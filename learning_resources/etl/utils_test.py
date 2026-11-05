@@ -1093,6 +1093,17 @@ def test_extract_content_ocr_failure_falls_back_to_tika(
     assert all(r.levelname == "WARNING" for r in ocr_records)
 
 
+def _extract_failing_for(name, failure):
+    """Return a fake _extract_content giving failure() for a file ending in name"""
+
+    def extract(document, metadata, olx_path, key, **kwargs):
+        if metadata["source_path"].endswith(name):
+            return failure()
+        return {"content": "text", "content_title": ""}
+
+    return extract
+
+
 # an extraction that raises is recorded as failed; one Tika gave nothing back
 # for is only skipped
 EXTRACTION_FAILURES = [
@@ -1112,15 +1123,9 @@ def test_process_olx_path_skips_failed_files(mocker, tmp_path, failure, recorded
     static_dir.mkdir()
     (static_dir / "good.html").write_text("<p>good</p>")
     (static_dir / "bad.html").write_text("<p>bad</p>")
-    bad = mocker.Mock(**failure)
-
-    def fake_extract(document, metadata, olx_path, key, **kwargs):
-        if "bad.html" in metadata["source_path"]:
-            return bad()
-        return {"content": "text", "content_title": ""}
-
     mocker.patch(
-        "learning_resources.etl.utils._extract_content", side_effect=fake_extract
+        "learning_resources.etl.utils._extract_content",
+        side_effect=_extract_failing_for("bad.html", mocker.Mock(**failure)),
     )
     failed = []
     results = list(
@@ -1477,15 +1482,11 @@ def test_transform_content_files_keys_colon_url_names(tmp_path, mocker):
     run = LearningResourceRunFactory.create(run_id="course-v1:MITx+1+run")
     olx = tmp_path / "course"
     _colon_olx(olx)
-
-    def fake_extract(document, metadata, olx_path, key, **kwargs):
-        if metadata["source_path"].endswith("other.html"):
-            msg = "converter output missing"
-            raise RuntimeError(msg)
-        return {"content": "text", "content_title": ""}
-
     mocker.patch(
-        "learning_resources.etl.utils._extract_content", side_effect=fake_extract
+        "learning_resources.etl.utils._extract_content",
+        side_effect=_extract_failing_for(
+            "other.html", mocker.Mock(side_effect=RuntimeError("failed"))
+        ),
     )
     failed_keys = []
     results = list(

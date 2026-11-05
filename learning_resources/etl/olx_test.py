@@ -19,7 +19,7 @@ from learning_resources.factories import (
     LearningResourceFactory,
     LearningResourceRunFactory,
 )
-from learning_resources.models import LearningResourceRun
+from learning_resources.models import LearningResource, LearningResourceRun
 
 pytestmark = pytest.mark.django_db
 
@@ -28,6 +28,12 @@ def _write_olx(root, rel, text):
     path = root / rel
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text)
+
+
+def _write_tree(root, files):
+    """Write each file of a {relative path: text} dict under root"""
+    for rel, text in files.items():
+        _write_olx(root, rel, text)
 
 
 def _ingested(olx, etl_source=None, **kwargs):
@@ -1426,8 +1432,7 @@ def _write_unit_olx(olx):
         "info/updates.html": "<p>old announcement</p>",
         "about/overview.html": "<p>about</p>",
     }
-    for rel, text in files.items():
-        _write_olx(olx, rel, text)
+    _write_tree(olx, files)
 
 
 def test_olx_archive_units(tmp_path):
@@ -1694,8 +1699,7 @@ def test_olx_archive_units_inline_lessons(tmp_path):
         "html/body.html": '<a href="/static/body.pdf">reading</a>',
         "static/body.pdf": "pdf",
     }
-    for rel, text in files.items():
-        _write_olx(olx, rel, text)
+    _write_tree(olx, files)
     run = LearningResourceRunFactory.create()
 
     def key(rel):
@@ -1783,8 +1787,7 @@ def test_olx_archive_units_ignores_staff_only_references(tmp_path):
         "static/shared.pdf": "pdf",
         "static/inline.pdf": "pdf",
     }
-    for rel, text in files.items():
-        _write_olx(olx, rel, text)
+    _write_tree(olx, files)
     run = LearningResourceRunFactory.create()
 
     def key(rel):
@@ -1834,8 +1837,7 @@ def test_olx_archive_units_context_static_files(tmp_path):
         "about",
     ):
         files[f"static/{name}.pdf"] = "pdf"
-    for rel, text in files.items():
-        _write_olx(olx, rel, text)
+    _write_tree(olx, files)
     run = LearningResourceRunFactory.create(
         learning_resource=LearningResourceFactory.create(
             etl_source=ETLSource.mitxonline.name, create_runs=False
@@ -1870,23 +1872,26 @@ def test_olx_archive_units_missing_course_file(tmp_path):
 
 
 @pytest.mark.parametrize(
-    ("missing", "message"),
+    ("chapter", "missing", "message"),
     [
-        ("chapter/ch.xml", r"chapter/ch\.xml is missing"),
-        ("sequential/seq.xml", r"sequential/seq\.xml is missing"),
+        ("ch", "chapter/ch.xml", r"chapter/ch\.xml is missing"),
+        ("ch", "sequential/seq.xml", r"sequential/seq\.xml is missing"),
+        # a colon-named block's message names the file edX would have written
+        ("ch:one", "chapter/ch/one.xml", r"chapter/ch/one\.xml is missing"),
     ],
 )
-def test_olx_archive_units_missing_outline_file(tmp_path, missing, message):
+def test_olx_archive_units_missing_outline_file(tmp_path, chapter, missing, message):
     """A chapter or sequential pointing to a missing file is not read as empty"""
     files = {
         "course.xml": '<course url_name="run" org="MITx" course="1"/>',
-        "course/run.xml": '<course><chapter url_name="ch"/></course>',
-        "chapter/ch.xml": '<chapter><sequential url_name="seq"/></chapter>',
+        "course/run.xml": f'<course><chapter url_name="{chapter}"/></course>',
+        f"chapter/{chapter.replace(':', '/')}.xml": (
+            '<chapter><sequential url_name="seq"/></chapter>'
+        ),
         "sequential/seq.xml": "<sequential><vertical><html><p>hi</p></html></vertical></sequential>",
     }
     del files[missing]
-    for rel, text in files.items():
-        _write_olx(tmp_path, rel, text)
+    _write_tree(tmp_path, files)
     run = LearningResourceRunFactory.create()
     with pytest.raises(ValueError, match=message):
         _units(tmp_path, run)
@@ -2085,8 +2090,7 @@ def _colon_olx(olx):
         "html/h/staff.xml": '<html filename="../private"/>',
         "html/private.html": "<p>staff only</p>",
     }
-    for rel, text in files.items():
-        _write_olx(olx, rel, text)
+    _write_tree(olx, files)
 
 
 def test_olx_archive_colon_url_names(tmp_path):
@@ -2097,11 +2101,9 @@ def test_olx_archive_colon_url_names(tmp_path):
     """
     olx = tmp_path / "course"
     _colon_olx(olx)
-    run = LearningResourceRunFactory.create(
+    run = LearningResourceRun(
         run_id="course-v1:MITx+1+run",
-        learning_resource=LearningResourceFactory.create(
-            etl_source=ETLSource.mitxonline.name, create_runs=False
-        ),
+        learning_resource=LearningResource(etl_source=ETLSource.mitxonline.name),
     )
     archive = OlxArchive(olx, run.learning_resource.etl_source)
 
@@ -2152,44 +2154,32 @@ def test_olx_archive_colon_url_names(tmp_path):
 
 
 @pytest.mark.parametrize(
-    ("rel", "expected"),
+    ("rel", "is_olx", "expected"),
     [
-        ("sequential/801x/a.xml", "block-v1:test_run+type@sequential+block@801x:a"),
-        ("problem/a/b/c d.xml", "block-v1:test_run+type@problem+block@a:b:c_d"),
-        ("problem/p.xml", "block-v1:test_run+type@problem+block@p"),
+        ("sequential/801x/a.xml", True, "type@sequential+block@801x:a"),
+        ("problem/a/b/c d.xml", True, "type@problem+block@a:b:c_d"),
+        ("problem/p.xml", True, "type@problem+block@p"),
         # folders that hold no blocks keep their old keys
-        ("static/images/x.png", "block-v1:test_run+type@images+block@x"),
-        ("tabs/t/page.html", "block-v1:test_run+type@t+block@page"),
+        ("static/images/x.png", True, "type@images+block@x"),
+        ("tabs/t/page.html", True, "type@t+block@page"),
+        # so does any file of a tree that is not OLX, like Canvas
+        ("sequential/801x/a.xml", False, "type@801x+block@a"),
     ],
 )
-@pytest.mark.parametrize("is_olx", [True, False])
-def test_olx_archive_key(tmp_path, rel, expected, is_olx):
+def test_olx_archive_key(tmp_path, rel, is_olx, expected):
     """An OLX tree keys a nested block file by its url_name; other trees don't"""
-    run = LearningResourceRun(run_id="course-v1:test_run")
     if is_olx:
         _write_olx(tmp_path, "course.xml", "<course/>")
-    path = tmp_path / rel
-    assert OlxArchive(tmp_path).key(path, run) == (
-        expected if is_olx else get_edx_module_id(str(path), run)
+    run = LearningResourceRun(run_id="course-v1:test_run")
+    assert OlxArchive(tmp_path).key(tmp_path / rel, run) == (
+        f"block-v1:test_run+{expected}"
     )
 
 
-def test_olx_archive_units_missing_colon_file(tmp_path):
-    """A missing colon-named block names the file edX would have written"""
-    _write_olx(tmp_path, "course.xml", '<course url_name="run" org="MITx" course="1"/>')
-    _write_olx(
-        tmp_path, "course/run.xml", '<course><chapter url_name="ch:one"/></course>'
-    )
-    run = LearningResourceRunFactory.create()
-    with pytest.raises(ValueError, match=r"chapter/ch/one\.xml is missing"):
-        _units(tmp_path, run)
-
-
-def test_olx_archive_empty_url_name_parts(tmp_path):
+def test_olx_archive_odd_url_name_parts(tmp_path):
     """
-    A url_name with an empty part, like :v or h::x, is read from inside the
-    tree, where edX reads it, so what a staff-only block holds is still
-    skipped, and its files are keyed by the url_name their path can't spell
+    url_names with an empty, . or .. part stay in the tree, keep staff-only
+    exclusion, and keep their declared key
     """
     olx = tmp_path / "course"
     files = {
@@ -2212,8 +2202,7 @@ def test_olx_archive_empty_url_name_parts(tmp_path):
         "problem/p.xml": "<problem/>",
         "html/h/x.xml": "<html><p>hi</p></html>",
     }
-    for rel, text in files.items():
-        _write_olx(olx, rel, text)
+    _write_tree(olx, files)
     run = LearningResourceRun(run_id="course-v1:test_run")
     archive = OlxArchive(olx)
 
@@ -2261,6 +2250,5 @@ def test_olx_archive_html_filename_ending_in_html(tmp_path):
         "html/c/both.html.html": "<p>staff only</p>",
         "html/c/both.html": "<p>not this block's</p>",
     }
-    for rel, text in files.items():
-        _write_olx(olx, rel, text)
+    _write_tree(olx, files)
     assert _ingested(olx) == ["course.xml", "course/run.xml", "html/c/both.html"]

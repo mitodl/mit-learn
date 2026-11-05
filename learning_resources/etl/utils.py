@@ -679,8 +679,6 @@ def _build_result(  # noqa: PLR0913, PLR0917
 ) -> dict:
     """Build the final result dictionary."""
     source_path = metadata.get("source_path")
-    # the key is the file's XBlock id
-    edx_module_id = key
     data = {
         "key": key,
         "published": True,
@@ -689,8 +687,8 @@ def _build_result(  # noqa: PLR0913, PLR0917
         "archive_checksum": metadata.get("archive_checksum"),
         "file_extension": metadata.get("file_extension"),
         "source_path": source_path,
-        "edx_module_id": edx_module_id,
-        "url": get_url_from_module_id(edx_module_id, run, video_srt_metadata),
+        "edx_module_id": key,
+        "url": get_url_from_module_id(key, run, video_srt_metadata),
         **content_dict,
     }
 
@@ -699,7 +697,7 @@ def _build_result(  # noqa: PLR0913, PLR0917
         content_dict.get("content"),
         olx_path,
         source_path,
-        edx_module_id,
+        key,
         video_srt_metadata,
     )
     return data

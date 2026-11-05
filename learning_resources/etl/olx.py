@@ -623,13 +623,11 @@ class OlxArchive:
         Return the files named <folder>/<name>.<ext>, without a glob: each
         directory is listed once, and name is not read as a pattern, so a
         url_name with [ still finds its file. Only the name before the last dot
-        counts, so notes doesn't also take notes.extra.html. A name leading
-        outside the tree finds nothing.
+        counts, so notes doesn't also take notes.extra.html.
         """
-        # only the folders are resolved: the file name is matched as written,
-        # since with its extension a name like .. (from a url_name a:..) is a
-        # file, ...xml. A url_name ending in : leaves no name; its file, .xml,
-        # has no suffix, so it is never ingested anyway.
+        # only the folders are normalized; the name is matched as written (a:..
+        # is the file ...xml). A url_name ending in : has no name, and its file,
+        # .xml, is never ingested.
         parent, _, stem = f"{folder}/{name}".rpartition("/")
         directory = self._in_tree(parent)
         if directory is None or not stem:
