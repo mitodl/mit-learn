@@ -16,7 +16,7 @@ type GatedLinkProps = {
 
 /**
  * Asks for data consent before following an in-app link to a contract
- * dashboard. Declining goes to dashboard home instead.
+ * dashboard. Cancelling goes to dashboard home instead.
  */
 const useConsentGatedNavigation = () => {
   const consentFlag = useFeatureFlag(FeatureFlags.B2BDataConsent)
@@ -45,9 +45,8 @@ const useConsentGatedNavigation = () => {
             if (result === true) {
               announce(`Consent recorded. Opening ${contract.name}.`)
               router.push(href)
-            } else {
-              announce("Response recorded.")
-              if (pathname !== DASHBOARD_HOME) router.push(DASHBOARD_HOME)
+            } else if (pathname !== DASHBOARD_HOME) {
+              router.push(DASHBOARD_HOME)
             }
           })
         },

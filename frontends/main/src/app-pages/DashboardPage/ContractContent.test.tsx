@@ -2615,24 +2615,11 @@ describe("ContractContent data consent", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
   })
 
-  test("Cancel records false and redirects to dashboard home", async () => {
-    const { org, contract, mitxOnlineUser } = setupConsent(null)
-    setMockResponse.post(urls.b2b.dataConsent(contract.id), undefined, {
-      code: 204,
-    })
+  test("Cancel redirects to dashboard home without recording a response", async () => {
+    const { org, contract } = setupConsent(null)
     renderContract(org, contract.slug)
     await screen.findByRole("dialog")
 
-    // What users/me returns after the POST.
-    setMockResponse.get(urls.userMe.get(), {
-      ...mitxOnlineUser,
-      b2b_organizations: [
-        {
-          ...org,
-          contracts: [{ ...contract, consented_to_data_sharing: false }],
-        },
-      ],
-    })
     await user.click(screen.getByRole("button", { name: "Cancel" }))
 
     await waitFor(() => {
@@ -2645,12 +2632,8 @@ describe("ContractContent data consent", () => {
     expect(
       screen.getByRole("button", { name: "Agree and continue" }),
     ).toHaveAttribute("aria-disabled", "true")
-    expect(makeRequest).toHaveBeenCalledWith(
-      expect.objectContaining({
-        method: "post",
-        url: urls.b2b.dataConsent(contract.id),
-        body: { consented: false },
-      }),
+    expect(makeRequest).not.toHaveBeenCalledWith(
+      expect.objectContaining({ method: "post" }),
     )
   })
 
@@ -2698,7 +2681,8 @@ describe("ContractContent data consent", () => {
     renderContract(org, contract.slug)
     await screen.findByRole("dialog")
 
-    await user.click(screen.getByRole("button", { name: "Cancel" }))
+    await user.click(consentCheckbox())
+    await user.click(screen.getByRole("button", { name: "Agree and continue" }))
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "We couldn't save your response. Please try again.",
