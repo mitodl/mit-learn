@@ -2,7 +2,7 @@
  * @jest-environment @happy-dom/jest-environment
  */
 import React from "react"
-import { act, screen } from "@testing-library/react"
+import { act, screen, waitFor } from "@testing-library/react"
 import type { Editor, JSONContent } from "@tiptap/react"
 import type { LearningResource } from "api"
 import { setMockResponse, factories, urls } from "api/test-utils"
@@ -103,15 +103,31 @@ describe("LearningResourceProvider", () => {
       count: 3,
     }).results
     const { ids, editor } = await setup([first, second], { readOnly: false })
+    // Held open so the test can look at the cards while the new list loads.
+    let respond = () => {}
+    const response = new Promise<void>((resolve) => {
+      respond = resolve
+    }).then(() => listResponse([first, second, added]))
     setMockResponse.get(
       urls.learningResources.list({ resource_id: [...ids, added.id] }),
-      listResponse([first, second, added]),
+      response,
     )
 
     act(() => {
       editor.chain().focus("end").insertLearningResource(added.id).run()
     })
 
+    // While the new list loads, only the added card is a skeleton.
+    await waitFor(() => {
+      const skeletonCards = [
+        ...document.querySelectorAll(".node-learningResource"),
+      ].filter((card) => card.querySelector(".MuiSkeleton-root"))
+      expect(skeletonCards).toHaveLength(1)
+    })
+    expect(screen.getByText(first.title)).toBeInTheDocument()
+    expect(screen.getByText(second.title)).toBeInTheDocument()
+
+    await act(async () => respond())
     expect(await screen.findByText(added.title)).toBeInTheDocument()
     expect(screen.getByText(first.title)).toBeInTheDocument()
     expect(screen.getByText(second.title)).toBeInTheDocument()
