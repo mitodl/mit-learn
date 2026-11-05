@@ -1673,6 +1673,19 @@ def load_video(video_data: dict) -> LearningResource:
         LearningResource: the created or updated video resource
 
     """
+    learning_resource, created = _write_video(video_data)
+    update_index(learning_resource, created)
+    return learning_resource
+
+
+def _write_video(video_data: dict) -> tuple[LearningResource, bool]:
+    """
+    Write a video to the database without updating the search index, for a
+    caller that has more to write before the video's index document is right.
+
+    Returns:
+        tuple: the video resource and whether it was created
+    """
     readable_id = video_data.pop("readable_id")
     platform = video_data.pop("platform")
     topics_data = video_data.pop("topics", None)
@@ -1701,9 +1714,7 @@ def load_video(video_data: dict) -> LearningResource:
         load_topics(learning_resource, topics_data)
         load_offered_by(learning_resource, offered_by_data)
 
-    update_index(learning_resource, created)
-
-    return learning_resource
+    return learning_resource, created
 
 
 def load_video_with_content_file(
@@ -1907,10 +1918,46 @@ def _upsert_ovs_playlist_from_collection(collection_data: dict) -> LearningResou
     return playlist
 
 
+def prune_ovs_playlists(playlist_ids: list[int]) -> None:
+    """
+    Unpublish the given OVS playlists that have no published videos left, and
+    reindex the rest.
+
+    This is the webhook's version of the prune in load_ovs_playlists, which
+    stops running once the webhook owns OVS. The webhook sees one video at a
+    time, so it only checks the playlists that video just left.
+    """
+    playlists = LearningResource.objects.filter(id__in=playlist_ids)
+    with transaction.atomic():
+        # A push holds its playlist's row until it commits, so waiting for the
+        # lock here means a video that push adds counts in the check below.
+        list(playlists.select_for_update().order_by("id").values_list("id"))
+        with_videos = LearningResourceRelationship.objects.filter(
+            parent_id__in=playlist_ids,
+            relation_type=LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
+            child__published=True,
+        ).values("parent_id")
+        empty_playlists = playlists.filter(published=True).exclude(id__in=with_videos)
+        empty_playlist_ids = list(empty_playlists.values_list("id", flat=True))
+        # Not empty_playlists: removing a video doesn't take the playlist lock,
+        # so its subquery could now match a playlist the hooks below won't see.
+        playlists.filter(id__in=empty_playlist_ids).update(published=False)
+    if empty_playlist_ids:
+        bulk_resources_unpublished_actions(
+            empty_playlist_ids, LearningResourceType.video_playlist.name
+        )
+    for playlist in playlists.filter(published=True):
+        update_index(playlist, newly_created=False)
+
+
 def load_ovs_video_from_webhook(video_payload: dict) -> LearningResource | None:
     """
     Upsert a single OVS video and its collection-as-playlist from a webhook payload.
 
+    A video that OVS moved to another collection leaves its old playlist. The
+    video is indexed last, after its relationships commit and its old playlists
+    are pruned, so its document has the new playlist, and an index failure
+    leaves only the reindex for the sender's retry.
     `video_payload` is one result dict from the OVS public videos API. Returns the
     video LearningResource, or None if the payload has no usable streaming source.
     """
@@ -1927,15 +1974,23 @@ def load_ovs_video_from_webhook(video_payload: dict) -> LearningResource | None:
             if collection.get("key")
             else None
         )
-        video = load_video(video_data)
+        video, created = _write_video(video_data)
         if playlist:
             LearningResourceRelationship.objects.update_or_create(
                 parent=playlist,
                 child=video,
                 relation_type=LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
             )
+        old_relationships = LearningResourceRelationship.objects.filter(
+            child=video,
+            relation_type=LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
+        ).exclude(parent=playlist)
+        old_playlist_ids = list(old_relationships.values_list("parent_id", flat=True))
+        old_relationships.delete()
+    prune_ovs_playlists(old_playlist_ids)
     if playlist:
         update_index(playlist, newly_created=False)
+    update_index(video, newly_created=created)
     return video
 
 
