@@ -29,6 +29,7 @@ from learning_resources.etl.ocw import (
 )
 from learning_resources.factories import (
     ContentFileFactory,
+    LearningResourceRunFactory,
     LearningResourceTopicFactory,
 )
 from learning_resources.models import ContentFile
@@ -576,3 +577,20 @@ def test_transform_run_missing_description_fields(settings):
 
     # Should return empty string when description fields are missing or None
     assert result["description"] == ""
+
+
+def test_derive_units(mocker):
+    """derive_units builds units from the run's published content files only"""
+    run = LearningResourceRunFactory.create()
+    published_content_files = ContentFileFactory.create_batch(
+        2, run=run, published=True, content_tags=[]
+    )
+    ContentFileFactory.create(run=run, published=False, content_tags=[])
+    units = [{"external_id": "context"}]
+    mock_build_units = mocker.patch(
+        "learning_resources.etl.ocw.build_units_from_content_files",
+        return_value=units,
+    )
+
+    assert ocw.derive_units(run) == units
+    assert set(mock_build_units.call_args.args[0]) == set(published_content_files)

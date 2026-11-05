@@ -29,6 +29,7 @@ from learning_resources.constants import (
     RunStatus,
 )
 from learning_resources.etl.constants import ETLSource
+from learning_resources.etl.ocw_units import build_units_from_content_files
 from learning_resources.etl.utils import (
     extract_text_metadata,
     generate_course_numbers_json,
@@ -39,6 +40,7 @@ from learning_resources.etl.utils import (
 from learning_resources.models import (
     ContentFile,
     LearningResource,
+    LearningResourceRun,
     default_delivery,
 )
 from learning_resources.utils import (
@@ -540,6 +542,21 @@ def transform_course(course_data: dict) -> dict:
         "format": [Format.asynchronous.name],
         "pace": [Pace.self_paced.name],
     }
+
+
+def derive_units(run: LearningResourceRun) -> list[dict]:
+    """
+    Derive an OCW run's units from its published content files
+
+    Args:
+        run (LearningResourceRun): the OCW course run
+
+    Returns:
+        list of dict: unit data for load_course_units
+    """
+    return build_units_from_content_files(
+        run.content_files.visible().prefetch_related("content_tags")
+    )
 
 
 def extract_course(
