@@ -205,7 +205,7 @@ def tune_collection(client, collection_name):
         return
     client.update_collection(
         collection_name=collection_name,
-        optimizer_config=models.OptimizersConfigDiff(**desired),
+        optimizers_config=models.OptimizersConfigDiff(**desired),
     )
 
 
@@ -266,9 +266,11 @@ def create_qdrant_collection(collection_name, force_recreate):
     # True if either of the collections were recreated
     if not client.collection_exists(collection_name=collection_name) or force_recreate:
         client.delete_collection(collection_name)
-        client.recreate_collection(
+        client.create_collection(
             collection_name=collection_name,
-            on_disk_payload=True,
+            # Replaces the deprecated on_disk_payload=True: payload stays on disk
+            # and is read into RAM on demand.
+            payload=models.PayloadStorageParams(memory=models.Memory.COLD),
             vectors_config={
                 encoder_dense.model_short_name(): models.VectorParams(
                     size=encoder_dense.dim(), distance=models.Distance.COSINE
