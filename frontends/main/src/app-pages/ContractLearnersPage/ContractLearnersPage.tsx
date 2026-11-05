@@ -17,7 +17,7 @@ import {
   styled,
   Typography,
 } from "ol-components"
-import { Alert, Button, Checkbox } from "@mitodl/smoot-design"
+import { Alert, Button, Checkbox, VisuallyHidden } from "@mitodl/smoot-design"
 import {
   analyticsContractQueries,
   type LearnerWithEnrollments,
@@ -47,12 +47,8 @@ import {
   GRID_PAGE_SIZE,
   ProgressGrid,
 } from "./ProgressGrid"
-import {
-  ALL,
-  completionStatusFilter,
-  SEARCH_MAX_LENGTH,
-  useLearnerFilters,
-} from "./useLearnerFilters"
+import { completionStatusFilter } from "@/common/urls"
+import { ALL, SEARCH_MAX_LENGTH, useLearnerFilters } from "./useLearnerFilters"
 
 /**
  * The B2B learner directory: one row per learner, one column per course run
@@ -270,6 +266,7 @@ const ErrorRow = styled.div({
 const CSV_EXPORT_CONCURRENCY = 5
 const UNAVAILABLE_MESSAGE_ID = "learner-analytics-unavailable-message"
 const NOT_LOADED_MESSAGE_ID = "learner-analytics-not-loaded-message"
+const MODULES_FAILED_MESSAGE_ID = "learner-export-modules-failed-message"
 
 const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: ALL, label: "All learners" },
@@ -405,6 +402,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   )
 
   const courseRuns = courseRunsQuery.data?.data
+  const courseRunsFailed = courseRunsQuery.isError && !courseRuns
   const exportUnavailable =
     !canQuery || notLoaded || !gridModulesResolved || !courseRuns
 
@@ -551,7 +549,9 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                   ? UNAVAILABLE_MESSAGE_ID
                   : notLoaded
                     ? NOT_LOADED_MESSAGE_ID
-                    : undefined
+                    : courseRunsFailed
+                      ? MODULES_FAILED_MESSAGE_ID
+                      : undefined
               }
               aria-busy={
                 isExporting ||
@@ -563,6 +563,12 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
             >
               {isExporting ? "Exporting…" : "Export learners"}
             </Button>
+            {courseRunsFailed ? (
+              <VisuallyHidden id={MODULES_FAILED_MESSAGE_ID}>
+                Export needs this contract&apos;s modules, which couldn&apos;t
+                load.
+              </VisuallyHidden>
+            ) : null}
           </ExportWrapper>
         </HeaderSection>
 
@@ -643,7 +649,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                     options={courseRunOptions}
                     value={activeGridModules}
                     onChange={setGridModules}
-                    error={courseRunsQuery.isError && !courseRunsQuery.data}
+                    error={courseRunsFailed}
                   />
                 ) : null}
                 <CheckboxField>
@@ -682,9 +688,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
               filters={gridFilters}
               query={gridQuery}
               courseRuns={courseRuns}
-              courseRunsFailed={
-                courseRunsQuery.isError && !courseRunsQuery.data
-              }
+              courseRunsFailed={courseRunsFailed}
               courseRunsFetching={courseRunsQuery.isFetching}
               onRetryCourseRuns={() => courseRunsQuery.refetch()}
               page={page}

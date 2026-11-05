@@ -2,6 +2,7 @@ import { env, requiredEnv } from "@/env"
 import type { V2ProgramDisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { slugify } from "@/common/slugs"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
+import type { CompletionStatusFilter } from "api/analytics-hooks/organizations"
 
 // matches ! $ & ' ( ) * + , ; = : @ ~
 const SAFE_IN_PATH_SEGMENT =
@@ -137,6 +138,41 @@ export const CONTRACT_LEARNERS_STATUSES = [
   "passed",
 ] as const
 export type ContractLearnersStatus = (typeof CONTRACT_LEARNERS_STATUSES)[number]
+
+/**
+ * "Completed" queries both `passed` and `certified`, matching the count
+ * tile above it: a learner who passed but hasn't certified yet is still
+ * "Completed" to a manager, and a standalone "Certificate" filter option
+ * previously returned fewer rows than the tile it was supposed to explain.
+ * The row-level status pill (`getDisplayStatus`) still distinguishes the
+ * two outcomes; only the filter groups them.
+ */
+export const STATUS_FILTER_COMPLETION_STATUS: Record<
+  ContractLearnersStatus,
+  CompletionStatusFilter[]
+> = {
+  not_started: ["not_started"],
+  in_progress: ["in_progress"],
+  passed: ["passed", "certified"],
+}
+
+/**
+ * Every status a learner who shared their progress can have. The API reports
+ * withheld outcomes as `unknown`, so asking for these leaves those learners out
+ * of rows and counts alike. A learner with no recorded decision is withheld
+ * unless the API's `consent_fail_open` setting is on, which no deployment sets.
+ */
+export const SHARED_COMPLETION_STATUSES: CompletionStatusFilter[] = [
+  "not_started",
+  "in_progress",
+  "passed",
+  "certified",
+]
+
+/** The `completion_status` filter for a Status option, or for all learners who shared their progress. */
+export const completionStatusFilter = (status?: ContractLearnersStatus) =>
+  status ? STATUS_FILTER_COMPLETION_STATUS[status] : SHARED_COMPLETION_STATUSES
+
 export type ContractLearnersFilters = {
   status?: ContractLearnersStatus
   needsAttention?: boolean

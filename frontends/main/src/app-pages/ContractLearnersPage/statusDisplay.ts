@@ -25,11 +25,13 @@ const DISPLAY_STATUS_LABEL: Record<DisplayStatus, string> = {
   unknown: "Unknown",
 }
 
-/** Requests already leave out learners who haven't consented; this keeps a status from leaking if one gets through. */
+/**
+ * Requests already leave out withheld learners; this keeps a status from
+ * leaking if one gets through. `outcomes_shared` is the API's own rule, so a
+ * learner it shares under `consent_fail_open` still shows their status.
+ */
 const getDisplayStatus = (row: LearnerEnrollment): DisplayStatus => {
-  if (row.outcomes_consent_status !== "consented" || !row.outcomes_shared) {
-    return "unknown"
-  }
+  if (!row.outcomes_shared) return "unknown"
   switch (row.completion_status) {
     case "certified":
       return "certificate"

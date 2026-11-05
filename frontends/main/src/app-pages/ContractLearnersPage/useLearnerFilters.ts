@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import type { CompletionStatusFilter } from "api/analytics-hooks/organizations"
 import { useAppSearchParams } from "@/common/useAppSearchParams"
 import {
+  completionStatusFilter,
   CONTRACT_LEARNERS_STATUSES,
   type ContractLearnersStatus,
 } from "@/common/urls"
@@ -14,40 +14,6 @@ const MAX_PAGE = 10_000
 const SEARCH_MAX_LENGTH = 254
 /** The `/learners` endpoint rejects more `courserun_readable_id` values than this. */
 const MAX_GRID_MODULES = 50
-
-/**
- * "Completed" queries both `passed` and `certified`, matching the count
- * tile above it: a learner who passed but hasn't certified yet is still
- * "Completed" to a manager, and a standalone "Certificate" filter option
- * previously returned fewer rows than the tile it was supposed to explain.
- * The row-level status pill (`getDisplayStatus`) still distinguishes the
- * two outcomes; only the filter groups them.
- */
-const STATUS_FILTER_COMPLETION_STATUS: Record<
-  ContractLearnersStatus,
-  CompletionStatusFilter[]
-> = {
-  not_started: ["not_started"],
-  in_progress: ["in_progress"],
-  passed: ["passed", "certified"],
-}
-
-/**
- * Every status a learner who shared their progress can have. The API reports
- * withheld outcomes as `unknown`, so asking for these leaves those learners out
- * of rows and counts alike. A learner with no recorded decision is withheld
- * unless the API's `consent_fail_open` setting is on, which no deployment sets.
- */
-const SHARED_COMPLETION_STATUSES: CompletionStatusFilter[] = [
-  "not_started",
-  "in_progress",
-  "passed",
-  "certified",
-]
-
-/** The `completion_status` filter for a Status option, or for all learners who shared their progress. */
-const completionStatusFilter = (status?: ContractLearnersStatus) =>
-  status ? STATUS_FILTER_COMPLETION_STATUS[status] : SHARED_COMPLETION_STATUSES
 
 const isStatus = (value: string | null): value is ContractLearnersStatus =>
   (CONTRACT_LEARNERS_STATUSES as readonly (string | null)[]).includes(value)
@@ -153,4 +119,4 @@ const useLearnerFilters = () => {
   }
 }
 
-export { ALL, SEARCH_MAX_LENGTH, completionStatusFilter, useLearnerFilters }
+export { ALL, SEARCH_MAX_LENGTH, useLearnerFilters }

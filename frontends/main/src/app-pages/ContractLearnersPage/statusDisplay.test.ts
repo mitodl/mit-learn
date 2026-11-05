@@ -28,16 +28,25 @@ describe("getDisplayStatus", () => {
   })
 
   test.each(["declined", "not_recorded"] as const)(
-    "a row without explicit consent reads Unknown, even with a status (%s)",
+    "a withheld row reads Unknown, even with a status (%s)",
     (consent) => {
       const row = factories.learnerProgress({
         outcomes_consent_status: consent,
-        outcomes_shared: consent === "not_recorded",
+        outcomes_shared: false,
         completion_status: "certified",
       })
       expect(getDisplayStatus(row)).toBe("unknown")
     },
   )
+
+  test("a row shared under consent_fail_open shows its status", () => {
+    const row = factories.learnerProgress({
+      outcomes_consent_status: "not_recorded",
+      outcomes_shared: true,
+      completion_status: "certified",
+    })
+    expect(getDisplayStatus(row)).toBe("certificate")
+  })
 
   test("a consenting row with an unrecognized completion_status reads Unknown", () => {
     const row = factories.learnerProgress({

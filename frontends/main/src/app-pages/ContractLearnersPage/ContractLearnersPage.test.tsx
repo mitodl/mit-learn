@@ -1393,6 +1393,29 @@ describe("ContractLearnersPage", () => {
       expect(exportButton).toHaveAttribute("aria-disabled", "false")
     })
 
+    test("says why Export is disabled when the modules fail to load", async () => {
+      const { contractId } = renderGrid()
+      setMockResponse.get(
+        analyticsUrls.contracts.courseRuns(ORG_UUID, contractId, {
+          limit: 1000,
+        }),
+        "Internal Server Error",
+        { code: 500 },
+      )
+      mockGridPage(contractId, 0, [learnerNamed("Ada Lovelace")])
+
+      const exportButton = await screen.findByRole("button", {
+        name: "Export learners",
+      })
+      await waitFor(() =>
+        expect(exportButton).toHaveAccessibleDescription(
+          "Export needs this contract's modules, which couldn't load.",
+        ),
+      )
+      expect(exportButton).toHaveAttribute("aria-disabled", "true")
+      expect(exportButton).toHaveAttribute("aria-busy", "false")
+    })
+
     test("reports a failure instead of downloading a partial file", async () => {
       const { contractId } = renderGrid()
       mockGridPage(contractId, 0, [learnerNamed("Ada Lovelace")], {

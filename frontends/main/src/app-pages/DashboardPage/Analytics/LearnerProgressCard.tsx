@@ -40,15 +40,9 @@ const BUCKETS = [
 
 type BucketKey = (typeof BUCKETS)[number]["key"]
 
-/** The tiles in order: every learner, then one per bucket. */
-const TILE_STATUSES: readonly (ContractLearnersStatus | undefined)[] = [
-  undefined,
-  ...BUCKETS.map((bucket) => bucket.status),
-]
-
 /** Folds `passed`+`certified` into "Completed", matching the learner
  * directory's Status filter (`STATUS_FILTER_COMPLETION_STATUS` in
- * `ContractLearnersPage.tsx`). */
+ * `common/urls.ts`). */
 const bucketCounts = (
   counts: CompletionStatusCounts,
 ): Record<BucketKey, number> => ({
@@ -235,8 +229,8 @@ const DistributionTitle = styled(Typography)(({ theme }) => ({
 })) as typeof Typography
 
 const LearnerProgressCard: React.FC<{
-  /** Learners on the contract, or with at least one enrollment in `status`. */
-  learnerCount: (status?: ContractLearnersStatus) => number
+  /** Learners on the contract (`all`), or with at least one enrollment in each status. */
+  learnerCounts: Record<ContractLearnersStatus | "all", number>
   totalCount: number | undefined
   statusCounts: CompletionStatusCounts | undefined
   isLoading: boolean
@@ -245,7 +239,7 @@ const LearnerProgressCard: React.FC<{
   /** Rendered beside the distribution, stacking below it on narrow screens. */
   aside?: React.ReactNode
 }> = ({
-  learnerCount,
+  learnerCounts,
   totalCount,
   statusCounts,
   isLoading,
@@ -336,7 +330,7 @@ const LearnerProgressCard: React.FC<{
       <TileRow>
         <Tile
           label="Learners enrolled"
-          value={learnerCount()}
+          value={learnerCounts.all}
           learnersHref={learnersHref()}
           linkText="View all learners"
           linkLabel="View all learners"
@@ -345,7 +339,7 @@ const LearnerProgressCard: React.FC<{
           <Tile
             key={bucket.key}
             label={bucket.label}
-            value={learnerCount(bucket.status)}
+            value={learnerCounts[bucket.status]}
             learnersHref={learnersHref(bucket.status)}
             linkText="View learners"
             linkLabel={`View learners (${bucket.label})`}
@@ -369,4 +363,3 @@ const LearnerProgressCard: React.FC<{
 }
 
 export default LearnerProgressCard
-export { TILE_STATUSES }

@@ -32,6 +32,8 @@ import { ForbiddenError, isAnalyticsNotLoaded } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import {
+  completionStatusFilter,
+  CONTRACT_LEARNERS_STATUSES,
   contractAdminView,
   contractLearnersView,
   organizationAnalyticsView,
@@ -45,10 +47,7 @@ import ContractKpiCards from "./Analytics/ContractKpiCards"
 import CoursePerformanceTable from "./Analytics/CoursePerformanceTable"
 import EngagementTrendChart from "./Analytics/EngagementTrendChart"
 import { SUPPRESSED_LEGEND } from "./Analytics/format"
-import LearnerProgressCard, {
-  TILE_STATUSES,
-} from "./Analytics/LearnerProgressCard"
-import { completionStatusFilter } from "../ContractLearnersPage/useLearnerFilters"
+import LearnerProgressCard from "./Analytics/LearnerProgressCard"
 import NeedsAttentionCard from "./Analytics/NeedsAttentionCard"
 import SectionHeader from "./Analytics/SectionHeader"
 import SectionTruncation from "./Analytics/SectionTruncation"
@@ -195,6 +194,8 @@ const PAGE_SIZE = 200
  * API will reject.
  */
 const MAX_PAGE_SIZE = 1000
+
+const LEARNER_TILES = ["all", ...CONTRACT_LEARNERS_STATUSES] as const
 
 type SectionKey = "utilization" | "trend" | "courses" | "content"
 
@@ -454,14 +455,27 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
 
   /** The tiles' learner counts, from the same requests their links open. */
   const learnerCounts = useQueries({
-    queries: TILE_STATUSES.map((status) => ({
+    queries: LEARNER_TILES.map((tile) => ({
       ...analyticsContractQueries.learners(orgUuid ?? "", contractId ?? 0, {
         limit: 1,
         offset: 0,
-        completion_status: completionStatusFilter(status),
+        completion_status: completionStatusFilter(
+          tile === "all" ? undefined : tile,
+        ),
       }),
       enabled: analyticsAvailable && !!contractId && !!learnerAnalyticsFlag,
+      placeholderData: keepPreviousData,
     })),
+    combine: (results) => ({
+      counts: Object.fromEntries(
+        LEARNER_TILES.map((tile, index) => [
+          tile,
+          results[index].data?.total_count ?? 0,
+        ]),
+      ) as Record<(typeof LEARNER_TILES)[number], number>,
+      isPending: results.some((result) => result.isPending),
+      isError: results.some((result) => result.isError),
+    }),
   })
 
   /**
@@ -671,20 +685,11 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
             isError={learnerProgress.isError}
           />
           <LearnerProgressCard
-            learnerCount={(status) =>
-              learnerCounts[TILE_STATUSES.indexOf(status)]?.data?.total_count ??
-              0
-            }
+            learnerCounts={learnerCounts.counts}
             totalCount={learnerProgress.data?.total_count}
             statusCounts={learnerProgress.data?.completion_status_counts}
-            isLoading={
-              learnerProgress.isPending ||
-              learnerCounts.some((query) => query.isPending)
-            }
-            isError={
-              learnerProgress.isError ||
-              learnerCounts.some((query) => query.isError)
-            }
+            isLoading={learnerProgress.isPending || learnerCounts.isPending}
+            isError={learnerProgress.isError || learnerCounts.isError}
             learnersHref={(status) =>
               contractLearnersView(orgSlug, contract.slug, { status })
             }
