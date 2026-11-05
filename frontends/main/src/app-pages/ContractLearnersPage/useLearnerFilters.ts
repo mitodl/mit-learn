@@ -34,8 +34,9 @@ const STATUS_FILTER_COMPLETION_STATUS: Record<
 
 /**
  * Every status a learner who shared their progress can have. The API reports
- * anyone who hasn't explicitly consented as `unknown`, so asking for these
- * leaves those learners out of rows and counts alike.
+ * withheld outcomes as `unknown`, so asking for these leaves those learners out
+ * of rows and counts alike. A learner with no recorded decision is withheld
+ * unless the API's `consent_fail_open` setting is on, which no deployment sets.
  */
 const SHARED_COMPLETION_STATUSES: CompletionStatusFilter[] = [
   "not_started",
