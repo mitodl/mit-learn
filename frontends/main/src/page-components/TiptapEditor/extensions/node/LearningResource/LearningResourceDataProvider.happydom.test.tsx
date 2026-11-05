@@ -2,11 +2,77 @@
  * @jest-environment @happy-dom/jest-environment
  */
 import React from "react"
-import { screen } from "@testing-library/react"
-import type { JSONContent } from "@tiptap/react"
+import { act, screen } from "@testing-library/react"
+import type { Editor, JSONContent } from "@tiptap/react"
+import type { LearningResource } from "api"
 import { setMockResponse, factories, urls } from "api/test-utils"
 import { renderWithProviders } from "@/test-utils"
 import { NewsEditor } from "../../../contentTypes/news/NewsEditor"
+
+const contentWithCards = (ids: number[]): JSONContent => ({
+  type: "doc",
+  content: [
+    {
+      type: "banner",
+      content: [
+        {
+          type: "heading",
+          attrs: { level: 1 },
+          content: [{ type: "text", text: "News with cards" }],
+        },
+        { type: "paragraph", content: [] },
+      ],
+    },
+    { type: "byline" },
+    ...ids.map((resourceId) => ({
+      type: "learningResource",
+      attrs: { resourceId },
+    })),
+  ],
+})
+
+const listResponse = (results: LearningResource[]) => ({
+  count: results.length,
+  next: null,
+  previous: null,
+  results,
+})
+
+/**
+ * Renders a published news item holding a card for each of `resources`:
+ * read-only as a visitor sees it, or in the editor. Published, so nothing
+ * autosaves.
+ */
+const setup = async (
+  resources: LearningResource[],
+  { readOnly }: { readOnly: boolean },
+) => {
+  const user = readOnly
+    ? factories.user.user({ is_authenticated: false })
+    : factories.user.user({ is_authenticated: true, is_article_editor: true })
+  setMockResponse.get(urls.userMe.get(), user)
+  setMockResponse.get(urls.userLists.membershipList(), [])
+  setMockResponse.get(urls.learningPaths.membershipList(), [])
+  const ids = resources.map((resource) => resource.id)
+  setMockResponse.get(
+    urls.learningResources.list({ resource_id: ids }),
+    listResponse(resources),
+  )
+  const newsItem = factories.websiteContent.websiteContent({
+    content: contentWithCards(ids),
+    is_published: true,
+  })
+  renderWithProviders(<NewsEditor newsItem={newsItem} readOnly={readOnly} />, {
+    user,
+  })
+  for (const resource of resources) {
+    expect(await screen.findByText(resource.title)).toBeInTheDocument()
+  }
+  const editor = (
+    document.querySelector(".ProseMirror") as HTMLElement & { editor: Editor }
+  ).editor
+  return { ids, editor }
+}
 
 describe("LearningResourceProvider", () => {
   afterEach(() => {
@@ -27,48 +93,47 @@ describe("LearningResourceProvider", () => {
   test("renders a read-only news item's resource cards without a render loop", async () => {
     let now = Date.now()
     jest.spyOn(Date, "now").mockImplementation(() => (now += 1))
+    await setup(factories.learningResources.resources({ count: 3 }).results, {
+      readOnly: true,
+    })
+  })
+
+  test("fills in a card added to the document", async () => {
+    const [first, second, added] = factories.learningResources.resources({
+      count: 3,
+    }).results
+    const { ids, editor } = await setup([first, second], { readOnly: false })
     setMockResponse.get(
-      urls.userMe.get(),
-      factories.user.user({ is_authenticated: false }),
+      urls.learningResources.list({ resource_id: [...ids, added.id] }),
+      listResponse([first, second, added]),
     )
 
-    const resources = factories.learningResources.resources({ count: 3 })
-    const ids = resources.results.map((resource) => resource.id)
-    setMockResponse.get(
-      urls.learningResources.list({ resource_id: ids }),
-      resources,
-    )
-
-    const content: JSONContent = {
-      type: "doc",
-      content: [
-        {
-          type: "banner",
-          content: [
-            {
-              type: "heading",
-              attrs: { level: 1 },
-              content: [{ type: "text", text: "News with cards" }],
-            },
-            { type: "paragraph", content: [] },
-          ],
-        },
-        { type: "byline" },
-        ...ids.map((resourceId) => ({
-          type: "learningResource",
-          attrs: { resourceId },
-        })),
-      ],
-    }
-    const newsItem = factories.websiteContent.websiteContent({
-      content,
-      is_published: true,
+    act(() => {
+      editor.chain().focus("end").insertLearningResource(added.id).run()
     })
 
-    renderWithProviders(<NewsEditor newsItem={newsItem} readOnly />)
+    expect(await screen.findByText(added.title)).toBeInTheDocument()
+    expect(screen.getByText(first.title)).toBeInTheDocument()
+    expect(screen.getByText(second.title)).toBeInTheDocument()
+  })
 
-    for (const resource of resources.results) {
-      expect(await screen.findByText(resource.title)).toBeInTheDocument()
-    }
+  test("keeps the cards already shown when the list for an added card fails", async () => {
+    const [first, second, added] = factories.learningResources.resources({
+      count: 3,
+    }).results
+    const { ids, editor } = await setup([first, second], { readOnly: false })
+    const failing = urls.learningResources.list({
+      resource_id: [...ids, added.id],
+    })
+    setMockResponse.get(failing, {}, { code: 500 })
+
+    act(() => {
+      editor.chain().focus("end").insertLearningResource(added.id).run()
+    })
+
+    await act(() => new Promise((resolve) => setTimeout(resolve, 100)))
+    expect(screen.getByText(first.title)).toBeInTheDocument()
+    expect(screen.getByText(second.title)).toBeInTheDocument()
+    expect(screen.queryByText(added.title)).not.toBeInTheDocument()
   })
 })

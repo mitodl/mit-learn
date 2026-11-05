@@ -81,9 +81,6 @@ const useLearningResourcesBulkList = (ids: number[]) => {
     // `select` runs during render, so it must not write to the cache: writing
     // here re-renders every subscriber, which runs `select` again.
     select: selectResults,
-    // Adding a card to the editor changes the ids, and so the query key; keep
-    // the cards already shown while the new list loads.
-    placeholderData: keepPreviousData,
   })
 }
 

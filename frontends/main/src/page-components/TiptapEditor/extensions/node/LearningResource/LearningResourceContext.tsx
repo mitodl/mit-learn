@@ -4,20 +4,22 @@ import { LearningResource } from "api/hooks/learningResources"
 
 export interface LearningResourceContextValue {
   resources: Record<number, LearningResource>
-  isLoading: boolean
+  isFetching: boolean
 }
 
 export const LearningResourceContext =
   createContext<LearningResourceContextValue>({
     resources: {},
-    isLoading: false,
+    isFetching: false,
   })
 
 export const useLearningResource = (id: number) => {
-  const { resources, isLoading } = useContext(LearningResourceContext)
+  const { resources, isFetching } = useContext(LearningResourceContext)
+  const resource = resources[id]
 
   return {
-    resource: resources[id],
-    isLoading,
+    resource,
+    // Per card: one that already has its data never goes back to loading.
+    isLoading: isFetching && !resource,
   }
 }
