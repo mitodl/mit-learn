@@ -2,10 +2,10 @@ import React from "react"
 import NiceModal from "@ebay/nice-modal-react"
 import { usePathname } from "next/navigation"
 import { useRouter } from "next-nprogress-bar"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import type { UserContractPage } from "@mitodl/mitxonline-api-axios/v0"
 import { FeatureFlags } from "@/common/feature_flags"
 import { DASHBOARD_HOME } from "@/common/urls"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { DataConsentModal } from "./DataConsentPrompt"
 import { useDashboardAnnounce } from "./DashboardAnnouncer"
 
@@ -19,7 +19,7 @@ type GatedLinkProps = {
  * dashboard. Declining goes to dashboard home instead.
  */
 const useConsentGatedNavigation = () => {
-  const consentFlag = useFeatureFlagEnabled(FeatureFlags.B2BDataConsent)
+  const consentFlag = useFeatureFlag(FeatureFlags.B2BDataConsent)
   const router = useRouter()
   const pathname = usePathname()
   const announce = useDashboardAnnounce()
@@ -32,7 +32,7 @@ const useConsentGatedNavigation = () => {
       >,
       href: string,
     ): GatedLinkProps => {
-      if (consentFlag !== true || contract.consented_to_data_sharing === true) {
+      if (!consentFlag || contract.consented_to_data_sharing === true) {
         return {}
       }
       return {

@@ -27,11 +27,11 @@ import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { managerOrganizationQueries } from "api/mitxonline-hooks/organizations"
 import { ButtonLink } from "@mitodl/smoot-design"
 import { RiAwardFill } from "@remixicon/react"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
 import { matchOrganizationBySlug, stripOrgPrefix } from "@/common/utils"
 import { FeatureFlags } from "@/common/feature_flags"
 import { DASHBOARD_HOME } from "@/common/urls"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import ContractManagerNav from "@/components/ContractManagerNav/ContractManagerNav"
 import { ResourceType, getKey } from "./CoursewareDisplay/helpers"
 import type { DashboardCourseEntry } from "./CoursewareDisplay/model/dashboardViewModel"
@@ -413,15 +413,13 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
     collections,
   } = useContractDashboardData(org, contract)
 
-  const managerDashboardFlag = useFeatureFlagEnabled(
+  const managerDashboardFlag = useFeatureFlag(
     FeatureFlags.B2BContractManagerDashboard,
   )
-  const analyticsEnabled = useFeatureFlagEnabled(
-    FeatureFlags.B2BAnalyticsDashboard,
-  )
+  const analyticsEnabled = useFeatureFlag(FeatureFlags.B2BAnalyticsDashboard)
   const { data: managerOrgs } = useQuery({
     ...managerOrganizationQueries.managerOrganizationsList(),
-    enabled: managerDashboardFlag === true || analyticsEnabled === true,
+    enabled: managerDashboardFlag || analyticsEnabled,
   })
   const isManager =
     managerOrgs?.some(matchOrganizationBySlug(stripOrgPrefix(org.slug))) ??
@@ -554,9 +552,9 @@ const ContractContent: React.FC<ContractContentProps> = ({
     (contract) => contract.slug === contractSlug,
   )
 
-  const consentFlag = useFeatureFlagEnabled(FeatureFlags.B2BDataConsent)
+  const consentFlag = useFeatureFlag(FeatureFlags.B2BDataConsent)
   const consentRequired =
-    consentFlag === true &&
+    consentFlag &&
     !!b2bContract &&
     b2bContract.consented_to_data_sharing !== true
   const router = useRouter()

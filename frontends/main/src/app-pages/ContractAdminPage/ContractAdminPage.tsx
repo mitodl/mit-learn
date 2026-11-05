@@ -7,7 +7,6 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import { RiErrorWarningLine } from "@remixicon/react"
 import {
   alpha,
@@ -53,6 +52,7 @@ import { matchOrganizationBySlug } from "@/common/utils"
 import { ForbiddenError } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import ContractManagerNav from "@/components/ContractManagerNav/ContractManagerNav"
 import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
@@ -999,9 +999,7 @@ const ContractAdminPage: React.FC<ContractAdminPageProps> = ({
   orgSlug,
   contractSlug,
 }) => {
-  const flagEnabled = useFeatureFlagEnabled(
-    FeatureFlags.B2BContractManagerDashboard,
-  )
+  const flagEnabled = useFeatureFlag(FeatureFlags.B2BContractManagerDashboard)
   const flagsLoaded = useFeatureFlagsLoaded()
 
   if (!flagsLoaded) {

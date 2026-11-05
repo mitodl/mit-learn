@@ -10,7 +10,7 @@ import {
   factories as analyticsFactories,
   urls as analyticsUrls,
 } from "api/analytics-test-utils"
-import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { allowConsoleErrors } from "ol-test-utilities"
 import { ForbiddenError } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
@@ -20,10 +20,7 @@ import { contractAnalyticsView, contractLearnersView } from "@/common/urls"
 import ContractLearnersPage from "./ContractLearnersPage"
 import { capturePostHog } from "@/common/analytics/posthog"
 
-jest.mock("posthog-js/react", () => ({
-  ...jest.requireActual("posthog-js/react"),
-  useFeatureFlagEnabled: jest.fn(),
-}))
+jest.mock("@/common/useFeatureFlag")
 
 jest.mock("@/common/analytics/posthog", () => ({
   capturePostHog: jest.fn(),
@@ -33,7 +30,7 @@ jest.mock("@/common/analytics/posthog", () => ({
 const mockCapture = jest.mocked(capturePostHog)
 jest.mock("@/common/useFeatureFlagsLoaded")
 const mockedUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
-const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
+const mockedUseFeatureFlag = jest.mocked(useFeatureFlag)
 
 const ORG_UUID = "11111111-2222-3333-4444-555555555555"
 const PAGE_SIZE = 25
@@ -156,7 +153,7 @@ const mockNeedsAttention = (
 describe("ContractLearnersPage", () => {
   beforeEach(() => {
     mockedUseFeatureFlagsLoaded.mockReturnValue(true)
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
     setMockResponse.get(
       mitxUrls.userMe.get(),
       mitxFactories.user.user({ email: "manager@test.com" }),
@@ -164,7 +161,7 @@ describe("ContractLearnersPage", () => {
   })
 
   test("throws ForbiddenError when the learner analytics flag is off", () => {
-    mockedUseFeatureFlagEnabled.mockReturnValue(false)
+    mockedUseFeatureFlag.mockReturnValue(false)
     allowConsoleErrors()
 
     expect(() =>
@@ -177,7 +174,7 @@ describe("ContractLearnersPage", () => {
   test("the aggregate analytics flag alone does not open this page", () => {
     // The two dashboards roll out independently: aggregate analytics must not
     // confer access to per-learner data.
-    mockedUseFeatureFlagEnabled.mockImplementation(
+    mockedUseFeatureFlag.mockImplementation(
       (flag) => flag === FeatureFlags.B2BAnalyticsDashboard,
     )
     allowConsoleErrors()
@@ -192,7 +189,7 @@ describe("ContractLearnersPage", () => {
   test("the learner flag alone does not open this page", () => {
     // Learner analytics is nested inside the analytics rollout: the back link
     // and framing assume the aggregate page is reachable.
-    mockedUseFeatureFlagEnabled.mockImplementation(
+    mockedUseFeatureFlag.mockImplementation(
       (flag) => flag === FeatureFlags.B2BLearnerAnalytics,
     )
     allowConsoleErrors()
@@ -205,7 +202,7 @@ describe("ContractLearnersPage", () => {
   })
 
   test("opens with both analytics flags on, with the contract nav marking Learners current", async () => {
-    mockedUseFeatureFlagEnabled.mockImplementation(
+    mockedUseFeatureFlag.mockImplementation(
       (flag) =>
         flag === FeatureFlags.B2BAnalyticsDashboard ||
         flag === FeatureFlags.B2BLearnerAnalytics,
@@ -2065,7 +2062,7 @@ describe("ContractLearnersPage progress grid", () => {
   beforeEach(() => {
     mockCapture.mockClear()
     mockedUseFeatureFlagsLoaded.mockReturnValue(true)
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
     setMockResponse.get(
       mitxUrls.userMe.get(),
       mitxFactories.user.user({ email: "manager@test.com" }),

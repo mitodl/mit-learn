@@ -7,7 +7,6 @@ import {
   useQueryClient,
 } from "@tanstack/react-query"
 import Image from "next/image"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import { RiCheckLine } from "@remixicon/react"
 import {
   Container,
@@ -52,6 +51,7 @@ import { ForbiddenError, isForbiddenResponse } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { analytics } from "@/common/analytics"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
 import ContractManagerNav from "@/components/ContractManagerNav/ContractManagerNav"
 import SectionHeader, {
@@ -1034,10 +1034,8 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
 
 const ContractLearnersPage: React.FC<ContractLearnersPageProps> = (props) => {
   const flagsLoaded = useFeatureFlagsLoaded()
-  const analyticsEnabled = useFeatureFlagEnabled(
-    FeatureFlags.B2BAnalyticsDashboard,
-  )
-  const learnerAnalyticsEnabled = useFeatureFlagEnabled(
+  const analyticsEnabled = useFeatureFlag(FeatureFlags.B2BAnalyticsDashboard)
+  const learnerAnalyticsEnabled = useFeatureFlag(
     FeatureFlags.B2BLearnerAnalytics,
   )
   const enabled = analyticsEnabled && learnerAnalyticsEnabled

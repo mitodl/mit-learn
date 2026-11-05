@@ -25,8 +25,8 @@ import NextLink from "next/link"
 import { CourseRunEnrollmentV3 } from "@mitodl/mitxonline-api-axios/v3"
 import { useOrderIdForRun } from "@/common/mitxonline/useOrderIdForResource"
 import { getRunMenuItems } from "./runMenuItems"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { useQuery } from "@tanstack/react-query"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 
@@ -215,7 +215,7 @@ const RunListRow: React.FC<RunListRowProps> = ({
    * single request and the per-row work is a client-side lookup.
    */
   const receiptResolution = useOrderIdForRun(enrollment.run.id)
-  const perRunMenusEnabled = useFeatureFlagEnabled(
+  const perRunMenusEnabled = useFeatureFlag(
     FeatureFlags.MultipleRunContextMenus,
   )
   const menuItems = getRunMenuItems({

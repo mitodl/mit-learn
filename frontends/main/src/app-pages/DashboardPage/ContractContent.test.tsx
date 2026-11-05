@@ -21,7 +21,7 @@ import { LanguageEnum } from "@mitodl/mitxonline-api-axios/v0"
 import { CourseWithCourseRunsSerializerV2 } from "@mitodl/mitxonline-api-axios/v2"
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
-import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { FeatureFlags } from "@/common/feature_flags"
 import { contractAdminView, DASHBOARD_HOME } from "@/common/urls"
 import mockRouter from "next-router-mock"
@@ -31,13 +31,8 @@ beforeEach(() => {
   setupOrderHistory()
 })
 
-jest.mock("posthog-js/react", () => ({
-  ...jest.requireActual("posthog-js/react"),
-  useFeatureFlagEnabled: jest.fn(),
-}))
-const mockedUseFeatureFlagEnabled = jest.mocked(
-  useFeatureFlagEnabled as (flag: string) => boolean | undefined,
-)
+jest.mock("@/common/useFeatureFlag")
+const mockedUseFeatureFlag = jest.mocked(useFeatureFlag)
 
 const mockB2bEnrollMutate = jest.fn()
 jest.mock("api/mitxonline-hooks/enrollment", () => ({
@@ -89,7 +84,7 @@ describe("ContractContent", () => {
   beforeEach(() => {
     setMockResponse.get(urls.enrollment.enrollmentsListV3(), [])
     setMockResponse.get(urls.programEnrollments.enrollmentsListV3(), [])
-    mockedUseFeatureFlagEnabled.mockReturnValue(undefined)
+    mockedUseFeatureFlag.mockReturnValue(false)
   })
 
   it("displays a header for each program returned and cards for courses in program", async () => {
@@ -1428,7 +1423,7 @@ describe("ContractContent", () => {
   })
 
   test("does not render the contract nav when the manager flags are off", async () => {
-    mockedUseFeatureFlagEnabled.mockImplementation(() => false)
+    mockedUseFeatureFlag.mockImplementation(() => false)
     const { orgX } = setupProgramsAndCourses()
 
     setMockResponse.get(managerOrganizationsUrl, {
@@ -1452,7 +1447,7 @@ describe("ContractContent", () => {
   })
 
   test("does not render the contract nav when the user is not a manager for this org", async () => {
-    mockedUseFeatureFlagEnabled.mockImplementation(
+    mockedUseFeatureFlag.mockImplementation(
       (flag) => flag !== FeatureFlags.B2BDataConsent,
     )
     const { orgX } = setupProgramsAndCourses()
@@ -1479,7 +1474,7 @@ describe("ContractContent", () => {
   })
 
   test("renders the contract nav for a manager, with Overview as the current page", async () => {
-    mockedUseFeatureFlagEnabled.mockImplementation(
+    mockedUseFeatureFlag.mockImplementation(
       (flag) => flag !== FeatureFlags.B2BDataConsent,
     )
     const { orgX } = setupProgramsAndCourses()
@@ -1514,7 +1509,7 @@ describe("ContractContent", () => {
   })
 
   test("renders the contract nav while programs are still loading", async () => {
-    mockedUseFeatureFlagEnabled.mockImplementation(
+    mockedUseFeatureFlag.mockImplementation(
       (flag) => flag !== FeatureFlags.B2BDataConsent,
     )
     const { orgX } = setupProgramsAndCourses()
@@ -2545,7 +2540,7 @@ describe("ContractContent data consent", () => {
   beforeEach(() => {
     setMockResponse.get(urls.enrollment.enrollmentsListV3(), [])
     setMockResponse.get(urls.programEnrollments.enrollmentsListV3(), [])
-    mockedUseFeatureFlagEnabled.mockImplementation(
+    mockedUseFeatureFlag.mockImplementation(
       (flag) => flag === FeatureFlags.B2BDataConsent,
     )
   })
@@ -2609,7 +2604,7 @@ describe("ContractContent data consent", () => {
   })
 
   test("shows no dialog and leaves cards enabled when the flag is off", async () => {
-    mockedUseFeatureFlagEnabled.mockReturnValue(false)
+    mockedUseFeatureFlag.mockReturnValue(false)
     const { org, contract } = setupConsent(null)
     renderContract(org, contract.slug)
 

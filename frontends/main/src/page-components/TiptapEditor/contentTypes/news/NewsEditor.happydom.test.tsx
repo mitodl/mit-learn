@@ -25,9 +25,8 @@ const confirmPublish = async () => {
   )
 }
 
-jest.mock("posthog-js/react", () => ({
-  useFeatureFlagEnabled: () => true,
-  usePostHog: () => ({}),
+jest.mock("@/common/useFeatureFlag", () => ({
+  useFeatureFlag: () => true,
 }))
 
 /**
