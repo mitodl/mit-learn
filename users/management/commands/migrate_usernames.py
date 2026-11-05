@@ -12,13 +12,20 @@ email (ignoring case). A user is also skipped when their email is already
 another user's username (ignoring case), or is longer than the username column.
 Those users are listed by id for manual review.
 
+People widgets list users by username, so they're updated along with each
+rename.
+
 Reports what would change by default. Pass --apply to rename.
 """
 
 from django.contrib.auth import get_user_model
 from django.core.management import BaseCommand
+from django.db import transaction
 from django.db.models import Exists, F, OuterRef
 from django.db.models.functions import Length, Lower
+
+from widgets.models import WidgetInstance
+from widgets.serializers.people import PeopleWidgetSerializer
 
 User = get_user_model()
 
@@ -59,24 +66,49 @@ def _renameable_users():
     )
 
 
+def _rename_widget_people(new_usernames):
+    """
+    Replace renamed users' old usernames in People widgets.
+
+    :param new_usernames: new username by old username
+    :type new_usernames: dict[str, str]
+    """
+    widgets = WidgetInstance.objects.select_for_update().filter(
+        widget_type=PeopleWidgetSerializer.name
+    )
+    for widget in widgets:
+        people = widget.configuration["people"]
+        if any(username in new_usernames for username in people):
+            widget.configuration["people"] = [
+                new_usernames.get(username, username) for username in people
+            ]
+            widget.save(update_fields=["configuration"])
+
+
 def rename_users():
     """
     Set username to the lowercased email for every user where that can't collide.
 
     Renaming one user can clear the way for another (their email was the first
     user's old username), so this repeats until a pass changes nothing. Each
-    batch commits on its own, so a run holds no row locks between batches, and
-    an interrupted run can be repeated.
+    batch commits on its own, along with the People widgets that list its users,
+    so a run holds no row locks between batches, and an interrupted run can be
+    repeated.
 
     :returns: how many users were renamed
     :rtype: int
     """
     renamed = 0
-    while user_ids := list(_renameable_users().values_list("pk", flat=True)):
-        for start in range(0, len(user_ids), UPDATE_BATCH_SIZE):
-            renamed += User.objects.filter(
-                pk__in=user_ids[start : start + UPDATE_BATCH_SIZE]
-            ).update(username=Lower("email"))
+    while users := list(
+        _renameable_users().values_list("pk", "username", "lower_email")
+    ):
+        for start in range(0, len(users), UPDATE_BATCH_SIZE):
+            batch = users[start : start + UPDATE_BATCH_SIZE]
+            with transaction.atomic():
+                renamed += User.objects.filter(
+                    pk__in=[pk for pk, _, _ in batch]
+                ).update(username=Lower("email"))
+                _rename_widget_people({old: new for _, old, new in batch})
     return renamed
 
 
