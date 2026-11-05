@@ -622,7 +622,7 @@ def test_get_podcast_transcripts_clears_the_view_cache(mocker):
     A saved transcript invalidates the cached transcript responses.
 
     The endpoint caches for REDIS_VIEW_CACHE_DURATION, so an --overwrite run
-    would otherwise keep serving the superseded text for up to a day.
+    would otherwise keep serving the superseded text until it expired.
     """
     mocker.patch(
         "learning_resources.etl.podcast.fetch_transcript",
