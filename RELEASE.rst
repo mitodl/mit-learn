@@ -1,6 +1,16 @@
 Release Notes
 =============
 
+Version 0.86.4
+--------------
+
+- Expire cached views by TTL instead of an hourly clear (#4253)
+- Speed up CI: drop coverage, split out Python checks, unchain the container build (#4259)
+- context and unit claim extraction tasks (#4178)
+- Add an Openly Licensed Content section to the Terms of Service (#4207)
+- Resource card redesign: two-line titles, inline actions, wider search spacing (#4238)
+- Stop the program certificates 500 and give certificates without a MicroMasters id no letter (#4198)
+
 Version 0.86.3
 --------------
 
