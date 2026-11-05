@@ -3,10 +3,8 @@ import { LearningResourceContext } from "./LearningResourceContext"
 
 import {
   useLearningResourcesBulkList,
-  learningResourceKeys,
   LearningResource,
 } from "api/hooks/learningResources"
-import { useQueries } from "@tanstack/react-query"
 
 interface LearningResourceProviderProps {
   resourceIds: number[]
@@ -16,31 +14,17 @@ export const LearningResourceProvider = ({
   resourceIds,
   children,
 }: LearningResourceProviderProps) => {
-  const { isLoading } = useLearningResourcesBulkList(resourceIds)
-
-  /* We can use the data from useLearningResourcesBulkList(),
-   * however pulling back from the query cache ensures aligns with the
-   * cache population during SSR and ensures we don't get any prefetch warnings.
-   */
-  const resourceQueries = useQueries({
-    queries: resourceIds.map((id) => ({
-      queryKey: learningResourceKeys.detail(id),
-      enabled: false, // 👈 read-only, no refetch
-    })),
-  })
+  // The bulk list is what the page prefetches on the server, so reading it
+  // directly matches the SSR cache.
+  const { data, isLoading } = useLearningResourcesBulkList(resourceIds)
 
   const resources = React.useMemo(() => {
     const map: Record<number, LearningResource> = {}
-
-    resourceQueries.forEach((query, index) => {
-      const id = resourceIds[index]
-      if (query.data) {
-        map[id] = query.data as LearningResource
-      }
+    data?.forEach((resource) => {
+      map[resource.id] = resource
     })
-
     return map
-  }, [resourceQueries, resourceIds])
+  }, [data])
 
   return (
     <LearningResourceContext.Provider value={{ resources, isLoading }}>
