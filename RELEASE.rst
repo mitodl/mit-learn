@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+Version 0.86.4
+--------------
+
+- Fix render loop on news and article pages with resource cards (#4269)
+
 Version 0.86.3
 --------------
 
