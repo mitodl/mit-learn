@@ -78,6 +78,12 @@ export type DashboardCourseEntry = {
   // question tied to new card UX (run selection controlled by card or parent).
   displayedEnrollment: CourseRunEnrollmentV3 | null
   displayedRun: BaseCourseRun | null
+  /**
+   * Ended enrollments listed under an unenrolled card's "Course runs" toggle,
+   * when the course is offered again (see `getRunToStartAgain`). Empty
+   * otherwise.
+   */
+  pastEnrollments: CourseRunEnrollmentV3[]
 }
 
 // ---------------------------------------------------------------------------
@@ -681,11 +687,47 @@ const filterEnrollmentsForContract = (
 }
 
 /**
- * Resolve the `displayedEnrollment` and `displayedRun` for a dashboard course
- * entry.
+ * When every run the learner took of a course has ended without a
+ * certificate, and the course has a next run (`next_run_id`, which mitxonline
+ * decides), the course is offered again: the card shows that run with Start,
+ * and the ended enrollments move under its "Course runs" toggle. A
+ * certificate on any run means the course is done, so it is never offered
+ * again.
+ *
+ * Not when the learner is already in the next run. That happens with an
+ * archived run: it has ended but stays open, so it can be the next run.
+ *
+ * Contract dashboards are left alone.
+ */
+const getRunToStartAgain = (
+  course: CourseWithCourseRunsSerializerV2,
+  enrollments: CourseRunEnrollmentV3[],
+  contractId?: number,
+): BaseCourseRun | null => {
+  if (typeof contractId === "number") return null
+  const courseEnrollments = enrollments.filter((enrollment) =>
+    enrollmentBelongsToCourse(course, enrollment),
+  )
+  if (courseEnrollments.length === 0) return null
+  if (pickCertificateEnrollment(courseEnrollments)) return null
+  const allEnded = courseEnrollments.every(
+    (e) => getRunTimeState(e.run.start_date, e.run.end_date) === "ended",
+  )
+  if (!allEnded) return null
+  const nextRun = course.courseruns.find((run) => run.id === course.next_run_id)
+  if (!nextRun) return null
+  if (courseEnrollments.some((e) => e.run.id === nextRun.id)) return null
+  return nextRun
+}
+
+/**
+ * Resolve the `displayedEnrollment`, `displayedRun` and `pastEnrollments` for
+ * a dashboard course entry.
  *
  * Filters enrollments to the relevant scope (contract or non-contract) and
- * variant (when a non-default variant is selected), then picks the best
+ * variant (when a non-default variant is selected). If the course is offered
+ * again (`getRunToStartAgain`), the entry is unenrolled on the new run and
+ * the ended enrollments become `pastEnrollments`. Otherwise it picks the best
  * enrollment via `selectBestEnrollment`. If the user is not enrolled, falls
  * back to the best run from `getBestRun` (or `selectVariantRunForCourse` when
  * a variant is active).
@@ -701,6 +743,7 @@ const resolveDisplayedRunAndEnrollment = (
 ): {
   displayedEnrollment: CourseRunEnrollmentV3 | null
   displayedRun: BaseCourseRun | null
+  pastEnrollments: CourseRunEnrollmentV3[]
 } => {
   const variantFilter = opts?.variant
     ? runMatchesVariant(opts.variant)
@@ -709,12 +752,27 @@ const resolveDisplayedRunAndEnrollment = (
     .filter(filterEnrollmentsForContract(course, opts?.contractId))
     .filter((e) => variantFilter(e.run))
 
+  const runToStartAgain = getRunToStartAgain(
+    course,
+    relevantEnrollments,
+    opts?.contractId,
+  )
+  if (runToStartAgain) {
+    return {
+      displayedEnrollment: null,
+      displayedRun: runToStartAgain,
+      pastEnrollments: sortEnrollmentsByStartDateDesc(
+        relevantEnrollments.filter((e) => enrollmentBelongsToCourse(course, e)),
+      ),
+    }
+  }
+
   const displayedEnrollment = selectBestEnrollment(course, relevantEnrollments)
   if (displayedEnrollment) {
     const displayedRun =
       course.courseruns.find((r) => r.id === displayedEnrollment.run.id) ??
       displayedEnrollment.run
-    return { displayedEnrollment, displayedRun }
+    return { displayedEnrollment, displayedRun, pastEnrollments: [] }
   }
 
   const defaultRun =
@@ -727,7 +785,7 @@ const resolveDisplayedRunAndEnrollment = (
   const displayedRun = isNonDefaultVariant
     ? selectVariantRunForCourse(opts.variantCandidateRuns ?? [], opts.variant!)
     : defaultRun
-  return { displayedEnrollment: null, displayedRun }
+  return { displayedEnrollment: null, displayedRun, pastEnrollments: [] }
 }
 
 /**
@@ -845,7 +903,7 @@ const buildCourseEntry = (
     variantCandidateRuns?: BaseCourseRun[]
   },
 ): DashboardCourseEntry | null => {
-  const { displayedRun, displayedEnrollment } =
+  const { displayedRun, displayedEnrollment, pastEnrollments } =
     resolveDisplayedRunAndEnrollment(course, enrollments, {
       contractId: opts.contractId,
       variant: opts.variant,
@@ -865,6 +923,7 @@ const buildCourseEntry = (
     ancestorContext: opts.ancestorContext,
     displayedEnrollment,
     displayedRun,
+    pastEnrollments,
   }
 }
 
