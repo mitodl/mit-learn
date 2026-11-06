@@ -25,7 +25,7 @@ export const LearningResourceProvider = ({
 }: LearningResourceProviderProps) => {
   // The bulk list is what the page prefetches on the server, so reading it
   // directly matches the SSR cache.
-  const { data, isFetching } = useLearningResourcesBulkList(resourceIds)
+  const { data, isLoading } = useLearningResourcesBulkList(resourceIds)
   const current = React.useMemo(() => byId(data), [data])
 
   // Adding a card in the editor changes the ids, and so the query key. Keep
@@ -44,7 +44,7 @@ export const LearningResourceProvider = ({
   )
 
   return (
-    <LearningResourceContext.Provider value={{ resources, isFetching }}>
+    <LearningResourceContext.Provider value={{ resources, isLoading }}>
       {children}
     </LearningResourceContext.Provider>
   )

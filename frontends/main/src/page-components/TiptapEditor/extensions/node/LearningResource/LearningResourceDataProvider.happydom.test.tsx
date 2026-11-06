@@ -147,7 +147,14 @@ describe("LearningResourceProvider", () => {
       editor.chain().focus("end").insertLearningResource(added.id).run()
     })
 
-    await act(() => new Promise((resolve) => setTimeout(resolve, 100)))
+    // The added card is a skeleton until its request fails, then renders
+    // nothing: the node is still on the canvas with no skeleton in it.
+    await waitFor(() => {
+      expect(document.querySelectorAll(".node-learningResource")).toHaveLength(
+        3,
+      )
+      expect(document.querySelectorAll(".MuiSkeleton-root")).toHaveLength(0)
+    })
     expect(screen.getByText(first.title)).toBeInTheDocument()
     expect(screen.getByText(second.title)).toBeInTheDocument()
     expect(screen.queryByText(added.title)).not.toBeInTheDocument()
