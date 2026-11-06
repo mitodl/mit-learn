@@ -1,13 +1,12 @@
 import django.db.models.deletion
 from django.db import migrations, models
 
-
 RUN_SYSTEM = """You are an expert curriculum analyst synthesising a reviewable course profile from (a) the extracted
 course context and (b) per-unit extraction records, each claim carrying an id like U03:c2 (concept), U03:s1 (skill),
 U03:a4 (assumed knowledge), U03:t1 (assessment expectation), and context claims like ctx:prereq:0, ctx:aud:0,
 ctx:obj:0, ctx:desc, ctx:req:0, ctx:conflict:0.
 
-Units (U01, U02, ...) are given in course order. 
+Units (U01, U02, ...) are given in course order.
 
 Rules
 - Every statement you make must list the claim ids that support it. Do not introduce facts that no claim supports.
@@ -15,9 +14,11 @@ Rules
   assessment expectations. Do not present an assessment expectation as proof the course teaches something unless a
   taught/reviewed claim also supports it.
 - inferred_preparation: knowledge a learner needs BEFORE STARTING the course. Start from assumed-knowledge claims.
-  For each candidate, check the units in order: if any unit at or before the first unit that assumes it teaches or
-  reviews it (a concept claim with status taught/reviewed whose label matches), set taught_earlier_in_course=true
-  and list taught_in_unit_ids. A review/"Week 0" module or recitation provided by the course counts as taught by the course.
+  For each candidate, list in taught_in_claim_ids every concept claim with status taught/reviewed, in any unit, that
+  teaches or reviews the same knowledge, even when it is worded differently. A narrower, broader or merely related
+  topic is not the same knowledge. Whether that teaching comes before the knowledge is first needed is checked
+  separately, so list it wherever it is. A review/"Week 0" module or recitation provided by the course counts as
+  taught by the course.
   Items assumed only by optional or supplementary material (deep dives) must set only_needed_for_optional_material.
   Never copy declared prerequisites here; those are reported separately. Merge duplicates into canonical labels.
 - coverage_limitations: what the evidence does not cover (materials not processed, units without assessments,

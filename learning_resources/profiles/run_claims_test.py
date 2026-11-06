@@ -16,7 +16,6 @@ from learning_resources.profiles import claims
 from learning_resources.profiles.run_claims import (
     apply_preparation_rule,
     generate_run_claims,
-    labels_match,
     unit_records,
 )
 from learning_resources.profiles.schemas import RunExtraction
@@ -291,6 +290,32 @@ def test_skipped_unit_in_prompt(fake_llm, run_inputs):
     assert "## U03 Week 3 (unit 3): NOT PROCESSED" in _prompt(fake_llm)
 
 
+def test_cited_teaching_excludes_preparation(fake_llm, run_inputs):
+    """The model's cited teaching claims, once checked, exclude preparation"""
+    run, context, extractions = run_inputs
+    fake_llm.return_value = (
+        _response(
+            inferred_preparation=[
+                _preparation(
+                    "Vector components",
+                    ["U02:a1"],
+                    "U02",
+                    taught_in_claim_ids=["U01:c1", "U09:c9"],
+                ),
+            ]
+        ),
+        "run raw",
+    )
+
+    output = generate_run_claims(run, context, extractions).output
+
+    assert output["inferred_preparation"] == []
+    (excluded,) = output["excluded_inferred_preparation"]
+    assert excluded["taught_in_claim_ids"] == ["U01:c1"]
+    assert excluded["code_check_taught_in"] == ["U01:c1"]
+    assert "U09:c9" in output["extraction_notes"][0]
+
+
 def test_unknown_ids_dropped(fake_llm, run_inputs):
     """Cited ids not in the input are dropped, with what they alone supported"""
     run, context, extractions = run_inputs
@@ -333,8 +358,7 @@ def _preparation(label, assumed, first_needed=None, **fields):
         "rationale": "",
         "first_needed_unit_id": first_needed,
         "assumed_claim_ids": assumed,
-        "taught_earlier_in_course": False,
-        "taught_in_unit_ids": [],
+        "taught_in_claim_ids": [],
         "confidence": "high",
         "only_needed_for_optional_material": False,
         **fields,
@@ -349,11 +373,23 @@ def test_preparation_rule(run_inputs):
     kept, excluded = apply_preparation_rule(
         [
             # assumed in U02, taught in U01
-            _preparation("Vector components", ["U02:a1"], "U02"),
+            _preparation(
+                "Vector components", ["U02:a1"], "U02", taught_in_claim_ids=["U01:c1"]
+            ),
             # assumed in U01, taught only later
-            _preparation("Newton's second law", ["U01:a1"], "U01"),
+            _preparation(
+                "Newton's second law",
+                ["U01:a1"],
+                "U01",
+                taught_in_claim_ids=["U02:c1"],
+            ),
             # assumed only in a bin, taught in U02
-            _preparation("Newton's second law", ["B01:a1"], "B01"),
+            _preparation(
+                "Newton's second law",
+                ["B01:a1"],
+                "B01",
+                taught_in_claim_ids=["U02:c1"],
+            ),
             # assumed in U01, taught nowhere
             _preparation("Derivatives", ["U01:a1"], "U01"),
         ],
@@ -373,33 +409,52 @@ def test_preparation_rule(run_inputs):
     assert excluded[0]["code_check_taught_in"] == ["U01:c1"]
 
 
-def test_preparation_rule_model_judgement(run_inputs):
-    """The model's judgement drops an item only for a unit at or before first use"""
+def test_preparation_rule_earliest_first_use(run_inputs):
+    """A cited claim before the model's first-needed unit sets the first use"""
     _, _, extractions = run_inputs
     records = unit_records(extractions)
 
+    # the model says U02, but cites an assumed claim of U01; U02 teaches it
+    kept, excluded = apply_preparation_rule(
+        [
+            _preparation(
+                "Newton's second law",
+                ["U01:a1"],
+                "U02",
+                taught_in_claim_ids=["U02:c1"],
+            )
+        ],
+        records,
+    )
+
+    assert excluded == []
+    assert [(item["label"], item["first_needed_unit_id"]) for item in kept] == [
+        ("Newton's second law", "U01"),
+    ]
+    assert kept[0]["code_check_taught_later_in"] == ["U02:c1"]
+
+
+def test_preparation_rule_only_teaching_claims(run_inputs):
+    """Cited claims that aren't taught or reviewed concepts don't drop an item"""
+    _, _, extractions = run_inputs
+    records = unit_records(extractions)
+
+    # a skill and an assumed claim, both in or before the first use
     kept, excluded = apply_preparation_rule(
         [
             _preparation(
                 "Statics",
                 ["U02:a1"],
                 "U02",
-                taught_earlier_in_course=True,
-                taught_in_unit_ids=["U01"],
-            ),
-            _preparation(
-                "Dynamics",
-                ["U01:a1"],
-                "U01",
-                taught_earlier_in_course=True,
-                taught_in_unit_ids=["U02"],
-            ),
+                taught_in_claim_ids=["U02:s1", "U01:a1"],
+            )
         ],
         records,
     )
 
-    assert [item["label"] for item in excluded] == ["Statics"]
-    assert [item["label"] for item in kept] == ["Dynamics"]
+    assert excluded == []
+    assert kept[0]["code_check_taught_in"] == []
+    assert kept[0]["code_check_taught_later_in"] == []
 
 
 def test_limitations(fake_llm, run_inputs):
@@ -417,17 +472,3 @@ def test_limitations(fake_llm, run_inputs):
         ),
         "Files over the per-file limit, read only in part: 1.",
     ]
-
-
-@pytest.mark.parametrize(
-    ("first", "second", "expected"),
-    [
-        ("Newton's second law", "NEWTON'S SECOND LAW", True),
-        ("Newton's second law", "Newton's second law (F=ma)", True),
-        ("free body diagram", "diagram, free body", True),
-        ("Derivatives", "Integrals", False),
-    ],
-)
-def test_labels_match(first, second, expected):
-    """Labels match when one contains the other or they share their words"""
-    assert labels_match(first, second) is expected

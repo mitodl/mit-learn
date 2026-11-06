@@ -6,7 +6,8 @@ step 1. This step reads only those stored claims, never file text, so the
 prompt is about the same size for a course with units as for one made only of
 bins. The model's output is checked in code before it is stored: cited ids
 that aren't in the input are dropped, and the inferred-preparation rule is
-applied here rather than left to the model.
+applied here rather than left to the model. The model says which concept claims
+teach each preparation item; code checks those claims and their units' order.
 
 A run's claims are stored in ClaimExtraction under a key built from its
 course and the keys of the extractions it reads, so they are regenerated only
@@ -14,7 +15,6 @@ when one of those changes. Bin keys are sorted, so rebuilding a run's bins in
 another order reuses the stored claims.
 """
 
-import difflib
 import logging
 from dataclasses import dataclass
 
@@ -31,7 +31,6 @@ from learning_resources.profiles.claims import (
     load_extractor,
 )
 from learning_resources.profiles.schemas import RunExtraction
-from learning_resources.profiles.verification import normalize
 
 log = logging.getLogger(__name__)
 
@@ -45,8 +44,6 @@ CLAIM_KINDS = {
 TEACHING_STATUSES = {"taught", "reviewed"}
 # a coverage limitation may cite this when no claim fits
 NOTES_ID = "ctx:notes"
-# how alike two labels' words must be to name the same thing
-LABEL_MATCH_RATIO = 0.88
 
 
 @dataclass(frozen=True)
@@ -220,40 +217,14 @@ def _run_key(
 
 
 # --------------------------------------------------------------------------- checks
-def labels_match(first: str, second: str) -> bool:
-    """Return whether two claim labels name the same thing"""
-    first, second = normalize(first), normalize(second)
-    if not first or not second:
-        return False
-    if first == second or first in second or second in first:
-        return True
-    words = [" ".join(sorted(set(label.split()))) for label in (first, second)]
-    return difflib.SequenceMatcher(None, *words).ratio() >= LABEL_MATCH_RATIO
-
-
-def _teaching(
-    records: list[UnitRecord], labels: list[str], *, units_through: int | None
-) -> list[str]:
-    """
-    Return the claim ids of taught or reviewed concepts matching any label.
-
-    With units_through, only units up to that position are searched; without,
-    every unit and bin is.
-    """
-    hits = []
-    for record in records:
-        if units_through is not None and (
-            record.order is None or record.order > units_through
-        ):
-            continue
-        hits.extend(
-            claim_id
-            for claim_id, kind, claim in record.claims
-            if kind == "concept"
-            and claim.get("teaching_status") in TEACHING_STATUSES
-            and any(labels_match(label, claim["label"]) for label in labels)
-        )
-    return hits
+def _teaching_claims(records: list[UnitRecord]) -> dict[str, int | None]:
+    """Return the order of each taught or reviewed concept claim's unit"""
+    return {
+        claim_id: record.order
+        for record in records
+        for claim_id, kind, claim in record.claims
+        if kind == "concept" and claim.get("teaching_status") in TEACHING_STATUSES
+    }
 
 
 def apply_preparation_rule(
@@ -262,33 +233,32 @@ def apply_preparation_rule(
     """
     Split inferred preparation into what's kept and what the course teaches.
 
-    An item first needed in a unit is dropped when the unit or one before it
-    teaches or reviews it. Bins have no order, so an item only bins assume is
-    dropped when anything in the course teaches it, and has no first-needed
-    unit. The model's own judgement drops an item only when the units it
-    names for the teaching come at or before first use.
+    The model names the concept claims that teach or review each item. Only
+    the ones that are taught or reviewed concepts count, and an item is
+    dropped when one of them is in the unit it is first needed in or one
+    before. It is first needed in the earliest of the unit the model names and
+    the units whose assumed claims it cites. Bins have no order, so an item
+    only bins assume is dropped when anything in the course teaches it, and
+    has no first-needed unit; teaching in a bin is neither before nor after
+    an item's first use in a unit.
 
     Returns:
         tuple of (list, list): the kept items, and the dropped ones with their
             exclusion_reason
     """
     order_of = {record.display_id: record.order for record in records}
-    labels_of = {
-        claim_id: claim["label"]
-        for record in records
-        for claim_id, _, claim in record.claims
-    }
+    teaching_claims = _teaching_claims(records)
     kept, excluded = [], []
     for candidate in preparation:
         item = dict(candidate)
-        first = order_of.get(item.get("first_needed_unit_id"))
-        if first is None:
-            # an unknown id, or a bin: the earliest unit that assumes it
-            assumed_in = [
-                order_of.get(claim_id.split(":")[0])
-                for claim_id in item["assumed_claim_ids"]
-            ]
-            first = min((order for order in assumed_in if order), default=None)
+        # the earlier of the model's unit and the earliest unit whose claims it
+        # cites: the model's unit can come after a cited first use. Bins and
+        # unknown ids have no order.
+        orders = [
+            order_of.get(claim_id.split(":")[0])
+            for claim_id in item["assumed_claim_ids"]
+        ] + [order_of.get(item.get("first_needed_unit_id"))]
+        first = min((order for order in orders if order), default=None)
         # bins have no order, so they are never the first unit that needs it
         item["first_needed_unit_id"] = next(
             (
@@ -298,23 +268,24 @@ def apply_preparation_rule(
             ),
             None,
         )
-        labels = [item["label"]] + [
-            labels_of[claim_id]
-            for claim_id in item["assumed_claim_ids"]
-            if claim_id in labels_of
+        cited = [
+            claim_id
+            for claim_id in item.get("taught_in_claim_ids", [])
+            if claim_id in teaching_claims
         ]
-        hits = _teaching(records, labels, units_through=first)
-        named = [u for u in item.get("taught_in_unit_ids", []) if u in order_of]
         if first is None:
             # only bins assume it: teaching anywhere in the course counts
-            model_units = named
-            later = []
+            hits, later = cited, []
         else:
-            model_units = [u for u in named if (order_of[u] or first + 1) <= first]
+            hits = [
+                claim_id
+                for claim_id in cited
+                if teaching_claims[claim_id] and teaching_claims[claim_id] <= first
+            ]
             later = [
                 claim_id
-                for claim_id in _teaching(records, labels, units_through=None)
-                if claim_id not in hits
+                for claim_id in cited
+                if teaching_claims[claim_id] and teaching_claims[claim_id] > first
             ]
         item["code_check_taught_in"] = hits
         item["code_check_taught_later_in"] = later
@@ -322,12 +293,6 @@ def apply_preparation_rule(
             item["exclusion_reason"] = (
                 "taught or reviewed in the course at or before first use: "
                 + ", ".join(hits)
-            )
-            excluded.append(item)
-        elif item.get("taught_earlier_in_course") and model_units:
-            item["exclusion_reason"] = (
-                "the model judged it taught earlier in the course: "
-                + ", ".join(model_units)
             )
             excluded.append(item)
         else:
@@ -421,8 +386,8 @@ def drop_unknown_ids(
     preparation = []
     for item in output["inferred_preparation"]:
         item["assumed_claim_ids"] = _known(item["assumed_claim_ids"], known, unknown)
-        item["taught_in_unit_ids"] = _known(
-            item["taught_in_unit_ids"], unit_ids, unknown
+        item["taught_in_claim_ids"] = _known(
+            item["taught_in_claim_ids"], known, unknown
         )
         if item.get("first_needed_unit_id") not in unit_ids:
             item["first_needed_unit_id"] = None

@@ -204,10 +204,12 @@ class PreparationOutput(Strict):
         min_length=1,
         description="Assumed-knowledge claim ids ('U01:a2') that motivate this",
     )
-    taught_earlier_in_course: bool = Field(
-        description="True if some unit at or before first use teaches or reviews it"
+    taught_in_claim_ids: list[str] = Field(
+        description=(
+            "Concept claim ids ('U02:c3') with status taught or reviewed, in any"
+            " unit, that teach or review this same knowledge; empty if none"
+        )
     )
-    taught_in_unit_ids: list[str]
     confidence: Literal["high", "medium", "low"]
     only_needed_for_optional_material: bool
 
