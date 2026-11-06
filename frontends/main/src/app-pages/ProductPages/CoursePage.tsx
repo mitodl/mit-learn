@@ -25,6 +25,8 @@ import { analytics } from "@/common/analytics"
 import { useFeatureFlag } from "@/common/useFeatureFlag"
 import HeaderEnrollButton from "./HeaderEnrollButton"
 import { useCourseEnrollment } from "./useCourseEnrollment"
+import { useCertificatePricing } from "./useCertificatePricing"
+import { canPurchaseRun } from "@/common/mitxonline"
 import { getSelectedRun } from "./courseRun"
 import type {
   CourseRunV2,
@@ -55,10 +57,16 @@ const CourseHeaderEnrollButton: React.FC<{
       onRequireSignup: setAnchor,
     },
   )
+  const { price, breakdown } = useCertificatePricing(
+    course,
+    selectedRun?.products?.[0],
+    { purchasable: selectedRun ? canPurchaseRun(selectedRun) : false },
+  )
 
   return (
     <HeaderEnrollButton
       state={state}
+      price={breakdown?.todaysPrice ?? price}
       isStatusLoading={isStatusLoading}
       isPending={isPending}
       error={error}
