@@ -2525,9 +2525,9 @@ describe("ContractLearnersPage progress grid", () => {
     expect(
       screen.getByRole("combobox", { name: /modules/i }),
     ).toHaveAccessibleName("Modules , 1 selected")
-    expect(screen.getByRole("combobox", { name: /modules/i })).toHaveTextContent(
-      "Module 6",
-    )
+    expect(
+      screen.getByRole("combobox", { name: /modules/i }),
+    ).toHaveTextContent("Module 6")
 
     mockGridPage(
       contractId,
