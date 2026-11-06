@@ -340,18 +340,18 @@ def get_or_create_extraction(  # noqa: PLR0913
     if (unit is None) == (run is None):
         msg = "Pass exactly one of unit and run"
         raise ValueError(msg)
-    owner = {"unit": unit} if unit is not None else {"run": run}
     if not overwrite:
         extraction = ClaimExtraction.objects.filter(key=key).first()
         if extraction:
-            return _store_extraction(owner, extraction)
+            return _store_extraction(extraction, unit=unit, run=run)
     parsed, raw = call_llm(extractor, combined_prompt())
     output = _stored_output(parsed.model_dump(), sources)
     if finish:
         output = finish(output)
     return _store_extraction(
-        owner,
         ClaimExtraction.objects.filter(key=key).first(),
+        unit=unit,
+        run=run,
         key=key,
         level=extractor.level,
         extractor_version=extractor.version,
@@ -365,19 +365,27 @@ def get_or_create_extraction(  # noqa: PLR0913
 
 
 def _store_extraction(
-    owner: dict, extraction: ClaimExtraction | None, **fields
+    extraction: ClaimExtraction | None,
+    *,
+    unit: Unit | None,
+    run: LearningResourceRun | None,
+    **fields,
 ) -> ClaimExtraction:
     """
-    Make an extraction the owner's, and delete the owner's other extractions.
+    Point an extraction at its unit or run, and delete that unit's or run's
+    other extractions.
 
     Args:
-        owner (dict): {"unit": unit} or {"run": run}, what the row is for
         extraction (ClaimExtraction | None): the row for the key, if there is
-            one; otherwise the owner's latest row is reused for the key, or a
-            row is created
+            one; otherwise the unit's or run's latest row is reused for the
+            key, or a row is created
+        unit (Unit | None): the unit the row is for, for a unit-level extraction
+        run (LearningResourceRun | None): the run the row is for, for a
+            run-level extraction; exactly one of unit and run is given
         fields: what else to set on the row
     """
-    ((field, value),) = owner.items()
+    field, value = ("unit", unit) if unit is not None else ("run", run)
+    owner = {field: value}
     with transaction.atomic():
         rows = ClaimExtraction.objects.select_for_update().filter(**owner)
         if extraction is None:
