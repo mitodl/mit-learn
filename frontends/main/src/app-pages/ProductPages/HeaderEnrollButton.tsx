@@ -1,7 +1,6 @@
 import React from "react"
 import { Alert, Button, styled } from "@mitodl/smoot-design"
 import { Stack } from "ol-components"
-import { SignupPopover } from "@/page-components/SignupPopover/SignupPopover"
 import { EnrollButton } from "./EnrollAreaParts"
 import EnrolledLink from "./EnrolledLink"
 import { badRequestDetail } from "api/mutation-errors"
@@ -56,9 +55,6 @@ type HeaderEnrollButtonProps = {
   isPending: boolean
   /** The failed enroll action's error, or null when there was none. */
   error: unknown
-  /** SignupPopover anchor owned by the caller (set via the hook's onRequireSignup). */
-  anchor: HTMLButtonElement | null
-  onAnchorClose: () => void
 }
 
 /**
@@ -72,8 +68,6 @@ const HeaderEnrollButton: React.FC<HeaderEnrollButtonProps> = ({
   isStatusLoading,
   isPending,
   error,
-  anchor,
-  onAnchorClose,
 }) => {
   if (state.status === "enrolled") {
     return (
@@ -114,7 +108,6 @@ const HeaderEnrollButton: React.FC<HeaderEnrollButtonProps> = ({
             </HeaderAlertSizer>
           )}
         </Stack>
-        <SignupPopover anchorEl={anchor} onClose={onAnchorClose} />
       </HeaderButtonSlot>
     )
   }
