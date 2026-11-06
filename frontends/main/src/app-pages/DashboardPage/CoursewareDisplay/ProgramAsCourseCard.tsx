@@ -120,6 +120,8 @@ const ProgramCardSubHeaderText = styled(Typography)(({ theme }) => ({
 }))
 
 const ProgramCardContent = styled.div(({ theme }) => ({
+  borderBottomLeftRadius: "inherit",
+  borderBottomRightRadius: "inherit",
   [theme.breakpoints.down("sm")]: {
     margin: "16px",
   },
@@ -147,7 +149,9 @@ const ProgramCardBody = styled.div(({ theme }) => ({
   alignItems: "stretch",
   alignSelf: "stretch",
   overflow: "hidden",
-  borderRadius: "0 0 8px 8px",
+  // Follow the card's corners, which are square when it sits inside a list.
+  borderBottomLeftRadius: "inherit",
+  borderBottomRightRadius: "inherit",
   [theme.breakpoints.down("sm")]: {
     borderRadius: "0 0 4px 4px",
     borderLeft: `1px solid ${theme.custom.colors.lightGray2}`,
