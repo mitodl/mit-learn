@@ -59,8 +59,7 @@ import graduateLogo from "@/public/images/dashboard/graduate.png"
 import ContractManagerNav from "@/components/ContractManagerNav/ContractManagerNav"
 import {
   FACET_MENU_PROPS,
-  FacetCount,
-  FacetLabel,
+  facetLabel,
   MenuBox,
   MenuRow,
 } from "@/components/FacetMenu/FacetMenu"
@@ -223,6 +222,22 @@ const FilterSelect: React.FC<React.ComponentProps<typeof FilterField>> = ({
 )
 
 /**
+ * The control is full-width on small screens and 280px on desktop, so the menu
+ * takes the control's width as its minimum rather than the facet menu's fixed
+ * 270px. Select sets that minimum inline from the control.
+ */
+const MODULES_MENU_PROPS = {
+  ...FACET_MENU_PROPS,
+  PaperProps: {
+    sx: {
+      ...FACET_MENU_PROPS.PaperProps.sx,
+      width: "auto",
+      maxWidth: "calc(100vw - 32px)",
+    },
+  },
+}
+
+/**
  * Multi-select, unlike the enrollments view's Module filter. The count is
  * said in the field's label, which is what names the combobox, so the badge
  * drawn inside it stays hidden.
@@ -238,7 +253,7 @@ const ModulesSelect: React.FC<{
       <>
         Modules
         {value.length > 0 ? (
-          <VisuallyHidden> {value.length} selected</VisuallyHidden>
+          <VisuallyHidden>, {value.length} selected</VisuallyHidden>
         ) : null}
       </>
     }
@@ -247,7 +262,7 @@ const ModulesSelect: React.FC<{
     value={value}
     error={error}
     errorText="Couldn't load modules. Reload to try again."
-    MenuProps={FACET_MENU_PROPS}
+    MenuProps={MODULES_MENU_PROPS}
     options={options.map((option) => ({
       value: option.value,
       label: (
@@ -259,14 +274,15 @@ const ModulesSelect: React.FC<{
     }))}
     renderValue={(selected) => {
       const ids = selected as string[]
-      return ids.length === 0 ? (
-        <SelectedValue>All modules</SelectedValue>
-      ) : (
-        <FacetLabel>
-          Selected
-          <FacetCount aria-hidden="true">{ids.length}</FacetCount>
-        </FacetLabel>
-      )
+      if (ids.length === 0) return <SelectedValue>All modules</SelectedValue>
+      if (ids.length === 1) {
+        return (
+          <SelectedValue>
+            {options.find((option) => option.value === ids[0])?.label}
+          </SelectedValue>
+        )
+      }
+      return facetLabel("Selected", ids)
     }}
     onChange={(event) => {
       const next = event.target.value

@@ -70,7 +70,7 @@ const facetName = (label: string, selected: string[]) =>
  */
 const MenuRow = styled.span({
   display: "flex",
-  alignItems: "center",
+  alignItems: "flex-start",
   gap: "8px",
   width: "100%",
 })
