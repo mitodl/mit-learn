@@ -18,7 +18,11 @@ import { programView } from "@/common/urls"
 import { PostHogEvents } from "@/common/constants"
 import { trackProgramEnrolled } from "@/common/analytics/gtm"
 import { capturePostHog } from "@/common/analytics/posthog"
-import { lastAuthRedirect, setLocation } from "./test-utils/enrollResume"
+import {
+  lastAuthRedirect,
+  rememberClick,
+  setLocation,
+} from "./test-utils/enrollResume"
 import { PlatformEnum } from "api"
 
 // The paid path checks enrollment eligibility before the cart.
@@ -333,6 +337,7 @@ describe("useProgramEnrollment — actions", () => {
       items: [],
     })
     setLocation("/programs/some-program?enroll=paid")
+    rememberClick("paid", null, "/programs/some-program")
 
     renderHook(
       () =>

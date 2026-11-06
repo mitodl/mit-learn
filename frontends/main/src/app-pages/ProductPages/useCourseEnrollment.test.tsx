@@ -28,7 +28,11 @@ import {
   trackBeginCheckout,
 } from "@/common/analytics/gtm"
 import { capturePostHog } from "@/common/analytics/posthog"
-import { lastAuthRedirect, setLocation } from "./test-utils/enrollResume"
+import {
+  lastAuthRedirect,
+  rememberClick,
+  setLocation,
+} from "./test-utils/enrollResume"
 
 // The paid path checks enrollment eligibility before the cart.
 beforeEach(() => {
@@ -563,6 +567,15 @@ describe("useCourseEnrollment — actions", () => {
       expect(url.searchParams.get("skip_onboarding")).toBe(
         skipsOnboarding ? "1" : null,
       )
+      expect(
+        JSON.parse(window.localStorage.getItem("mitlearn.pendingEnrollment")!),
+      ).toEqual(
+        expect.objectContaining({
+          kind,
+          runId: run.id,
+          pathname: "/courses/some-course",
+        }),
+      )
       expect(makeRequest).not.toHaveBeenCalledWith(
         expect.objectContaining({ method: "post" }),
       )
@@ -571,7 +584,10 @@ describe("useCourseEnrollment — actions", () => {
 
   describe("resuming after sign-up", () => {
     const replaceState = jest.spyOn(window.history, "replaceState")
-    beforeEach(() => replaceState.mockImplementation(() => {}))
+    beforeEach(() => {
+      replaceState.mockImplementation(() => {})
+      window.localStorage.clear()
+    })
     afterAll(() => replaceState.mockRestore())
 
     const makePaidRun = () =>
@@ -596,6 +612,7 @@ describe("useCourseEnrollment — actions", () => {
         { id: 1, items: [] },
       )
       setLocation(`/courses/c?enroll=paid&run=${marked.id}&utm_source=email`)
+      rememberClick("paid", marked.id, "/courses/c")
 
       renderHook(
         () =>
@@ -630,6 +647,7 @@ describe("useCourseEnrollment — actions", () => {
         mitxFactories.enrollment.courseEnrollment({ run: { id: run.id } }),
       ])
       setLocation(`/courses/c?enroll=paid&run=${run.id}`)
+      rememberClick("paid", run.id, "/courses/c")
 
       renderHook(
         () =>
@@ -645,6 +663,52 @@ describe("useCourseEnrollment — actions", () => {
         expect.objectContaining({ url: mitxUrls.baskets.clear() }),
       )
     })
+
+    test.each([
+      {
+        name: "no click in this browser (a crafted link)",
+        remembered: false,
+        age: 0,
+      },
+      {
+        name: "a click over a day old",
+        remembered: true,
+        age: 25 * 60 * 60 * 1000,
+      },
+    ])(
+      "free marker with $name -> removed, nothing started",
+      async ({ remembered, age }) => {
+        const run = makeRun({
+          is_enrollable: true,
+          is_upgradable: false,
+          is_archived: false,
+          enrollment_modes: [makeMode({ requires_payment: false })],
+          products: [],
+        })
+        const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+        setLocation(`/courses/c?enroll=free&run=${run.id}`)
+        if (remembered) {
+          rememberClick("free", run.id, "/courses/c", Date.now() - age)
+        }
+
+        renderHook(
+          () =>
+            useCourseEnrollment(course, run, {
+              tracking: { placement: "infobox" },
+              resume: true,
+            }),
+          { wrapper },
+        )
+
+        await waitFor(() => expect(replaceState).toHaveBeenCalledTimes(1))
+        expect(makeRequest).not.toHaveBeenCalledWith(
+          expect.objectContaining({ method: "post" }),
+        )
+        expect(window.localStorage.getItem("mitlearn.pendingEnrollment")).toBe(
+          null,
+        )
+      },
+    )
 
     test("instances without `resume` leave the marker alone", async () => {
       const run = makePaidRun()
