@@ -3,38 +3,17 @@
 import React from "react"
 import Image from "next/image"
 import Link from "next/link"
-import {
-  keepPreviousData,
-  useQuery,
-  type UseQueryOptions,
-} from "@tanstack/react-query"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import type { AxiosError } from "axios"
 import { Skeleton, Stack, styled, Typography } from "ol-components"
-import { ButtonLink } from "@mitodl/smoot-design"
 import { managerOrganizationQueries } from "api/mitxonline-hooks/organizations"
-import {
-  analyticsContractQueries,
-  analyticsOrganizationQueries,
-} from "api/analytics-hooks/organizations"
-import type {
-  ContentEngagementDepth,
-  ContractContentEngagementDepth,
-  ContractMonthlyEngagementTrend,
-  ContractUtilization,
-  EnrollmentCompletionFunnel,
-  MonthlyEngagementTrend,
-  OrgAnalyticsResponse,
-} from "api/analytics-hooks/organizations"
+import { analyticsContractQueries } from "api/analytics-hooks/organizations"
 import { isAnalyticsConfigured } from "api/runtime"
 import { matchOrganizationBySlug } from "@/common/utils"
 import { ForbiddenError, isAnalyticsNotLoaded } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
-import {
-  contractAdminView,
-  contractLearnersView,
-  organizationAnalyticsView,
-} from "@/common/urls"
+import { contractAnalyticsView, contractLearnersView } from "@/common/urls"
 import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
 import ContractManagerNav from "@/components/ContractManagerNav/ContractManagerNav"
@@ -50,7 +29,7 @@ import SectionHeader from "./Analytics/SectionHeader"
 import SectionTruncation from "./Analytics/SectionTruncation"
 
 /**
- * Org-scoped B2B analytics, the reporting half of the org-manager dashboard
+ * Contract-scoped B2B analytics, the reporting half of the org-manager dashboard
  * whose other half is `ContractAdminPage` (seat administration). It reuses that
  * page's layout, header and table primitives so the two read as one product.
  *
@@ -77,28 +56,6 @@ const HeaderSection = styled.div(({ theme }) => ({
   [theme.breakpoints.down("md")]: {
     flexDirection: "column",
     alignItems: "flex-start",
-  },
-}))
-
-const HeaderActions = styled.div(({ theme }) => ({
-  display: "flex",
-  gap: "12px",
-  flexShrink: 0,
-  flexWrap: "wrap",
-  justifyContent: "flex-end",
-  "> a": {
-    whiteSpace: "nowrap",
-  },
-  [theme.breakpoints.down("md")]: {
-    width: "100%",
-    justifyContent: "flex-start",
-  },
-  [theme.breakpoints.down("sm")]: {
-    flexDirection: "column",
-    width: "100%",
-    "> a": {
-      width: "100%",
-    },
   },
 }))
 
@@ -150,6 +107,11 @@ const Notice = styled(Typography)(({ theme }) => ({
   borderRadius: "8px",
   padding: "24px",
 })) as typeof Typography
+
+const ContractLinks = styled.ul({
+  margin: "8px 0 0",
+  paddingLeft: "20px",
+})
 
 /**
  * What an em dash in place of a figure means, said once for the page.
@@ -210,97 +172,15 @@ const isForbidden = (error: unknown) => {
   return status === 401 || status === 403
 }
 
-/**
- * One section's query options, with the row type pinned but the query key
- * widened. Org- and contract-scoped factories build keys of different lengths;
- * this is what lets a single `useQuery` call accept either.
- */
-type SectionQuery<RowT> = (page: {
-  limit: number
-}) => UseQueryOptions<OrgAnalyticsResponse<RowT>, Error>
-
-type SectionQueries = {
-  utilization: SectionQuery<ContractUtilization>
-  trend: SectionQuery<MonthlyEngagementTrend>
-  courses: SectionQuery<EnrollmentCompletionFunnel>
-  content: SectionQuery<ContentEngagementDepth>
-}
-
-/**
- * Widens only a factory's query-key type param, leaving its row type checked
- * against `SectionQueries`. Same trade `erase` makes in
- * `hooks/organizations/queries.test.ts`, narrowed to the key alone: wiring a
- * section to a factory whose row type doesn't match still fails to compile.
- */
-const eraseKey = <RowT,>(
-  // Nothing here reads the query key; only the row type above is meant to
-  // stay checked against `SectionQueries`.
-  factory: (page: { limit: number }) => UseQueryOptions<
-    OrgAnalyticsResponse<RowT>,
-    Error,
-    OrgAnalyticsResponse<RowT>,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    any
-  >,
-): SectionQuery<RowT> => factory
-
-/**
- * `analyticsContractQueries.engagementTrend` returns
- * `ContractMonthlyEngagementTrend` -- the same columns as
- * `MonthlyEngagementTrend` plus the contract identity -- rather than
- * `MonthlyEngagementTrend` itself, the one section where the org- and
- * contract-scoped factories disagree on row type. `eraseKey` can't bridge
- * that the way it does for the other three sections: `UseQueryOptions` uses
- * the row type contravariantly in `select`, so a superset row type isn't
- * assignable through generics alone. `EngagementTrendChart` only reads the
- * shared columns, so erasing it here is safe.
- */
-const eraseContractTrendRow = (
-  // Nothing here reads the query key.
-  factory: (page: { limit: number }) => UseQueryOptions<
-    OrgAnalyticsResponse<ContractMonthlyEngagementTrend>,
-    Error,
-    OrgAnalyticsResponse<ContractMonthlyEngagementTrend>,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    any
-  >,
-): SectionQuery<MonthlyEngagementTrend> =>
-  factory as unknown as SectionQuery<MonthlyEngagementTrend>
-
-/**
- * Same trade as `eraseContractTrendRow`, for the one other section where the
- * contract-scoped row (`ContractContentEngagementDepth`) is a superset of the
- * org-scoped one: it adds the contract identity that `ContentEngagementTable`
- * never reads.
- */
-const eraseContractContentRow = (
-  // Nothing here reads the query key.
-  factory: (page: { limit: number }) => UseQueryOptions<
-    OrgAnalyticsResponse<ContractContentEngagementDepth>,
-    Error,
-    OrgAnalyticsResponse<ContractContentEngagementDepth>,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    any
-  >,
-): SectionQuery<ContentEngagementDepth> =>
-  factory as unknown as SectionQuery<ContentEngagementDepth>
-
 type AnalyticsContentInternalProps = {
   orgSlug: string
-  /**
-   * When present, the page is scoped to one contract: the same four sections,
-   * narrowed. Absent, it stays org-wide. Both routes render this component.
-   */
-  contractSlug?: string
+  contractSlug: string
 }
 
 const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
   orgSlug,
   contractSlug,
 }) => {
-  const managerDashboardFlag = useFeatureFlag(
-    FeatureFlags.B2BContractManagerDashboard,
-  )
   const learnerAnalyticsFlag = useFeatureFlag(FeatureFlags.B2BLearnerAnalytics)
   const {
     data: managerOrgs,
@@ -319,21 +199,19 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
   // MITx Online's contract id, resolved from the slug the route carries -- the
   // same lookup ContractAdminPage does. The analytics API filters on this id,
   // never on the slug, and never on the warehouse's `contract_pk` surrogate.
-  const contract = contractSlug
-    ? org?.contracts.find((c) => c.slug === contractSlug)
-    : undefined
+  const contract = org?.contracts.find((c) => c.slug === contractSlug)
   const contractId = contract?.id ?? null
   // A contract route whose slug matches nothing in this org is as unavailable
   // as a missing org UUID: better an empty state than a request with
   // `undefined` in the path, which the API would answer with a 403 for a
   // contract that simply does not exist.
   const analyticsAvailable =
-    isAnalyticsConfigured() && !!orgUuid && (!contractSlug || !!contractId)
+    isAnalyticsConfigured() && !!orgUuid && !!contractId
   // The narrower case of the above: the org itself is fine, only the
   // contract slug doesn't resolve (a stale or mistyped link). Kept distinct
   // from `analyticsAvailable` so the notice can point at the broken link
   // instead of telling a manager on a perfectly valid org to contact support.
-  const contractUnresolved = !!contractSlug && !!orgUuid && !contractId
+  const contractUnresolved = !!orgUuid && !contractId
 
   // Per-section page size. Raised only by that section's "Show all", so
   // expanding a truncated course table never refetches the other three.
@@ -354,82 +232,40 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
   // back to its skeleton, which is exactly what the option was there to prevent.
   // It behaves as documented on `useQuery` (as it does on ContractAdminPage).
   // The count is fixed and the order never changes, so this is hook-safe.
-  //
-  // Org- and contract-scoped queries return the identical envelope and row
-  // shapes, so the scope is chosen once here and nothing below this line
-  // changes with it. The hook count and order stay fixed either way.
-  //
-  // The `eraseKey` wrap on each factory is load-bearing. The two branches
-  // build query keys of different lengths (contract keys carry two more
-  // segments) and `queryOptions` is invariant in the key type, so the
-  // inferred union leaves `useQuery` unable to pick an overload. Widening
-  // just the key -- rather than the whole options object -- keeps each
-  // section's row type checked against `SectionQueries`.
-  const scoped = React.useMemo(() => {
-    const orgId = orgUuid ?? ""
-    return contractId
-      ? {
-          utilization: eraseKey<ContractUtilization>((page) =>
-            analyticsContractQueries.contractUtilization(
-              orgId,
-              contractId,
-              page,
-            ),
-          ),
-          trend: eraseContractTrendRow((page) =>
-            analyticsContractQueries.engagementTrend(orgId, contractId, page),
-          ),
-          courses: eraseKey<EnrollmentCompletionFunnel>((page) =>
-            analyticsContractQueries.enrollmentFunnel(orgId, contractId, page),
-          ),
-          content: eraseContractContentRow((page) =>
-            analyticsContractQueries.contentEngagement(orgId, contractId, page),
-          ),
-        }
-      : {
-          utilization: eraseKey<ContractUtilization>((page) =>
-            analyticsOrganizationQueries.contractUtilization(orgId, page),
-          ),
-          trend: eraseKey<MonthlyEngagementTrend>((page) =>
-            analyticsOrganizationQueries.engagementTrend(orgId, page),
-          ),
-          courses: eraseKey<EnrollmentCompletionFunnel>((page) =>
-            analyticsOrganizationQueries.enrollmentFunnel(orgId, page),
-          ),
-          content: eraseKey<ContentEngagementDepth>((page) =>
-            analyticsOrganizationQueries.contentEngagement(orgId, page),
-          ),
-        }
-  }, [orgUuid, contractId]) satisfies SectionQueries
 
   const utilization = useQuery({
-    ...scoped.utilization({ limit: limits.utilization }),
+    ...analyticsContractQueries.contractUtilization(orgUuid ?? "", contractId ?? 0, {
+      limit: limits.utilization,
+    }),
     enabled: analyticsAvailable,
     placeholderData: keepPreviousData,
   })
   const trend = useQuery({
-    ...scoped.trend({ limit: limits.trend }),
+    ...analyticsContractQueries.engagementTrend(orgUuid ?? "", contractId ?? 0, {
+      limit: limits.trend,
+    }),
     enabled: analyticsAvailable,
     placeholderData: keepPreviousData,
   })
   const courses = useQuery({
-    ...scoped.courses({ limit: limits.courses }),
+    ...analyticsContractQueries.enrollmentFunnel(orgUuid ?? "", contractId ?? 0, {
+      limit: limits.courses,
+    }),
     enabled: analyticsAvailable,
     placeholderData: keepPreviousData,
   })
   const content = useQuery({
-    ...scoped.content({ limit: limits.content }),
+    ...analyticsContractQueries.contentEngagement(orgUuid ?? "", contractId ?? 0, {
+      limit: limits.content,
+    }),
     enabled: analyticsAvailable,
     placeholderData: keepPreviousData,
   })
 
   /**
-   * `learnerProgress` has no org-wide equivalent (it returns individual
-   * learners under one contract; see `ContractLearnersPage.tsx`), so this
-   * section only renders when a contract is in view — the same reason the contract nav's
-   * Learners link is absent from the org-wide aggregate page. It is gated on
-   * `B2BLearnerAnalytics` for the same reason that link is: every tile links
-   * to the Learners page, which throws `ForbiddenError` without the flag.
+   * Gated on `B2BLearnerAnalytics` for the same reason the contract nav's
+   * Learners link is: every tile links to the Learners page, which throws
+   * `ForbiddenError` without the flag.
    * One row is enough: only `total_count`, `outcomes_withheld_count` and
    * `completion_status_counts` are read, the same trick
    * `ContractLearnersPage.tsx`'s own `totalQuery` uses.
@@ -444,7 +280,7 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
       contractId ?? 0,
       { limit: 1 },
     ),
-    enabled: analyticsAvailable && !!contractId && learnerAnalyticsFlag,
+    enabled: analyticsAvailable && learnerAnalyticsFlag,
     placeholderData: keepPreviousData,
   })
 
@@ -518,12 +354,6 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
     return <ErrorContent title="Access denied" timSays="403" />
   }
 
-  /**
-   * Org-wide only. A contract-scoped page reaches Seats through
-   * ContractManagerNav, so it must never fall back to the org's first contract.
-   */
-  const manageSeatsSlug = contractSlug ? undefined : org.contracts[0]?.slug
-
   const header = (
     <>
       <HeaderSection>
@@ -543,17 +373,6 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
             </PageSubtitle>
           </div>
         </OrgDetailsContainer>
-        {manageSeatsSlug && managerDashboardFlag ? (
-          <HeaderActions>
-            <ButtonLink
-              size="small"
-              variant="bordered"
-              href={contractAdminView(orgSlug, manageSeatsSlug)}
-            >
-              Manage seats
-            </ButtonLink>
-          </HeaderActions>
-        ) : null}
       </HeaderSection>
       {contract ? (
         <ContractManagerNav
@@ -569,14 +388,25 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
     return (
       <Stack gap="24px">
         {header}
-        <Notice>
+        <Notice component="div">
           {contractUnresolved ? (
             <>
-              This contract link could not be found for {org.name}. Try{" "}
-              <Link href={organizationAnalyticsView(orgSlug)}>
-                organization-wide analytics
-              </Link>{" "}
-              instead.
+              This contract link could not be found for {org.name}.
+              {org.contracts.length ? (
+                <>
+                  {" "}
+                  Choose one of its contracts:
+                  <ContractLinks>
+                    {org.contracts.map((c) => (
+                      <li key={c.id}>
+                        <Link href={contractAnalyticsView(orgSlug, c.slug)}>
+                          {c.name}
+                        </Link>
+                      </li>
+                    ))}
+                  </ContractLinks>
+                </>
+              ) : null}
             </>
           ) : isAnalyticsConfigured() ? (
             // The org record has no Keycloak organization UUID, which is
@@ -590,7 +420,7 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
     )
   }
 
-  // Every section reads the same org (or contract), so the first to come back
+  // Every section reads the same contract, so the first to come back
   // "not loaded" speaks for the page. Rendering four empty sections and a
   // failure notice instead would tell a manager something broke.
   const notLoaded = [
@@ -605,7 +435,7 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
       <Stack gap="24px">
         {header}
         <Notice>
-          Analytics for {contract?.name ?? org.name} will be available once its
+          Analytics for {contract?.name} will be available once its
           data has been loaded. Please check back later.
         </Notice>
       </Stack>
@@ -731,7 +561,7 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
 
 type AnalyticsContentProps = {
   orgSlug: string
-  contractSlug?: string
+  contractSlug: string
 }
 
 const AnalyticsContent: React.FC<AnalyticsContentProps> = ({
