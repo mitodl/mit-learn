@@ -57,14 +57,16 @@ const CourseHeaderEnrollButton: React.FC<{
       onRequireSignup: setAnchor,
     },
   )
-  const { price } = useCertificatePricing(course, selectedRun?.products?.[0], {
-    purchasable: selectedRun ? canPurchaseRun(selectedRun) : false,
-  })
+  const { price, breakdown } = useCertificatePricing(
+    course,
+    selectedRun?.products?.[0],
+    { purchasable: selectedRun ? canPurchaseRun(selectedRun) : false },
+  )
 
   return (
     <HeaderEnrollButton
       state={state}
-      price={price}
+      price={breakdown?.todaysPrice ?? price}
       isStatusLoading={isStatusLoading}
       isPending={isPending}
       error={error}
