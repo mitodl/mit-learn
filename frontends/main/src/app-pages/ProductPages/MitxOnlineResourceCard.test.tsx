@@ -547,7 +547,7 @@ describe("mitxOnlineCardContent", () => {
       ).toMatchObject({ tone: "dark", primary: "Paid" })
     })
 
-    test("Free and paid enrollment is free to audit, with the certificate type and price", () => {
+    test("Free and paid enrollment reads 'Free' over the certificate type and price", () => {
       const resource = program({
         enrollment_modes: [freeMode, paidMode],
         min_price: 100,
@@ -558,13 +558,13 @@ describe("mitxOnlineCardContent", () => {
         mitxOnlineCardContent({ resource, resourceType: "program" })?.price,
       ).toEqual({
         tone: "light",
-        primary: "Free to audit",
+        primary: "Free",
         certificate: resource.certificate_type,
         certificatePrice: "$100 – $500",
       })
     })
 
-    test("Free to audit with no known price shows just the certificate type", () => {
+    test("Free and paid enrollment with no known price shows just the certificate type", () => {
       const resource = program({
         enrollment_modes: [freeMode, paidMode],
         min_price: null,
@@ -573,9 +573,12 @@ describe("mitxOnlineCardContent", () => {
       })
 
       expect(
-        mitxOnlineCardContent({ resource, resourceType: "program" })?.price
-          .certificate,
-      ).toBe(resource.certificate_type)
+        mitxOnlineCardContent({ resource, resourceType: "program" })?.price,
+      ).toEqual({
+        tone: "light",
+        primary: "Free",
+        certificate: resource.certificate_type,
+      })
     })
 
     test("No enrollment modes give a neutral panel with no price", () => {
