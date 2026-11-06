@@ -3651,24 +3651,37 @@ def test_generate_unit_claims_for_resource(mocker, overwrite):
     mocker.patch.object(
         LearningResource, "best_run", new_callable=mocker.PropertyMock, return_value=run
     )
+    context_extraction = factories.ClaimExtractionFactory.create()
+    unit_extractions = factories.ClaimExtractionFactory.create_batch(3)
     generate_context = mocker.patch(
         "learning_resources.profiles.context_claims.generate_context_claims",
-        return_value=factories.ClaimExtractionFactory.create(),
+        return_value=context_extraction,
     )
     generate_unit = mocker.patch(
         "learning_resources.profiles.unit_claims.generate_unit_claims",
-        side_effect=factories.ClaimExtractionFactory.create_batch(3),
+        side_effect=unit_extractions,
+    )
+    generate_run = mocker.patch(
+        "learning_resources.profiles.run_claims.generate_run_claims",
+        return_value=factories.ClaimExtractionFactory.create(unit=None),
     )
 
     result = tasks.generate_unit_claims_for_resource(
         run.learning_resource.id, overwrite=overwrite
     )
 
-    assert result == {"context_extracted": 1, "unit_extracted": 3}
+    assert result == {"context_extracted": 1, "unit_extracted": 3, "run_extracted": 1}
     generate_context.assert_called_once_with(run, overwrite=overwrite)
+    units = [first, second, bin_unit]
     assert generate_unit.call_args_list == [
-        mocker.call(unit, overwrite=overwrite) for unit in [first, second, bin_unit]
+        mocker.call(unit, overwrite=overwrite) for unit in units
     ]
+    generate_run.assert_called_once_with(
+        run,
+        context_extraction,
+        list(zip(units, unit_extractions, strict=True)),
+        overwrite=overwrite,
+    )
 
 
 def test_generate_unit_claims_for_resource_failures(mocker):
@@ -3691,6 +3704,9 @@ def test_generate_unit_claims_for_resource_failures(mocker):
             factories.ClaimExtractionFactory.create(),
         ],
     )
+    generate_run = mocker.patch(
+        "learning_resources.profiles.run_claims.generate_run_claims"
+    )
 
     result = tasks.generate_unit_claims_for_resource(run.learning_resource.id)
 
@@ -3699,7 +3715,10 @@ def test_generate_unit_claims_for_resource_failures(mocker):
         "unit_failed": 1,
         "unit_skipped": 1,
         "unit_extracted": 1,
+        "run_skipped": 1,
     }
+    # claims missing a unit would misjudge what the course teaches
+    generate_run.assert_not_called()
     assert [call.args[0] for call in generate_unit.call_args_list] == [
         failing,
         skipped,
@@ -3723,11 +3742,18 @@ def test_generate_unit_claims_for_resource_no_context(mocker):
         "learning_resources.profiles.unit_claims.generate_unit_claims",
         return_value=None,
     )
+    generate_run = mocker.patch(
+        "learning_resources.profiles.run_claims.generate_run_claims",
+        return_value=None,
+    )
 
     result = tasks.generate_unit_claims_for_resource(unit.run.learning_resource.id)
 
-    assert result == {"unit_skipped": 1}
+    assert result == {"unit_skipped": 1, "run_skipped": 1}
     generate_context.assert_not_called()
+    generate_run.assert_called_once_with(
+        unit.run, None, [(unit, None)], overwrite=False
+    )
 
 
 def test_generate_unit_claims_for_resource_no_units(mocker):
@@ -3783,6 +3809,70 @@ def test_generate_unit_claims_for_resource_publishes(mocker):
     assert set(
         ClaimExtraction.objects.filter(published=True).values_list("id", flat=True)
     ) == {context_extraction.id, unit_extraction.id, other_course.id}
+
+
+def test_generate_unit_claims_for_resource_publishes_run(mocker):
+    """The best run's run-level extraction is published, and other runs' aren't"""
+    resource = LearningResourceFactory.create(is_course=True, runs=[])
+    best_run, old_run = factories.LearningResourceRunFactory.create_batch(
+        2, learning_resource=resource
+    )
+    unit = factories.UnitFactory.create(run=best_run)
+    unit_extraction = factories.ClaimExtractionFactory.create(unit=unit)
+    run_extraction = factories.ClaimExtractionFactory.create(
+        unit=None, run=best_run, level=ClaimExtraction.Level.RUN
+    )
+    old_run_extraction = factories.ClaimExtractionFactory.create(
+        unit=None, run=old_run, level=ClaimExtraction.Level.RUN, published=True
+    )
+    mocker.patch.object(
+        LearningResource,
+        "best_run",
+        new_callable=mocker.PropertyMock,
+        return_value=best_run,
+    )
+    mocker.patch(
+        "learning_resources.profiles.unit_claims.generate_unit_claims",
+        return_value=unit_extraction,
+    )
+    mocker.patch(
+        "learning_resources.profiles.run_claims.generate_run_claims",
+        return_value=run_extraction,
+    )
+
+    tasks.generate_unit_claims_for_resource(resource.id)
+
+    assert set(
+        ClaimExtraction.objects.filter(published=True).values_list("id", flat=True)
+    ) == {unit_extraction.id, run_extraction.id}
+    old_run_extraction.refresh_from_db()
+    assert old_run_extraction.published is False
+
+
+def test_generate_unit_claims_for_resource_run_failure(mocker):
+    """A failed run step is counted, and the units are still published"""
+    unit = factories.UnitFactory.create()
+    unit_extraction = factories.ClaimExtractionFactory.create(unit=unit)
+    mocker.patch.object(
+        LearningResource,
+        "best_run",
+        new_callable=mocker.PropertyMock,
+        return_value=unit.run,
+    )
+    mocker.patch(
+        "learning_resources.profiles.unit_claims.generate_unit_claims",
+        return_value=unit_extraction,
+    )
+    mocker.patch(
+        "learning_resources.profiles.run_claims.generate_run_claims",
+        side_effect=ValueError("bad response"),
+    )
+
+    result = tasks.generate_unit_claims_for_resource(unit.run.learning_resource.id)
+
+    assert result == {"unit_extracted": 1, "run_failed": 1}
+    unit_extraction.refresh_from_db()
+    assert unit_extraction.published is True
 
 
 def test_generate_unit_claims_for_resource_no_units_unpublishes(mocker):

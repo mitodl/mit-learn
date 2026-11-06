@@ -139,16 +139,6 @@ class OutlineEntry(Strict):
     title: str
 
 
-class Conflict(Strict):
-    topic: str
-    statements: list[Statement] = Field(min_length=2)
-    assessment: str = Field(
-        description=(
-            "How the statements disagree and which is likely authoritative, if any"
-        )
-    )
-
-
 class CourseContextOut(Strict):
     title: str
     stated_audience: list[Statement]
@@ -160,7 +150,75 @@ class CourseContextOut(Strict):
         description="What is graded or required vs. optional, as stated"
     )
     instructional_outline: list[OutlineEntry]
-    conflicts: list[Conflict]
     extraction_notes: list[str] = Field(
         description="Gaps, ambiguities, material you could not use"
+    )
+
+
+# --------------------------------------------------------------------------- run
+class TopicOutput(Strict):
+    label: str
+    description: str
+    unit_ids: list[str] = Field(min_length=1)
+    concept_claim_ids: list[str] = Field(min_length=1)
+
+
+class ClaimText(Strict):
+    text: str
+    claim_ids: list[str] = Field(
+        min_length=1, description="Supporting claim ids, e.g. 'U03:c2', 'ctx:prereq:0'"
+    )
+
+
+class PreparationOutput(Strict):
+    label: str = Field(
+        description=(
+            "Canonical name of the knowledge or skill, e.g. 'Single-variable"
+            " differentiation'"
+        )
+    )
+    description: str
+    rationale: str = Field(
+        description=(
+            "Why a learner needs this before starting, citing where it is first assumed"
+        )
+    )
+    first_needed_unit_id: str | None = Field(
+        None,
+        description=(
+            "The first unit (U01, U02, ...) that assumes it; empty when only bins do"
+        ),
+    )
+    assumed_claim_ids: list[str] = Field(
+        min_length=1,
+        description="Assumed-knowledge claim ids ('U01:a2') that motivate this",
+    )
+    taught_before_first_use_claim_ids: list[str] = Field(
+        description=(
+            "Concept claim ids ('U02:c3') with status taught or reviewed, in the"
+            " first unit that needs it or an earlier one, that teach or review"
+            " this same knowledge; empty if none"
+        )
+    )
+    taught_after_first_use_claim_ids: list[str] = Field(
+        description=(
+            "Concept claim ids with status taught or reviewed, in units after"
+            " the first unit that needs it, that teach or review this same"
+            " knowledge; empty if none"
+        )
+    )
+    confidence: Literal["high", "medium", "low"]
+    only_needed_for_optional_material: bool
+
+
+class RunExtraction(Strict):
+    summary: str = Field(description="4-6 sentence course summary")
+    summary_claim_ids: list[str] = Field(min_length=1)
+    audience: list[ClaimText]
+    main_topics: list[TopicOutput]
+    learning_outcomes: list[ClaimText]
+    inferred_preparation: list[PreparationOutput]
+    coverage_limitations: list[ClaimText]
+    extraction_notes: list[str] = Field(
+        default_factory=list, description="Gaps or ambiguities in the records"
     )
