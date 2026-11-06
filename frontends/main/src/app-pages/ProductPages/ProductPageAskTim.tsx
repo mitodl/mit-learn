@@ -5,7 +5,6 @@ import { useAppSearchParams } from "@/common/useAppSearchParams"
 import { LinkAdapter, styled } from "ol-components"
 import { styled as smootStyled } from "@mitodl/smoot-design"
 import { RiSparkling2Line } from "@remixicon/react"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import { LearningResource, ResourceTypeEnum } from "api"
 import {
   useLearningResourceByReadableId,
@@ -14,6 +13,7 @@ import {
 import { FeatureFlags } from "@/common/feature_flags"
 import { analytics } from "@/common/analytics"
 import { RESOURCE_DRAWER_PARAMS, setResourceParams } from "@/common/urls"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { isSyllabusChatEnabled } from "@/page-components/AiChat/syllabusChatConfig"
 
 const AskTimCard = styled.div(({ theme }) => ({
@@ -121,11 +121,11 @@ type ProductPageAskTimSectionProps = {
 export const ProductPageAskTimSection: React.FC<
   ProductPageAskTimSectionProps
 > = ({ readableId, resourceType }) => {
-  const courseChatEnabled = useFeatureFlagEnabled(FeatureFlags.LrDrawerChatbot)
-  const programChatEnabled = useFeatureFlagEnabled(FeatureFlags.PrDrawerChatbot)
+  const courseChatEnabled = useFeatureFlag(FeatureFlags.LrDrawerChatbot)
+  const programChatEnabled = useFeatureFlag(FeatureFlags.PrDrawerChatbot)
   const flagEnabled =
     resourceType === "course" ? courseChatEnabled : programChatEnabled
-  const chatEnabledForType = isSyllabusChatEnabled() && !!flagEnabled
+  const chatEnabledForType = isSyllabusChatEnabled() && flagEnabled
 
   const { data: resource, isSuccess } = useLearningResourceByReadableId(
     readableId,

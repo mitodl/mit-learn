@@ -10,8 +10,8 @@ from authentication.views import (
 )
 
 urlpatterns = [
-    re_path(r"^logout", CustomLogoutView.as_view(), name="logout"),
-    re_path(r"^login", CustomLoginView.as_view(), name="login"),
+    re_path(r"^logout/?$", CustomLogoutView.as_view(), name="logout"),
+    re_path(r"^login/?$", CustomLoginView.as_view(), name="login"),
     path(
         "account/action/start/<slug:action>/",
         AccountActionStartView.as_view(),

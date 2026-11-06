@@ -5,6 +5,7 @@ learning_resources tasks
 import datetime as datetime_module
 import logging
 import uuid
+from collections import Counter
 from datetime import UTC, datetime
 
 import boto3
@@ -12,8 +13,8 @@ import celery
 from celery.exceptions import Ignore, MaxRetriesExceededError
 from django.conf import settings
 from django.core.cache import caches
-from django.db import OperationalError
-from django.db.models import Q
+from django.db import OperationalError, transaction
+from django.db.models import F, Q
 from django.utils import timezone
 
 from learning_resources.api import (
@@ -83,9 +84,11 @@ from learning_resources.lib.warehouse import (
     iter_rows,
 )
 from learning_resources.models import (
+    ClaimExtraction,
     ContentFile,
     LearningResource,
     LearningResourceRun,
+    Unit,
     VideoChannel,
 )
 from learning_resources.site_scrapers.utils import scraper_for_site
@@ -1435,6 +1438,146 @@ def generate_all_credential_metadata(
         len(generation_tasks),
     )
     return len(generation_tasks)
+
+
+def unit_claims_resource_ids() -> list[int]:
+    """
+    Return the published courses that have units on any run.
+
+    The task resolves each course's best run, which isn't queryable, and skips
+    a course whose best run has no units.
+    """
+    return list(
+        LearningResource.objects.filter(
+            published=True,
+            resource_type=LearningResourceType.course.name,
+            runs__units__isnull=False,
+        )
+        .distinct()
+        .values_list("id", flat=True)
+    )
+
+
+@app.task(acks_late=True)
+def generate_unit_claims_for_resource(
+    resource_id: int, *, overwrite: bool = False
+) -> dict | None:
+    """
+    Generate step 1 resource profile claims for a course's best run: its
+    context unit, then each of its units and bins.
+
+    The context and the units don't depend on each other, so one that fails is
+    logged and skipped without costing the rest; running again retries only
+    what failed, since stored extractions are reused.
+
+    The extractions the best run's units use are then the course's only
+    published ones: see publish_claim_extractions.
+
+    Args:
+        resource_id (int): the LearningResource id
+        overwrite (bool): regenerate claims that are already stored
+
+    Returns:
+        dict | None: counts of context and unit extractions that were
+            extracted, skipped (no text, or over the input budget) and failed,
+            or None when the best run has no units
+    """
+    # deferred: the claim modules import the AI libraries, kept out of boot
+    from learning_resources.profiles.context_claims import generate_context_claims
+    from learning_resources.profiles.unit_claims import generate_unit_claims
+
+    resource = LearningResource.objects.get(id=resource_id)
+    run = resource.best_run
+    if not run or not run.units.exists():
+        log.info("No units to generate claims for in %s", resource.readable_id)
+        publish_claim_extractions(resource, [])
+        return None
+
+    stats = Counter()
+    # the best run's extractions
+    current = []
+
+    def _extract(kind, external_id, generate):
+        try:
+            extraction = generate()
+        except Exception:
+            log.exception(
+                "Claim extraction failed for %s %s of run %s",
+                kind,
+                external_id,
+                run.run_id,
+            )
+            stats[f"{kind}_failed"] += 1
+            return
+        if extraction:
+            current.append(extraction.id)
+        stats[f"{kind}_extracted" if extraction else f"{kind}_skipped"] += 1
+
+    if run.units.filter(kind=Unit.Kind.CONTEXT).exists():
+        _extract(
+            Unit.Kind.CONTEXT,
+            "context",
+            lambda: generate_context_claims(run, overwrite=overwrite),
+        )
+    units = run.units.exclude(kind=Unit.Kind.CONTEXT).order_by(
+        F("position").asc(nulls_last=True), "external_id"
+    )
+    for unit in units:
+        _extract(
+            Unit.Kind.UNIT,
+            unit.external_id,
+            lambda unit=unit: generate_unit_claims(unit, overwrite=overwrite),
+        )
+    publish_claim_extractions(resource, current)
+    log.info("Generated unit claims for %s: %s", resource.readable_id, dict(stats))
+    return dict(stats)
+
+
+def publish_claim_extractions(resource: LearningResource, current: list[int]) -> None:
+    """
+    Publish a course's current claim extractions and unpublish the rest.
+
+    The rest are those of runs that aren't the best run, and of best-run
+    units that failed or were skipped this time, whose rows weren't brought
+    up to date. Rows whose unit was deleted, which no course sweeps, are
+    unpublished too.
+
+    Args:
+        resource (LearningResource): the course
+        current (list of int): ids of the best run's extractions
+    """
+    extractions = ClaimExtraction.objects.filter(unit__run__learning_resource=resource)
+    with transaction.atomic():
+        extractions.filter(id__in=current, published=False).update(published=True)
+        extractions.filter(published=True).exclude(id__in=current).update(
+            published=False
+        )
+        ClaimExtraction.objects.filter(published=True, unit__isnull=True).update(
+            published=False
+        )
+
+
+@app.task(acks_late=True)
+def generate_all_claims(resource_ids: list[int], *, overwrite: bool = False) -> int:
+    """
+    Queue resource profile claim generation for each resource.
+
+    Only step 1, the context and unit claims, exists so far.
+
+    Args:
+        resource_ids (list of int): the LearningResource ids
+        overwrite (bool): regenerate claims that are already stored
+
+    Returns:
+        int: how many courses were queued
+    """
+    celery.group(
+        [
+            generate_unit_claims_for_resource.si(resource_id, overwrite=overwrite)
+            for resource_id in resource_ids
+        ]
+    ).apply_async()
+    return len(resource_ids)
 
 
 # Names the SyncYouTubeTask run whose playlist loads are current. Kept where

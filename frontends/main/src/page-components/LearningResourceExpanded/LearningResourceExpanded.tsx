@@ -10,12 +10,12 @@ import TitleSection from "./TitleSection"
 import CallToActionSection from "./CallToActionSection"
 import ResourceDescription from "./ResourceDescription"
 import { FeatureFlags } from "@/common/feature_flags"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import AiSyllabusBotSlideDown, {
   AiChatSyllabusOpener,
   ChatTransitionState,
 } from "./AiChatSyllabusSlideDown"
 import { RESOURCE_DRAWER_PARAMS } from "@/common/urls"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 
 const Outer = styled.div(({ theme }) => ({
   display: "flex",
@@ -146,12 +146,10 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
     initialChatExpanded ? ChatTransitionState.Open : ChatTransitionState.Closed,
   )
 
-  const learningResourceChatbotEnabled = useFeatureFlagEnabled(
+  const learningResourceChatbotEnabled = useFeatureFlag(
     FeatureFlags.LrDrawerChatbot,
   )
-  const programChatbotEnabled = useFeatureFlagEnabled(
-    FeatureFlags.PrDrawerChatbot,
-  )
+  const programChatbotEnabled = useFeatureFlag(FeatureFlags.PrDrawerChatbot)
   const chatEnabled =
     (learningResourceChatbotEnabled &&
       resource?.resource_type === ResourceTypeEnum.Course) ||

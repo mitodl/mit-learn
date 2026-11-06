@@ -9,7 +9,6 @@ import {
   type UseQueryOptions,
 } from "@tanstack/react-query"
 import type { AxiosError } from "axios"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import { Skeleton, Stack, styled, Typography } from "ol-components"
 import { ButtonLink } from "@mitodl/smoot-design"
 import { managerOrganizationQueries } from "api/mitxonline-hooks/organizations"
@@ -28,7 +27,7 @@ import type {
 } from "api/analytics-hooks/organizations"
 import { isAnalyticsConfigured } from "api/runtime"
 import { matchOrganizationBySlug } from "@/common/utils"
-import { ForbiddenError } from "@/common/errors"
+import { ForbiddenError, isAnalyticsNotLoaded } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import {
@@ -36,6 +35,7 @@ import {
   contractLearnersView,
   organizationAnalyticsView,
 } from "@/common/urls"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
 import ContractManagerNav from "@/components/ContractManagerNav/ContractManagerNav"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
@@ -200,8 +200,10 @@ type SectionKey = "utilization" | "trend" | "courses" | "content"
  * 401 and 403, so a caller the analytics API rejects never reaches an
  * `isError` branch here at all — the error is thrown to the route's error
  * boundary, which is where every other page's access denial is handled too.
- * Only the remaining statuses (5xx, network) surface as `isError` below, and
- * those mean "could not load", not "not allowed".
+ * Only the remaining statuses surface as `isError` below. A 404 carrying a
+ * not-loaded code (`isAnalyticsNotLoaded`) means the warehouse has not picked
+ * up this org or contract yet; anything else (5xx, network) means "could not
+ * load", not "not allowed".
  */
 const isForbidden = (error: unknown) => {
   const status = (error as AxiosError | null)?.response?.status
@@ -296,12 +298,10 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
   orgSlug,
   contractSlug,
 }) => {
-  const managerDashboardFlag = useFeatureFlagEnabled(
+  const managerDashboardFlag = useFeatureFlag(
     FeatureFlags.B2BContractManagerDashboard,
   )
-  const learnerAnalyticsFlag = useFeatureFlagEnabled(
-    FeatureFlags.B2BLearnerAnalytics,
-  )
+  const learnerAnalyticsFlag = useFeatureFlag(FeatureFlags.B2BLearnerAnalytics)
   const {
     data: managerOrgs,
     isLoading: isLoadingOrgs,
@@ -444,7 +444,7 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
       contractId ?? 0,
       { limit: 1 },
     ),
-    enabled: analyticsAvailable && !!contractId && !!learnerAnalyticsFlag,
+    enabled: analyticsAvailable && !!contractId && learnerAnalyticsFlag,
     placeholderData: keepPreviousData,
   })
 
@@ -590,6 +590,28 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
     )
   }
 
+  // Every section reads the same org (or contract), so the first to come back
+  // "not loaded" speaks for the page. Rendering four empty sections and a
+  // failure notice instead would tell a manager something broke.
+  const notLoaded = [
+    utilization,
+    trend,
+    courses,
+    content,
+    learnerProgress,
+  ].some((query) => isAnalyticsNotLoaded(query.error))
+  if (notLoaded) {
+    return (
+      <Stack gap="24px">
+        {header}
+        <Notice>
+          Analytics for {contract?.name ?? org.name} will be available once its
+          data has been loaded. Please check back later.
+        </Notice>
+      </Stack>
+    )
+  }
+
   const failed = [utilization, trend, courses, content, learnerProgress].some(
     (query) => query.isError,
   )
@@ -716,11 +738,12 @@ const AnalyticsContent: React.FC<AnalyticsContentProps> = ({
   orgSlug,
   contractSlug,
 }) => {
-  const flagEnabled = useFeatureFlagEnabled(FeatureFlags.B2BAnalyticsDashboard)
+  const flagEnabled = useFeatureFlag(FeatureFlags.B2BAnalyticsDashboard)
   const flagsLoaded = useFeatureFlagsLoaded()
 
-  // The whole page is behind the flag, so wait for the real value rather than
-  // 403-ing on a bootstrapped `false` — same reasoning as ContractAdminPage.
+  // The whole page is behind the flag, so wait until flags are final rather
+  // than 403-ing on what the flag reads before then: a value PostHog stored on
+  // an earlier visit, or the env default (see useFeatureFlagsLoaded's USE CASE).
   if (!flagsLoaded) {
     return <Skeleton width="100%" height="128px" />
   }

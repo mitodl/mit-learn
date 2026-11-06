@@ -14,7 +14,7 @@ import type {
   ContractNeedsAttention,
   LearnerProgressResponse,
 } from "api/analytics-hooks/organizations"
-import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { allowConsoleErrors } from "ol-test-utilities"
 import { ForbiddenError } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
@@ -48,15 +48,10 @@ jest.mock("@mui/x-charts/LineChart", () => ({
   LineChart: () => <div data-testid="line-chart" />,
 }))
 
-jest.mock("posthog-js/react", () => ({
-  ...jest.requireActual("posthog-js/react"),
-  useFeatureFlagEnabled: jest.fn(),
-}))
+jest.mock("@/common/useFeatureFlag")
 jest.mock("@/common/useFeatureFlagsLoaded")
 const mockedUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
-const mockedUseFeatureFlagEnabled = jest.mocked(
-  useFeatureFlagEnabled as (flag: string) => boolean | undefined,
-)
+const mockedUseFeatureFlag = jest.mocked(useFeatureFlag)
 
 const managerOrgsUrl = urls.organization.managerOrganizationsList()
 
@@ -183,7 +178,7 @@ const setContractAnalyticsResponses = (
 describe("AnalyticsContent", () => {
   beforeEach(() => {
     mockedUseFeatureFlagsLoaded.mockReturnValue(true)
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
     setMockResponse.get(
       urls.userMe.get(),
       factories.user.user({ email: "manager@test.com" }),
@@ -192,7 +187,7 @@ describe("AnalyticsContent", () => {
 
   describe("access", () => {
     test("throws ForbiddenError when the feature flag is off", () => {
-      mockedUseFeatureFlagEnabled.mockReturnValue(false)
+      mockedUseFeatureFlag.mockReturnValue(false)
       allowConsoleErrors()
 
       expect(() =>
@@ -200,9 +195,9 @@ describe("AnalyticsContent", () => {
       ).toThrow(ForbiddenError)
     })
 
-    test("waits for PostHog rather than 403-ing on a bootstrapped false", () => {
+    test("waits for PostHog rather than 403-ing on the env default", () => {
       mockedUseFeatureFlagsLoaded.mockReturnValue(false)
-      mockedUseFeatureFlagEnabled.mockReturnValue(undefined)
+      mockedUseFeatureFlag.mockReturnValue(false)
 
       expect(() =>
         renderWithProviders(<AnalyticsContent orgSlug="any-org" />),
@@ -292,6 +287,111 @@ describe("AnalyticsContent", () => {
       // failed the test via the mock adapter's console.error.
       expect(
         screen.queryByRole("heading", { name: "Contract utilization" }),
+      ).not.toBeInTheDocument()
+    })
+
+    /**
+     * MITx Online knows an org as soon as it is created; the warehouse only
+     * after its next load. The API says so with a 404 and a code, and that
+     * must read as "on its way", not as a broken page.
+     */
+    test("says the data is on its way when the warehouse has not loaded the org", async () => {
+      const org = orgWithUuid()
+      setManagerOrgs([org])
+      const page = { limit: 200 }
+      const notLoaded = [
+        {
+          detail: {
+            code: "organization_not_loaded",
+            message: "No analytics data has been loaded for organization yet",
+          },
+        },
+        { code: 404 },
+      ] as const
+      for (const url of [
+        analyticsUrls.organizations.contractUtilization(ORG_UUID, page),
+        analyticsUrls.organizations.engagementTrend(ORG_UUID, page),
+        analyticsUrls.organizations.enrollmentFunnel(ORG_UUID, page),
+        analyticsUrls.organizations.contentEngagement(ORG_UUID, page),
+      ]) {
+        setMockResponse.get(url, ...notLoaded)
+      }
+
+      renderWithProviders(
+        <AnalyticsContent orgSlug={org.slug.replace(/^org-/, "")} />,
+      )
+
+      await screen.findByText(
+        `Analytics for ${org.name} will be available once its data has been loaded. Please check back later.`,
+      )
+      expect(
+        screen.queryByText(/Some analytics could not be loaded/),
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole("heading", { name: "Contract utilization" }),
+      ).not.toBeInTheDocument()
+    })
+
+    test("names the contract when the warehouse has not loaded it", async () => {
+      const contract = factories.contracts.contract()
+      const org = orgWithUuid({ contracts: [contract] })
+      setManagerOrgs([org])
+      const page = { limit: 200 }
+      const notLoaded = [
+        {
+          detail: {
+            code: "contract_not_loaded",
+            message: "No analytics data has been loaded for contract yet",
+          },
+        },
+        { code: 404 },
+      ] as const
+      for (const url of [
+        analyticsUrls.contracts.contractUtilization(
+          ORG_UUID,
+          contract.id,
+          page,
+        ),
+        analyticsUrls.contracts.engagementTrend(ORG_UUID, contract.id, page),
+        analyticsUrls.contracts.enrollmentFunnel(ORG_UUID, contract.id, page),
+        analyticsUrls.contracts.contentEngagement(ORG_UUID, contract.id, page),
+        analyticsUrls.contracts.learnerProgress(ORG_UUID, contract.id, {
+          limit: 1,
+        }),
+      ]) {
+        setMockResponse.get(url, ...notLoaded)
+      }
+
+      renderWithProviders(
+        <AnalyticsContent
+          orgSlug={org.slug.replace(/^org-/, "")}
+          contractSlug={contract.slug}
+        />,
+      )
+
+      await screen.findByText(
+        `Analytics for ${contract.name} will be available once its data has been loaded. Please check back later.`,
+      )
+    })
+
+    test("still reports an ordinary 404 as a failed section", async () => {
+      const org = orgWithUuid()
+      setManagerOrgs([org])
+      allowConsoleErrors()
+      setAnalyticsResponses()
+      setMockResponse.get(
+        analyticsUrls.organizations.enrollmentFunnel(ORG_UUID, { limit: 200 }),
+        { detail: "Not Found" },
+        { code: 404 },
+      )
+
+      renderWithProviders(
+        <AnalyticsContent orgSlug={org.slug.replace(/^org-/, "")} />,
+      )
+
+      await screen.findByText(/Some analytics could not be loaded/)
+      expect(
+        screen.queryByText(/will be available once its data has been loaded/),
       ).not.toBeInTheDocument()
     })
   })
@@ -804,7 +904,7 @@ describe("AnalyticsContent", () => {
 describe("AnalyticsContent, contract-scoped", () => {
   beforeEach(() => {
     mockedUseFeatureFlagsLoaded.mockReturnValue(true)
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
     setMockResponse.get(
       urls.userMe.get(),
       factories.user.user({ email: "manager@test.com" }),
@@ -944,7 +1044,7 @@ describe("AnalyticsContent, contract-scoped", () => {
   test("hides the Learners link and the Learner progress section when the learner analytics flag is off", async () => {
     // The learner page throws ForbiddenError without its flag, so the button
     // would be a dead end -- and every Learner progress tile links there too.
-    mockedUseFeatureFlagEnabled.mockImplementation(
+    mockedUseFeatureFlag.mockImplementation(
       (flag) => flag !== FeatureFlags.B2BLearnerAnalytics,
     )
     const contract = factories.contracts.contract()
@@ -1398,7 +1498,7 @@ describe("AnalyticsContent, contract-scoped", () => {
     // The button links to ContractAdminPage, which throws ForbiddenError
     // without this flag — surfacing the button here without it would send a
     // manager to a dead end.
-    mockedUseFeatureFlagEnabled.mockImplementation(
+    mockedUseFeatureFlag.mockImplementation(
       (flag) => flag === FeatureFlags.B2BAnalyticsDashboard,
     )
     const contract = factories.contracts.contract()

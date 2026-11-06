@@ -16,14 +16,14 @@ import {
 } from "api/mitxonline-test-utils"
 import { OrganizationCards } from "./OrganizationCards"
 import type { UserOrganizationPage } from "@mitodl/mitxonline-api-axios/v0"
-import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 
-jest.mock("posthog-js/react")
-const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
+jest.mock("@/common/useFeatureFlag")
+const mockedUseFeatureFlag = jest.mocked(useFeatureFlag)
 
 describe("OrganizationCards", () => {
   beforeEach(() => {
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
   })
 
   type SetupOptions = {
@@ -557,8 +557,8 @@ describe("OrganizationCards", () => {
       )
     })
 
-    it("stays on dashboard home after declining", async () => {
-      const { contract } = setupContract(false)
+    it("stays on dashboard home after cancelling, without recording a response", async () => {
+      setupContract(false)
       await user.click(await continueButton())
       await user.click(await screen.findByRole("button", { name: "Cancel" }))
 
@@ -566,17 +566,13 @@ describe("OrganizationCards", () => {
         expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
       )
       expect(mockRouter.asPath).toBe(DASHBOARD_HOME)
-      expect(makeRequest).toHaveBeenCalledWith(
-        expect.objectContaining({
-          method: "post",
-          url: mitxOnlineUrls.b2b.dataConsent(contract.id),
-          body: { consented: false },
-        }),
+      expect(makeRequest).not.toHaveBeenCalledWith(
+        expect.objectContaining({ method: "post" }),
       )
     })
 
     it("follows the link without asking when the flag is off", async () => {
-      mockedUseFeatureFlagEnabled.mockReturnValue(false)
+      mockedUseFeatureFlag.mockReturnValue(false)
       setupContract(null)
       expect(await clickIsBlocked(await continueButton())).toBe(false)
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument()

@@ -41,3 +41,11 @@
 2026-09-28 PUT /api/v0/widget_lists/{id}/ removed the enum value `RSS Feed` of the request property `widgets/items/widget_type` (media type: application/x-www-form-urlencoded)
 2026-09-28 PUT /api/v0/widget_lists/{id}/ removed the enum value `RSS Feed` of the request property `widgets/items/widget_type` (media type: multipart/form-data)
 2026-09-28 PUT /api/v0/widget_lists/{id}/ removed the enum value `RSS Feed` of the request property `widgets/items/widget_type` (media type: application/json)
+
+# A certificate for a program with no MicroMasters program id (DEDP Public
+# Policy and the DEDP umbrella program, which only ran on MITx Online) has no
+# program letter: the intercept URL needs that id, and the letter content is
+# looked up by it. Both letter URLs are null for those certificates.
+# Sentry MIT-LEARN-4VG
+2026-10-28 GET /api/v0/program_certificates/ the response property `items/program_letter_generate_url` became nullable for the status `200`
+2026-10-28 GET /api/v0/program_certificates/ the response property `items/program_letter_share_url` became nullable for the status `200`

@@ -1,6 +1,6 @@
 import React from "react"
 import { renderWithProviders, screen } from "@/test-utils"
-import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { notFound } from "next/navigation"
 import { allowConsoleErrors } from "ol-test-utilities"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
@@ -15,25 +15,23 @@ jest.mock("@/common/useFeatureFlagsLoaded", () => ({
   useFeatureFlagsLoaded: jest.fn(),
 }))
 
-jest.mock("posthog-js/react")
+jest.mock("@/common/useFeatureFlag")
 
-const mockUseFeatureFlagEnabled = jest.mocked(
-  useFeatureFlagEnabled as (flag: string) => boolean | undefined,
-)
+const mockUseFeatureFlag = jest.mocked(useFeatureFlag)
 const mockUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
 const mockNotFound = jest.mocked(notFound)
 
 describe("ArithmixClient", () => {
   test("renders the Arithmix component when the feature flag is enabled", async () => {
     mockUseFeatureFlagsLoaded.mockReturnValue(true)
-    mockUseFeatureFlagEnabled.mockReturnValue(true)
+    mockUseFeatureFlag.mockReturnValue(true)
     renderWithProviders(<ArithmixClient />)
     expect(await screen.findByTestId("arithmix")).toBeInTheDocument()
   })
 
   test("renders nothing while the feature flag is loading", () => {
     mockUseFeatureFlagsLoaded.mockReturnValue(false)
-    mockUseFeatureFlagEnabled.mockReturnValue(undefined)
+    mockUseFeatureFlag.mockReturnValue(false)
     renderWithProviders(<ArithmixClient />)
     expect(screen.queryByTestId("arithmix")).not.toBeInTheDocument()
     expect(mockNotFound).not.toHaveBeenCalled()
@@ -45,7 +43,7 @@ describe("ArithmixClient", () => {
       throw new Error("NEXT_NOT_FOUND")
     })
     mockUseFeatureFlagsLoaded.mockReturnValue(true)
-    mockUseFeatureFlagEnabled.mockReturnValue(false)
+    mockUseFeatureFlag.mockReturnValue(false)
     expect(() => renderWithProviders(<ArithmixClient />)).toThrow(
       "NEXT_NOT_FOUND",
     )
@@ -64,8 +62,8 @@ describe("ArithmixClient", () => {
         throw new Error("Failed to load dynamically imported module")
       },
     }))
-    jest.doMock("posthog-js/react", () => ({
-      useFeatureFlagEnabled: () => true,
+    jest.doMock("@/common/useFeatureFlag", () => ({
+      useFeatureFlag: () => true,
     }))
     jest.doMock("@/common/useFeatureFlagsLoaded", () => ({
       useFeatureFlagsLoaded: () => true,

@@ -1,6 +1,6 @@
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import { ChannelTypeEnum } from "api/v0"
 import { FeatureFlags } from "@/common/feature_flags"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 
 /**
  * Whether this channel draws its redesigned page.
@@ -15,21 +15,19 @@ import { FeatureFlags } from "@/common/feature_flags"
  * without asking PostHog.
  *
  * The department page is still behind a flag of its own, so it can be turned
- * on when it is ready. A flag that has not resolved reads as off, which draws
- * the page every other channel draws. That is the page the department page had
- * before the redesign, so the fallback is the old page rather than an empty
- * one.
+ * on when it is ready. A flag that has not resolved reads as its env default,
+ * off unless set, which draws the page every other channel draws. That is the
+ * page the department page had before the redesign, so the fallback is the old
+ * page rather than an empty one.
  */
 const useChannelPageRedesign = (channelType: string): boolean => {
-  const departmentEnabled = useFeatureFlagEnabled(
-    FeatureFlags.DepartmentPageRedesign,
-  )
+  const departmentEnabled = useFeatureFlag(FeatureFlags.DepartmentPageRedesign)
 
   if (channelType === ChannelTypeEnum.Topic) {
     return true
   }
   if (channelType === ChannelTypeEnum.Department) {
-    return departmentEnabled === true
+    return departmentEnabled
   }
   return false
 }

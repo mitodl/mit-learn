@@ -10,18 +10,18 @@ import {
   waitFor,
   within,
 } from "@/test-utils"
-import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 
-jest.mock("posthog-js/react")
+jest.mock("@/common/useFeatureFlag")
 jest.mock("@/common/useFeatureFlagsLoaded")
 
-const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
+const mockedUseFeatureFlag = jest.mocked(useFeatureFlag)
 const mockedUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
 
 describe("NewsListingPage", () => {
   beforeEach(() => {
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
     mockedUseFeatureFlagsLoaded.mockReturnValue(true)
     setMockResponse.get(urls.userMe.get(), { is_authenticated: false })
   })
@@ -415,7 +415,7 @@ describe("NewsListingPage story actions", () => {
 
   /* A sibling describe, so it does not inherit the suite's own beforeEach. */
   beforeEach(() => {
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
     mockedUseFeatureFlagsLoaded.mockReturnValue(true)
   })
 
