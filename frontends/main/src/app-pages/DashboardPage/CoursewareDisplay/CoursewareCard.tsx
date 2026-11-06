@@ -135,6 +135,7 @@ const CoursewareCard: React.FC<CoursewareCardProps> = (props) => {
     <UnenrolledCourseCard
       course={entry.course}
       displayedRun={entry.displayedRun ?? undefined}
+      pastEnrollments={entry.pastEnrollments}
       contractId={entry.contractId}
       ancestorContext={entry.ancestorContext}
       layout={layout}

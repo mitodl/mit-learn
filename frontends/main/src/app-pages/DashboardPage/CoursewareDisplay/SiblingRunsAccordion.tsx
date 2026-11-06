@@ -293,9 +293,55 @@ const RunListRow: React.FC<RunListRowProps> = ({
   )
 }
 
-type SiblingRunsPanelProps = {
-  /** The currently displayed enrollment (shown above the sibling list). */
+const CurrentRunRow: React.FC<{
   enrollment: CourseRunEnrollmentV3
+  disabled: boolean
+}> = ({ enrollment, disabled }) => {
+  const currentRun = enrollment.run
+  const currentStatus = getDashboardEnrollmentStatus({
+    type: DashboardType.CourseRunEnrollment,
+    data: enrollment,
+  })
+  const currentTimeState = getRunTimeState(
+    currentRun?.start_date,
+    currentRun?.end_date,
+  )
+  const currentStatusLabel = getRunStatusLabel(currentStatus, currentTimeState)
+  const currentRunIdentifier = formatRunIdentifier(currentRun)
+  const currentLabelValue = currentStatusLabel
+    ? `${currentRunIdentifier} (${currentStatusLabel})`
+    : currentRunIdentifier
+  const currentRunLabel = `Current run: ${currentLabelValue}`
+
+  return (
+    <RunListRow
+      isFirst
+      icon={
+        currentStatus === EnrollmentStatus.Completed ? (
+          <EnrollmentStatusIcon status={currentStatus} />
+        ) : currentTimeState === "upcoming" ? (
+          <UpcomingRunIcon aria-hidden="true" />
+        ) : currentTimeState === "ended" ? (
+          <ExpiredRunIcon aria-hidden="true" />
+        ) : (
+          <EnrollmentStatusIcon status={currentStatus} />
+        )
+      }
+      labelPrefix="Current run:"
+      labelValue={currentLabelValue}
+      runLabel={currentRunLabel}
+      enrollment={enrollment}
+      disabled={disabled}
+    />
+  )
+}
+
+type SiblingRunsPanelProps = {
+  /**
+   * The currently displayed enrollment, shown above the sibling list. Absent
+   * when the card shows a run the learner hasn't enrolled in yet.
+   */
+  enrollment?: CourseRunEnrollmentV3
   /**
    * Other enrollments for the same course variant, pre-filtered to exclude
    * the current enrollment. Each entry becomes a row in the list.
@@ -317,22 +363,6 @@ const SiblingRunsPanel: React.FC<SiblingRunsPanelProps> = ({
   labelledBy,
   disabled = false,
 }) => {
-  const currentRun = enrollment.run
-  const currentStatus = getDashboardEnrollmentStatus({
-    type: DashboardType.CourseRunEnrollment,
-    data: enrollment,
-  })
-  const currentTimeState = getRunTimeState(
-    currentRun?.start_date,
-    currentRun?.end_date,
-  )
-  const currentStatusLabel = getRunStatusLabel(currentStatus, currentTimeState)
-  const currentRunIdentifier = formatRunIdentifier(currentRun)
-  const currentLabelValue = currentStatusLabel
-    ? `${currentRunIdentifier} (${currentStatusLabel})`
-    : currentRunIdentifier
-  const currentRunLabel = `Current run: ${currentLabelValue}`
-
   return (
     <Collapse
       in={expanded}
@@ -344,26 +374,10 @@ const SiblingRunsPanel: React.FC<SiblingRunsPanelProps> = ({
     >
       <RunsListWrapper>
         <RunsListBox>
-          <RunListRow
-            isFirst
-            icon={
-              currentStatus === EnrollmentStatus.Completed ? (
-                <EnrollmentStatusIcon status={currentStatus} />
-              ) : currentTimeState === "upcoming" ? (
-                <UpcomingRunIcon aria-hidden="true" />
-              ) : currentTimeState === "ended" ? (
-                <ExpiredRunIcon aria-hidden="true" />
-              ) : (
-                <EnrollmentStatusIcon status={currentStatus} />
-              )
-            }
-            labelPrefix="Current run:"
-            labelValue={currentLabelValue}
-            runLabel={currentRunLabel}
-            enrollment={enrollment}
-            disabled={disabled}
-          />
-          {siblingEnrollments.map((e) => {
+          {enrollment && (
+            <CurrentRunRow enrollment={enrollment} disabled={disabled} />
+          )}
+          {siblingEnrollments.map((e, index) => {
             const startDate = e.run?.start_date
             const endDate = e.run?.end_date
             const runEnrollmentStatus = getDashboardEnrollmentStatus({
@@ -392,7 +406,7 @@ const SiblingRunsPanel: React.FC<SiblingRunsPanelProps> = ({
             return (
               <RunListRow
                 key={e.id}
-                isFirst={false}
+                isFirst={!enrollment && index === 0}
                 icon={
                   isUpcoming ? (
                     // The visible "Upcoming:" prefix already says this.
