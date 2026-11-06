@@ -381,8 +381,9 @@ const sortEnrollmentsByStartDateDesc = (
  * `selectBestEnrollment` (single course) and `pickDisplayedHomeEnrollments`
  * (one group per course+variant).
  *
- * Priority: the most recent run that is underway, else the most recent run
- * that has ended, else the soonest upcoming one.
+ * Priority: the most recent run that is underway, else the soonest upcoming
+ * one, else the most recent run that has ended. A run the learner has signed
+ * up for but not started is more current than one that is over.
  *
  * Runs are classified by `getRunTimeState`, the same helper the card's badge
  * and the sibling-runs accordion label use, so the run this picks can never be
@@ -414,8 +415,8 @@ const pickBestEnrollmentFromGroup = (
   // run and the last upcoming entry is the one starting soonest.
   return (
     byTimeState.underway[0] ??
-    byTimeState.ended[0] ??
     byTimeState.upcoming.at(-1) ??
+    byTimeState.ended[0] ??
     sorted[0]
   )
 }
