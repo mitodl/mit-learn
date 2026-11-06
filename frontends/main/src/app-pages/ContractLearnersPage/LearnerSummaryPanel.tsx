@@ -15,7 +15,6 @@ import {
   contentProgressPercent,
   DISPLAY_STATUS_LABEL,
   getDisplayStatus,
-  isWithheldStatus,
 } from "./statusDisplay"
 
 type ActivityField =
@@ -185,7 +184,6 @@ const Count: React.FC<{ value: number | null }> = ({ value }) =>
 const moduleStatusText = (enrollment: LearnerEnrollment) => {
   const status = getDisplayStatus(enrollment)
   const label = DISPLAY_STATUS_LABEL[status]
-  if (isWithheldStatus(status)) return label
   const percent = contentProgressPercent(enrollment, status)
   const progress = percent === null ? "" : ` ${percent}%`
   const date = enrollment.last_active_on
