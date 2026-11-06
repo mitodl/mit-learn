@@ -622,11 +622,14 @@ describe("CoursePage", () => {
 
         renderWithProviders(<CoursePage readableId={course.readable_id} />)
 
-        const enrollBtns = await screen.findAllByRole("button", {
-          name: "Enroll",
+        // The header's paid button carries the price, so this cannot be the
+        // InfoBox's plain "Enroll".
+        const banner = await screen.findByTestId("banner-container")
+        const headerBtn = await within(banner).findByRole("button", {
+          name: /^Enroll - /,
         })
         await act(async () => {
-          enrollBtns[0].click()
+          headerBtn.click()
         })
 
         await waitFor(() => {
