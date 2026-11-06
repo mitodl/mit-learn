@@ -28,6 +28,7 @@ import {
   trackBeginCheckout,
 } from "@/common/analytics/gtm"
 import { capturePostHog } from "@/common/analytics/posthog"
+import { lastAuthRedirect, setLocation } from "./test-utils/enrollResume"
 
 // The paid path checks enrollment eligibility before the cart.
 beforeEach(() => {
@@ -58,6 +59,10 @@ const makeRun = mitxFactories.courses.courseRun
 const makeMode = mitxFactories.courses.enrollmentMode
 const makeProduct = mitxFactories.courses.product
 const makeUser = factories.user.user
+const fakeClickEvent = () =>
+  ({
+    currentTarget: document.createElement("button"),
+  }) as React.MouseEvent<HTMLButtonElement>
 
 const wrapper = ({ children }: { children: React.ReactNode }) => {
   const queryClient = makeBrowserQueryClient({ maxRetries: 0 })
@@ -515,49 +520,151 @@ describe("useCourseEnrollment — actions", () => {
     expect(trackCourseEnrolled).toHaveBeenCalledWith(course.title)
   })
 
-  test("unauthenticated click -> onRequireSignup called with anchor button", async () => {
-    const run = makeRun({
-      is_enrollable: true,
-      is_upgradable: false,
-      is_archived: false,
-      enrollment_modes: [makeMode({ requires_payment: false })],
-      products: [],
+  test.each([
+    { kind: "free", requiresPayment: false, skipsOnboarding: false },
+    { kind: "paid", requiresPayment: true, skipsOnboarding: true },
+  ] as const)(
+    "unauthenticated $kind click -> login, returning to this page to finish",
+    async ({ kind, requiresPayment, skipsOnboarding }) => {
+      const run = makeRun({
+        is_enrollable: true,
+        is_upgradable: requiresPayment,
+        is_archived: false,
+        enrollment_modes: [makeMode({ requires_payment: requiresPayment })],
+        products: requiresPayment ? [makeProduct()] : [],
+      })
+      const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+      setMockResponse.get(
+        urls.userMe.get(),
+        makeUser({ is_authenticated: false }),
+      )
+      setLocation("/courses/some-course?utm_source=email")
+
+      const { result } = renderHook(
+        () =>
+          useCourseEnrollment(course, run, {
+            tracking: { placement: "infobox" },
+          }),
+        { wrapper },
+      )
+      await waitFor(() => expect(result.current.isStatusLoading).toBe(false))
+      const state = result.current.state
+      if (state.status !== "options") throw new Error("expected options")
+      state.options.find((o) => o.kind === kind)!.onClick!(fakeClickEvent())
+
+      const { url, next, signupNext } = lastAuthRedirect()
+      expect(next.pathname).toBe("/courses/some-course")
+      expect(Object.fromEntries(next.searchParams)).toEqual({
+        utm_source: "email",
+        enroll: kind,
+        run: String(run.id),
+      })
+      expect(signupNext.href).toBe(next.href)
+      expect(url.searchParams.get("skip_onboarding")).toBe(
+        skipsOnboarding ? "1" : null,
+      )
+      expect(makeRequest).not.toHaveBeenCalledWith(
+        expect.objectContaining({ method: "post" }),
+      )
+    },
+  )
+
+  describe("resuming after sign-up", () => {
+    const replaceState = jest.spyOn(window.history, "replaceState")
+    beforeEach(() => replaceState.mockImplementation(() => {}))
+    afterAll(() => replaceState.mockRestore())
+
+    const makePaidRun = () =>
+      makeRun({
+        is_enrollable: true,
+        is_upgradable: true,
+        is_archived: false,
+        enrollment_modes: [makeMode({ requires_payment: true })],
+        products: [makeProduct()],
+      })
+
+    test("paid marker -> basket for the marked run, marker removed, no click event", async () => {
+      const selected = makePaidRun()
+      const marked = makePaidRun()
+      const course = makeCourse({
+        next_run_id: selected.id,
+        courseruns: [selected, marked],
+      })
+      setMockResponse.delete(mitxUrls.baskets.clear(), undefined)
+      setMockResponse.post(
+        mitxUrls.baskets.createFromProduct(marked.products![0].id),
+        { id: 1, items: [] },
+      )
+      setLocation(`/courses/c?enroll=paid&run=${marked.id}&utm_source=email`)
+
+      renderHook(
+        () =>
+          useCourseEnrollment(course, selected, {
+            tracking: { placement: "infobox" },
+            resume: true,
+          }),
+        { wrapper },
+      )
+
+      await waitFor(() =>
+        expect(makeRequest).toHaveBeenCalledWith(
+          expect.objectContaining({
+            method: "post",
+            url: mitxUrls.baskets.createFromProduct(marked.products![0].id),
+          }),
+        ),
+      )
+      expect(replaceState).toHaveBeenCalledTimes(1)
+      const cleaned = new URL(String(replaceState.mock.calls[0][2]))
+      expect(cleaned.search).toBe("?utm_source=email")
+      expect(mockCapturePostHog).not.toHaveBeenCalledWith(
+        PostHogEvents.EnrollCtaClicked,
+        expect.anything(),
+      )
     })
-    const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
 
-    setMockResponse.get(
-      urls.userMe.get(),
-      makeUser({ is_authenticated: false }),
-    )
+    test("marker for a run already enrolled in -> removed, nothing started", async () => {
+      const run = makePaidRun()
+      const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+      setMockResponse.get(mitxUrls.enrollment.enrollmentsListV3(), [
+        mitxFactories.enrollment.courseEnrollment({ run: { id: run.id } }),
+      ])
+      setLocation(`/courses/c?enroll=paid&run=${run.id}`)
 
-    const onRequireSignup = jest.fn()
+      renderHook(
+        () =>
+          useCourseEnrollment(course, run, {
+            tracking: { placement: "infobox" },
+            resume: true,
+          }),
+        { wrapper },
+      )
 
-    const { result } = renderHook(
-      () =>
-        useCourseEnrollment(course, run, {
-          tracking: { placement: "infobox" },
-          onRequireSignup,
-        }),
-      { wrapper },
-    )
+      await waitFor(() => expect(replaceState).toHaveBeenCalledTimes(1))
+      expect(makeRequest).not.toHaveBeenCalledWith(
+        expect.objectContaining({ url: mitxUrls.baskets.clear() }),
+      )
+    })
 
-    await waitFor(() => expect(result.current.isStatusLoading).toBe(false))
+    test("instances without `resume` leave the marker alone", async () => {
+      const run = makePaidRun()
+      const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+      setLocation(`/courses/c?enroll=paid&run=${run.id}`)
 
-    const state = result.current.state
-    expect(state.status).toBe("options")
-    if (state.status !== "options") return
+      const { result } = renderHook(
+        () =>
+          useCourseEnrollment(course, run, {
+            tracking: { placement: "header" },
+          }),
+        { wrapper },
+      )
 
-    const freeOption = state.options.find((o) => o.kind === "free")
-    expect(freeOption).toBeDefined()
-
-    const anchorButton = document.createElement("button")
-    const fakeEvent = {
-      currentTarget: anchorButton,
-    } as React.MouseEvent<HTMLButtonElement>
-
-    freeOption!.onClick!(fakeEvent)
-
-    expect(onRequireSignup).toHaveBeenCalledWith(anchorButton)
+      await waitFor(() => expect(result.current.isStatusLoading).toBe(false))
+      expect(replaceState).not.toHaveBeenCalled()
+      expect(makeRequest).not.toHaveBeenCalledWith(
+        expect.objectContaining({ url: mitxUrls.baskets.clear() }),
+      )
+    })
   })
 
   test("fires PostHog enroll_cta_clicked on paid action click", async () => {
