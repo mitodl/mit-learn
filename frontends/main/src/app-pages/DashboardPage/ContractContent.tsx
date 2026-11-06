@@ -182,20 +182,20 @@ const WelcomeMessage: React.FC<{ contract?: ContractPage }> = ({
 const CoursewareCardStyled = styled(CoursewareCard)({
   borderRadius: "0px",
   borderTop: "none",
+  boxShadow: "none",
   "&:last-of-type": {
     borderRadius: "0px 0px 8px 8px",
   },
 })
 
-const ProgramAsCourseCardStyled = styled(ProgramAsCourseCard)(({ theme }) => ({
+const ProgramAsCourseCardStyled = styled(ProgramAsCourseCard)({
   borderRadius: "0px",
   borderTop: "none",
-  borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
   boxShadow: "none",
   "&:last-of-type": {
     borderRadius: "0px 0px 8px 8px",
   },
-}))
+})
 
 const ProgramRoot = styled.div(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
