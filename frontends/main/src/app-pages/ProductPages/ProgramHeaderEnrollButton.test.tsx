@@ -7,7 +7,11 @@ import {
 } from "api/mitxonline-test-utils"
 import { programView } from "@/common/urls"
 import ProgramHeaderEnrollButton from "./ProgramHeaderEnrollButton"
-import { makeProgram } from "./test-utils/userPricing"
+import {
+  DiscountTypeEnum,
+  PaymentTypeEnum,
+} from "@mitodl/mitxonline-api-axios/v0"
+import { makeProgram, setupUserPricing } from "./test-utils/userPricing"
 
 jest.mock("next-nprogress-bar", () => ({
   useRouter: () => ({ push: jest.fn() }),
@@ -26,6 +30,7 @@ const makeMode = mitxFactories.courses.enrollmentMode
 const makeProduct = mitxFactories.courses.product
 const makeProgramEnrollment = mitxFactories.enrollment.programEnrollmentV3
 const makeUser = factories.user.user
+const makeUserPricingDiscount = mitxFactories.products.userPricingDiscount
 
 // The price suffix is mobile-only through a CSS media query, which jsdom does
 // not apply, so it is part of the accessible name at every width here.
@@ -105,6 +110,74 @@ describe("ProgramHeaderEnrollButton", () => {
 
     expect(
       await screen.findByRole("button", { name: "Enroll - $899" }),
+    ).toBeInTheDocument()
+  })
+
+  test("(c2) credit: header names the upgrade and today's price, as the InfoBox does", async () => {
+    setupAuth()
+    const program = makeProgram({
+      enrollment_modes: [makeMode({ requires_payment: true })],
+      products: [makeProduct({ price: "899.00" })],
+      ...pinnedPrice,
+    })
+    setupUserPricing(program, {
+      user_price: "599",
+      discount: makeUserPricingDiscount({ amount_off: "300" }),
+    })
+
+    renderWithProviders(<ProgramHeaderEnrollButton program={program} />)
+
+    expect(
+      await screen.findByRole("button", {
+        name: "Upgrade to Full Program - $599",
+      }),
+    ).toBeInTheDocument()
+  })
+
+  test("(c3) credit on displayAsCourse: header keeps the plain label and price", async () => {
+    setupAuth()
+    const program = makeProgram({
+      enrollment_modes: [makeMode({ requires_payment: true })],
+      products: [makeProduct({ price: "899.00" })],
+      ...pinnedPrice,
+    })
+    setupUserPricing(program, {
+      user_price: "599",
+      discount: makeUserPricingDiscount({ amount_off: "300" }),
+    })
+
+    renderWithProviders(
+      <ProgramHeaderEnrollButton program={program} displayAsCourse />,
+    )
+
+    expect(
+      await screen.findByRole("button", { name: "Enroll - $899" }),
+    ).toBeInTheDocument()
+  })
+
+  test("(c4) financial aid: header shows today's price, not the advertised range", async () => {
+    setupAuth()
+    const program = makeProgram({
+      enrollment_modes: [makeMode({ requires_payment: true })],
+      products: [makeProduct({ price: "1000.00" })],
+      min_price: 250,
+      max_price: 1000,
+    })
+    setupUserPricing(program, {
+      user_price: "250",
+      discount: makeUserPricingDiscount({
+        amount_off: "750",
+        // The factory defaults to paid-amount-off, which reads as a credit.
+        discount_type: DiscountTypeEnum.DollarsOff,
+        payment_type: PaymentTypeEnum.FinancialAssistance,
+      }),
+      product_flexible_price: mitxFactories.products.discount(),
+    })
+
+    renderWithProviders(<ProgramHeaderEnrollButton program={program} />)
+
+    expect(
+      await screen.findByRole("button", { name: "Enroll in Program - $250" }),
     ).toBeInTheDocument()
   })
 

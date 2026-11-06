@@ -4,7 +4,8 @@ import {
   factories as mitxFactories,
   mockEnrollmentEligible,
 } from "api/mitxonline-test-utils"
-import { makeCourse } from "./test-utils/userPricing"
+import { makeCourse, setupRunPricing } from "./test-utils/userPricing"
+import { DiscountTypeEnum } from "@mitodl/mitxonline-api-axios/v0"
 import type {
   CoursePageItem,
   CourseWithCourseRunsSerializerV2,
@@ -464,6 +465,45 @@ describe("CoursePage", () => {
       // The suffix is mobile-only by media query, which jsdom does not apply.
       expect(
         await screen.findByRole("button", { name: "Enroll - $899" }),
+      ).toBeInTheDocument()
+    })
+
+    test("discounted learner: header button names today's price", async () => {
+      const product = mitxFactories.courses.product({ price: "899.00" })
+      const run = mitxFactories.courses.courseRun({
+        is_enrollable: true,
+        is_upgradable: true,
+        is_archived: false,
+        enrollment_modes: [paidMode],
+        products: [product],
+      })
+      const course = makeCourse({
+        next_run_id: run.id,
+        courseruns: [run],
+        min_price: 899,
+        max_price: 899,
+      })
+      const page = makePage({ course_details: course })
+      setupApis({ course, page })
+      setMockResponse.get(
+        learnUrls.userMe.get(),
+        learnFactories.user.user({ is_authenticated: true }),
+      )
+      setMockResponse.get(mitxUrls.enrollment.enrollmentsListV3(), [])
+      setupRunPricing(run, {
+        user_price: "599",
+        discount: mitxFactories.products.userPricingDiscount({
+          amount_off: "300",
+          discount_type: DiscountTypeEnum.DollarsOff,
+        }),
+      })
+
+      renderWithProviders(<CoursePage readableId={course.readable_id} />)
+      await waitForCoursePageToSettle(page.title)
+
+      const banner = await screen.findByTestId("banner-container")
+      expect(
+        await within(banner).findByRole("button", { name: "Enroll - $599" }),
       ).toBeInTheDocument()
     })
 
