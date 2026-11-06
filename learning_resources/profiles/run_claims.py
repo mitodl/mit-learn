@@ -1,18 +1,19 @@
 """
 Step 2 of resource profile generation: claims about a run as a whole.
 
-The run's context unit and each of its units and bins have been extracted in
-step 1. This step reads only those stored claims, never file text, so the
-prompt is about the same size for a course with units as for one made only of
-bins. The model's output is checked in code before it is stored: cited ids
-that aren't in the input are dropped, and the inferred-preparation rule is
-applied here rather than left to the model. The model says which concept claims
-teach each preparation item; code checks those claims and their units' order.
+The run's context unit and each of its units have been extracted in step 1.
+This step reads only those stored claims, never file text. It is implemented
+only for runs without bins so far: every unit is treated as an ordered step.
+
+The model's output is checked in code before it is stored: cited ids that
+aren't in the input are dropped. The model says which concept claims teach
+each preparation item before it is first needed and which teach it later; code
+keeps only the ones that are taught or reviewed concepts and drops the items
+taught before first use.
 
 A run's claims are stored in ClaimExtraction under a key built from its
 course and the keys of the extractions it reads, so they are regenerated only
-when one of those changes. Bin keys are sorted, so rebuilding a run's bins in
-another order reuses the stored claims.
+when one of those changes.
 """
 
 import logging
@@ -31,15 +32,21 @@ from learning_resources.profiles.claims import (
     load_extractor,
 )
 from learning_resources.profiles.schemas import RunExtraction
+from learning_resources.profiles.unit_claims import CLAIM_PREFIXES
 
 log = logging.getLogger(__name__)
 
-# claim lists in a unit output, and the kind each claim has in the prompt
+# the kind each claim has in the prompt, and its heading, by claim id prefix
+_KINDS_BY_PREFIX = {
+    "c": ("concept", "Concepts"),
+    "s": ("skill", "Skills"),
+    "a": ("assumed", "Assumed knowledge"),
+    "t": ("assessment", "Assessment expectations"),
+}
+# claim lists in a unit output: their kind and heading. Built from the unit
+# step's lists, so a list added there without a kind here fails at import.
 CLAIM_KINDS = {
-    "concepts": "concept",
-    "skills": "skill",
-    "assumed_knowledge": "assumed",
-    "assessment_expectations": "assessment",
+    field: _KINDS_BY_PREFIX[prefix] for field, prefix in CLAIM_PREFIXES.items()
 }
 TEACHING_STATUSES = {"taught", "reviewed"}
 # a coverage limitation may cite this when no claim fits
@@ -48,15 +55,15 @@ NOTES_ID = "ctx:notes"
 
 @dataclass(frozen=True)
 class UnitRecord:
-    """A unit or bin of the run, as the run prompt refers to it"""
+    """A unit of the run, as the run prompt refers to it"""
 
-    # U01, U02, ... for units in course order; B01, B02, ... for bins
+    # U01, U02, ... in course order
     display_id: str
     unit: Unit
     # None when the unit was skipped: no text, or over the input budget
     extraction: ClaimExtraction | None
-    # 1, 2, ... for units; None for bins, which have no order
-    order: int | None
+    # 1, 2, ... in course order
+    order: int
 
     @property
     def claims(self) -> list[tuple[str, str, dict]]:
@@ -65,7 +72,7 @@ class UnitRecord:
             return []
         return [
             (f"{self.display_id}:{claim['id']}", kind, claim)
-            for field, kind in CLAIM_KINDS.items()
+            for field, (kind, _) in CLAIM_KINDS.items()
             for claim in self.extraction.output.get(field, [])
         ]
 
@@ -80,34 +87,42 @@ def load_run_extractor() -> ClaimExtractor:
 
 
 # --------------------------------------------------------------------------- inputs
+def _display_id(order: int) -> str:
+    """Return the id the run prompt gives the unit at this position"""
+    return f"U{order:02d}"
+
+
 def unit_records(
     extractions: list[tuple[Unit, ClaimExtraction | None]],
 ) -> list[UnitRecord]:
-    """
-    Return a run's units in course order, then its bins, with their ids.
-
-    Bins are numbered by the key of their extraction, so the prompt, like the
-    key, doesn't depend on the order bins were built in. Skipped bins come
-    last, by external id.
-    """
+    """Return a run's units in course order, with their ids"""
+    # the order generate_unit_claims_for_resource extracts them in
     units = sorted(
-        (pair for pair in extractions if pair[0].kind == Unit.Kind.UNIT),
-        key=lambda pair: (pair[0].position is None, pair[0].position, pair[0].id),
-    )
-    bins = sorted(
-        (pair for pair in extractions if pair[0].kind == Unit.Kind.BIN),
+        extractions,
         key=lambda pair: (
-            pair[1] is None,
-            pair[1].key if pair[1] else pair[0].external_id,
+            pair[0].position is None,
+            pair[0].position,
+            pair[0].external_id,
         ),
     )
     return [
-        UnitRecord(f"U{index:02d}", unit, extraction, index)
+        UnitRecord(_display_id(index), unit, extraction, index)
         for index, (unit, extraction) in enumerate(units, 1)
-    ] + [
-        UnitRecord(f"B{index:02d}", unit, extraction, None)
-        for index, (unit, extraction) in enumerate(bins, 1)
     ]
+
+
+def _claim_lookup(records: list[UnitRecord]) -> dict[str, tuple[str, dict]]:
+    """Return each unit claim, as claim id: (kind, claim)"""
+    return {
+        claim_id: (kind, claim)
+        for record in records
+        for claim_id, kind, claim in record.claims
+    }
+
+
+def _teaches(kind: str, claim: dict) -> bool:
+    """Return whether a claim is a concept the course teaches or reviews"""
+    return kind == "concept" and claim.get("teaching_status") in TEACHING_STATUSES
 
 
 def context_claims(output: dict | None) -> dict[str, str]:
@@ -127,11 +142,6 @@ def context_claims(output: dict | None) -> dict[str, str]:
         )
     for index, statement in enumerate(output.get("required_materials", [])):
         claims[f"ctx:req:{index}"] = statement["text"]
-    for index, conflict in enumerate(output.get("conflicts", [])):
-        statements = " / ".join(item["text"] for item in conflict["statements"])
-        claims[f"ctx:conflict:{index}"] = (
-            f"{conflict['topic']}: {statements} ({conflict['assessment']})"
-        )
     return claims
 
 
@@ -166,25 +176,18 @@ def _claim_line(claim_id: str, kind: str, claim: dict) -> str:
 
 
 def _records_block(records: list[UnitRecord]) -> str:
-    titles = {
-        "concept": "Concepts",
-        "skill": "Skills",
-        "assumed": "Assumed knowledge",
-        "assessment": "Assessment expectations",
-    }
     lines = []
     for record in records:
-        where = f"unit {record.order}" if record.order else "bin, unordered"
-        header = f"## {record.display_id} {record.unit.title} ({where})"
+        header = f"## {record.display_id} {record.unit.title} (unit {record.order})"
         if record.extraction is None:
             lines.append(f"{header}: NOT PROCESSED (no text, or over the budget)")
             continue
         lines.append(f"{header}\nSummary: {record.extraction.output['summary']}")
         claims = record.claims
-        for kind, title in titles.items():
+        for kind, heading in CLAIM_KINDS.values():
             items = [line for line in claims if line[1] == kind]
             if items:
-                lines.append(f"{title}:")
+                lines.append(f"{heading}:")
                 lines.extend(_claim_line(*item) for item in items)
         notes = record.extraction.output.get("extraction_notes")
         if notes:
@@ -207,122 +210,74 @@ def _run_key(
         )
 
     # The course is in the key so that runs of one course share a row, like
-    # the unit keys. Bins are already in key order.
+    # the unit keys.
     return extractor.key(
         run.learning_resource_id,
-        [record_key(record) for record in records if record.order],
-        [record_key(record) for record in records if not record.order],
+        [record_key(record) for record in records],
         context.key if context else None,
     )
 
 
 # --------------------------------------------------------------------------- checks
-def _teaching_claims(records: list[UnitRecord]) -> dict[str, int | None]:
-    """Return the order of each taught or reviewed concept claim's unit"""
-    return {
-        claim_id: record.order
-        for record in records
-        for claim_id, kind, claim in record.claims
-        if kind == "concept" and claim.get("teaching_status") in TEACHING_STATUSES
-    }
-
-
 def apply_preparation_rule(
     preparation: list[dict], records: list[UnitRecord]
 ) -> tuple[list[dict], list[dict]]:
     """
     Split inferred preparation into what's kept and what the course teaches.
 
-    The model names the concept claims that teach or review each item. Only
-    the ones that are taught or reviewed concepts count, and an item is
-    dropped when one of them is in the unit it is first needed in or one
-    before. It is first needed in the earliest of the unit the model names and
-    the units whose assumed claims it cites. Bins have no order, so an item
-    only bins assume is dropped when anything in the course teaches it, and
-    has no first-needed unit; teaching in a bin is neither before nor after
-    an item's first use in a unit.
+    The model names the concept claims that teach or review each item at or
+    before its first use, and the ones that do later; drop_unknown_ids has
+    already kept only the ones that are taught or reviewed concepts. An item
+    taught before first use is dropped; one taught only later is kept with a
+    review note. The reported first-needed unit is the earliest of the unit
+    the model names and the units whose assumed claims it cites.
 
     Returns:
         tuple of (list, list): the kept items, and the dropped ones with their
             exclusion_reason
     """
     order_of = {record.display_id: record.order for record in records}
-    teaching_claims = _teaching_claims(records)
     kept, excluded = [], []
     for candidate in preparation:
         item = dict(candidate)
-        # the earlier of the model's unit and the earliest unit whose claims it
-        # cites: the model's unit can come after a cited first use. Bins and
+        # the model's unit can come after a cited first use. Context and
         # unknown ids have no order.
         orders = [
             order_of.get(claim_id.split(":")[0])
             for claim_id in item["assumed_claim_ids"]
-        ] + [order_of.get(item.get("first_needed_unit_id"))]
-        first = min((order for order in orders if order), default=None)
-        # bins have no order, so they are never the first unit that needs it
-        item["first_needed_unit_id"] = next(
-            (
-                unit_id
-                for unit_id, order in order_of.items()
-                if first is not None and order == first
-            ),
-            None,
-        )
-        cited = [
-            claim_id
-            for claim_id in item.get("taught_in_claim_ids", [])
-            if claim_id in teaching_claims
         ]
-        if first is None:
-            # only bins assume it: teaching anywhere in the course counts
-            hits, later = cited, []
-        else:
-            hits = [
-                claim_id
-                for claim_id in cited
-                if teaching_claims[claim_id] and teaching_claims[claim_id] <= first
-            ]
-            later = [
-                claim_id
-                for claim_id in cited
-                if teaching_claims[claim_id] and teaching_claims[claim_id] > first
-            ]
-        item["code_check_taught_in"] = hits
-        item["code_check_taught_later_in"] = later
-        if hits:
+        orders.append(order_of.get(item.get("first_needed_unit_id")))
+        first = min(filter(None, orders), default=None)
+        item["first_needed_unit_id"] = _display_id(first) if first else None
+        before = item.get("taught_before_first_use_claim_ids", [])
+        later = item.get("taught_after_first_use_claim_ids", [])
+        if before:
             item["exclusion_reason"] = (
                 "taught or reviewed in the course at or before first use: "
-                + ", ".join(hits)
+                + ", ".join(before)
             )
             excluded.append(item)
-        else:
-            if later:
-                item["review_note"] = (
-                    "the course teaches it after first use ("
-                    + ", ".join(later)
-                    + "), so this may be a sequencing gap rather than a prerequisite"
-                )
-            kept.append(item)
+            continue
+        if later:
+            item["review_note"] = (
+                "the course teaches it after first use ("
+                + ", ".join(later)
+                + "), so this may be a sequencing gap rather than a prerequisite"
+            )
+        kept.append(item)
     return kept, excluded
-
-
-def _known(ids: list[str], known: set[str], unknown: set[str]) -> list[str]:
-    unknown.update(claim_id for claim_id in ids if claim_id not in known)
-    return [claim_id for claim_id in ids if claim_id in known]
 
 
 def _drop_ungrounded_outcomes(output: dict, claims: dict) -> list[str]:
     """Drop learning outcomes that cite no skill and no taught or reviewed concept"""
 
-    def teaches(claim_id):
+    def grounds(claim_id):
         kind, claim = claims.get(claim_id, (None, {}))
-        return kind == "skill" or (
-            kind == "concept" and claim.get("teaching_status") in TEACHING_STATUSES
-        )
+        return kind == "skill" or _teaches(kind, claim)
 
     grounded, notes = [], []
     for item in output["learning_outcomes"]:
-        if any(teaches(claim_id) for claim_id in item["claim_ids"]):
+        if any(grounds(claim_id) for claim_id in item["claim_ids"]):
             grounded.append(item)
         else:
             notes.append(
@@ -334,70 +289,68 @@ def _drop_ungrounded_outcomes(output: dict, claims: dict) -> list[str]:
 
 
 def drop_unknown_ids(
-    output: dict, records: list[UnitRecord], context: dict | None
+    output: dict,
+    claims: dict[str, tuple[str, dict]],
+    unit_ids: set[str],
+    context: dict | None,
 ) -> list[str]:
     """
     Remove cited ids that aren't in the input, and what is left unsupported.
 
     Learning outcomes must also cite a skill, or a taught or reviewed concept:
-    one supported only by assessments or assumed knowledge is dropped.
+    one supported only by assessments or assumed knowledge is dropped. The
+    teaching a preparation item cites keeps only taught or reviewed concepts.
+
+    Args:
+        output (dict): the model's output, changed in place
+        claims (dict): the run's unit claims, see _claim_lookup
+        unit_ids (set of str): the run's unit display ids
+        context (dict | None): the context extraction's output
 
     Returns:
         list of str: a note for each id and item that was removed
     """
-    claims = {
-        claim_id: (kind, claim)
-        for record in records
-        for claim_id, kind, claim in record.claims
-    }
     known = set(claims) | set(context_claims(context)) | {NOTES_ID}
-    unit_ids = {record.display_id for record in records}
+    teaching = {claim_id for claim_id, pair in claims.items() if _teaches(*pair)}
     unknown: set[str] = set()
     notes = []
 
-    output["summary_claim_ids"] = _known(output["summary_claim_ids"], known, unknown)
-    for field in (
-        "audience",
-        "learning_outcomes",
-        "coverage_limitations",
-        "unresolved_conflicts",
-    ):
+    def allowed(ids: list[str], valid: set[str]) -> list[str]:
+        unknown.update(i for i in ids if i not in known and i not in unit_ids)
+        return [claim_id for claim_id in ids if claim_id in valid]
+
+    def supported(items: list[dict], what: str, required: str, **fields) -> list:
+        """Filter each item's id fields; keep the items with required ids left"""
         kept = []
-        for item in output[field]:
-            item["claim_ids"] = _known(item["claim_ids"], known, unknown)
-            if item["claim_ids"]:
+        for item in items:
+            for field, valid in fields.items():
+                item[field] = allowed(item[field], valid)
+            if item[required]:
                 kept.append(item)
             else:
-                notes.append(f"Dropped {field} {item['text'][:80]!r}: no known claim")
-        output[field] = kept
+                name = item.get("text") or item["label"]
+                notes.append(f"Dropped {what} {name[:80]!r}: no known claim")
+        return kept
 
+    output["summary_claim_ids"] = allowed(output["summary_claim_ids"], known)
+    for field in ("audience", "learning_outcomes", "coverage_limitations"):
+        output[field] = supported(output[field], field, "claim_ids", claim_ids=known)
     notes += _drop_ungrounded_outcomes(output, claims)
-
-    topics = []
-    for topic in output["main_topics"]:
-        topic["concept_claim_ids"] = _known(topic["concept_claim_ids"], known, unknown)
-        topic["unit_ids"] = _known(topic["unit_ids"], unit_ids, unknown)
-        if topic["concept_claim_ids"]:
-            topics.append(topic)
-        else:
-            notes.append(f"Dropped main topic {topic['label']!r}: no known concept")
-    output["main_topics"] = topics
-
-    preparation = []
-    for item in output["inferred_preparation"]:
-        item["assumed_claim_ids"] = _known(item["assumed_claim_ids"], known, unknown)
-        item["taught_in_claim_ids"] = _known(
-            item["taught_in_claim_ids"], known, unknown
-        )
-        if item.get("first_needed_unit_id") not in unit_ids:
-            item["first_needed_unit_id"] = None
-        if item["assumed_claim_ids"]:
-            preparation.append(item)
-        else:
-            notes.append(
-                f"Dropped inferred preparation {item['label']!r}: no known claim"
-            )
-    output["inferred_preparation"] = preparation
+    output["main_topics"] = supported(
+        output["main_topics"],
+        "main topic",
+        "concept_claim_ids",
+        concept_claim_ids=known,
+        unit_ids=unit_ids,
+    )
+    output["inferred_preparation"] = supported(
+        output["inferred_preparation"],
+        "inferred preparation",
+        "assumed_claim_ids",
+        assumed_claim_ids=known,
+        taught_before_first_use_claim_ids=teaching,
+        taught_after_first_use_claim_ids=teaching,
+    )
 
     if unknown:
         notes.insert(0, "Dropped unknown ids: " + ", ".join(sorted(unknown)))
@@ -405,28 +358,21 @@ def drop_unknown_ids(
 
 
 # --------------------------------------------------------------------------- output
-def _limitations(records: list[UnitRecord]) -> list[dict]:
-    """Return the limitations the code states, for bins and truncated files"""
-    limitations = []
-
-    def files(record):
-        return (
-            len(record.extraction.output.get("sources", [])) if record.extraction else 0
-        )
-
-    in_bins = sum(files(record) for record in records if not record.order)
-    if any(not record.order for record in records):
-        in_units = sum(files(record) for record in records if record.order)
-        limitations.append(
-            {
-                "text": (
-                    f"{in_units} of {in_units + in_bins} files were in ordered units;"
-                    f" preparation for the {in_bins} in bins was judged course-wide."
-                ),
-                "claim_ids": [],
-                "from_code": True,
-            }
-        )
+def _finish(
+    output: dict,
+    records: list[UnitRecord],
+    context_output: dict | None,
+    context_id: int | None,
+) -> dict:
+    """Check the model's output and add what the code derives"""
+    claims = _claim_lookup(records)
+    unit_ids = {record.display_id for record in records}
+    output["extraction_notes"] += drop_unknown_ids(
+        output, claims, unit_ids, context_output
+    )
+    kept, excluded = apply_preparation_rule(output["inferred_preparation"], records)
+    output["inferred_preparation"] = kept
+    output["excluded_inferred_preparation"] = excluded
     truncated = sum(
         1
         for record in records
@@ -435,7 +381,7 @@ def _limitations(records: list[UnitRecord]) -> list[dict]:
         if source.get("truncated")
     )
     if truncated:
-        limitations.append(
+        output["coverage_limitations"].append(
             {
                 "text": (
                     f"Files over the per-file limit, read only in part: {truncated}."
@@ -444,19 +390,6 @@ def _limitations(records: list[UnitRecord]) -> list[dict]:
                 "from_code": True,
             }
         )
-    return limitations
-
-
-def _finish(
-    output: dict, records: list[UnitRecord], context: ClaimExtraction | None
-) -> dict:
-    """Check the model's output and add what the code derives"""
-    context_output = context.output if context else None
-    output["extraction_notes"] += drop_unknown_ids(output, records, context_output)
-    kept, excluded = apply_preparation_rule(output["inferred_preparation"], records)
-    output["inferred_preparation"] = kept
-    output["excluded_inferred_preparation"] = excluded
-    output["coverage_limitations"] += _limitations(records)
     output["declared_prerequisites"] = {
         "status": context_output["prerequisites_status"] if context_output else None,
         "items": [
@@ -469,14 +402,13 @@ def _finish(
     output["concepts"] = [
         {
             "claim_id": claim_id,
-            "unit_id": record.display_id,
+            "unit_id": claim_id.split(":")[0],
             "label": claim["label"],
             "kind": claim.get("kind"),
             "teaching_status": claim["teaching_status"],
         }
-        for record in records
-        for claim_id, kind, claim in record.claims
-        if kind == "concept" and claim.get("teaching_status") in TEACHING_STATUSES
+        for claim_id, (kind, claim) in claims.items()
+        if _teaches(kind, claim)
     ]
     # what each display id refers to, to resolve citations in step 3
     output["units"] = [
@@ -489,7 +421,7 @@ def _finish(
         }
         for record in records
     ]
-    output["context_extraction"] = context.id if context else None
+    output["context_extraction"] = context_id
     return output
 
 
@@ -507,14 +439,14 @@ def generate_run_claims(
     Args:
         run (LearningResourceRun): the run
         context (ClaimExtraction | None): the context unit's extraction
-        extractions (list): each unit and bin of the run, with its current
+        extractions (list): each unit of the run, with its current
             extraction, or None when it was skipped
         overwrite (bool): call the model even when an extraction with the
             same key is stored, and replace it
 
     Returns:
         ClaimExtraction | None: the run's extraction, or None when none of
-            its units or bins has claims
+            its units has claims
 
     Raises:
         ClaimExtractionError: when the model gives no valid response
@@ -523,16 +455,17 @@ def generate_run_claims(
     if not any(record.extraction for record in records):
         log.info("No unit claims to generate run claims from for %s", run.run_id)
         return None
+    context_output = context.output if context else None
+    context_id = context.id if context else None
     extractor = load_run_extractor()
     return get_or_create_extraction(
         extractor,
         _run_key(extractor, run, context, records),
         lambda: prompts.run_combined_prompt(
-            _context_block(context.output if context else None),
-            _records_block(records),
+            _context_block(context_output), _records_block(records)
         ),
         [],
         run=run,
-        finish=lambda output: _finish(output, records, context),
+        finish=lambda output: _finish(output, records, context_output, context_id),
         overwrite=overwrite,
     )

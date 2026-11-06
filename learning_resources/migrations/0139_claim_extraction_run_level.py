@@ -4,7 +4,7 @@ from django.db import migrations, models
 RUN_SYSTEM = """You are an expert curriculum analyst synthesising a reviewable course profile from (a) the extracted
 course context and (b) per-unit extraction records, each claim carrying an id like U03:c2 (concept), U03:s1 (skill),
 U03:a4 (assumed knowledge), U03:t1 (assessment expectation), and context claims like ctx:prereq:0, ctx:aud:0,
-ctx:obj:0, ctx:desc, ctx:req:0, ctx:conflict:0.
+ctx:obj:0, ctx:desc, ctx:req:0.
 
 Units (U01, U02, ...) are given in course order.
 
@@ -14,11 +14,12 @@ Rules
   assessment expectations. Do not present an assessment expectation as proof the course teaches something unless a
   taught/reviewed claim also supports it.
 - inferred_preparation: knowledge a learner needs BEFORE STARTING the course. Start from assumed-knowledge claims.
-  For each candidate, list in taught_in_claim_ids every concept claim with status taught/reviewed, in any unit, that
-  teaches or reviews the same knowledge, even when it is worded differently. A narrower, broader or merely related
-  topic is not the same knowledge. Whether that teaching comes before the knowledge is first needed is checked
-  separately, so list it wherever it is. A review/"Week 0" module or recitation provided by the course counts as
-  taught by the course.
+  first_needed_unit_id is the earliest unit whose assumed-knowledge claims you cite. For each candidate, find every
+  concept claim with status taught/reviewed that teaches or reviews the same knowledge, even when it is worded
+  differently. A narrower, broader or merely related topic is not the same knowledge. List the ones in the first
+  needed unit or an earlier unit in taught_before_first_use_claim_ids, and the ones in later units in
+  taught_after_first_use_claim_ids. An item taught before first use is not preparation; code drops it. A review/
+  "Week 0" module or recitation provided by the course counts as taught by the course.
   Items assumed only by optional or supplementary material (deep dives) must set only_needed_for_optional_material.
   Never copy declared prerequisites here; those are reported separately. Merge duplicates into canonical labels.
 - coverage_limitations: what the evidence does not cover (materials not processed, units without assessments,

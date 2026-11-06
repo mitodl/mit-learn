@@ -95,7 +95,6 @@ CONTEXT_OUTPUT = {
     ],
     "required_materials": [],
     "instructional_outline": [],
-    "conflicts": [],
     "extraction_notes": [],
     "sources": [],
 }
@@ -107,16 +106,13 @@ def _extraction(unit, output):
 
 @pytest.fixture
 def run_inputs():
-    """Return a run with a context unit, two units out of position order, and a bin"""
+    """Return a run with a context unit and two units out of position order"""
     run = LearningResourceRunFactory.create()
     context_unit = UnitFactory.create(
         run=run, kind=Unit.Kind.CONTEXT, external_id="context", position=None
     )
     second = UnitFactory.create(run=run, title="Week 2", position=2)
     first = UnitFactory.create(run=run, title="Week 1", position=1)
-    bin_unit = UnitFactory.create(
-        run=run, kind=Unit.Kind.BIN, title="Readings", position=None
-    )
     extractions = [
         (
             second,
@@ -137,14 +133,8 @@ def run_inputs():
                     concepts=[_concept("c1", "Vector components")],
                     assumed=[_assumed("a1", "Derivatives")],
                     files=2,
+                    truncated=1,
                 ),
-            ),
-        ),
-        (
-            bin_unit,
-            _extraction(
-                bin_unit,
-                _unit_output(assumed=[_assumed("a1", "Kinematics")], truncated=1),
             ),
         ),
     ]
@@ -170,7 +160,6 @@ def _response(**fields):
         ],
         "inferred_preparation": [],
         "coverage_limitations": [],
-        "unresolved_conflicts": [],
     }
     return RunExtraction.model_validate({**defaults, **fields})
 
@@ -194,11 +183,9 @@ def test_generate_run_claims(fake_llm, run_inputs):
     extraction = generate_run_claims(run, context, extractions)
 
     prompt = _prompt(fake_llm)
-    # units in course order, then bins; claim ids prefixed by the unit
+    # units in course order; claim ids prefixed by the unit
     assert prompt.index("## U01 Week 1") < prompt.index("## U02 Week 2")
-    assert prompt.index("## U02 Week 2") < prompt.index("## B01 Readings")
     assert "[U02:c1] [taught] Newton's second law" in prompt
-    assert "[B01:a1] Kinematics" in prompt
     assert "[ctx:prereq:0] [prerequisite] 18.01 is required" in prompt
     assert (extraction.level, extraction.run, extraction.unit) == (
         ClaimExtraction.Level.RUN,
@@ -215,7 +202,6 @@ def test_generate_run_claims(fake_llm, run_inputs):
     assert [(unit["unit_id"], unit["unit"]) for unit in output["units"]] == [
         ("U01", extractions[1][0].id),
         ("U02", extractions[0][0].id),
-        ("B01", extractions[2][0].id),
     ]
     assert output["context_extraction"] == context.id
 
@@ -241,19 +227,6 @@ def test_changed_unit_reruns_run(fake_llm, run_inputs):
     assert extraction.pk == first.pk
     assert extraction.key != first.key
     assert fake_llm.call_count == 2
-
-
-def test_bin_order_keeps_key(fake_llm):
-    """Rebuilding bins in another order reuses the run's claims"""
-    run = LearningResourceRunFactory.create()
-    bins = UnitFactory.create_batch(
-        2, run=run, kind=Unit.Kind.BIN, position=None, title="Bin"
-    )
-    extractions = [(unit, _extraction(unit, _unit_output())) for unit in bins]
-    first = generate_run_claims(run, None, extractions)
-
-    assert generate_run_claims(run, None, list(reversed(extractions))) == first
-    assert fake_llm.call_count == 1
 
 
 def test_same_title_in_other_course_keyed_apart(fake_llm, run_inputs):
@@ -300,7 +273,7 @@ def test_cited_teaching_excludes_preparation(fake_llm, run_inputs):
                     "Vector components",
                     ["U02:a1"],
                     "U02",
-                    taught_in_claim_ids=["U01:c1", "U09:c9"],
+                    taught_before_first_use_claim_ids=["U01:c1", "U09:c9"],
                 ),
             ]
         ),
@@ -311,8 +284,7 @@ def test_cited_teaching_excludes_preparation(fake_llm, run_inputs):
 
     assert output["inferred_preparation"] == []
     (excluded,) = output["excluded_inferred_preparation"]
-    assert excluded["taught_in_claim_ids"] == ["U01:c1"]
-    assert excluded["code_check_taught_in"] == ["U01:c1"]
+    assert excluded["taught_before_first_use_claim_ids"] == ["U01:c1"]
     assert "U09:c9" in output["extraction_notes"][0]
 
 
@@ -358,7 +330,8 @@ def _preparation(label, assumed, first_needed=None, **fields):
         "rationale": "",
         "first_needed_unit_id": first_needed,
         "assumed_claim_ids": assumed,
-        "taught_in_claim_ids": [],
+        "taught_before_first_use_claim_ids": [],
+        "taught_after_first_use_claim_ids": [],
         "confidence": "high",
         "only_needed_for_optional_material": False,
         **fields,
@@ -366,7 +339,7 @@ def _preparation(label, assumed, first_needed=None, **fields):
 
 
 def test_preparation_rule(run_inputs):
-    """Preparation taught at or before first use is dropped; bins count anywhere"""
+    """Preparation the model says is taught by first use is dropped"""
     _, _, extractions = run_inputs
     records = unit_records(extractions)
 
@@ -374,21 +347,17 @@ def test_preparation_rule(run_inputs):
         [
             # assumed in U02, taught in U01
             _preparation(
-                "Vector components", ["U02:a1"], "U02", taught_in_claim_ids=["U01:c1"]
+                "Vector components",
+                ["U02:a1"],
+                "U02",
+                taught_before_first_use_claim_ids=["U01:c1"],
             ),
             # assumed in U01, taught only later
             _preparation(
                 "Newton's second law",
                 ["U01:a1"],
                 "U01",
-                taught_in_claim_ids=["U02:c1"],
-            ),
-            # assumed only in a bin, taught in U02
-            _preparation(
-                "Newton's second law",
-                ["B01:a1"],
-                "B01",
-                taught_in_claim_ids=["U02:c1"],
+                taught_after_first_use_claim_ids=["U02:c1"],
             ),
             # assumed in U01, taught nowhere
             _preparation("Derivatives", ["U01:a1"], "U01"),
@@ -400,17 +369,16 @@ def test_preparation_rule(run_inputs):
         ("Newton's second law", "U01"),
         ("Derivatives", "U01"),
     ]
-    assert kept[0]["code_check_taught_later_in"] == ["U02:c1"]
+    assert kept[0]["taught_after_first_use_claim_ids"] == ["U02:c1"]
     assert "sequencing gap" in kept[0]["review_note"]
     assert [(item["label"], item["first_needed_unit_id"]) for item in excluded] == [
         ("Vector components", "U02"),
-        ("Newton's second law", None),
     ]
-    assert excluded[0]["code_check_taught_in"] == ["U01:c1"]
+    assert excluded[0]["taught_before_first_use_claim_ids"] == ["U01:c1"]
 
 
 def test_preparation_rule_earliest_first_use(run_inputs):
-    """A cited claim before the model's first-needed unit sets the first use"""
+    """A cited claim before the model's first-needed unit is reported as first use"""
     _, _, extractions = run_inputs
     records = unit_records(extractions)
 
@@ -421,7 +389,7 @@ def test_preparation_rule_earliest_first_use(run_inputs):
                 "Newton's second law",
                 ["U01:a1"],
                 "U02",
-                taught_in_claim_ids=["U02:c1"],
+                taught_after_first_use_claim_ids=["U02:c1"],
             )
         ],
         records,
@@ -431,34 +399,39 @@ def test_preparation_rule_earliest_first_use(run_inputs):
     assert [(item["label"], item["first_needed_unit_id"]) for item in kept] == [
         ("Newton's second law", "U01"),
     ]
-    assert kept[0]["code_check_taught_later_in"] == ["U02:c1"]
+    assert kept[0]["taught_after_first_use_claim_ids"] == ["U02:c1"]
 
 
-def test_preparation_rule_only_teaching_claims(run_inputs):
+def test_preparation_only_teaching_claims(fake_llm, run_inputs):
     """Cited claims that aren't taught or reviewed concepts don't drop an item"""
-    _, _, extractions = run_inputs
-    records = unit_records(extractions)
-
-    # a skill and an assumed claim, both in or before the first use
-    kept, excluded = apply_preparation_rule(
-        [
-            _preparation(
-                "Statics",
-                ["U02:a1"],
-                "U02",
-                taught_in_claim_ids=["U02:s1", "U01:a1"],
-            )
-        ],
-        records,
+    run, context, extractions = run_inputs
+    fake_llm.return_value = (
+        _response(
+            inferred_preparation=[
+                # a skill and an assumed claim, both in or before the first use
+                _preparation(
+                    "Statics",
+                    ["U02:a1"],
+                    "U02",
+                    taught_before_first_use_claim_ids=["U02:s1", "U01:a1"],
+                ),
+            ]
+        ),
+        "run raw",
     )
 
-    assert excluded == []
-    assert kept[0]["code_check_taught_in"] == []
-    assert kept[0]["code_check_taught_later_in"] == []
+    output = generate_run_claims(run, context, extractions).output
+
+    assert output["excluded_inferred_preparation"] == []
+    (item,) = output["inferred_preparation"]
+    assert item["taught_before_first_use_claim_ids"] == []
+    assert item["taught_after_first_use_claim_ids"] == []
+    # known ids, so not reported as unknown
+    assert not any("unknown" in note for note in output["extraction_notes"])
 
 
 def test_limitations(fake_llm, run_inputs):
-    """Bins and truncated files are stated as limitations"""
+    """Truncated files are stated as a limitation"""
     run, context, extractions = run_inputs
 
     limitations = generate_run_claims(run, context, extractions).output[
@@ -466,9 +439,5 @@ def test_limitations(fake_llm, run_inputs):
     ]
 
     assert [item["text"] for item in limitations] == [
-        (
-            "3 of 4 files were in ordered units; preparation for the 1 in bins was"
-            " judged course-wide."
-        ),
         "Files over the per-file limit, read only in part: 1.",
     ]

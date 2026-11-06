@@ -139,16 +139,6 @@ class OutlineEntry(Strict):
     title: str
 
 
-class Conflict(Strict):
-    topic: str
-    statements: list[Statement] = Field(min_length=2)
-    assessment: str = Field(
-        description=(
-            "How the statements disagree and which is likely authoritative, if any"
-        )
-    )
-
-
 class CourseContextOut(Strict):
     title: str
     stated_audience: list[Statement]
@@ -160,7 +150,6 @@ class CourseContextOut(Strict):
         description="What is graded or required vs. optional, as stated"
     )
     instructional_outline: list[OutlineEntry]
-    conflicts: list[Conflict]
     extraction_notes: list[str] = Field(
         description="Gaps, ambiguities, material you could not use"
     )
@@ -204,10 +193,18 @@ class PreparationOutput(Strict):
         min_length=1,
         description="Assumed-knowledge claim ids ('U01:a2') that motivate this",
     )
-    taught_in_claim_ids: list[str] = Field(
+    taught_before_first_use_claim_ids: list[str] = Field(
         description=(
-            "Concept claim ids ('U02:c3') with status taught or reviewed, in any"
-            " unit, that teach or review this same knowledge; empty if none"
+            "Concept claim ids ('U02:c3') with status taught or reviewed, in the"
+            " first unit that needs it or an earlier one, that teach or review"
+            " this same knowledge; empty if none"
+        )
+    )
+    taught_after_first_use_claim_ids: list[str] = Field(
+        description=(
+            "Concept claim ids with status taught or reviewed, in units after"
+            " the first unit that needs it, that teach or review this same"
+            " knowledge; empty if none"
         )
     )
     confidence: Literal["high", "medium", "low"]
@@ -222,7 +219,6 @@ class RunExtraction(Strict):
     learning_outcomes: list[ClaimText]
     inferred_preparation: list[PreparationOutput]
     coverage_limitations: list[ClaimText]
-    unresolved_conflicts: list[ClaimText]
     extraction_notes: list[str] = Field(
         default_factory=list, description="Gaps or ambiguities in the records"
     )
