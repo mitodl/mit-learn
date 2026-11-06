@@ -24,6 +24,11 @@ const nextConfig = {
   productionBrowserSourceMaps: true,
   allowedDevOrigins,
   /**
+   * Drops `X-Powered-By: Next.js`, which advertises the framework. Flagged as
+   * "HTTP Header Version Disclosure" by the 2026-10 assessment (mitodl/hq#14080).
+   */
+  poweredByHeader: false,
+  /**
    * Standalone output emits a minimal self-contained server at
    * .next/standalone/ with only the required runtime files. The resulting
    * Docker image requires no node_modules and no yarn at startup.
@@ -90,6 +95,34 @@ const nextConfig = {
        * Cache-Control value) depend on runtime state that is unavailable at
        * build time. The rules below are genuinely static and immutable.
        */
+
+      /* Static security headers (mitodl/hq#14080). Applied to static assets
+       * too: nosniff matters most there, where a wrong Content-Type gets
+       * acted on.
+       *
+       * The CSP is not here -- it allowlists a host from NEXT_PUBLIC_APPZI_URL,
+       * which is unreadable at build time, so it lives in src/proxy.ts.
+       * See docs/rfcs/0007-security-headers.md D2.
+       *
+       * Referrer-Policy governs the Referer this site SENDS, not what it
+       * receives on an inbound link -- the referring site decides that. So the
+       * case for strict-origin-when-cross-origin is outbound disclosure: full
+       * URL same-origin, origin only cross-origin, keeping paths and query
+       * strings out of what GTM, HubSpot, Appzi and embedded players see.
+       */
+      {
+        source: "/:path*",
+        headers: [
+          {
+            key: "X-Content-Type-Options",
+            value: "nosniff",
+          },
+          {
+            key: "Referrer-Policy",
+            value: "strict-origin-when-cross-origin",
+          },
+        ],
+      },
 
       /* Raw public images. The image optimizer also reuses this as the max-age
        * of the optimized /_next/image responses it produces from them.
