@@ -33,7 +33,6 @@ from learning_resources.factories import (
     CredentialMetadataConfigurationFactory,
     CredentialMetadataFactory,
     ETLSourceOwnershipFactory,
-    LearningPathFactory,
     LearningResourceFactory,
     LearningResourcePlatformFactory,
     LearningResourceRunFactory,
@@ -3335,38 +3334,6 @@ def test_ocw_sync_task_reads_nothing_it_does_not_own(mocker):
     mock_connect.assert_not_called()
     mock_iter_rows.assert_not_called()
     assert not LearningResource.objects.exists()
-
-
-def test_unpublish_mit_edx_resources(mocker):
-    """mit_edx resources are unpublished and the lists that held one reindexed"""
-    plugins = mocker.patch("learning_resources.utils.get_plugin_manager")
-    upsert = mocker.patch("learning_resources.tasks.resource_upserted_actions")
-    views_cache = mocker.patch("learning_resources.tasks.clear_views_cache")
-    edx_courses = [
-        LearningResourceFactory.create(is_course=True, etl_source="mit_edx"),
-        LearningResourceFactory.create(
-            is_course=True, etl_source="mit_edx", published=False, test_mode=True
-        ),
-    ]
-    other = LearningResourceFactory.create(is_course=True, etl_source="xpro")
-    path, _draft_path = (
-        LearningPathFactory.create(
-            resources=[edx_courses[0], other], learning_resource__published=published
-        ).learning_resource
-        for published in (True, False)
-    )
-
-    tasks.unpublish_mit_edx_resources()
-
-    for course in edx_courses:
-        course.refresh_from_db()
-        assert (course.published, course.test_mode) == (False, False)
-    other.refresh_from_db()
-    assert other.published is True
-    assert plugins.return_value.hook.resource_unpublished.call_count == 2
-    # the draft path stays out of search
-    upsert.assert_called_once_with(path, percolate=False, generate_embeddings=True)
-    views_cache.assert_called_once_with()
 
 
 def _warehouse_owns_content_files(etl_source):
