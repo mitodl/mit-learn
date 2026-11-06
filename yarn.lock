@@ -3144,18 +3144,18 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mitodl/ol-analytics-dashboard-api-axios@npm:2026.10.28":
-  version: 2026.10.28
-  resolution: "@mitodl/ol-analytics-dashboard-api-axios@npm:2026.10.28"
+"@mitodl/ol-analytics-dashboard-api-axios@npm:2026.11.2":
+  version: 2026.11.2
+  resolution: "@mitodl/ol-analytics-dashboard-api-axios@npm:2026.11.2"
   dependencies:
     axios: "npm:^1.6.5"
-  checksum: 10/e1d7c835d822c6738b95a65156c67a65874388526540bddaf6c32133d4046f3d67c11da51b43fb16f6b1bc81da05a82e2a41ad84d2df903561507c8466cd9167
+  checksum: 10/b6cfe3ef268e9dc920ae19a40460010103912b14cb4345dd7a775f0df04a8483d240baeb7b425f3f649ede7732997e59ada02bcd276e44b5926adb81fadb559c
   languageName: node
   linkType: hard
 
-"@mitodl/smoot-design@npm:6.39.1":
-  version: 6.39.1
-  resolution: "@mitodl/smoot-design@npm:6.39.1"
+"@mitodl/smoot-design@npm:6.40.0":
+  version: 6.40.0
+  resolution: "@mitodl/smoot-design@npm:6.40.0"
   dependencies:
     "@ai-sdk/react": "npm:1.2.12"
     "@emotion/cache": "npm:^11.14.0"
@@ -3180,7 +3180,7 @@ __metadata:
     "@remixicon/react": ^4.2.0
     react: ^18 || ^19
     react-dom: ^18 || ^19
-  checksum: 10/4575dba3c426a49633adbb8eb0db02533832a0e6f2a3173a6a53cc5397e130db39f0b2bb979b76f2dc0bdfc1ddf2157ae2e6a017c34cfaed6a2334ad9b57057b
+  checksum: 10/8d0ab23b09e267329b99995b3ad2bbc70ef34b19da4e3755048641db438b9e729ed394d8afd0f31bffdbefeb404e2cab6e40d0acd22140100ff4b07b4ea15eea
   languageName: node
   linkType: hard
 
@@ -4588,12 +4588,30 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@posthog/core@npm:1.5.5":
-  version: 1.5.5
-  resolution: "@posthog/core@npm:1.5.5"
+"@posthog/browser-common@npm:^0.10.1":
+  version: 0.10.1
+  resolution: "@posthog/browser-common@npm:0.10.1"
   dependencies:
-    cross-spawn: "npm:^7.0.6"
-  checksum: 10/f6404b0c5af3676afb37187145f173aab7a7eebf2caaf6831b4645f6fe6683287677bdc77f7239cb448b2d770215aa0eadca89578d83dd73ab6260e907c3a919
+    "@posthog/core": "npm:^1.61.1"
+    "@posthog/types": "npm:^1.418.0"
+    preact: "npm:^10.29.3"
+  checksum: 10/2ff006d4aa3d37ba903c1c3ce042f06f1577e30be8ddc0028fd57803cfda1f51fbfaa666466107aa9a4d604e922606d0c1ca1cebe027b7851fd7eb3e5a5f58df
+  languageName: node
+  linkType: hard
+
+"@posthog/core@npm:^1.61.1, @posthog/core@npm:^1.61.2":
+  version: 1.61.2
+  resolution: "@posthog/core@npm:1.61.2"
+  dependencies:
+    "@posthog/types": "npm:^1.418.0"
+  checksum: 10/44e6c74d210895d76bb4f6fe01cc37e92a2dd4cbd3e8217de7dd82838c6d1c32acb5f2b2fad33a01623330b718b72c6b867715e85a02e1989e6c0d76db23bf40
+  languageName: node
+  linkType: hard
+
+"@posthog/types@npm:^1.418.0":
+  version: 1.418.0
+  resolution: "@posthog/types@npm:1.418.0"
+  checksum: 10/be7e44b2e61ed840f60bb514b85e668dcc1a2b235f30e7d3b211fc4e924a9559dbf9e3130a9e4b6b19dc61a3e7dd2cc386d4063d80807b9037c1a6e2d15b17f7
   languageName: node
   linkType: hard
 
@@ -8489,7 +8507,7 @@ __metadata:
     "@faker-js/faker": "npm:^10.5.0"
     "@mitodl/mit-learn-api-axios": "npm:2026.8.17"
     "@mitodl/mitxonline-api-axios": "npm:2026.10.15-1"
-    "@mitodl/ol-analytics-dashboard-api-axios": "npm:2026.10.28"
+    "@mitodl/ol-analytics-dashboard-api-axios": "npm:2026.11.2"
     "@tanstack/react-query": "npm:^5.66.0"
     "@testing-library/react": "npm:^16.3.0"
     axios: "npm:^1.20.0"
@@ -9776,7 +9794,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"core-js@npm:^3.38.1":
+"core-js@npm:^3.49.0":
   version: 3.51.0
   resolution: "core-js@npm:3.51.0"
   checksum: 10/e2de0817bd27b8456e97f28d7752e96a519be9e776afd797d8404883f9ee7d274312ffbfdd883ae8f5fad32ab78267f2a05d17a7650bd3233feb093bbc249562
@@ -10599,7 +10617,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"dompurify@npm:^3.3.1":
+"dompurify@npm:^3.3.1, dompurify@npm:^3.4.13":
   version: 3.4.17
   resolution: "dompurify@npm:3.4.17"
   dependencies:
@@ -12233,7 +12251,7 @@ __metadata:
     react-google-recaptcha: "npm:^3.1.0"
     stylelint: "npm:^16.18.0"
     stylelint-config-standard-scss: "npm:^15.0.0"
-    syncpack: "npm:14.0.0-alpha.40"
+    syncpack: "npm:14.3.1"
     ts-node: "npm:^10.9.2"
     typescript: "npm:^5.5.4"
   languageName: unknown
@@ -15068,7 +15086,7 @@ __metadata:
     "@mitodl/course-search-utils": "npm:^3.8.1"
     "@mitodl/hacksnack": "npm:^0.1.2"
     "@mitodl/mitxonline-api-axios": "npm:2026.10.15-1"
-    "@mitodl/smoot-design": "npm:6.39.1"
+    "@mitodl/smoot-design": "npm:6.40.0"
     "@mui/base": "npm:5.0.0-beta.70"
     "@mui/material": "npm:^6.4.5"
     "@mui/material-nextjs": "npm:^6.4.3"
@@ -15135,7 +15153,7 @@ __metadata:
     ol-test-utilities: "npm:0.0.0"
     ol-utilities: "npm:0.0.0"
     papaparse: "npm:^5.5.3"
-    posthog-js: "npm:1.297.2"
+    posthog-js: "npm:1.442.0"
     react: "npm:^19.2.1"
     react-dom: "npm:^19.2.1"
     react-hotkeys-hook: "npm:^5.2.1"
@@ -16592,7 +16610,7 @@ __metadata:
     typescript: "npm:^5.5.4"
     wheel-indicator: "npm:^1.3.0"
   peerDependencies:
-    "@mitodl/smoot-design": 6.39.1
+    "@mitodl/smoot-design": 6.40.0
     next: ^16.2.7
   languageName: unknown
   linkType: soft
@@ -17392,20 +17410,33 @@ __metadata:
   languageName: node
   linkType: hard
 
-"posthog-js@npm:1.297.2":
-  version: 1.297.2
-  resolution: "posthog-js@npm:1.297.2"
+"posthog-js@npm:1.442.0":
+  version: 1.442.0
+  resolution: "posthog-js@npm:1.442.0"
   dependencies:
-    "@posthog/core": "npm:1.5.5"
-    core-js: "npm:^3.38.1"
+    "@posthog/browser-common": "npm:^0.10.1"
+    "@posthog/core": "npm:^1.61.2"
+    "@posthog/types": "npm:^1.418.0"
+    core-js: "npm:^3.49.0"
+    dompurify: "npm:^3.4.13"
     fflate: "npm:^0.4.8"
-    preact: "npm:^10.19.3"
-    web-vitals: "npm:^4.2.4"
-  checksum: 10/c41ff83ea60899845942555537894e4c264b143ce3388dfc722191b3e7a4d37a07399f6aebb479ef92cf26e4a04b99f0fc5a7e814a9e0363b4bb5ea40acc5399
+    preact: "npm:^10.29.3"
+    query-selector-shadow-dom: "npm:^1.0.1"
+    web-vitals: "npm:^6.2.1"
+    web-vitals-soft-navs: "npm:web-vitals@6.2.1"
+  peerDependencies:
+    "@types/react": ">=16.8.0"
+    react: ">=16.8.0"
+  peerDependenciesMeta:
+    "@types/react":
+      optional: true
+    react:
+      optional: true
+  checksum: 10/1ba08518280bea27b6c6109ce19e053907755ded82caa853f8e9664ffc2ac25e51eca7bcb3558afe7ee54395fe808329aa9178ae2202fda0ddb8dfd853654444
   languageName: node
   linkType: hard
 
-"preact@npm:^10.19.3":
+"preact@npm:^10.29.3":
   version: 10.29.8
   resolution: "preact@npm:10.29.8"
   peerDependencies:
@@ -17822,6 +17853,13 @@ __metadata:
     es-define-property: "npm:^1.0.1"
     side-channel: "npm:^1.1.1"
   checksum: 10/032a642c783fa93277c703591643734519c1e96ed2a9ea83a371fda4187dd9d6c2e5b66a69378a77e5a824bf8c4d1d0654295c069a9ff6c55509c0112c459a28
+  languageName: node
+  linkType: hard
+
+"query-selector-shadow-dom@npm:^1.0.1":
+  version: 1.0.1
+  resolution: "query-selector-shadow-dom@npm:1.0.1"
+  checksum: 10/f0fc0f3caf2f300a66a741ca3f5ff191c53d548e82287ec3256f88715d5893d16be2abf4d4deaca8203a25be0fb4690109272d5556682abc57a2ba7861d4ace6
   languageName: node
   linkType: hard
 
@@ -20111,74 +20149,74 @@ __metadata:
   languageName: node
   linkType: hard
 
-"syncpack-darwin-arm64@npm:14.0.0-alpha.40":
-  version: 14.0.0-alpha.40
-  resolution: "syncpack-darwin-arm64@npm:14.0.0-alpha.40"
+"syncpack-darwin-arm64@npm:14.3.1":
+  version: 14.3.1
+  resolution: "syncpack-darwin-arm64@npm:14.3.1"
   conditions: os=darwin & cpu=arm64
   languageName: node
   linkType: hard
 
-"syncpack-darwin-x64@npm:14.0.0-alpha.40":
-  version: 14.0.0-alpha.40
-  resolution: "syncpack-darwin-x64@npm:14.0.0-alpha.40"
+"syncpack-darwin-x64@npm:14.3.1":
+  version: 14.3.1
+  resolution: "syncpack-darwin-x64@npm:14.3.1"
   conditions: os=darwin & cpu=x64
   languageName: node
   linkType: hard
 
-"syncpack-linux-arm64-musl@npm:14.0.0-alpha.40":
-  version: 14.0.0-alpha.40
-  resolution: "syncpack-linux-arm64-musl@npm:14.0.0-alpha.40"
+"syncpack-linux-arm64-musl@npm:14.3.1":
+  version: 14.3.1
+  resolution: "syncpack-linux-arm64-musl@npm:14.3.1"
   conditions: os=linux & cpu=arm64
   languageName: node
   linkType: hard
 
-"syncpack-linux-arm64@npm:14.0.0-alpha.40":
-  version: 14.0.0-alpha.40
-  resolution: "syncpack-linux-arm64@npm:14.0.0-alpha.40"
+"syncpack-linux-arm64@npm:14.3.1":
+  version: 14.3.1
+  resolution: "syncpack-linux-arm64@npm:14.3.1"
   conditions: os=linux & cpu=arm64
   languageName: node
   linkType: hard
 
-"syncpack-linux-x64-musl@npm:14.0.0-alpha.40":
-  version: 14.0.0-alpha.40
-  resolution: "syncpack-linux-x64-musl@npm:14.0.0-alpha.40"
+"syncpack-linux-x64-musl@npm:14.3.1":
+  version: 14.3.1
+  resolution: "syncpack-linux-x64-musl@npm:14.3.1"
   conditions: os=linux & cpu=x64
   languageName: node
   linkType: hard
 
-"syncpack-linux-x64@npm:14.0.0-alpha.40":
-  version: 14.0.0-alpha.40
-  resolution: "syncpack-linux-x64@npm:14.0.0-alpha.40"
+"syncpack-linux-x64@npm:14.3.1":
+  version: 14.3.1
+  resolution: "syncpack-linux-x64@npm:14.3.1"
   conditions: os=linux & cpu=x64
   languageName: node
   linkType: hard
 
-"syncpack-windows-arm64@npm:14.0.0-alpha.40":
-  version: 14.0.0-alpha.40
-  resolution: "syncpack-windows-arm64@npm:14.0.0-alpha.40"
+"syncpack-windows-arm64@npm:14.3.1":
+  version: 14.3.1
+  resolution: "syncpack-windows-arm64@npm:14.3.1"
   conditions: os=win32 & cpu=arm64
   languageName: node
   linkType: hard
 
-"syncpack-windows-x64@npm:14.0.0-alpha.40":
-  version: 14.0.0-alpha.40
-  resolution: "syncpack-windows-x64@npm:14.0.0-alpha.40"
+"syncpack-windows-x64@npm:14.3.1":
+  version: 14.3.1
+  resolution: "syncpack-windows-x64@npm:14.3.1"
   conditions: os=win32 & cpu=x64
   languageName: node
   linkType: hard
 
-"syncpack@npm:14.0.0-alpha.40":
-  version: 14.0.0-alpha.40
-  resolution: "syncpack@npm:14.0.0-alpha.40"
+"syncpack@npm:14.3.1":
+  version: 14.3.1
+  resolution: "syncpack@npm:14.3.1"
   dependencies:
-    syncpack-darwin-arm64: "npm:14.0.0-alpha.40"
-    syncpack-darwin-x64: "npm:14.0.0-alpha.40"
-    syncpack-linux-arm64: "npm:14.0.0-alpha.40"
-    syncpack-linux-arm64-musl: "npm:14.0.0-alpha.40"
-    syncpack-linux-x64: "npm:14.0.0-alpha.40"
-    syncpack-linux-x64-musl: "npm:14.0.0-alpha.40"
-    syncpack-windows-arm64: "npm:14.0.0-alpha.40"
-    syncpack-windows-x64: "npm:14.0.0-alpha.40"
+    syncpack-darwin-arm64: "npm:14.3.1"
+    syncpack-darwin-x64: "npm:14.3.1"
+    syncpack-linux-arm64: "npm:14.3.1"
+    syncpack-linux-arm64-musl: "npm:14.3.1"
+    syncpack-linux-x64: "npm:14.3.1"
+    syncpack-linux-x64-musl: "npm:14.3.1"
+    syncpack-windows-arm64: "npm:14.3.1"
+    syncpack-windows-x64: "npm:14.3.1"
   dependenciesMeta:
     syncpack-darwin-arm64:
       optional: true
@@ -20198,7 +20236,7 @@ __metadata:
       optional: true
   bin:
     syncpack: index.cjs
-  checksum: 10/437da181268fc68f23ed38ba8f67524f942f72b0770a5e03f5a290033052f379ff6266df9537af4bd408191b916010231a22485a938a5ba5975916622d70203e
+  checksum: 10/84c901c06f4654e396e4dd38ec5cb8eb025acf55b0ebab1f9e9ab525e18fbc86dbb09d65b465ba4217944faeb7276b9dff1d853a46c75d44d26ce9fe950e813a
   languageName: node
   linkType: hard
 
@@ -21543,10 +21581,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"web-vitals@npm:^4.2.4":
-  version: 4.2.4
-  resolution: "web-vitals@npm:4.2.4"
-  checksum: 10/68cd1c2625a04b26e7eab67110623396afc6c9ef8c3a76f4e780aefe5b7d4ca1691737a0b99119e1d1ca9a463c4d468c0f0090b1875b6d784589d3a4a8503313
+"web-vitals-soft-navs@npm:web-vitals@6.2.1":
+  version: 6.2.1
+  resolution: "web-vitals@npm:6.2.1"
+  checksum: 10/bde1b9f39da7718d966fe60f8be4d17d571f381243b69a83cce29f04bd6076a9de20d3129ae9a483e711b94b767e3db9a37a0191890c043dbf121f55c96999c4
+  languageName: node
+  linkType: hard
+
+"web-vitals@npm:^6.2.1":
+  version: 6.2.3
+  resolution: "web-vitals@npm:6.2.3"
+  checksum: 10/1dd6800c27ef725e5cd4f3e0d7902e017549813474024bd1ce00a3fb839f63109a71e168d4da740cb6c7ddfbfba2d5f2cc1be59dad176ea10732fbd34dbec974
   languageName: node
   linkType: hard
 

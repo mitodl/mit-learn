@@ -5,19 +5,32 @@ import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
 import { getByImageSrc, queryByImageSrc } from "ol-test-utilities"
 import { renderWithTheme, screen, user, within } from "@/test-utils"
 import { ResourceCardView } from "./ResourceCardView"
-import type { CardLayoutProps, ResourceCardViewProps } from "./ResourceCardView"
+import type {
+  CardAction,
+  CardLayoutProps,
+  ResourceCardViewProps,
+} from "./ResourceCardView"
+
+const makeAction = (): CardAction => ({
+  label: faker.lorem.sentence(),
+  filled: faker.datatype.boolean(),
+  icon: <span aria-hidden />,
+  onClick: jest.fn(),
+})
 
 const makeProps = (): ResourceCardViewProps => {
   const title = faker.lorem.words(3)
+  // Metadata rows are keyed by label, so the labels must differ.
+  const [label1, label2] = faker.helpers.uniqueArray(faker.lorem.word, 2)
   return {
     title,
     typeLabel: faker.lorem.word(),
     parentCourseName: faker.lorem.words(2),
     imageSrc: faker.image.url(),
     metadata: [
-      { label: faker.lorem.word(), value: faker.lorem.words(2) },
+      { label: label1, value: faker.lorem.words(2) },
       {
-        label: faker.lorem.word(),
+        label: label2,
         value: faker.lorem.words(2),
       },
     ],
@@ -33,12 +46,7 @@ const makeProps = (): ResourceCardViewProps => {
     href: `/${faker.lorem.slug()}`,
     pushUrl: `?resource=${faker.number.int()}`,
     onLinkClick: jest.fn(),
-    action: {
-      label: faker.lorem.sentence(),
-      filled: faker.datatype.boolean(),
-      icon: <span aria-hidden />,
-      onClick: jest.fn(),
-    },
+    actions: [makeAction(), makeAction()],
     headingLevel: faker.helpers.arrayElement([2, 3, 4, 5, 6] as const),
     className: faker.lorem.word(),
   }
@@ -59,7 +67,7 @@ describe("ResourceCardView", () => {
     expect(props.onLinkClick).toHaveBeenCalledTimes(1)
   })
 
-  test("The link is described by the type, parent, metadata, and price, but not the action", () => {
+  test("The link is described by the type, parent, metadata, and price, but not the actions", () => {
     const props = makeProps()
     renderWithTheme(<ResourceCardView {...props} />)
     const link = screen.getByRole("link", { name: props.title })
@@ -74,9 +82,11 @@ describe("ResourceCardView", () => {
       .map((text) => escapeRegExp(text))
       .join(".*")
     expect(link).toHaveAccessibleDescription(new RegExp(inOrder))
-    expect(link).not.toHaveAccessibleDescription(
-      new RegExp(escapeRegExp(props.action!.label)),
-    )
+    props.actions!.forEach(({ label }) => {
+      expect(link).not.toHaveAccessibleDescription(
+        new RegExp(escapeRegExp(label)),
+      )
+    })
   })
 
   test("Metadata is a description list of div-wrapped term/definition pairs", () => {
@@ -95,22 +105,30 @@ describe("ResourceCardView", () => {
     })
   })
 
-  test("The action is a dialog-opening button after the price panel", async () => {
+  test("The actions are dialog-opening buttons, in order, after the price panel", async () => {
     const props = makeProps()
+    const [first, second] = props.actions!
     renderWithTheme(<ResourceCardView {...props} />)
-    const button = screen.getByRole("button", { name: props.action!.label })
-    expect(screen.getAllByRole("button")).toEqual([button])
+    const buttons = screen.getAllByRole("button")
+    expect(buttons.map((b) => b.getAttribute("aria-label"))).toEqual([
+      first.label,
+      second.label,
+    ])
     const link = screen.getByRole("link", { name: props.title })
     const panelId = link.getAttribute("aria-describedby")!.split(" ").at(-1)!
     const panel = document.getElementById(panelId)!
     expect(panel).toHaveTextContent(props.price.primary!)
     expect(within(panel).queryAllByRole("button")).toEqual([])
-    expect(button).toHaveAttribute("aria-haspopup", "dialog")
-    expect(
-      panel.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy()
-    await user.click(button)
-    expect(props.action!.onClick).toHaveBeenCalledTimes(1)
+    buttons.forEach((button) => {
+      expect(button).toHaveAttribute("aria-haspopup", "dialog")
+      expect(
+        panel.compareDocumentPosition(button) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy()
+    })
+    await user.click(buttons[1])
+    expect(second.onClick).toHaveBeenCalledTimes(1)
+    expect(first.onClick).not.toHaveBeenCalled()
     expect(props.onLinkClick).not.toHaveBeenCalled()
   })
 

@@ -4,6 +4,7 @@ import {
   RiBookmarkFill,
   RiBookmarkLine,
   RiFileCopy2Line,
+  RiMenuAddLine,
 } from "@remixicon/react"
 import { styled } from "ol-components"
 import { ResourceCardSkeleton, ResourceCardView } from "./ResourceCardView"
@@ -28,6 +29,13 @@ const makeAction = (
   ) : (
     <RiBookmarkLine aria-hidden />
   ),
+  onClick: () => {},
+})
+
+const makeLearningPathAction = (cardTitle: string): CardAction => ({
+  label: `Add to learning path: ${cardTitle}`,
+  filled: false,
+  icon: <RiMenuAddLine aria-hidden />,
   onClick: () => {},
 })
 
@@ -86,7 +94,7 @@ const meta: Meta<ResourceCardViewProps> = {
     layout: "vertical",
     size: "medium",
     href: "#",
-    action: makeAction(title),
+    actions: [makeAction(title)],
     headingLevel: 3,
   },
 }
@@ -141,7 +149,7 @@ const variants = (
   }))
 
 const edgeCases = (args: ResourceCardViewProps): ResourceCardViewProps[] => [
-  { ...args, title: longTitle, action: makeAction(longTitle) },
+  { ...args, title: longTitle, actions: [makeAction(longTitle)] },
   ...variants(args, LONG_RANGES),
   { ...args, title: `No image: ${args.title}`, imageSrc: null },
   {
@@ -152,11 +160,16 @@ const edgeCases = (args: ResourceCardViewProps): ResourceCardViewProps[] => [
     placeholderIcon: <RiFileCopy2Line />,
     price: PRICES.Free,
   },
-  { ...args, title: `No action: ${args.title}`, action: undefined },
+  { ...args, title: `No action: ${args.title}`, actions: undefined },
   {
     ...args,
     title: `Bookmarked: ${args.title}`,
-    action: makeAction(args.title, { bookmarked: true }),
+    actions: [makeAction(args.title, { bookmarked: true })],
+  },
+  {
+    ...args,
+    title: `Two actions: ${args.title}`,
+    actions: [makeLearningPathAction(args.title), makeAction(args.title)],
   },
   {
     ...args,
@@ -170,7 +183,7 @@ const edgeCases = (args: ResourceCardViewProps): ResourceCardViewProps[] => [
 /**
  * Every price state in each layout and size, then edge cases: a long title,
  * long price ranges, no image (with and without a placeholder icon), no action,
- * a bookmarked action, and no metadata.
+ * a bookmarked action, two actions, and no metadata.
  */
 export const Omnibus: Story = {
   parameters: { layout: "padded" },

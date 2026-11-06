@@ -3,9 +3,11 @@ Test tasks
 """
 
 from datetime import timedelta
+from types import SimpleNamespace
 from unittest.mock import ANY
 
 import pytest
+from celery.exceptions import MaxRetriesExceededError, Retry
 from decorator import contextmanager
 from django.core.cache import caches
 from django.db import DatabaseError
@@ -22,6 +24,7 @@ from learning_resources.constants import (
     PlatformType,
 )
 from learning_resources.credentials import CredentialMetadata
+from learning_resources.etl import warehouse_content_files
 from learning_resources.etl.constants import MARKETING_PAGE_FILE_TYPE, ETLSource
 from learning_resources.etl.exceptions import ExtractException
 from learning_resources.etl.ownership import CONTENT_FILE, TRANSCRIPT
@@ -36,10 +39,12 @@ from learning_resources.factories import (
     LearningResourceRunFactory,
 )
 from learning_resources.models import (
+    ClaimExtraction,
     ContentFile,
     ETLShadowRun,
     ETLSourceOwnership,
     LearningResource,
+    Unit,
     VideoChannel,
 )
 from learning_resources.tasks import (
@@ -49,6 +54,7 @@ from learning_resources.tasks import (
     get_youtube_data,
     get_youtube_playlist_data,
     get_youtube_transcripts,
+    load_warehouse_content_files,
     marketing_page_for_resources,
     scrape_marketing_pages,
     sync_canvas_courses,
@@ -2524,6 +2530,13 @@ MITXONLINE_OWNED = pytest.param(
     (ETLSource.mitxonline.name, ["course", "program"]), id="mitxonline"
 )
 OCW_OWNED = pytest.param((ETLSource.ocw.name, ["course"]), id="ocw")
+CONTENT_FILE_TASKS = [
+    pytest.param("SyncOCWContentFilesTask", ETLSource.ocw.name, id="ocw"),
+    pytest.param(
+        "SyncMITxOnlineContentFilesTask", ETLSource.mitxonline.name, id="mitxonline"
+    ),
+    pytest.param("SyncXproContentFilesTask", ETLSource.xpro.name, id="xpro"),
+]
 
 
 @pytest.mark.parametrize("warehouse_owns", [YOUTUBE_OWNED], indirect=True)
@@ -3354,3 +3367,453 @@ def test_unpublish_mit_edx_resources(mocker):
     # the draft path stays out of search
     upsert.assert_called_once_with(path, percolate=False, generate_embeddings=True)
     views_cache.assert_called_once_with()
+
+
+def _warehouse_owns_content_files(etl_source):
+    factories.ETLSourceOwnershipFactory.create(
+        etl_source=etl_source,
+        resource_type=CONTENT_FILE,
+        owner=ETLSourceOwnership.Pipeline.WAREHOUSE,
+    )
+
+
+@pytest.mark.parametrize(("task_name", "etl_source"), CONTENT_FILE_TASKS)
+@pytest.mark.parametrize("allow", [True, False])
+def test_content_file_sync_queues_a_load_per_changed_run(
+    mocker, settings, task_name, etl_source, allow
+):
+    """A sync reads aggregates only, for its own source, and queues what changed"""
+    settings.WAREHOUSE_CATALOG = "catalog"
+    settings.WAREHOUSE_SCHEMA = "schema"
+    _warehouse_owns_content_files(etl_source)
+    conn = mocker.patch("learning_resources.lib.warehouse.connect_to_warehouse")
+    stats = [{"run_readable_id": "run-1", "row_count": 2}]
+    mock_stats = mocker.patch(
+        "learning_resources.tasks.iter_group_stats", return_value=iter(stats)
+    )
+    mock_iter_rows = mocker.patch("learning_resources.tasks.iter_rows")
+    mock_runs = mocker.patch(
+        "learning_resources.tasks.warehouse_content_files.runs_to_load",
+        return_value=[("run-1", 2), ("run-2", 5)],
+    )
+    mock_load = mocker.patch("learning_resources.tasks.load_warehouse_content_files")
+    task = getattr(tasks, task_name)
+
+    assert task.run(allow_mass_unpublish=allow) == 2
+
+    mock_iter_rows.assert_not_called()
+    mock_stats.assert_called_once_with(
+        conn.return_value,
+        f"catalog.schema.{warehouse_content_files.VIEWS[etl_source]}",
+        "run_readable_id",
+        columns=warehouse_content_files.FINGERPRINT_COLUMNS[etl_source],
+        where={"etl_source": etl_source},
+    )
+    mock_runs.assert_called_once_with(etl_source, stats, allow_mass_unpublish=allow)
+    assert mock_load.delay.call_args_list == [
+        mocker.call(etl_source, "run-1", 2, allow_shrink=allow),
+        mocker.call(etl_source, "run-2", 5, allow_shrink=allow),
+    ]
+
+
+@pytest.mark.parametrize(("task_name", "etl_source"), CONTENT_FILE_TASKS)
+@pytest.mark.parametrize(
+    "ownership",
+    [
+        {},
+        {"owner": ETLSourceOwnership.Pipeline.LEGACY},
+        {
+            "owner": ETLSourceOwnership.Pipeline.LEGACY,
+            "shadow": ETLSourceOwnership.Pipeline.WAREHOUSE,
+        },
+        {"owner": ETLSourceOwnership.Pipeline.WEBHOOK},
+    ],
+)
+def test_content_file_sync_is_a_no_op_unless_the_warehouse_owns_it(
+    mocker, task_name, etl_source, ownership
+):
+    """
+    Under legacy, or a shadow, which content files can't have, a sync connects
+    to nothing and queues nothing
+    """
+    if ownership:
+        factories.ETLSourceOwnershipFactory.create(
+            etl_source=etl_source, resource_type=CONTENT_FILE, **ownership
+        )
+    mock_connect = mocker.patch("learning_resources.lib.warehouse.connect_to_warehouse")
+    mock_load = mocker.patch("learning_resources.tasks.load_warehouse_content_files")
+
+    assert getattr(tasks, task_name).run() == 0
+
+    mock_connect.assert_not_called()
+    mock_load.delay.assert_not_called()
+
+
+def test_content_file_sync_owner_of_one_source_leaves_the_other_alone(mocker):
+    """Ownership is per source, so xPRO's flip doesn't start MITx Online's sync"""
+    _warehouse_owns_content_files(ETLSource.xpro.name)
+    mock_connect = mocker.patch("learning_resources.lib.warehouse.connect_to_warehouse")
+
+    assert tasks.SyncMITxOnlineContentFilesTask.run() == 0
+
+    mock_connect.assert_not_called()
+
+
+@pytest.fixture
+def content_file_run(mocker, settings):
+    """Set up a run the warehouse owns the content files of, with its lock free"""
+    settings.WAREHOUSE_CATALOG = "catalog"
+    settings.WAREHOUSE_SCHEMA = "schema"
+    _warehouse_owns_content_files(ETLSource.mitxonline.name)
+    run = factories.LearningResourceRunFactory.create(
+        learning_resource=factories.LearningResourceFactory.create(
+            is_course=True, etl_source=ETLSource.mitxonline.name, create_runs=False
+        ),
+        published=True,
+    )
+    mock_caches = mocker.patch("learning_resources.tasks.caches")
+    mock_caches.__getitem__.return_value.add.return_value = True
+    return SimpleNamespace(run=run, lock=mock_caches.__getitem__.return_value)
+
+
+def test_load_warehouse_content_files_reads_one_run(mocker, content_file_run):
+    """A load reads only its run, closes the connection, then writes under its lock"""
+    run = content_file_run.run
+    rows = [{"key": "a"}]
+    mock_connect = mocker.patch("learning_resources.tasks.connect_to_warehouse")
+    mock_iter_rows = mocker.patch(
+        "learning_resources.tasks.iter_rows", return_value=iter(rows)
+    )
+    mock_load = mocker.patch(
+        "learning_resources.tasks.warehouse_content_files.load_run", return_value=1
+    )
+
+    assert load_warehouse_content_files(ETLSource.mitxonline.name, run.run_id, 7) == 1
+
+    mock_iter_rows.assert_called_once_with(
+        mock_connect.return_value,
+        "catalog.schema.integrations__learn__content_files",
+        where={"etl_source": ETLSource.mitxonline.name, "run_readable_id": run.run_id},
+    )
+    mock_connect.return_value.close.assert_called_once_with()
+    mock_load.assert_called_once_with(
+        run, rows, expected_count=7, allow_mass_unpublish=False, allow_shrink=False
+    )
+    key = f"warehouse_content_files:{ETLSource.mitxonline.name}:{run.run_id}"
+    content_file_run.lock.add.assert_called_once_with(
+        key, "1", timeout=tasks.CONTENT_FILE_LOAD_LOCK_SECONDS
+    )
+    content_file_run.lock.delete.assert_called_once_with(key)
+
+
+@pytest.mark.parametrize("override", ["allow_mass_unpublish", "allow_shrink"])
+def test_load_warehouse_content_files_passes_the_unpublish_override(
+    mocker, content_file_run, override
+):
+    """An operator, or a sync, loosens the run's unpublish limit through the task"""
+    mocker.patch("learning_resources.tasks.connect_to_warehouse")
+    mocker.patch("learning_resources.tasks.iter_rows", return_value=iter([]))
+    mock_load = mocker.patch(
+        "learning_resources.tasks.warehouse_content_files.load_run", return_value=0
+    )
+
+    load_warehouse_content_files.delay(
+        ETLSource.mitxonline.name, content_file_run.run.run_id, 3, **{override: True}
+    )
+
+    assert mock_load.call_args.kwargs == {
+        "expected_count": 3,
+        "allow_mass_unpublish": override == "allow_mass_unpublish",
+        "allow_shrink": override == "allow_shrink",
+    }
+
+
+def test_load_warehouse_content_files_releases_the_lock_on_failure(
+    mocker, content_file_run
+):
+    """A failed read closes the connection and doesn't hold the run"""
+    mock_connect = mocker.patch("learning_resources.tasks.connect_to_warehouse")
+    mocker.patch(
+        "learning_resources.tasks.iter_rows", side_effect=RuntimeError("query failed")
+    )
+
+    with pytest.raises(RuntimeError):
+        load_warehouse_content_files(
+            ETLSource.mitxonline.name, content_file_run.run.run_id
+        )
+
+    mock_connect.return_value.close.assert_called_once_with()
+    content_file_run.lock.delete.assert_called_once()
+
+
+def test_load_warehouse_content_files_retries_when_the_run_is_locked(
+    mocker, content_file_run
+):
+    """A second load of a run waits outside the worker instead of blocking it"""
+    content_file_run.lock.add.return_value = False
+    mock_connect = mocker.patch("learning_resources.tasks.connect_to_warehouse")
+    mock_retry = mocker.patch.object(
+        load_warehouse_content_files, "retry", side_effect=Retry()
+    )
+
+    with pytest.raises(Retry):
+        load_warehouse_content_files(
+            ETLSource.mitxonline.name, content_file_run.run.run_id
+        )
+
+    mock_retry.assert_called_once_with(countdown=tasks.CONTENT_FILE_LOAD_RETRY_SECONDS)
+    mock_connect.assert_not_called()
+    content_file_run.lock.delete.assert_not_called()
+
+
+def test_load_warehouse_content_files_gives_up_after_its_retries(
+    mocker, content_file_run
+):
+    """Past the retry cap the run is left to the daily sync"""
+    content_file_run.lock.add.return_value = False
+    mocker.patch.object(
+        load_warehouse_content_files, "retry", side_effect=MaxRetriesExceededError()
+    )
+    mock_connect = mocker.patch("learning_resources.tasks.connect_to_warehouse")
+
+    assert (
+        load_warehouse_content_files(
+            ETLSource.mitxonline.name, content_file_run.run.run_id
+        )
+        == 0
+    )
+
+    mock_connect.assert_not_called()
+
+
+def test_load_warehouse_content_files_skips_when_ownership_moved(mocker):
+    """A load queued before content files were handed back reads and writes nothing"""
+    run = factories.LearningResourceRunFactory.create(
+        learning_resource=factories.LearningResourceFactory.create(
+            is_course=True, etl_source=ETLSource.mitxonline.name, create_runs=False
+        )
+    )
+    mock_connect = mocker.patch("learning_resources.tasks.connect_to_warehouse")
+
+    assert load_warehouse_content_files(ETLSource.mitxonline.name, run.run_id) == 0
+
+    mock_connect.assert_not_called()
+
+
+def test_load_warehouse_content_files_skips_a_run_learn_does_not_have(
+    mocker, content_file_run
+):
+    """A webhook can name a run before its course sync has created it"""
+    mock_connect = mocker.patch("learning_resources.tasks.connect_to_warehouse")
+
+    assert load_warehouse_content_files(ETLSource.mitxonline.name, "unknown") == 0
+
+    mock_connect.assert_not_called()
+
+
+def test_load_warehouse_content_files_stops_inside_its_lock():
+    """A load can't outlive the lock that keeps a second load of the run out"""
+    assert (
+        load_warehouse_content_files.time_limit < tasks.CONTENT_FILE_LOAD_LOCK_SECONDS
+    )
+
+
+def test_load_warehouse_content_files_runs_on_the_content_queue():
+    """The load shares the queue the archive ETL's content tasks run on"""
+    assert app.conf.task_routes[load_warehouse_content_files.name] == {
+        "queue": "edx_content"
+    }
+
+
+def test_unit_claims_resource_ids():
+    """Only published courses with units on some run are swept"""
+    with_units = factories.UnitFactory.create().run.learning_resource
+    with_units.resource_type = LearningResourceType.course.name
+    with_units.published = True
+    with_units.save()
+    unpublished = factories.UnitFactory.create().run.learning_resource
+    unpublished.resource_type = LearningResourceType.course.name
+    unpublished.published = False
+    unpublished.save()
+    factories.LearningResourceRunFactory.create()
+
+    assert tasks.unit_claims_resource_ids() == [with_units.id]
+
+
+@pytest.mark.parametrize("overwrite", [True, False])
+def test_generate_unit_claims_for_resource(mocker, overwrite):
+    """The best run's context unit and each of its units and bins are extracted"""
+    run = factories.LearningResourceRunFactory.create()
+    factories.UnitFactory.create(run=run, kind=Unit.Kind.CONTEXT, position=None)
+    bin_unit = factories.UnitFactory.create(run=run, kind=Unit.Kind.BIN, position=None)
+    second = factories.UnitFactory.create(run=run, position=2)
+    first = factories.UnitFactory.create(run=run, position=1)
+    mocker.patch.object(
+        LearningResource, "best_run", new_callable=mocker.PropertyMock, return_value=run
+    )
+    generate_context = mocker.patch(
+        "learning_resources.profiles.context_claims.generate_context_claims",
+        return_value=factories.ClaimExtractionFactory.create(),
+    )
+    generate_unit = mocker.patch(
+        "learning_resources.profiles.unit_claims.generate_unit_claims",
+        side_effect=factories.ClaimExtractionFactory.create_batch(3),
+    )
+
+    result = tasks.generate_unit_claims_for_resource(
+        run.learning_resource.id, overwrite=overwrite
+    )
+
+    assert result == {"context_extracted": 1, "unit_extracted": 3}
+    generate_context.assert_called_once_with(run, overwrite=overwrite)
+    assert generate_unit.call_args_list == [
+        mocker.call(unit, overwrite=overwrite) for unit in [first, second, bin_unit]
+    ]
+
+
+def test_generate_unit_claims_for_resource_failures(mocker):
+    """A unit that fails or is skipped doesn't stop the rest of the run"""
+    run = factories.LearningResourceRunFactory.create()
+    factories.UnitFactory.create(run=run, kind=Unit.Kind.CONTEXT, position=None)
+    failing, skipped, extracted = factories.UnitFactory.create_batch(3, run=run)
+    mocker.patch.object(
+        LearningResource, "best_run", new_callable=mocker.PropertyMock, return_value=run
+    )
+    mocker.patch(
+        "learning_resources.profiles.context_claims.generate_context_claims",
+        side_effect=ValueError("bad response"),
+    )
+    generate_unit = mocker.patch(
+        "learning_resources.profiles.unit_claims.generate_unit_claims",
+        side_effect=[
+            ValueError("bad response"),
+            None,
+            factories.ClaimExtractionFactory.create(),
+        ],
+    )
+
+    result = tasks.generate_unit_claims_for_resource(run.learning_resource.id)
+
+    assert result == {
+        "context_failed": 1,
+        "unit_failed": 1,
+        "unit_skipped": 1,
+        "unit_extracted": 1,
+    }
+    assert [call.args[0] for call in generate_unit.call_args_list] == [
+        failing,
+        skipped,
+        extracted,
+    ]
+
+
+def test_generate_unit_claims_for_resource_no_context(mocker):
+    """A run without a context unit only extracts its units"""
+    unit = factories.UnitFactory.create()
+    mocker.patch.object(
+        LearningResource,
+        "best_run",
+        new_callable=mocker.PropertyMock,
+        return_value=unit.run,
+    )
+    generate_context = mocker.patch(
+        "learning_resources.profiles.context_claims.generate_context_claims"
+    )
+    mocker.patch(
+        "learning_resources.profiles.unit_claims.generate_unit_claims",
+        return_value=None,
+    )
+
+    result = tasks.generate_unit_claims_for_resource(unit.run.learning_resource.id)
+
+    assert result == {"unit_skipped": 1}
+    generate_context.assert_not_called()
+
+
+def test_generate_unit_claims_for_resource_no_units(mocker):
+    """Nothing is generated when the best run has no units"""
+    run = factories.LearningResourceRunFactory.create()
+    mocker.patch.object(
+        LearningResource, "best_run", new_callable=mocker.PropertyMock, return_value=run
+    )
+    generate_unit = mocker.patch(
+        "learning_resources.profiles.unit_claims.generate_unit_claims"
+    )
+
+    assert tasks.generate_unit_claims_for_resource(run.learning_resource.id) is None
+    generate_unit.assert_not_called()
+
+
+def test_generate_unit_claims_for_resource_publishes(mocker):
+    """Only the best run's current extractions are published"""
+    resource = LearningResourceFactory.create(is_course=True, runs=[])
+    best_run, old_run = factories.LearningResourceRunFactory.create_batch(
+        2, learning_resource=resource
+    )
+    context = factories.UnitFactory.create(
+        run=best_run, kind=Unit.Kind.CONTEXT, position=None
+    )
+    unit, failing, skipped = factories.UnitFactory.create_batch(3, run=best_run)
+    context_extraction, unit_extraction = (
+        factories.ClaimExtractionFactory.create(unit=owner) for owner in (context, unit)
+    )
+    # left from before, or from when the old run was the best run
+    for owner in (failing, skipped, factories.UnitFactory.create(run=old_run)):
+        factories.ClaimExtractionFactory.create(unit=owner, published=True)
+    other_course = factories.ClaimExtractionFactory.create(published=True)
+    # its unit was deleted
+    factories.ClaimExtractionFactory.create(unit=None, published=True)
+    mocker.patch.object(
+        LearningResource,
+        "best_run",
+        new_callable=mocker.PropertyMock,
+        return_value=best_run,
+    )
+    mocker.patch(
+        "learning_resources.profiles.context_claims.generate_context_claims",
+        return_value=context_extraction,
+    )
+    mocker.patch(
+        "learning_resources.profiles.unit_claims.generate_unit_claims",
+        side_effect=[unit_extraction, ValueError("bad response"), None],
+    )
+
+    tasks.generate_unit_claims_for_resource(resource.id)
+
+    assert set(
+        ClaimExtraction.objects.filter(published=True).values_list("id", flat=True)
+    ) == {context_extraction.id, unit_extraction.id, other_course.id}
+
+
+def test_generate_unit_claims_for_resource_no_units_unpublishes(mocker):
+    """A course whose best run has no units has no published extractions"""
+    resource = LearningResourceFactory.create(is_course=True, runs=[])
+    best_run, old_run = factories.LearningResourceRunFactory.create_batch(
+        2, learning_resource=resource
+    )
+    extraction = factories.ClaimExtractionFactory.create(
+        unit=factories.UnitFactory.create(run=old_run), published=True
+    )
+    mocker.patch.object(
+        LearningResource,
+        "best_run",
+        new_callable=mocker.PropertyMock,
+        return_value=best_run,
+    )
+
+    assert tasks.generate_unit_claims_for_resource(resource.id) is None
+    extraction.refresh_from_db()
+    assert extraction.published is False
+
+
+def test_generate_all_claims(mocker):
+    """One task is queued per course"""
+    group = mocker.patch("learning_resources.tasks.celery.group")
+    task = mocker.patch("learning_resources.tasks.generate_unit_claims_for_resource")
+
+    assert tasks.generate_all_claims([1, 2], overwrite=True) == 2
+    assert task.si.call_args_list == [
+        mocker.call(1, overwrite=True),
+        mocker.call(2, overwrite=True),
+    ]
+    group.return_value.apply_async.assert_called_once()

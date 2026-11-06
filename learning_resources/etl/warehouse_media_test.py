@@ -4,6 +4,8 @@ from datetime import UTC, datetime
 from types import SimpleNamespace
 
 import pytest
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 
 from learning_resources.constants import (
     LearningResourceRelationTypes,
@@ -575,6 +577,44 @@ def test_sync_youtube_as_a_shadow_compares_content_file_playlists(
         assert report.error == ""
         assert report.details["field_counts"] == {}
     assert stored_youtube() == before
+
+
+def test_sync_youtube_as_a_shadow_reads_content_files_without_their_content(
+    warehouse_owns_youtube,
+):
+    """
+    A shadow reads the content files of every OCW playlist at once, so it must
+    leave out their content (transcripts) and the course's descriptions, and
+    load nothing it skipped one file at a time.
+    """
+    run = LearningResourceRunFactory.create(published=True)
+    for video_id in ("vid-a", "vid-b"):
+        ContentFileFactory.create(youtube_id=video_id, run=run, content="x" * 10_000)
+    views = (
+        [channel_row()],
+        [playlist_row("PL-ocw", create_videos=0)],
+        [membership_row("PL-ocw", "vid-a", 0), membership_row("PL-ocw", "vid-b", 1)],
+        [video_row("vid-a"), video_row("vid-b")],
+    )
+    sync_and_load_youtube(*views)
+
+    with CaptureQueriesContext(connection) as context:
+        reports = shadow_youtube(*views)
+
+    content_file_queries = [
+        query["sql"]
+        for query in context.captured_queries
+        if 'FROM "learning_resources_contentfile"' in query["sql"]
+    ]
+    # _kept_playlists' youtube ids, then _matched_content_files
+    assert len(content_file_queries) == 2
+    for sql in content_file_queries:
+        assert '"learning_resources_contentfile"."content"' not in sql
+        assert '"learning_resources_contentfile"."summary"' not in sql
+        assert '"learning_resources_learningresource"."full_description"' not in sql
+    for report in reports.values():
+        assert report.error == ""
+        assert report.details["field_counts"] == {}
 
 
 def test_sync_youtube_as_a_shadow_finds_a_content_file_video_on_another_platform(

@@ -70,7 +70,7 @@
     "prettier-plugin-django-alpine": "^1.2.6",
     "stylelint": "^16.18.0",
     "stylelint-config-standard-scss": "^15.0.0",
-    "syncpack": "14.0.0-alpha.40",
+    "syncpack": "14.3.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.5.4"
   },

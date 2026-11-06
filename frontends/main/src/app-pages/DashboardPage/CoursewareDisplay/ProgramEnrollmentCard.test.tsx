@@ -6,14 +6,14 @@ import { programCertificates as programCertificateFactory } from "api/test-utils
 import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 import { receiptView } from "@/common/urls"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
-import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { ProgramEnrollmentCard } from "./ProgramEnrollmentCard"
 import { setupOrderHistory } from "./test-utils"
 
-jest.mock("posthog-js/react")
+jest.mock("@/common/useFeatureFlag")
 
-const mockedUseFeatureFlagEnabled = jest
-  .mocked(useFeatureFlagEnabled)
+const mockedUseFeatureFlag = jest
+  .mocked(useFeatureFlag)
   .mockImplementation(() => false)
 
 // Verified cards look up their order; default to none, tests override.
@@ -320,15 +320,17 @@ describe("ProgramEnrollmentCard program letter", () => {
   const setup = ({
     flagEnabled,
     mitxonlineProgramId,
+    shareUrl = SHARE_URL,
   }: {
     flagEnabled: boolean
     mitxonlineProgramId: number | null
+    shareUrl?: string | null
   }) => {
-    mockedUseFeatureFlagEnabled.mockReturnValue(flagEnabled)
+    mockedUseFeatureFlag.mockReturnValue(flagEnabled)
     setMockResponse.get(urls.programCertificates.list(), [
       programCertificateFactory.programCertificate({
         mitxonline_program_id: mitxonlineProgramId,
-        program_letter_share_url: SHARE_URL,
+        program_letter_share_url: shareUrl,
       }),
     ])
     const programEnrollment =
@@ -374,11 +376,26 @@ describe("ProgramEnrollmentCard program letter", () => {
     ).not.toBeInTheDocument()
   })
 
+  test("is hidden when the matching certificate has no letter", async () => {
+    // A certificate for a program with no MicroMasters id (e.g. DEDP Public
+    // Policy) has a null share url: there is no letter content for it.
+    setup({
+      flagEnabled: true,
+      mitxonlineProgramId: PROGRAM_ID,
+      shareUrl: null,
+    })
+    await openMenu()
+
+    expect(
+      screen.queryByRole("menuitem", { name: "Program Letter" }),
+    ).not.toBeInTheDocument()
+  })
+
   test("is hidden when the certificate request fails, leaving the rest of the menu intact", async () => {
     // Deliberate: a failed lookup is indistinguishable from having no
     // certificate, because the failed response is both the letter url and the
     // only signal that the learner has a letter. See useProgramLetterMenuItem.
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
     setMockResponse.get(urls.programCertificates.list(), null, { code: 500 })
     const programEnrollment =
       mitxonline.factories.enrollment.programEnrollmentV3({

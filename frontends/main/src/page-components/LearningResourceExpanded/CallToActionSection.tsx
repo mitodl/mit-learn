@@ -2,7 +2,6 @@ import { env } from "@/env"
 import React, { useState } from "react"
 import styled from "@emotion/styled"
 import { default as NextImage } from "next/image"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import {
   Skeleton,
   theme,
@@ -48,6 +47,7 @@ import {
 import { parentPodcastIds, videoPlaylistIds } from "@/common/slugs"
 import { FeatureFlags } from "@/common/feature_flags"
 import { externalLinkProps } from "@/common/utils"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 
 const NEXT_PUBLIC_ORIGIN = env("NEXT_PUBLIC_ORIGIN")
 
@@ -385,7 +385,7 @@ const CallToActionSection = ({
 }) => {
   const [shareExpanded, setShareExpanded] = useState(false)
   const [copyText, setCopyText] = useState("Copy Link")
-  const ocwProductPages = useFeatureFlagEnabled(FeatureFlags.OcwProductPages)
+  const ocwProductPages = useFeatureFlag(FeatureFlags.OcwProductPages)
 
   if (hide) {
     return null

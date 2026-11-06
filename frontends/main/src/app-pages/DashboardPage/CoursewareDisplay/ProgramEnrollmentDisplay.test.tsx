@@ -29,7 +29,7 @@ import { ProgramEnrollmentDisplay } from "./ProgramEnrollmentDisplay"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { makeRequest } from "api/test-utils"
 import { setupOrderHistory, setupCoursePricing } from "./test-utils"
-import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
 
@@ -43,9 +43,9 @@ beforeEach(() => {
   setupOrderHistory()
 })
 
-jest.mock("posthog-js/react")
-const mockedUseFeatureFlagEnabled = jest
-  .mocked(useFeatureFlagEnabled)
+jest.mock("@/common/useFeatureFlag")
+const mockedUseFeatureFlag = jest
+  .mocked(useFeatureFlag)
   .mockImplementation(() => false)
 
 describe("ProgramEnrollmentDisplay", () => {
@@ -61,7 +61,7 @@ describe("ProgramEnrollmentDisplay", () => {
     })
     const courses = mitxonline.factories.courses.courses({ count: 3 })
 
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
@@ -126,7 +126,7 @@ describe("ProgramEnrollmentDisplay", () => {
       ],
     }
 
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
@@ -365,7 +365,7 @@ describe("ProgramEnrollmentDisplay", () => {
       ],
     }
 
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
@@ -484,7 +484,7 @@ describe("ProgramEnrollmentDisplay", () => {
       ],
     }
 
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
@@ -610,7 +610,7 @@ describe("ProgramEnrollmentDisplay", () => {
       ],
     }
 
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
@@ -735,7 +735,7 @@ describe("ProgramEnrollmentDisplay", () => {
       ],
     }
 
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
@@ -873,7 +873,7 @@ describe("ProgramEnrollmentDisplay", () => {
       results: [moduleCourse],
     }
 
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [
       mitxonline.factories.enrollment.courseEnrollment({
         run: { ...moduleRun, course: moduleCourse },
@@ -986,7 +986,7 @@ describe("ProgramEnrollmentDisplay", () => {
       ],
     }
 
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
@@ -1095,7 +1095,7 @@ describe("ProgramEnrollmentDisplay", () => {
       grades: [], // Enrolled but not completed
     })
 
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [
       enrollment,
     ])
@@ -1206,7 +1206,7 @@ describe("ProgramEnrollmentDisplay", () => {
     }
 
     setupCoursePricing(...courses.results)
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), []) // No enrollments
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
@@ -1305,7 +1305,7 @@ describe("ProgramEnrollmentDisplay", () => {
         ],
       }
 
-      mockedUseFeatureFlagEnabled.mockReturnValue(true)
+      mockedUseFeatureFlag.mockReturnValue(true)
       setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
       setMockResponse.get(
         mitxonline.urls.programEnrollments.enrollmentsListV3(),
@@ -1433,7 +1433,7 @@ describe("ProgramEnrollmentDisplay", () => {
       }),
     ]
 
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
     setMockResponse.get(
       mitxonline.urls.enrollment.enrollmentsListV3(),
       enrollments,
@@ -1538,7 +1538,7 @@ describe("ProgramEnrollmentDisplay", () => {
       }),
     ]
 
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
     setMockResponse.get(
       mitxonline.urls.enrollment.enrollmentsListV3(),
       enrollments,
@@ -1597,7 +1597,7 @@ describe("ProgramEnrollmentDisplay", () => {
       req_tree: reqTree.serialize(),
     })
 
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
     // User is not enrolled in any programs
     setMockResponse.get(
@@ -1696,7 +1696,7 @@ describe("ProgramEnrollmentDisplay", () => {
         },
       })
 
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
@@ -1948,7 +1948,7 @@ describe("ProgramEnrollmentDisplay", () => {
         },
       })
 
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [
       moduleCourseEnrollment,
     ])
@@ -2093,7 +2093,7 @@ describe("ProgramEnrollmentDisplay", () => {
       },
     })
 
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [
       courseEnrollment,
     ])
@@ -2209,7 +2209,7 @@ describe("ProgramEnrollmentDisplay", () => {
       req_tree: reqTree.serialize(),
     })
 
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
@@ -2281,7 +2281,7 @@ describe("ProgramEnrollmentDisplay", () => {
       })
     const courses = mitxonline.factories.courses.courses({ count: 2 })
 
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
@@ -2328,7 +2328,7 @@ describe("ProgramEnrollmentDisplay", () => {
       })
     const courses = mitxonline.factories.courses.courses({ count: 2 })
 
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),

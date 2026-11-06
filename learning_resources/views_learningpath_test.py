@@ -228,7 +228,8 @@ def test_learning_path_items_endpoint_create_item_bad_data(client, user):
     update_editor_group(user, True)  # noqa: FBT003
     client.force_login(user)
 
-    data = {"child": 999}
+    missing_id = models.LearningResource.objects.aggregate(Max("id"))["id__max"] + 1
+    data = {"child": missing_id}
 
     resp = client.post(
         reverse(
@@ -240,7 +241,7 @@ def test_learning_path_items_endpoint_create_item_bad_data(client, user):
     )
     assert resp.status_code == 400
     assert resp.json() == {
-        "child": ['Invalid pk "999" - object does not exist.'],
+        "child": [f'Invalid pk "{missing_id}" - object does not exist.'],
         "error_type": "ValidationError",
     }
 

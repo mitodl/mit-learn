@@ -1255,6 +1255,98 @@ describe("EnrolledCourseCard — multiple enrollment runs", () => {
     )
     expect(screen.getAllByText("Course runs (5)").length).toBeGreaterThan(0)
   })
+
+  describe("card context menu", () => {
+    const openDesktopCardMenu = async () => {
+      const desktopCard = screen.getByTestId("enrollment-card-desktop")
+      await user.click(
+        within(desktopCard).getByRole("button", { name: "More options" }),
+      )
+    }
+
+    test("omits run-scoped items from a multi-run card", async () => {
+      setupUserApis()
+      const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+        enrollment_mode: EnrollmentMode.Verified,
+        run: { course: { readable_id: "some-course-id" } },
+      })
+      setupOrderHistory({ runId: enrollment.run.id })
+      renderWithProviders(
+        <EnrolledCourseCard
+          enrollment={enrollment}
+          siblingEnrollments={[
+            mitxonline.factories.enrollment.courseEnrollment(),
+          ]}
+        />,
+      )
+      const desktopCard = screen.getByTestId("enrollment-card-desktop")
+      // The current-run row shares the card's order lookup, so its Receipt
+      // item appearing means the lookup has resolved for the card too.
+      await user.click(
+        within(desktopCard).getByRole("button", { name: /Course runs/ }),
+      )
+      await user.click(
+        within(desktopCard).getByRole("button", {
+          name: /^More options for Current run/,
+        }),
+      )
+      await screen.findByRole("menuitem", { name: "Receipt" })
+      await user.keyboard("{Escape}")
+      await waitFor(() => {
+        expect(screen.queryByRole("menu")).not.toBeInTheDocument()
+      })
+
+      await openDesktopCardMenu()
+      expect(
+        screen.getByRole("menuitem", { name: "View Course Details" }),
+      ).toBeInTheDocument()
+      for (const name of ["Email Settings", "Unenroll", "Receipt"]) {
+        expect(screen.queryByRole("menuitem", { name })).not.toBeInTheDocument()
+      }
+    })
+
+    test("keeps run-scoped items on a single-run card", async () => {
+      setupUserApis()
+      const enrollment = mitxonline.factories.enrollment.courseEnrollment()
+      renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
+      await openDesktopCardMenu()
+
+      expect(
+        screen.getByRole("menuitem", { name: "Email Settings" }),
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole("menuitem", { name: "Unenroll" }),
+      ).toBeInTheDocument()
+    })
+
+    test("hides the card menu when no course-level items remain", async () => {
+      setupUserApis()
+      const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+        b2b_contract_id: faker.number.int(),
+      })
+      renderWithProviders(
+        <EnrolledCourseCard
+          enrollment={enrollment}
+          siblingEnrollments={[
+            mitxonline.factories.enrollment.courseEnrollment(),
+          ]}
+        />,
+      )
+      const desktopCard = screen.getByTestId("enrollment-card-desktop")
+      expect(
+        within(desktopCard).queryByRole("button", { name: "More options" }),
+      ).not.toBeInTheDocument()
+      // The rows still offer the run actions.
+      await user.click(
+        within(desktopCard).getByRole("button", { name: /Course runs/ }),
+      )
+      expect(
+        within(desktopCard).getAllByRole("button", {
+          name: /^More options for /,
+        }),
+      ).toHaveLength(2)
+    })
+  })
 })
 
 // The enrollment status icon only renders for compact program module rows

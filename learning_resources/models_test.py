@@ -290,6 +290,9 @@ def test_credential_metadata_deleted_with_its_resource():
 CONTENT_FILE_PUBLISHED_READERS = {
     # OCW learning materials: OCW files have no release date
     "learning_resources/tasks.py: content_files.filter(published=True).values_list",
+    # the same, and every file the run keeps: load_learning_materials replaces the
+    # course's materials from these ids, so a hidden file must not lose its own
+    "learning_resources/etl/warehouse_content_files.py: content_files.filter(published=True).values_list",
     # marketing pages attached directly to a resource: never dated
     "learning_resources/tasks.py: ContentFile.objects.filter(file_type=MARKETING",
     "learning_resources/credentials.py: ContentFile.objects.filter(learning_resource=",

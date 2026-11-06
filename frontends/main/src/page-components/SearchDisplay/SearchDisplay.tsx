@@ -39,6 +39,8 @@ import {
   SearchModeEnumDescriptions,
 } from "api"
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
+import { FeatureFlags } from "@/common/feature_flags"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { useAdminSearchParams } from "api/hooks/adminSearchParams"
 import {
   AvailableFacets,
@@ -453,13 +455,24 @@ const PaginationContainer = styled.div`
 
 const StyledResultsContainer = styled.div<{ fetching: boolean }>(
   ({ fetching }) => ({
-    "ul > li + li": {
-      marginTop: "8px",
-    },
-
     opacity: fetching ? 0.5 : 1,
   }),
 )
+
+/**
+ * The results as rows, for the default layout. The redesigned cards stand
+ * further apart, and further still when stacked on a phone.
+ */
+const ResultsList = styled(PlainList, {
+  shouldForwardProp: (prop) => prop !== "redesign",
+})<{ redesign: boolean }>(({ theme, redesign }) => ({
+  "> li + li": redesign
+    ? {
+        marginTop: "16px",
+        [theme.breakpoints.down("sm")]: { marginTop: "24px" },
+      }
+    : { marginTop: "8px" },
+}))
 
 /**
  * The results as a grid, for `resultsLayout="cards"`: four across at desktop,
@@ -482,18 +495,6 @@ const CardGrid = styled(PlainList)(({ theme }) => ({
   },
   [theme.breakpoints.down("sm")]: {
     gridTemplateColumns: "minmax(0, 1fr)",
-  },
-  /**
-   * The results container spaces a list of rows by pushing each item below
-   * the one before it. A grid does not want that: `gap` already spaces these
-   * both ways, and the margin lands inside the row, so every card but the
-   * first in a row sits lower than its neighbours.
-   *
-   * Doubled to outweigh that rule, which names an ancestor and so starts
-   * ahead of anything this can say about its own children.
-   */
-  "&& > li + li": {
-    marginTop: 0,
   },
   /**
    * The card fixes its own width to the one its size is drawn at -- 300px for
@@ -910,6 +911,8 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
   // controls, so there is nothing to fetch while hybrid search is active.
   const { data: adminParams, isLoading: isAdminParamsLoading } =
     useAdminSearchParams(expandAdminOptions && !hybridSearchActive)
+
+  const redesign = useFeatureFlag(FeatureFlags.ResourceCardRedesign)
 
   const scrollHook = useRef<HTMLDivElement>(null)
   const resultsHeadingRef = useRef<HTMLHeadingElement>(null)
@@ -1531,7 +1534,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                         ))}
                     </CardGrid>
                   ) : (
-                    <PlainList itemSpacing={1.5}>
+                    <ResultsList redesign={redesign}>
                       {Array(PAGE_SIZE)
                         .fill(null)
                         .map((a, index) => (
@@ -1543,7 +1546,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                             />
                           </li>
                         ))}
-                    </PlainList>
+                    </ResultsList>
                   )
                 ) : displayData && (displayData.results?.length ?? 0) > 0 ? (
                   resultsLayout === "cards" ? (
@@ -1558,7 +1561,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                       ))}
                     </CardGrid>
                   ) : (
-                    <PlainList itemSpacing={1.5}>
+                    <ResultsList redesign={redesign}>
                       {displayData.results.map((resource: LearningResource) => (
                         <li key={resource.id}>
                           <ResourceCard
@@ -1568,7 +1571,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                           />
                         </li>
                       ))}
-                    </PlainList>
+                    </ResultsList>
                   )
                 ) : resultsLayout === "cards" ? (
                   <NoResults

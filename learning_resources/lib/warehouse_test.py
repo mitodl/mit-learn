@@ -48,6 +48,7 @@ from learning_resources.lib.warehouse import (
     _WATERMARK_LOOKBACK,
     BaseWarehouseETLTask,
     connect_to_warehouse,
+    iter_group_stats,
     iter_rows,
 )
 from learning_resources.models import ETLShadowRun
@@ -232,6 +233,100 @@ def test_iter_rows_with_since_filters_on_last_modified():
         "SELECT * FROM catalog.schema.my_view "
         "WHERE last_modified > '2026-06-15 12:30:00.000'"
     )
+
+
+def test_iter_rows_with_where_binds_its_values():
+    """A where filter is parameterized, and combines with since."""
+    conn = MagicMock()
+    cursor = _make_cursor(["id"], [])
+    conn.cursor.return_value = cursor
+    since = datetime(2026, 6, 15, 12, 30, 0, tzinfo=UTC)
+
+    list(
+        iter_rows(
+            conn,
+            "catalog.schema.my_view",
+            since=since,
+            where={"etl_source": "ocw", "run_readable_id": "a'b"},
+        )
+    )
+
+    cursor.execute.assert_called_once_with(
+        "SELECT * FROM catalog.schema.my_view WHERE etl_source = %s "
+        "AND run_readable_id = %s AND last_modified > '2026-06-15 12:30:00.000'",
+        ["ocw", "a'b"],
+    )
+
+
+def test_iter_group_stats_aggregates_each_column():
+    """iter_group_stats asks for a count and a max of each column, per group."""
+    conn = MagicMock()
+    cursor = _make_cursor(
+        ["run_readable_id", "row_count", "last_modified_count", "last_modified_max"],
+        [("run-1", 3, 2, "2026-10-20")],
+    )
+    conn.cursor.return_value = cursor
+
+    rows = list(
+        iter_group_stats(
+            conn,
+            "catalog.schema.my_view",
+            "run_readable_id",
+            columns=("last_modified",),
+            where={"etl_source": "ocw"},
+        )
+    )
+
+    assert rows == [
+        {
+            "run_readable_id": "run-1",
+            "row_count": 3,
+            "last_modified_count": 2,
+            "last_modified_max": "2026-10-20",
+        }
+    ]
+    cursor.execute.assert_called_once_with(
+        "SELECT run_readable_id, COUNT(*) AS row_count, "
+        "COUNT(last_modified) AS last_modified_count, "
+        "MAX(last_modified) AS last_modified_max "
+        "FROM catalog.schema.my_view WHERE etl_source = %s "
+        "GROUP BY run_readable_id",
+        ["ocw"],
+    )
+
+
+@pytest.mark.parametrize(
+    ("group_by", "columns", "where"),
+    [
+        ("run; DROP TABLE x", (), None),
+        ("run_id", ("last_modified) --",), None),
+        ("run_id", (), {"etl_source = 1 OR 1": "x"}),
+    ],
+)
+def test_iter_group_stats_rejects_unsafe_column_names(group_by, columns, where):
+    """Column names go into the SQL, so anything but an identifier is refused."""
+    with pytest.raises(ValueError, match="Unsafe column name"):
+        list(
+            iter_group_stats(
+                MagicMock(),
+                "catalog.schema.view",
+                group_by,
+                columns=columns,
+                where=where,
+            )
+        )
+
+
+def test_iter_group_stats_rejects_unsafe_view_names():
+    """iter_group_stats checks the view name as iter_rows does."""
+    with pytest.raises(ValueError, match="Unsafe view name"):
+        list(iter_group_stats(MagicMock(), "view; DROP TABLE x", "run_id"))
+
+
+def test_iter_rows_rejects_unsafe_where_columns():
+    """A where column goes into the SQL, so anything but an identifier is refused."""
+    with pytest.raises(ValueError, match="Unsafe column name"):
+        list(iter_rows(MagicMock(), "catalog.schema.view", where={"a = 1 --": "x"}))
 
 
 def test_iter_rows_accepts_dotted_identifiers():

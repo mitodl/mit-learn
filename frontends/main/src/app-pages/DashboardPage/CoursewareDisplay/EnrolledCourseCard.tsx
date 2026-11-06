@@ -522,7 +522,12 @@ export const EnrolledCourseCard = ({
     })
   }
 
-  menuItems.push(...getRunMenuItems({ enrollment, title, receiptResolution }))
+  const hasMultipleRuns = (siblingEnrollments?.length ?? 0) > 0
+  // With several runs, each accordion row carries its own run's actions, so
+  // the card keeps only course-level items rather than an unlabeled duplicate.
+  if (!hasMultipleRuns) {
+    menuItems.push(...getRunMenuItems({ enrollment, title, receiptResolution }))
+  }
 
   const menuButton = (
     <MenuButton
@@ -556,7 +561,6 @@ export const EnrolledCourseCard = ({
       </Stack>
     )
 
-  const hasMultipleRuns = (siblingEnrollments?.length ?? 0) > 0
   const showEnrollmentStatusIcon =
     !isContractPageResource && isModule && isCompact
   const runCount = (siblingEnrollments?.length ?? 0) + 1

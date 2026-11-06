@@ -7,6 +7,7 @@ import pytest
 from langchain_core.messages import AIMessage
 
 from learning_resources.factories import (
+    ClaimExtractionFactory,
     ContentFileFactory,
     LearningResourceRunFactory,
     UnitContentFileFactory,
@@ -157,8 +158,8 @@ def test_generate_unit_claims(fake_llm):
     assert output["skills"][0]["evidence"][0]["verified"] == "unverified"
 
 
-def test_outline_in_prompt_and_key(fake_llm):
-    """The run's units, in order, are in the prompt and its key"""
+def test_outline_in_prompt_not_key(fake_llm):
+    """The run's units, in order, are in the prompt but not its key"""
     unit = _build_unit(position=1)
     UnitFactory.create(run=unit.run, external_id="seq1", title="Week 1", position=0)
     UnitFactory.create(
@@ -169,9 +170,24 @@ def test_outline_in_prompt_and_key(fake_llm):
     prompt = _prompt(fake_llm)
     assert "Units (course order): 1. Week 1; 2. Week 0" in prompt
     assert "title='Week 0' | kind=unit | unit 2 of 2" in prompt
-    assert _generate(unit) == first
+    assert _generate(unit).key == first.key
+    other = Unit.objects.get(external_id="seq1")
+    other.title = "Renamed week"
+    other.position = 5
+    other.save()
     UnitFactory.create(run=unit.run, external_id="seq2", title="Week 2", position=2)
-    assert _generate(unit) != first
+    assert _generate(unit).key == first.key
+    assert fake_llm.call_count == 1
+
+
+def test_unit_title_in_key(fake_llm):
+    """Renaming a unit changes its own key"""
+    unit = _build_unit()
+    first = _generate(unit)
+    unit.title = "Week 0: forces"
+    unit.save()
+
+    assert _generate(unit).key != first.key
     assert fake_llm.call_count == 2
 
 
@@ -195,13 +211,53 @@ def test_context_unit_rejected(fake_llm):
     assert fake_llm.call_count == 0
 
 
-def test_title_in_key(fake_llm):
-    """Units are keyed by their course title"""
+def test_course_in_key(fake_llm):
+    """Units are keyed by their course"""
     unit = _build_unit()
     other = _build_unit()
 
     first = _generate(unit)
     assert _generate(other) != first
+    assert fake_llm.call_count == 2
+
+
+def test_replaced_extraction_unpublished(fake_llm):
+    """A unit's extraction is unpublished when it is replaced"""
+    unit = _build_unit()
+    first = _generate(unit)
+    ClaimExtraction.objects.filter(pk=first.pk).update(published=True)
+
+    assert _generate(unit).published is True
+    _add_file(unit, "An added worked example.", position=2)
+    assert _generate(unit).published is False
+
+
+def test_unit_left_with_one_extraction(fake_llm):
+    """Storing a unit's extraction replaces every row the unit had"""
+    unit = _build_unit()
+    ClaimExtractionFactory.create_batch(2, unit=unit)
+
+    extraction = _generate(unit)
+
+    assert list(ClaimExtraction.objects.filter(unit=unit)) == [extraction]
+    assert fake_llm.call_count == 1
+
+
+def test_same_title_in_other_course_keyed_apart(fake_llm):
+    """Another course with the same title and files gets its own extraction"""
+    unit = _build_unit()
+    other_course = LearningResourceRunFactory.create(
+        learning_resource__title=unit.run.learning_resource.title
+    )
+    other = _build_unit(other_course)
+
+    first = _generate(unit)
+    second = _generate(other)
+
+    assert second.pk != first.pk
+    assert second.key != first.key
+    first.refresh_from_db()
+    assert (first.unit, second.unit) == (unit, other)
     assert fake_llm.call_count == 2
 
 
@@ -236,24 +292,33 @@ def test_overwrite_reruns_unit(fake_llm):
 
 
 def test_identical_unit_in_other_run_reuses_extraction(fake_llm):
-    """Another run's unit with the same files reuses the extraction"""
+    """Another run's unit with the same files takes over the extraction"""
     unit = _build_unit()
     extraction = _generate(unit)
     other_run = LearningResourceRunFactory.create(
         learning_resource=unit.run.learning_resource
     )
+    other_unit = _build_unit(other_run)
 
-    assert _generate(_build_unit(other_run)) == extraction
+    reused = _generate(other_unit)
+
+    assert reused.pk == extraction.pk
+    assert reused.unit == other_unit
+    assert ClaimExtraction.objects.count() == 1
     assert fake_llm.call_count == 1
 
 
 def test_changed_file_reruns_unit(fake_llm):
-    """A changed file makes a new call"""
+    """A changed file makes a new call that replaces the unit's extraction"""
     unit = _build_unit()
     first = _generate(unit)
     _add_file(unit, "An added worked example.", position=2)
 
-    assert _generate(unit) != first
+    extraction = _generate(unit)
+
+    assert extraction.pk == first.pk
+    assert extraction.key != first.key
+    assert ClaimExtraction.objects.count() == 1
     assert fake_llm.call_count == 2
 
 

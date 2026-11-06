@@ -1,6 +1,6 @@
 import React from "react"
 import { renderWithProviders, screen } from "@/test-utils"
-import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { notFound } from "next/navigation"
 import { allowConsoleErrors } from "ol-test-utilities"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
@@ -10,18 +10,16 @@ jest.mock("@/common/useFeatureFlagsLoaded", () => ({
   useFeatureFlagsLoaded: jest.fn(),
 }))
 
-jest.mock("posthog-js/react")
+jest.mock("@/common/useFeatureFlag")
 
-const mockUseFeatureFlagEnabled = jest.mocked(
-  useFeatureFlagEnabled as (flag: string) => boolean | undefined,
-)
+const mockUseFeatureFlag = jest.mocked(useFeatureFlag)
 const mockUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
 const mockNotFound = jest.mocked(notFound)
 
 describe("HacksnackFlagGate", () => {
   test("renders children when the feature flag is enabled", () => {
     mockUseFeatureFlagsLoaded.mockReturnValue(true)
-    mockUseFeatureFlagEnabled.mockReturnValue(true)
+    mockUseFeatureFlag.mockReturnValue(true)
     renderWithProviders(
       <HacksnackFlagGate>
         <div data-testid="gated-content">Gated content</div>
@@ -33,7 +31,7 @@ describe("HacksnackFlagGate", () => {
 
   test("renders nothing while the feature flags have not loaded", () => {
     mockUseFeatureFlagsLoaded.mockReturnValue(false)
-    mockUseFeatureFlagEnabled.mockReturnValue(undefined)
+    mockUseFeatureFlag.mockReturnValue(false)
     renderWithProviders(
       <HacksnackFlagGate>
         <div data-testid="gated-content">Gated content</div>
@@ -49,7 +47,7 @@ describe("HacksnackFlagGate", () => {
       throw new Error("NEXT_NOT_FOUND")
     })
     mockUseFeatureFlagsLoaded.mockReturnValue(true)
-    mockUseFeatureFlagEnabled.mockReturnValue(false)
+    mockUseFeatureFlag.mockReturnValue(false)
     expect(() =>
       renderWithProviders(
         <HacksnackFlagGate>
