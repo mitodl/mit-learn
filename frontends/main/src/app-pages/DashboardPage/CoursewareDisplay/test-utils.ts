@@ -19,6 +19,7 @@ import {
 } from "@mitodl/mitxonline-api-axios/v2"
 import {
   CourseRunEnrollmentV3,
+  ProgramEnrollmentModeEnum,
   V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v3"
 import { getIdsFromReqTree } from "@/common/mitxonline"
@@ -670,7 +671,18 @@ const buildProgramScenario = (
   return { entities, mockAll }
 }
 
+/**
+ * Program enrollment modes that mean the learner paid for the program. The
+ * dashboard must treat both alike until no "verified" program enrollments
+ * remain (mitxonline hq#14063).
+ */
+const PAID_PROGRAM_ENROLLMENT_MODES = [
+  ProgramEnrollmentModeEnum.Verified,
+  ProgramEnrollmentModeEnum.Upgrade,
+]
+
 export {
+  PAID_PROGRAM_ENROLLMENT_MODES,
   setupCoursePricing,
   dashboardCourse,
   dashboardProgram,
