@@ -4,11 +4,6 @@ import { LearningResource } from "api/hooks/learningResources"
 
 export interface LearningResourceContextValue {
   resources: Record<number, LearningResource>
-  /**
-   * The list query's `isLoading` (pending and fetching), not its `isFetching`:
-   * a background refetch of a list that already has data must not put cards
-   * back into their skeleton state.
-   */
   isLoading: boolean
 }
 

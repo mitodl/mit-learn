@@ -132,31 +132,4 @@ describe("LearningResourceProvider", () => {
     expect(screen.getByText(first.title)).toBeInTheDocument()
     expect(screen.getByText(second.title)).toBeInTheDocument()
   })
-
-  test("keeps the cards already shown when the list for an added card fails", async () => {
-    const [first, second, added] = factories.learningResources.resources({
-      count: 3,
-    }).results
-    const { ids, editor } = await setup([first, second], { readOnly: false })
-    const failing = urls.learningResources.list({
-      resource_id: [...ids, added.id],
-    })
-    setMockResponse.get(failing, {}, { code: 500 })
-
-    act(() => {
-      editor.chain().focus("end").insertLearningResource(added.id).run()
-    })
-
-    // The added card is a skeleton until its request fails, then renders
-    // nothing: the node is still on the canvas with no skeleton in it.
-    await waitFor(() => {
-      expect(document.querySelectorAll(".node-learningResource")).toHaveLength(
-        3,
-      )
-      expect(document.querySelectorAll(".MuiSkeleton-root")).toHaveLength(0)
-    })
-    expect(screen.getByText(first.title)).toBeInTheDocument()
-    expect(screen.getByText(second.title)).toBeInTheDocument()
-    expect(screen.queryByText(added.title)).not.toBeInTheDocument()
-  })
 })

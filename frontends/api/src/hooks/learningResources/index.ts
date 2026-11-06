@@ -74,13 +74,17 @@ const useLearningResourceByReadableId = (
 
 const selectResults = (data: { results: LearningResource[] }) => data.results
 
-const useLearningResourcesBulkList = (ids: number[]) => {
+const useLearningResourcesBulkList = (
+  ids: number[],
+  opts?: { placeholderData?: typeof keepPreviousData },
+) => {
   return useQuery({
     ...learningResourceQueries.list({ resource_id: ids }),
     enabled: ids.length > 0,
     // `select` runs during render, so it must not write to the cache: writing
     // here re-renders every subscriber, which runs `select` again.
     select: selectResults,
+    ...opts,
   })
 }
 
