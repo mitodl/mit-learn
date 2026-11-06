@@ -13,6 +13,7 @@ import type {
   SupportedVariant,
 } from "@mitodl/mitxonline-api-axios/v0"
 import type {
+  CourseWithCourseRunsSerializerV2,
   V2Program,
   V2ProgramCollection,
 } from "@mitodl/mitxonline-api-axios/v2"
@@ -24,18 +25,19 @@ import type {
 import {
   buildCourseEntry,
   getCollectionFirstCoursesInDisplayOrder,
-  getProgramCoursesInContractOrder,
+  getContractProgramCourseware,
   getRenderableContractCollections,
   getSortedStandaloneContractPrograms,
   groupCourseRunEnrollmentsByCourseId,
   groupProgramEnrollmentsByProgramId,
   sortVariants,
+  type ContractProgramItem,
   type DashboardCourseEntry,
 } from "../model/dashboardViewModel"
 
 type ContractProgramDisplayData = {
   program: V2Program
-  entries: DashboardCourseEntry[]
+  items: ContractProgramItem[]
   programEnrollment?: V3UserProgramEnrollment
 }
 
@@ -66,11 +68,13 @@ const useContractDashboardData = (
   const programEnrollmentsQuery = useQuery(
     enrollmentQueries.programEnrollmentsList(),
   )
+  // Includes the programs nested in the contract's programs, so ask for the
+  // API's largest page.
   const programsQuery = useQuery(
     programsQueries.programsList({
       org_id: org.id,
       contract_id: contract.id,
-      page_size: 30,
+      page_size: 100,
     }),
   )
   const programCollectionsQuery = useQuery(
@@ -169,30 +173,48 @@ const useContractDashboardData = (
     groupCourseRunEnrollmentsByCourseId(courseRunEnrollments)
 
   const programRows = sortedPrograms.map((program) => {
-    const courses = getProgramCoursesInContractOrder(program, contractCourses)
     const programEnrollment = programEnrollmentsById[program.id]
-    return {
+    // Module courses enroll through the contract program too: the backend only
+    // takes a program_id that is directly in the contract (mitodl/hq#14208).
+    const buildEntry = (course: CourseWithCourseRunsSerializerV2) =>
+      buildCourseEntry(course, enrollmentsByCourseId[course.id] ?? [], {
+        contractId: contract.id,
+        ancestorContext: {
+          programEnrollment,
+          parentProgramReadableIds: [program.readable_id],
+        },
+        variant: variantRunsLoading
+          ? undefined
+          : (selectedVariant ?? undefined),
+        variantCandidateRuns:
+          isDefaultVariantSelection || variantRunsLoading
+            ? undefined
+            : variantRunsByCourseId[course.id],
+      })
+    const items = getContractProgramCourseware(
       program,
-      entries: courses
-        .map((course) =>
-          buildCourseEntry(course, enrollmentsByCourseId[course.id] ?? [], {
-            contractId: contract.id,
-            ancestorContext: {
-              programEnrollment,
-              parentProgramReadableIds: [program.readable_id],
+      programs,
+      contractCourses,
+    ).flatMap((courseware): ContractProgramItem[] => {
+      if (courseware.kind === "course") {
+        const entry = buildEntry(courseware.course)
+        return entry ? [{ kind: "course", entry }] : []
+      }
+      const moduleEntries = courseware.moduleCourses
+        .map(buildEntry)
+        .filter((entry): entry is DashboardCourseEntry => entry !== null)
+      return moduleEntries.length > 0
+        ? [
+            {
+              kind: "program",
+              program: courseware.program,
+              moduleEntries,
+              programEnrollment: programEnrollmentsById[courseware.program.id],
             },
-            variant: variantRunsLoading
-              ? undefined
-              : (selectedVariant ?? undefined),
-            variantCandidateRuns:
-              isDefaultVariantSelection || variantRunsLoading
-                ? undefined
-                : variantRunsByCourseId[course.id],
-          }),
-        )
-        .filter((entry): entry is DashboardCourseEntry => entry !== null),
-      programEnrollment,
-    }
+          ]
+        : []
+    })
+    return { program, items, programEnrollment }
   })
 
   const collectionRows = renderableCollections.map((collection) => {
