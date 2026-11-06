@@ -23,4 +23,17 @@ const lastAuthRedirect = () => {
   }
 }
 
-export { setLocation, lastAuthRedirect }
+/** Record a signed-out enroll click in this browser, as signupToEnrollUrl does. */
+const rememberClick = (
+  kind: "paid" | "free",
+  runId: number | null,
+  pathname: string,
+  at = Date.now(),
+): void => {
+  window.localStorage.setItem(
+    "mitlearn.pendingEnrollment",
+    JSON.stringify({ kind, runId, pathname, at }),
+  )
+}
+
+export { setLocation, lastAuthRedirect, rememberClick }

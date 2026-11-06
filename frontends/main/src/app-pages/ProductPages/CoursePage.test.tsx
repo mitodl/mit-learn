@@ -6,7 +6,11 @@ import {
 } from "api/mitxonline-test-utils"
 import { makeCourse, setupRunPricing } from "./test-utils/userPricing"
 import { DiscountTypeEnum } from "@mitodl/mitxonline-api-axios/v0"
-import { lastAuthRedirect, setLocation } from "./test-utils/enrollResume"
+import {
+  lastAuthRedirect,
+  rememberClick,
+  setLocation,
+} from "./test-utils/enrollResume"
 import type {
   CoursePageItem,
   CourseWithCourseRunsSerializerV2,
@@ -686,6 +690,7 @@ describe("CoursePage", () => {
         })
         mockEnrollmentEligible()
         setLocation(`/courses/${course.readable_id}?enroll=paid&run=${run.id}`)
+        rememberClick("paid", run.id, `/courses/${course.readable_id}`)
 
         renderWithProviders(<CoursePage readableId={course.readable_id} />)
 
