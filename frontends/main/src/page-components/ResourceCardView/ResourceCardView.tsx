@@ -46,18 +46,6 @@ const startsMetadata = (
   ]
 }
 
-const freeToAuditPanel = (
-  certificateType: string,
-  certificatePrice: string | null | undefined,
-  license?: string,
-): PricePanel => ({
-  tone: "light",
-  primary: "Free to audit",
-  certificate: certificateType,
-  certificatePrice: certificatePrice ?? undefined,
-  license,
-})
-
 type CardAction = {
   label: string
   /** The resource is already in the list this action adds it to. */
@@ -697,12 +685,7 @@ const ResourceCardSkeleton: React.FC<
   )
 }
 
-export {
-  ResourceCardView,
-  ResourceCardSkeleton,
-  startsMetadata,
-  freeToAuditPanel,
-}
+export { ResourceCardView, ResourceCardSkeleton, startsMetadata }
 export type {
   ResourceCardSize,
   CardLayoutProps,

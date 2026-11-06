@@ -150,7 +150,7 @@ describe("learningResourceCardContent", () => {
       )
     })
 
-    test("Free with a priced certificate is free to audit, naming the certificate type", () => {
+    test("Free with a priced certificate names the certificate type and price", () => {
       const resource = course({
         free: true,
         certification: true,
@@ -163,13 +163,13 @@ describe("learningResourceCardContent", () => {
 
       expect(learningResourceCardContent(resource).price).toEqual({
         tone: "light",
-        primary: "Free to audit",
+        primary: "Free",
         certificate: resource.certification_type.name,
         certificatePrice: "$50",
       })
     })
 
-    test("Free with an unpriced certificate is free to audit", () => {
+    test("Free with an unpriced certificate names the certificate type", () => {
       const resource = course({
         free: true,
         certification: true,
@@ -179,7 +179,7 @@ describe("learningResourceCardContent", () => {
 
       expect(learningResourceCardContent(resource).price).toEqual({
         tone: "light",
-        primary: "Free to audit",
+        primary: "Free",
         certificate: resource.certification_type.name,
       })
     })
@@ -195,7 +195,7 @@ describe("learningResourceCardContent", () => {
         amounts: ["0", "50"],
         price: {
           tone: "light",
-          primary: "Free to audit",
+          primary: "Free",
           certificate: "Certificate",
           certificatePrice: "$50",
         },
@@ -230,6 +230,27 @@ describe("learningResourceCardContent", () => {
       expect(learningResourceCardContent(resource).price).toEqual({
         tone: "light",
         primary: "Free",
+        license: "Open license",
+      })
+    })
+
+    test("Free with a certificate and an open license shows both", () => {
+      const resource = course({
+        free: true,
+        certification: true,
+        certification_type: professional,
+        license_cc: true,
+        resource_prices: [
+          { amount: "0", currency: "USD" },
+          { amount: "50", currency: "USD" },
+        ],
+      })
+
+      expect(learningResourceCardContent(resource).price).toEqual({
+        tone: "light",
+        primary: "Free",
+        certificate: resource.certification_type.name,
+        certificatePrice: "$50",
         license: "Open license",
       })
     })
