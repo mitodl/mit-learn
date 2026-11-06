@@ -15,8 +15,6 @@ const ProgramHeaderEnrollButton: React.FC<ProgramHeaderEnrollButtonProps> = ({
   program,
   displayAsCourse,
 }) => {
-  const [anchor, setAnchor] = React.useState<null | HTMLButtonElement>(null)
-
   // Same price and label as the InfoBox's paid action (ProgramEnrollArea).
   const { price, breakdown } = useProgramCertificatePrice(program)
   const appliedSavings = programAppliedSavings(breakdown, displayAsCourse)
@@ -27,7 +25,6 @@ const ProgramHeaderEnrollButton: React.FC<ProgramHeaderEnrollButtonProps> = ({
       tracking: { placement: "header" },
       displayAsCourse,
       upgradeLabel: appliedSavings?.kind === "credit",
-      onRequireSignup: setAnchor,
     },
   )
 
@@ -38,8 +35,6 @@ const ProgramHeaderEnrollButton: React.FC<ProgramHeaderEnrollButtonProps> = ({
       isStatusLoading={isStatusLoading}
       isPending={isPending}
       error={error}
-      anchor={anchor}
-      onAnchorClose={() => setAnchor(null)}
     />
   )
 }

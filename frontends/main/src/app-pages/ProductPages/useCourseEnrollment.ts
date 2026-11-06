@@ -12,9 +12,15 @@ import { enrollmentAlertSuccessUrl } from "@/common/mitxonline"
 import { useRouter } from "next-nprogress-bar"
 import { analytics } from "@/common/analytics"
 import { DASHBOARD_HOME } from "@/common/urls"
-import { getCourseScenario, type CourseScenario } from "./courseRun"
+import {
+  getCourseScenario,
+  getEnrollableRuns,
+  type CourseScenario,
+} from "./courseRun"
 import { useCourseEnrolledRunIds } from "./useCourseEnrolledRunIds"
 import { type EnrollCtaPlacement } from "./enrollAnalytics"
+import { signupToEnrollUrl, useResumeEnrollment } from "./enrollResume"
+import { offers } from "./enrollTypes"
 import type {
   EnrollAction,
   EnrollActionKind,
@@ -39,8 +45,11 @@ export type UseCourseEnrollment = {
 type UseCourseEnrollmentOptions = {
   /** Analytics-only metadata for the `enroll_cta_clicked` event; no behavior. */
   tracking: { placement: EnrollCtaPlacement }
-  /** Behavioral: called when an unauthenticated user clicks an enroll action. */
-  onRequireSignup?: (anchor: HTMLButtonElement) => void
+  /**
+   * Finish an enrollment started before sign-up. Set on one instance per page,
+   * so the enrollment runs once.
+   */
+  resume?: boolean
 }
 
 export const useCourseEnrollment = (
@@ -82,9 +91,47 @@ export const useCourseEnrollment = (
   // a misleading "problem processing your enrollment" message.
   const error = replaceBasketItem.error ?? createEnrollment.error
 
+  const startEnrollment = async (
+    kind: EnrollActionKind,
+    run: CourseRunV2 | undefined,
+  ) => {
+    analytics.enrollmentStarted(course.title)
+    if (kind === "paid") {
+      const product = run?.products?.[0]
+      if (run && product) {
+        analytics.checkoutStarted({
+          courseName: course.title,
+          courseId: course.readable_id,
+          value: product.price ? parseFloat(product.price) : 0,
+        })
+        replaceBasketItem.mutate(product.id, {
+          type: "course_run",
+          id: run.id,
+        })
+      }
+    } else if (kind === "free") {
+      if (run) {
+        await mutateWithCompliance(
+          createEnrollment,
+          { run_id: run.id },
+          {
+            onSuccess: () => {
+              analytics.courseEnrolled(course.title)
+              router.push(
+                enrollmentAlertSuccessUrl({
+                  title: course.title ?? "your enrollment",
+                }),
+              )
+            },
+          },
+        )
+      }
+    }
+  }
+
   const makeOnClick =
     (kind: EnrollActionKind, label: string): EnrollAction["onClick"] =>
-    async (e) => {
+    async () => {
       analytics.enrollCtaClicked({
         placement: opts?.tracking.placement,
         kind,
@@ -93,42 +140,28 @@ export const useCourseEnrollment = (
         label,
       })
       if (!me.data?.is_authenticated) {
-        opts?.onRequireSignup?.(e.currentTarget)
+        window.location.assign(signupToEnrollUrl(kind, selectedRun?.id))
         return
       }
-      analytics.enrollmentStarted(course.title)
-      if (kind === "paid") {
-        const product = selectedRun?.products?.[0]
-        if (selectedRun && product) {
-          analytics.checkoutStarted({
-            courseName: course.title,
-            courseId: course.readable_id,
-            value: product.price ? parseFloat(product.price) : 0,
-          })
-          replaceBasketItem.mutate(product.id, {
-            type: "course_run",
-            id: selectedRun.id,
-          })
-        }
-      } else if (kind === "free") {
-        if (selectedRun) {
-          await mutateWithCompliance(
-            createEnrollment,
-            { run_id: selectedRun.id },
-            {
-              onSuccess: () => {
-                analytics.courseEnrolled(course.title)
-                router.push(
-                  enrollmentAlertSuccessUrl({
-                    title: course.title ?? "your enrollment",
-                  }),
-                )
-              },
-            },
-          )
-        }
-      }
+      await startEnrollment(kind, selectedRun)
     }
+
+  useResumeEnrollment({
+    enabled: !!opts?.resume,
+    ready: !isStatusLoading,
+    onResume: (kind, runId) => {
+      // The run the learner chose before signing up, while it still makes the
+      // same offer and they are not already enrolled in it.
+      const run =
+        runId === null
+          ? selectedRun
+          : getEnrollableRuns(course).find((r) => r.id === runId)
+      if (!isAuthenticated || !run || enrolledRunIds.includes(run.id)) return
+      if (offers(getCourseScenario(run).offering, kind)) {
+        startEnrollment(kind, run)
+      }
+    },
+  })
 
   // Enrolled in the selected run — supersedes everything
   if (isEnrolledInSelected) {
