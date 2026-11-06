@@ -33,7 +33,7 @@ import {
   setupOrderHistory,
   setupCoursePricing,
 } from "./test-utils"
-import { useFeatureFlag } from "posthog-js/react"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
 
