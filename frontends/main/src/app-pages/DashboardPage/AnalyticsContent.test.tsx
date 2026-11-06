@@ -111,8 +111,9 @@ const setAnalyticsResponses = ({
 }
 
 /**
- * `setAnalyticsResponses` plus the learner progress and needs-attention
- * endpoints, for tests that render with the learner analytics flag on.
+ * Mocks the four section endpoints and the learner progress and
+ * needs-attention endpoints, for tests that render with the learner analytics
+ * flag on.
  */
 const setContractAnalyticsResponses = (
   contractId: number,
@@ -194,7 +195,9 @@ describe("AnalyticsContent", () => {
       allowConsoleErrors()
 
       expect(() =>
-        renderWithProviders(<AnalyticsContent orgSlug="any-org" contractSlug="any-contract" />),
+        renderWithProviders(
+          <AnalyticsContent orgSlug="any-org" contractSlug="any-contract" />,
+        ),
       ).toThrow(ForbiddenError)
     })
 
@@ -203,14 +206,18 @@ describe("AnalyticsContent", () => {
       mockedUseFeatureFlag.mockReturnValue(false)
 
       expect(() =>
-        renderWithProviders(<AnalyticsContent orgSlug="any-org" contractSlug="any-contract" />),
+        renderWithProviders(
+          <AnalyticsContent orgSlug="any-org" contractSlug="any-contract" />,
+        ),
       ).not.toThrow()
     })
 
     test("denies access when the caller does not manage the requested org", async () => {
       setManagerOrgs([orgWithUuid()])
 
-      renderWithProviders(<AnalyticsContent orgSlug="not-my-org" contractSlug={CONTRACT.slug} />)
+      renderWithProviders(
+        <AnalyticsContent orgSlug="not-my-org" contractSlug={CONTRACT.slug} />,
+      )
 
       await screen.findByRole("heading", { name: "Access denied" })
     })
@@ -228,7 +235,11 @@ describe("AnalyticsContent", () => {
       const page = { limit: 200 }
       const forbidden = ["Forbidden", { code: 403 }] as const
       setMockResponse.get(
-        analyticsUrls.contracts.contractUtilization(ORG_UUID, CONTRACT.id, page),
+        analyticsUrls.contracts.contractUtilization(
+          ORG_UUID,
+          CONTRACT.id,
+          page,
+        ),
         ...forbidden,
       )
       setMockResponse.get(
@@ -247,7 +258,10 @@ describe("AnalyticsContent", () => {
       const onError = jest.fn()
       renderWithProviders(
         <TestingErrorBoundary onError={onError}>
-          <AnalyticsContent orgSlug={org.slug.replace(/^org-/, "")} contractSlug={CONTRACT.slug} />
+          <AnalyticsContent
+            orgSlug={org.slug.replace(/^org-/, "")}
+            contractSlug={CONTRACT.slug}
+          />
         </TestingErrorBoundary>,
       )
 
@@ -263,7 +277,9 @@ describe("AnalyticsContent", () => {
         code: 500,
       })
 
-      renderWithProviders(<AnalyticsContent orgSlug="any-org" contractSlug="any-contract" />)
+      renderWithProviders(
+        <AnalyticsContent orgSlug="any-org" contractSlug="any-contract" />,
+      )
 
       await screen.findByRole("heading", { name: "Something went wrong" })
     })
@@ -280,7 +296,10 @@ describe("AnalyticsContent", () => {
       setManagerOrgs([org])
 
       renderWithProviders(
-        <AnalyticsContent orgSlug={org.slug.replace(/^org-/, "")} contractSlug={CONTRACT.slug} />,
+        <AnalyticsContent
+          orgSlug={org.slug.replace(/^org-/, "")}
+          contractSlug={CONTRACT.slug}
+        />,
       )
 
       await screen.findByText(
@@ -341,13 +360,18 @@ describe("AnalyticsContent", () => {
       allowConsoleErrors()
       setAnalyticsResponses()
       setMockResponse.get(
-        analyticsUrls.contracts.enrollmentFunnel(ORG_UUID, CONTRACT.id, { limit: 200 }),
+        analyticsUrls.contracts.enrollmentFunnel(ORG_UUID, CONTRACT.id, {
+          limit: 200,
+        }),
         { detail: "Not Found" },
         { code: 404 },
       )
 
       renderWithProviders(
-        <AnalyticsContent orgSlug={org.slug.replace(/^org-/, "")} contractSlug={CONTRACT.slug} />,
+        <AnalyticsContent
+          orgSlug={org.slug.replace(/^org-/, "")}
+          contractSlug={CONTRACT.slug}
+        />,
       )
 
       await screen.findByText(/Some analytics could not be loaded/)
@@ -364,7 +388,10 @@ describe("AnalyticsContent", () => {
       setAnalyticsResponses()
 
       renderWithProviders(
-        <AnalyticsContent orgSlug={org.slug.replace(/^org-/, "")} contractSlug={CONTRACT.slug} />,
+        <AnalyticsContent
+          orgSlug={org.slug.replace(/^org-/, "")}
+          contractSlug={CONTRACT.slug}
+        />,
       )
 
       await screen.findByRole("heading", { name: "Contract utilization" })
@@ -403,7 +430,10 @@ describe("AnalyticsContent", () => {
       })
 
       renderWithProviders(
-        <AnalyticsContent orgSlug={org.slug.replace(/^org-/, "")} contractSlug={CONTRACT.slug} />,
+        <AnalyticsContent
+          orgSlug={org.slug.replace(/^org-/, "")}
+          contractSlug={CONTRACT.slug}
+        />,
       )
 
       await screen.findByRole("heading", { name: "Acme Site License" })
@@ -430,7 +460,10 @@ describe("AnalyticsContent", () => {
       })
 
       renderWithProviders(
-        <AnalyticsContent orgSlug={org.slug.replace(/^org-/, "")} contractSlug={CONTRACT.slug} />,
+        <AnalyticsContent
+          orgSlug={org.slug.replace(/^org-/, "")}
+          contractSlug={CONTRACT.slug}
+        />,
       )
 
       await screen.findByText("Intro to Widgets")
@@ -476,7 +509,10 @@ describe("AnalyticsContent", () => {
       })
 
       renderWithProviders(
-        <AnalyticsContent orgSlug={org.slug.replace(/^org-/, "")} contractSlug={CONTRACT.slug} />,
+        <AnalyticsContent
+          orgSlug={org.slug.replace(/^org-/, "")}
+          contractSlug={CONTRACT.slug}
+        />,
       )
 
       await screen.findByText("Deep Widgets")
@@ -513,7 +549,10 @@ describe("AnalyticsContent", () => {
       setAnalyticsResponses()
 
       renderWithProviders(
-        <AnalyticsContent orgSlug={org.slug.replace(/^org-/, "")} contractSlug={CONTRACT.slug} />,
+        <AnalyticsContent
+          orgSlug={org.slug.replace(/^org-/, "")}
+          contractSlug={CONTRACT.slug}
+        />,
       )
 
       const region = await screen.findByRole("region", {
@@ -561,7 +600,10 @@ describe("AnalyticsContent", () => {
       })
 
       renderWithProviders(
-        <AnalyticsContent orgSlug={org.slug.replace(/^org-/, "")} contractSlug={CONTRACT.slug} />,
+        <AnalyticsContent
+          orgSlug={org.slug.replace(/^org-/, "")}
+          contractSlug={CONTRACT.slug}
+        />,
       )
 
       await screen.findByText("Sparse Widgets")
@@ -584,7 +626,11 @@ describe("AnalyticsContent", () => {
       setManagerOrgs([org])
       const page = { limit: 200 }
       setMockResponse.get(
-        analyticsUrls.contracts.contractUtilization(ORG_UUID, CONTRACT.id, page),
+        analyticsUrls.contracts.contractUtilization(
+          ORG_UUID,
+          CONTRACT.id,
+          page,
+        ),
         analyticsFactories.envelope(
           [analyticsFactories.contractUtilization()],
           {
@@ -606,7 +652,10 @@ describe("AnalyticsContent", () => {
       )
 
       renderWithProviders(
-        <AnalyticsContent orgSlug={org.slug.replace(/^org-/, "")} contractSlug={CONTRACT.slug} />,
+        <AnalyticsContent
+          orgSlug={org.slug.replace(/^org-/, "")}
+          contractSlug={CONTRACT.slug}
+        />,
       )
 
       expect(
@@ -625,7 +674,10 @@ describe("AnalyticsContent", () => {
       })
 
       renderWithProviders(
-        <AnalyticsContent orgSlug={org.slug.replace(/^org-/, "")} contractSlug={CONTRACT.slug} />,
+        <AnalyticsContent
+          orgSlug={org.slug.replace(/^org-/, "")}
+          contractSlug={CONTRACT.slug}
+        />,
       )
 
       await screen.findByText("No course enrollments recorded yet.")
@@ -648,13 +700,18 @@ describe("AnalyticsContent", () => {
       setAnalyticsResponses()
       // Overrides the successful response registered just above.
       setMockResponse.get(
-        analyticsUrls.contracts.enrollmentFunnel(ORG_UUID, CONTRACT.id, { limit: 200 }),
+        analyticsUrls.contracts.enrollmentFunnel(ORG_UUID, CONTRACT.id, {
+          limit: 200,
+        }),
         "Internal Server Error",
         { code: 500 },
       )
 
       renderWithProviders(
-        <AnalyticsContent orgSlug={org.slug.replace(/^org-/, "")} contractSlug={CONTRACT.slug} />,
+        <AnalyticsContent
+          orgSlug={org.slug.replace(/^org-/, "")}
+          contractSlug={CONTRACT.slug}
+        />,
       )
 
       await screen.findByText(
@@ -694,7 +751,10 @@ describe("AnalyticsContent", () => {
       setAnalyticsResponses()
 
       renderWithProviders(
-        <AnalyticsContent orgSlug={org.slug.replace(/^org-/, "")} contractSlug={CONTRACT.slug} />,
+        <AnalyticsContent
+          orgSlug={org.slug.replace(/^org-/, "")}
+          contractSlug={CONTRACT.slug}
+        />,
       )
 
       await screen.findByRole("heading", { name: "Course performance" })
@@ -709,7 +769,9 @@ describe("AnalyticsContent", () => {
       setManagerOrgs([org])
       setAnalyticsResponses()
       setMockResponse.get(
-        analyticsUrls.contracts.enrollmentFunnel(ORG_UUID, CONTRACT.id, { limit: 200 }),
+        analyticsUrls.contracts.enrollmentFunnel(ORG_UUID, CONTRACT.id, {
+          limit: 200,
+        }),
         analyticsFactories.envelope(courseRows(2), {
           as_of: AS_OF,
           total_count: 340,
@@ -717,7 +779,9 @@ describe("AnalyticsContent", () => {
       )
       // "Show all" asks for the whole result set in one page.
       setMockResponse.get(
-        analyticsUrls.contracts.enrollmentFunnel(ORG_UUID, CONTRACT.id, { limit: 340 }),
+        analyticsUrls.contracts.enrollmentFunnel(ORG_UUID, CONTRACT.id, {
+          limit: 340,
+        }),
         analyticsFactories.envelope(courseRows(3), {
           as_of: AS_OF,
           total_count: 340,
@@ -726,7 +790,10 @@ describe("AnalyticsContent", () => {
 
       const user = userEvent.setup()
       renderWithProviders(
-        <AnalyticsContent orgSlug={org.slug.replace(/^org-/, "")} contractSlug={CONTRACT.slug} />,
+        <AnalyticsContent
+          orgSlug={org.slug.replace(/^org-/, "")}
+          contractSlug={CONTRACT.slug}
+        />,
       )
 
       await screen.findByText("Showing 2 of 340.")
@@ -751,14 +818,18 @@ describe("AnalyticsContent", () => {
       // under test doesn't depend on the magnitudes. `total_count` still has to
       // exceed the page size, or there would be nothing to expand.
       setMockResponse.get(
-        analyticsUrls.contracts.enrollmentFunnel(ORG_UUID, CONTRACT.id, { limit: 200 }),
+        analyticsUrls.contracts.enrollmentFunnel(ORG_UUID, CONTRACT.id, {
+          limit: 200,
+        }),
         analyticsFactories.envelope(courseRows(2), {
           as_of: AS_OF,
           total_count: 340,
         }),
       )
       setMockResponse.get(
-        analyticsUrls.contracts.enrollmentFunnel(ORG_UUID, CONTRACT.id, { limit: 340 }),
+        analyticsUrls.contracts.enrollmentFunnel(ORG_UUID, CONTRACT.id, {
+          limit: 340,
+        }),
         analyticsFactories.envelope(courseRows(3), {
           as_of: AS_OF,
           total_count: 340,
@@ -767,7 +838,10 @@ describe("AnalyticsContent", () => {
 
       const user = userEvent.setup()
       renderWithProviders(
-        <AnalyticsContent orgSlug={org.slug.replace(/^org-/, "")} contractSlug={CONTRACT.slug} />,
+        <AnalyticsContent
+          orgSlug={org.slug.replace(/^org-/, "")}
+          contractSlug={CONTRACT.slug}
+        />,
       )
 
       const button = await screen.findByRole("button", { name: "Show all 340" })
@@ -789,7 +863,9 @@ describe("AnalyticsContent", () => {
       setManagerOrgs([org])
       setAnalyticsResponses()
       setMockResponse.get(
-        analyticsUrls.contracts.enrollmentFunnel(ORG_UUID, CONTRACT.id, { limit: 200 }),
+        analyticsUrls.contracts.enrollmentFunnel(ORG_UUID, CONTRACT.id, {
+          limit: 200,
+        }),
         analyticsFactories.envelope(courseRows(2), {
           as_of: AS_OF,
           total_count: 340,
@@ -799,7 +875,9 @@ describe("AnalyticsContent", () => {
       // after the LIMIT had already been applied. (Tiny counts on purpose — see
       // the note in the busy/announce test.)
       setMockResponse.get(
-        analyticsUrls.contracts.enrollmentFunnel(ORG_UUID, CONTRACT.id, { limit: 340 }),
+        analyticsUrls.contracts.enrollmentFunnel(ORG_UUID, CONTRACT.id, {
+          limit: 340,
+        }),
         analyticsFactories.envelope(courseRows(3), {
           as_of: AS_OF,
           total_count: 340,
@@ -808,7 +886,10 @@ describe("AnalyticsContent", () => {
 
       const user = userEvent.setup()
       renderWithProviders(
-        <AnalyticsContent orgSlug={org.slug.replace(/^org-/, "")} contractSlug={CONTRACT.slug} />,
+        <AnalyticsContent
+          orgSlug={org.slug.replace(/^org-/, "")}
+          contractSlug={CONTRACT.slug}
+        />,
       )
 
       await user.click(
@@ -831,14 +912,18 @@ describe("AnalyticsContent", () => {
       setManagerOrgs([org])
       setAnalyticsResponses()
       setMockResponse.get(
-        analyticsUrls.contracts.enrollmentFunnel(ORG_UUID, CONTRACT.id, { limit: 200 }),
+        analyticsUrls.contracts.enrollmentFunnel(ORG_UUID, CONTRACT.id, {
+          limit: 200,
+        }),
         analyticsFactories.envelope(courseRows(2), {
           as_of: AS_OF,
           total_count: 5000,
         }),
       )
       setMockResponse.get(
-        analyticsUrls.contracts.enrollmentFunnel(ORG_UUID, CONTRACT.id, { limit: 1000 }),
+        analyticsUrls.contracts.enrollmentFunnel(ORG_UUID, CONTRACT.id, {
+          limit: 1000,
+        }),
         analyticsFactories.envelope(courseRows(4), {
           as_of: AS_OF,
           total_count: 5000,
@@ -847,7 +932,10 @@ describe("AnalyticsContent", () => {
 
       const user = userEvent.setup()
       renderWithProviders(
-        <AnalyticsContent orgSlug={org.slug.replace(/^org-/, "")} contractSlug={CONTRACT.slug} />,
+        <AnalyticsContent
+          orgSlug={org.slug.replace(/^org-/, "")}
+          contractSlug={CONTRACT.slug}
+        />,
       )
 
       // Capped at max_page_size rather than asking for all 5000.

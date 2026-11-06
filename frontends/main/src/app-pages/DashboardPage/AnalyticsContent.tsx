@@ -234,30 +234,46 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
   // The count is fixed and the order never changes, so this is hook-safe.
 
   const utilization = useQuery({
-    ...analyticsContractQueries.contractUtilization(orgUuid ?? "", contractId ?? 0, {
-      limit: limits.utilization,
-    }),
+    ...analyticsContractQueries.contractUtilization(
+      orgUuid ?? "",
+      contractId ?? 0,
+      {
+        limit: limits.utilization,
+      },
+    ),
     enabled: analyticsAvailable,
     placeholderData: keepPreviousData,
   })
   const trend = useQuery({
-    ...analyticsContractQueries.engagementTrend(orgUuid ?? "", contractId ?? 0, {
-      limit: limits.trend,
-    }),
+    ...analyticsContractQueries.engagementTrend(
+      orgUuid ?? "",
+      contractId ?? 0,
+      {
+        limit: limits.trend,
+      },
+    ),
     enabled: analyticsAvailable,
     placeholderData: keepPreviousData,
   })
   const courses = useQuery({
-    ...analyticsContractQueries.enrollmentFunnel(orgUuid ?? "", contractId ?? 0, {
-      limit: limits.courses,
-    }),
+    ...analyticsContractQueries.enrollmentFunnel(
+      orgUuid ?? "",
+      contractId ?? 0,
+      {
+        limit: limits.courses,
+      },
+    ),
     enabled: analyticsAvailable,
     placeholderData: keepPreviousData,
   })
   const content = useQuery({
-    ...analyticsContractQueries.contentEngagement(orgUuid ?? "", contractId ?? 0, {
-      limit: limits.content,
-    }),
+    ...analyticsContractQueries.contentEngagement(
+      orgUuid ?? "",
+      contractId ?? 0,
+      {
+        limit: limits.content,
+      },
+    ),
     enabled: analyticsAvailable,
     placeholderData: keepPreviousData,
   })
@@ -435,8 +451,8 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
       <Stack gap="24px">
         {header}
         <Notice>
-          Analytics for {contract?.name} will be available once its
-          data has been loaded. Please check back later.
+          Analytics for {contract?.name} will be available once its data has
+          been loaded. Please check back later.
         </Notice>
       </Stack>
     )
