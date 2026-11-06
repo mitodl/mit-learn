@@ -2004,8 +2004,6 @@ def remove_qdrant_records(ids, resource_type):
 def remove_points_matching_params(
     params,
     collection_name=RESOURCES_COLLECTION_NAME,
-    *,
-    wait=False,
 ):
     """
     Delete points from Qdrant matching the provided params
@@ -2022,7 +2020,7 @@ def remove_points_matching_params(
             points_selector=models.FilterSelector(
                 filter=qdrant_conditions,
             ),
-            wait=wait,
+            wait=False,
         )
 
 

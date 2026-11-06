@@ -21,7 +21,11 @@ from vector_search.constants import (
     CONTENT_FILES_COLLECTION_NAME,
     RESOURCES_COLLECTION_NAME,
 )
-from vector_search.utils import qdrant_client, remove_points_matching_params
+from vector_search.utils import (
+    qdrant_client,
+    qdrant_query_conditions,
+    remove_points_matching_params,
+)
 
 MIT_EDX = "mit_edx"
 EDX = PlatformType.edx.name
@@ -64,17 +68,34 @@ def remove_edx_from_opensearch() -> list[str]:
 
 
 def remove_edx_from_qdrant() -> list[str]:
-    """Delete every edx platform point. Returns what failed."""
+    """Queue a delete of every edx platform point. Returns what is left."""
     # embeddings can exist with the indexing hooks off, so check the connection
     if not (settings.QDRANT_HOST and settings.QDRANT_BASE_COLLECTION_NAME):
         return []
     failed = []
     for collection in (RESOURCES_COLLECTION_NAME, CONTENT_FILES_COLLECTION_NAME):
         try:
-            if qdrant_client().collection_exists(collection):
-                # wait so a failed delete is reported, not just queued
-                remove_points_matching_params(
-                    {"platform": EDX}, collection_name=collection, wait=True
+            client = qdrant_client()
+            if not client.collection_exists(collection):
+                continue
+            params = {"platform": EDX}
+            # one point is enough to know the delete isn't done
+            remaining, _ = client.scroll(
+                collection_name=collection,
+                scroll_filter=qdrant_query_conditions(
+                    params, collection_name=collection
+                ),
+                limit=1,
+                with_payload=False,
+                with_vectors=False,
+            )
+            if remaining:
+                # waiting can hang on a big, busy collection, so queue the delete
+                # and let a rerun confirm the points are gone
+                remove_points_matching_params(params, collection_name=collection)
+                failed.append(
+                    f"Qdrant {collection}: deleting edx points, rerun to confirm "
+                    "they are gone"
                 )
         except Exception as err:  # noqa: BLE001
             failed.append(f"Qdrant {collection}: {err!r}")
