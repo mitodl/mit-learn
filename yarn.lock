@@ -3697,13 +3697,23 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@next/eslint-plugin-next@npm:16.4.4, @next/eslint-plugin-next@npm:^16.2.7":
+"@next/eslint-plugin-next@npm:16.4.4":
   version: 16.4.4
   resolution: "@next/eslint-plugin-next@npm:16.4.4"
   dependencies:
     "@eslint-community/eslint-utils": "npm:4.9.1"
     fast-glob: "npm:3.3.1"
   checksum: 10/b4e5a1b2c883c6feb701bbc7851c10df1a34c5f485846cdfe353bf6b644436b35dd71a9c263d474dee9aa46de7f8f76a022ccdbbfa95038596992aeaf57c3ef4
+  languageName: node
+  linkType: hard
+
+"@next/eslint-plugin-next@npm:^16.4.4":
+  version: 16.4.5
+  resolution: "@next/eslint-plugin-next@npm:16.4.5"
+  dependencies:
+    "@eslint-community/eslint-utils": "npm:4.9.1"
+    fast-glob: "npm:3.3.1"
+  checksum: 10/6100994fd947ebd96b8834b7750a44e44d160bec202ae4125ce606dcace2fd02162514d03adb8b006c56c7da5cb6685fbd92e4b70fe040de1d922eed79b50976
   languageName: node
   linkType: hard
 
@@ -12216,7 +12226,7 @@ __metadata:
   dependencies:
     "@faker-js/faker": "npm:^10.5.0"
     "@jest/environment": "npm:^29.7.0"
-    "@next/eslint-plugin-next": "npm:^16.2.7"
+    "@next/eslint-plugin-next": "npm:^16.4.4"
     "@swc/core": "npm:^1.11.29"
     "@swc/jest": "npm:^0.2.38"
     "@testing-library/jest-dom": "npm:^6.4.8"
