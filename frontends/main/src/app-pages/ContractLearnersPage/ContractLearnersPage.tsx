@@ -7,7 +7,6 @@ import {
   useQueryClient,
 } from "@tanstack/react-query"
 import Image from "next/image"
-import { RiCheckLine } from "@remixicon/react"
 import {
   Container,
   Pagination,
@@ -58,6 +57,12 @@ import { analytics } from "@/common/analytics"
 import { useFeatureFlag } from "@/common/useFeatureFlag"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
 import ContractManagerNav from "@/components/ContractManagerNav/ContractManagerNav"
+import {
+  FACET_MENU_PROPS,
+  facetLabel,
+  MenuBox,
+  MenuRow,
+} from "@/components/FacetMenu/FacetMenu"
 import SectionHeader, {
   SectionFreshness,
 } from "../DashboardPage/Analytics/SectionHeader"
@@ -216,18 +221,26 @@ const FilterSelect: React.FC<React.ComponentProps<typeof FilterField>> = ({
   />
 )
 
-const OptionLabel = styled.span({
-  display: "flex",
-  alignItems: "center",
-  gap: "8px",
-})
-
-/** Hidden rather than absent on unselected options, so labels stay aligned. */
-const OptionCheck = styled(RiCheckLine)({ flexShrink: 0 })
+/**
+ * The control is full-width on small screens and 280px on desktop, so the menu
+ * takes the control's width as its minimum rather than the facet menu's fixed
+ * 270px. Select sets that minimum inline from the control.
+ */
+const MODULES_MENU_PROPS = {
+  ...FACET_MENU_PROPS,
+  PaperProps: {
+    sx: {
+      ...FACET_MENU_PROPS.PaperProps.sx,
+      width: "auto",
+      maxWidth: "calc(100vw - 32px)",
+    },
+  },
+}
 
 /**
- * Multi-select, unlike the enrollments view's Module filter. A check marks
- * each selected option, since MUI's selected background alone is color-only.
+ * Multi-select, unlike the enrollments view's Module filter. The count is
+ * said in the field's label, which is what names the combobox, so the badge
+ * drawn inside it stays hidden.
  */
 const ModulesSelect: React.FC<{
   options: { value: string; label: string }[]
@@ -236,38 +249,40 @@ const ModulesSelect: React.FC<{
   error: boolean
 }> = ({ options, value, onChange, error }) => (
   <FilterField
-    label="Modules"
+    label={
+      <>
+        Modules
+        {value.length > 0 ? (
+          <VisuallyHidden>, {value.length} selected</VisuallyHidden>
+        ) : null}
+      </>
+    }
     size="medium"
     multiple
     value={value}
     error={error}
     errorText="Couldn't load modules. Reload to try again."
+    MenuProps={MODULES_MENU_PROPS}
     options={options.map((option) => ({
       value: option.value,
       label: (
-        <OptionLabel>
-          <OptionCheck
-            aria-hidden="true"
-            size={16}
-            style={{
-              visibility: value.includes(option.value) ? "visible" : "hidden",
-            }}
-          />
+        <MenuRow>
+          <MenuBox checked={value.includes(option.value)} aria-hidden />
           {option.label}
-        </OptionLabel>
+        </MenuRow>
       ),
     }))}
     renderValue={(selected) => {
       const ids = selected as string[]
-      return (
-        <SelectedValue>
-          {ids.length === 0
-            ? "All modules"
-            : ids.length === 1
-              ? options.find((option) => option.value === ids[0])?.label
-              : `${ids.length} modules`}
-        </SelectedValue>
-      )
+      if (ids.length === 0) return <SelectedValue>All modules</SelectedValue>
+      if (ids.length === 1) {
+        return (
+          <SelectedValue>
+            {options.find((option) => option.value === ids[0])?.label}
+          </SelectedValue>
+        )
+      }
+      return facetLabel("Selected", ids)
     }}
     onChange={(event) => {
       const next = event.target.value
