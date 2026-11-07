@@ -43,6 +43,7 @@ from learning_resources.factories import (
     LearningResourceOfferorFactory,
     LearningResourceRunFactory,
     LearningResourceTopicFactory,
+    TutorProblemFileFactory,
 )
 
 pytestmark = pytest.mark.django_db
@@ -1118,10 +1119,9 @@ def test_figure_folder(settings):
     assert utils._figure_folder("a/key", {"archive_checksum": "abc"}) is None  # noqa: SLF001
 
 
-def test_pdf_to_markdown_stores_figures(mocker, settings, tmp_path):
-    """Figures are saved to storage and linked by url; older versions go"""
-    from learning_resources.converters.opendataloader_llm_converter import Figure
-
+@pytest.fixture
+def figure_storage(settings, tmp_path):
+    """Default storage on the file system, served from https://cdn.test/"""
     media = tmp_path / "media"
     settings.STORAGES = {
         "default": {
@@ -1132,6 +1132,14 @@ def test_pdf_to_markdown_stores_figures(mocker, settings, tmp_path):
             "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"
         },
     }
+    return media
+
+
+def test_pdf_to_markdown_stores_figures(mocker, figure_storage, tmp_path):
+    """Figures are saved to storage and linked by url"""
+    from learning_resources.converters.opendataloader_llm_converter import Figure
+
+    media = figure_storage
     old = media / "figures/file/old/p1_1.png"
     old.parent.mkdir(parents=True)
     old.write_bytes(b"old")
@@ -1163,7 +1171,89 @@ def test_pdf_to_markdown_stores_figures(mocker, settings, tmp_path):
     )
     assert unsaved.placeholder() in markdown
     assert (media / "figures/file/new/p1_1.png").read_bytes() == b"png"
-    assert not old.exists()
+    # older versions stay until no saved row links to them
+    assert old.exists()
+
+
+def test_extract_content_tutor_problem_figures_are_placeholders(
+    mocker, settings, tmp_path
+):
+    """Tutor problem figures are not saved to storage"""
+    settings.SKIP_TIKA = False
+    settings.OCR_SAVE_FIGURES = True
+    (tmp_path / "doc.pdf").write_bytes(b"pdf")
+    metadata = {"file_extension": ".pdf", "source_path": "doc.pdf"}
+    mocker.patch("learning_resources.etl.utils.pdf_is_valid", return_value=True)
+    mocker.patch("learning_resources.etl.utils._should_use_ocr", return_value=True)
+    extract_ocr = mocker.patch(
+        "learning_resources.etl.utils._extract_content_with_ocr",
+        return_value={"content": "markdown", "content_title": ""},
+    )
+    cleanup = mocker.patch(
+        "learning_resources.etl.utils._delete_unlinked_figure_versions"
+    )
+    utils._extract_content(  # noqa: SLF001
+        b"pdf", metadata, str(tmp_path), "key", use_ocr=True, is_tutor_problem=True
+    )
+    extract_ocr.assert_called_once_with(
+        tmp_path / "doc.pdf",
+        True,  # noqa: FBT003
+        figure_folder=None,
+    )
+    cleanup.assert_not_called()
+
+
+@pytest.mark.parametrize("converted", [True, False])
+def test_extract_content_cleans_up_figures_after_ocr(
+    mocker, settings, tmp_path, converted
+):
+    """Other figure versions are cleaned up only after a successful OCR"""
+    settings.SKIP_TIKA = False
+    settings.OCR_SAVE_FIGURES = True
+    (tmp_path / "doc.pdf").write_bytes(b"pdf")
+    metadata = {"file_extension": ".pdf", "source_path": "doc.pdf"}
+    mocker.patch("learning_resources.etl.utils.pdf_is_valid", return_value=True)
+    mocker.patch("learning_resources.etl.utils._should_use_ocr", return_value=True)
+    mocker.patch(
+        "learning_resources.etl.utils._extract_content_with_ocr",
+        return_value={"content": "markdown", "content_title": ""}
+        if converted
+        else None,
+    )
+    mocker.patch(
+        "learning_resources.etl.utils._extract_content_with_tika", return_value=None
+    )
+    cleanup = mocker.patch(
+        "learning_resources.etl.utils._delete_unlinked_figure_versions"
+    )
+    utils._extract_content(b"pdf", metadata, str(tmp_path), "key", use_ocr=True)  # noqa: SLF001
+    if converted:
+        cleanup.assert_called_once_with(utils._figure_folder("key", metadata))  # noqa: SLF001
+    else:
+        cleanup.assert_not_called()
+
+
+def test_delete_unlinked_figure_versions(figure_storage):
+    """Only other versions no saved row links to are deleted"""
+    folders = {
+        name: figure_storage / f"figures/file/{name}"
+        for name in ("new", "linked", "tutor", "unlinked")
+    }
+    for folder in folders.values():
+        folder.mkdir(parents=True)
+        (folder / "p1_1.png").write_bytes(b"png")
+    ContentFileFactory.create(
+        content="![a](https://cdn.test/figures/file/linked/p1_1.png)"
+    )
+    TutorProblemFileFactory.create(
+        run=LearningResourceRunFactory.create(),
+        content="![a](https://cdn.test/figures/file/tutor/p1_1.png)",
+    )
+    utils._delete_unlinked_figure_versions("figures/file/new")  # noqa: SLF001
+    assert (folders["new"] / "p1_1.png").exists()
+    assert (folders["linked"] / "p1_1.png").exists()
+    assert (folders["tutor"] / "p1_1.png").exists()
+    assert not (folders["unlinked"] / "p1_1.png").exists()
 
 
 def test_extract_content_ocr_failure_falls_back_to_tika(

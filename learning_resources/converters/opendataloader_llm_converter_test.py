@@ -10,6 +10,7 @@ from learning_resources.converters.opendataloader_llm_converter import (
     OCR_FAILED_PLACEHOLDER,
     PAGE_CACHE_SIZE,
     REGION,
+    BlockType,
     ContentBlock,
     Figure,
     ImageForOCR,
@@ -585,6 +586,22 @@ def test_figure_ocr_failure_keeps_a_graphic(figure_page):
     assert results[image.block_id] == figure.placeholder()
 
 
+def test_rejected_crop_falls_back_to_placeholder(figure_page, mocker, tmp_path):
+    """A graphic whose crop extract_region rejects is a placeholder, not a link"""
+    converter, figure, image = figure_page
+    converter.figures_dir = tmp_path
+    converter._page_renderer = mocker.Mock(  # noqa: SLF001
+        **{"extract_region.return_value": None}
+    )
+    mocker.patch.object(converter, "_markdown_assembler", MarkdownAssembler())
+    markdown = converter._finish(  # noqa: SLF001
+        [image], {image.block_id: "<!-- figure: a long thin rule -->"}
+    )
+    assert figure.path is None
+    assert figure.placeholder() in markdown
+    assert ".png" not in markdown
+
+
 def test_figure_ocr_failure_keeps_parsed_text(figure_page):
     """The parsed text a failed candidate replaced is written after it"""
     converter, figure, _ = figure_page
@@ -1035,12 +1052,58 @@ def test_convert_to_structured_markdown(mocker, caplog):
     assert '"role": "problem"' in tagged
 
     structure.return_value = assemble_structure(text, plan, [{}])
-    tagged = converter.convert_to_structured_markdown()
-    assert '"status": "needs_review"' in tagged
+    assert converter.convert_to_structured_markdown() == text
     assert "needs review" in caplog.text
 
     structure.side_effect = RuntimeError("structure model unavailable")
     assert converter.convert_to_structured_markdown() == text
+
+
+def test_rejected_boilerplate_keeps_source_text(mocker):
+    """A real paragraph labelled boilerplate fails the checks and stays"""
+    converter = OpenDataLoaderLLMConverter(Path("test.pdf"))
+    paragraph = " ".join(["Consider the circuit shown below."] * 40)
+    text = f"## Problem 1\n\nCalculate the result.\n\n{paragraph}"
+    mocker.patch.object(converter, "convert_to_markdown", return_value=text)
+    plan, _ = prepare_structure(text)
+    result = assemble_structure(
+        text,
+        plan,
+        [
+            _answer(
+                [
+                    _segment(plan, "##", "problem", through="Calculate", problem="1"),
+                    _segment(plan, "Consider", "boilerplate", reason="footer"),
+                ]
+            )
+        ],
+    )
+    assert "large boilerplate exclusion needs review" in result["check"]["errors"]
+    assert paragraph not in export_structure_markdown(text, result)
+    mocker.patch.object(converter, "structure", return_value=result)
+    assert converter.convert_to_structured_markdown() == text
+
+
+def test_null_solution_part_with_parts():
+    """A whole-problem solution with "part": null assembles with the parts"""
+    text = "## Problem 1\n\n(a) Find x.\n\nSolution: x = 2."
+    plan, _ = prepare_structure(text)
+    result = assemble_structure(
+        text,
+        plan,
+        [
+            _answer(
+                [
+                    _segment(plan, "##", "problem", problem="1"),
+                    _segment(plan, "(a)", "part", problem="1", part="a"),
+                    _segment(plan, "Solution", "solution", problem="1", part=None),
+                ]
+            )
+        ],
+    )
+    (problem,) = result["problems"]
+    assert "x = 2" in problem["solution"]
+    assert problem["parts"][0]["body"] == "Find x."
 
 
 def test_convert_to_structured_markdown_skips_empty(mocker):
@@ -1078,6 +1141,32 @@ def test_structure_is_repaired_once(mocker, settings):
     repair_prompt = completion.call_args.kwargs["messages"][0]["content"][0]["text"]
     assert "A previous attempt failed these checks" in repair_prompt
     assert converter.usage.requests == 2
+
+
+def test_reflow_keeps_columns_apart():
+    """Fragmented two-column text is reflowed one column at a time"""
+    lines = [
+        ([50, 700, 140, 710], "LEFT_START"),
+        ([145, 700, 250, 710], "left continues"),
+        ([50, 686, 250, 696], "LEFT_END."),
+        ([350, 700, 550, 710], "RIGHT_START"),
+        ([350, 686, 550, 696], "RIGHT_END."),
+    ]
+    blocks = [
+        ContentBlock(
+            block_type=BlockType.TEXT_BLOCK,
+            block_id=i,
+            page_number=1,
+            bounding_box=box,
+            content=text,
+        )
+        for i, (box, text) in enumerate(lines, start=1)
+    ]
+    assert MarkdownAssembler().assemble(blocks, {}).split("\n\n") == [
+        "<!-- page: 1 -->",
+        "LEFT_START left continues LEFT_END.",
+        "RIGHT_START RIGHT_END.",
+    ]
 
 
 def test_list_bullets_and_full_width_labels():

@@ -579,16 +579,19 @@ def _extract_content(  # noqa: PLR0913
     if _should_use_ocr(
         file_extension=file_extension, file_path=file_path, use_ocr=use_ocr
     ):
+        # tutor solutions are access-controlled and stored figures are public, so
+        # their figures stay placeholders
+        figure_folder = None if is_tutor_problem else _figure_folder(key, metadata)
         try:
             content_dict = _extract_content_with_ocr(
-                file_path,
-                is_tutor_problem,
-                figure_folder=_figure_folder(key, metadata),
+                file_path, is_tutor_problem, figure_folder=figure_folder
             )
         except Exception:  # noqa: BLE001
             log.warning("OCR extraction failed for %s, falling back to tika", file_path)
             content_dict = None
         if content_dict:
+            if figure_folder:
+                _delete_unlinked_figure_versions(figure_folder)
             return content_dict
 
     content_dict = _extract_content_with_tika(
@@ -1378,11 +1381,9 @@ def _pdf_to_markdown(pdf_path, figure_folder: str | None = None):
         converter = OpenDataLoaderLLMConverter(
             pdf_path, figures_dir=Path(figures_dir), figure_link_prefix=""
         )
-        markdown = _store_figures(
+        return _store_figures(
             converter.convert_to_structured_markdown(), converter.figures, figure_folder
         )
-    _delete_other_figure_versions(figure_folder)
-    return markdown
 
 
 def _store_figures(markdown: str, figures: list, folder: str) -> str:
@@ -1410,13 +1411,26 @@ def _store_figures(markdown: str, figures: list, folder: str) -> str:
     return markdown
 
 
-def _delete_other_figure_versions(folder: str) -> None:
-    """Delete the figures saved for a file's other (replaced) versions."""
+def _figure_version_linked(folder: str) -> bool:
+    """Whether a saved ContentFile or TutorProblemFile still links to a folder."""
+    link = f"{folder}/"
+    return (
+        ContentFile.objects.filter(content__contains=link).exists()
+        or TutorProblemFile.objects.filter(content__contains=link).exists()
+    )
+
+
+def _delete_unlinked_figure_versions(folder: str) -> None:
+    """
+    Delete the figures saved for a file's other versions once no saved row
+    links to them. Rows are loaded after every file is transformed (and a load
+    can fail), so the version they link to stays until a later conversion.
+    """
     file_folder, _, version = folder.rpartition("/")
     try:
         versions, _ = default_storage.listdir(file_folder)
         for other in versions:
-            if other == version:
+            if other == version or _figure_version_linked(f"{file_folder}/{other}"):
                 continue
             _, names = default_storage.listdir(f"{file_folder}/{other}")
             for name in names:

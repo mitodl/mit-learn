@@ -27,6 +27,7 @@ import itertools
 import json
 import logging
 import re
+import statistics
 import tempfile
 import threading
 import uuid
@@ -231,18 +232,8 @@ class Figure:
 
     def region_markdown(self, figure_text: str, transcription: str) -> str:
         """
-        Write a region: its crop (figure_text), then the transcription,
-        collapsed where markdown renders HTML:
-
-        <!-- region p2_1 -->
-        ![description](link "p2_1 page=2 ...")
-
-        <details><summary>Transcription</summary>
-
-        ...
-
-        </details>
-        <!-- /region -->
+        Write a region: its crop (figure_text), then its transcription collapsed in a
+        <details> block, between <!-- region id --> and <!-- /region --> comments.
         """
         return (
             f"<!-- region {self.figure_id} -->\n{figure_text}\n\n"
@@ -389,10 +380,8 @@ def merge_side_by_side(
     boxes: list[list[float]], gap: float
 ) -> list[tuple[list[float], bool]]:
     """
-    Union candidates that sit next to each other on the same rows (e.g. two
-    tables or two plots printed side by side): their arrangement is part of
-    what the page shows, so they are cropped and decided as one. Returns
-    (box, whether it was merged) pairs.
+    Union candidates side by side on the same rows (e.g. two plots), so they
+    are cropped and decided as one. Returns (box, merged) pairs.
     """
     items = [(list(b), False) for b in boxes]
     merged = True
@@ -440,10 +429,8 @@ def _words_inside(page, bounds) -> int:
 
 def _line_pieces(obj) -> list[list[float]] | None:
     """
-    Return the boxes (page coordinates) of a path made of nothing but separate
-    horizontal, unfilled lines (heading underlines, rules), one per line; None
-    for any other path (a diagram of straight lines, a table grid). Such a
-    path's overall bounds can span a whole column of text.
+    Boxes of a path that is only separate horizontal unfilled lines (rules,
+    underlines), one per line; None for any other path.
     """
     raw = obj.raw
     fill, stroke = ctypes.c_int(), ctypes.c_int()
@@ -488,16 +475,10 @@ def find_figure_boxes(
     page: pdfium.PdfPage, text_blocks: list[tuple[list[float], str]]
 ) -> list[tuple[list[float], bool]]:
     """
-    Bounding boxes (PDF points, bottom-left origin) of the candidate figures on
-    one page, top to bottom, each with whether it is several items printed
-    side by side.
-
-    Boxes are on the page as shown (display_box), like the parser's blocks
-    once _prepare has turned them. Candidates are the page's top-level
-    graphics: embedded images, form XObjects (an included figure file) and
-    clusters of vector paths big enough not to be
-    a rule or a fraction bar. Short text blocks touching a candidate (its
-    labels) are folded into it. text_blocks are (bbox, text) pairs.
+    Candidate figure boxes on one page (display_box coordinates), top to bottom,
+    each with whether it is several items side by side. Candidates are images,
+    form XObjects and vector-path clusters too big to be rules; short text
+    blocks touching one (its labels) are folded in.
     """
     width, height = page.get_width(), page.get_height()
     rotation = page.get_rotation()
@@ -668,11 +649,9 @@ FIGURE_BOX = re.compile(r"^\s*([\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+)\s*
 
 def parse_figure_mark(mark: str) -> tuple[str, str, str | None]:
     """
-    (id, description, box) of a figure mark's text, "<id> | <description> |
-    <box>". Models leave the id out ("<description> | <box>": a new graphic)
-    and write | inside a description ("$|\\tau|$"), so the id is the first
-    field only when it looks like one, and the box the last. In a table the
-    fields are split by "\\|", escaped for the table.
+    (id, description, box) of a figure mark "<id> | <description> | <box>".
+    The id may be missing and descriptions may contain |, so the id is the
+    first field only when it looks like one, and the box is the last.
     """
     mark = mark.replace("\\|", "|")
     figure_id = "new"
@@ -983,17 +962,42 @@ def is_fragmented(boxes: list[list[float]]) -> bool:
     return any(len(line.pieces) > 1 for line in _lines(pieces))
 
 
+def _columns(pieces: list[_Piece]) -> list[list[_Piece]]:
+    """
+    Split pieces (in parser order) at vertical gutters no piece crosses and too
+    wide to be a word gap; the columns come back in parser order.
+    """
+    if not pieces:
+        return []
+    height = statistics.median(p.height for p in pieces)
+    columns: list[list[int]] = []
+    edge = None
+    for i in sorted(range(len(pieces)), key=lambda i: pieces[i].x0):
+        piece = pieces[i]
+        if edge is None or piece.x0 - edge > MAX_WORD_GAP * height:
+            columns.append([])
+        columns[-1].append(i)
+        edge = piece.x1 if edge is None else max(edge, piece.x1)
+    columns.sort(key=min)
+    return [[pieces[i] for i in sorted(column)] for column in columns]
+
+
 def reflow(blocks: list[tuple[list[float], str]]) -> list[str]:
     """
     Paragraphs of text for a run of (bbox, text) blocks; bbox is PDF points
-    (x1, y1, x2, y2) with the origin bottom-left.
+    (x1, y1, x2, y2) with the origin bottom-left. Separate columns are reflowed
+    one at a time, in parser order.
     """
     pieces = [
         _Piece(text, b[0], b[1], b[2], b[3])
         for b, text in blocks
         if len(b) == 4 and text and text.strip()  # noqa: PLR2004
     ]
-    return _paragraphs(_lines(pieces))
+    return [
+        paragraph
+        for column in _columns(pieces)
+        for paragraph in _paragraphs(_lines(column))
+    ]
 
 
 # --- Running headers and footers -----------------------------------------------
@@ -1397,10 +1401,8 @@ def _header_footer_text(block: dict) -> str:
 
 def _unwrap_header_footer(kids: list[dict]) -> list[dict]:
     """
-    Keep the blocks of the parser's page headers and footers that are content: a
-    problem's label printed at the top of its page ("Problem 3"), or a line
-    on one page only. Page numbers and lines repeated on other pages (with
-    their numbers ignored) are running headers and footers, and go.
+    Keep parser header/footer blocks that are content (a problem label, a
+    line on one page only, a credit); drop page numbers and running lines.
     """
 
     def key(block: dict) -> str:
@@ -1741,19 +1743,8 @@ class OCRProcessor:
 
 class MarkdownAssembler:
     """
-    Assembles markdown from parsed content blocks.
-
-    Handles all content types from OpenDataLoader JSON output:
-    - heading: Section headings with levels
-    - paragraph: Text paragraphs
-    - image: Embedded images (processed via OCR)
-    - table: Tables with rows and cells
-    - list: Flattened into its items and their nested blocks
-    - text chunk / text block: Raw text content
-    - line: Single lines of text
-    - list item: Individual list items (when standalone)
-
-    Each page starts with a <!-- page: N --> marker.
+    Assemble markdown from parsed OpenDataLoader blocks; each page starts with
+    a <!-- page: N --> marker.
     """
 
     def assemble(
@@ -1834,15 +1825,8 @@ class MarkdownAssembler:
         self, block: ContentBlock, ocr_results: dict[int, str | None]
     ) -> str | None:
         """
-        Format a content block to markdown.
-
-        Supports all content types from OpenDataLoader:
-        - heading: Markdown headings with # prefix
-        - paragraph: Plain text paragraphs
-        - image: OCR results or placeholder
-        - table: Markdown tables with | separators
-        - text chunk / text block / line: Plain text
-        - list item: Single list item (when standalone)
+        Format one content block (heading, paragraph, image, table, text or list
+        item) as markdown.
         """
         block_type = block.block_type
         block_content = None
@@ -2119,11 +2103,8 @@ class OpenDataLoaderLLMConverter:
 
     def _text_lost(self, page_num: int, blocks: list[ContentBlock]) -> str | None:  # noqa: PLR0911
         """
-        Why the parsed text can't stand for the page, if it can't: the parser
-        returned nothing for a page that draws something, kept little of the
-        page's text layer, the text layer is scrambled (in its own encoding, as
-        control characters, or as symbols or punctuation once parsed), or it is
-        letter-spaced.
+        Why the parsed text can't stand for the page, if it can't (nothing
+        parsed, little of the text layer kept, scrambled or letter-spaced text).
         """
         layer = "".join(self._layer_text.get(page_num, "").split())
         parsed = sum(len("".join((c or "").split())) for _, c in self._texts(blocks))
@@ -2388,10 +2369,8 @@ class OpenDataLoaderLLMConverter:
         self, figure: Figure, text: str, blocks: list[ContentBlock]
     ) -> str:
         """
-        Drop the paragraphs of a candidate's transcription that the parser already
-        read from a text block that crosses its edge: such a block stays in the
-        markdown, and the crop caught part of it, often cut mid-word ("se
-        provide ..." for "7. Please provide ...").
+        Drop transcription paragraphs the parser already read from a text block
+        crossing the candidate's edge (the crop often cuts them mid-word).
         """
         if not text:
             return text
@@ -2424,10 +2403,8 @@ class OpenDataLoaderLLMConverter:
         self, figure: Figure, text: str, blocks: list[ContentBlock]
     ) -> bool:
         """
-        Return whether a candidate the OCR transcribed as text lies in a table the
-        parser read, which already has (nearly) all of its words: the drawing
-        was the table's ruling, and its transcription would repeat the table.
-        (A plot inside a table of its tick labels comes back as a graphic.)
+        Whether a candidate transcribed as text lies in a parsed table that already
+        has nearly all its words (the drawing was the table's ruling).
         """
         words = set(TABLE_WORD.findall(LATEX_COMMAND.sub(" ", text).lower()))
         if not words:
@@ -2609,9 +2586,8 @@ class OpenDataLoaderLLMConverter:
 
     def convert_to_structured_markdown(self, metadata: dict | None = None) -> str:
         """
-        Convert the PDF to markdown tagged with its problems, parts and solutions
-        (export_structure_markdown). If structuring fails, the converted markdown
-        is returned untagged rather than losing the OCR.
+        Convert the PDF to markdown tagged with its problems, parts and solutions.
+        If structuring fails its checks, the untagged markdown is returned.
         """
         markdown = self.convert_to_markdown()
         if not markdown.strip():
@@ -2623,10 +2599,11 @@ class OpenDataLoaderLLMConverter:
             return markdown
         if result["status"] != "validated":
             log.warning(
-                "Structure of %s needs review: %s",
+                "Structure of %s needs review, keeping it untagged: %s",
                 self.document_path.name,
                 result["check"]["errors"][:MAX_LOGGED_STRUCTURE_ERRORS],
             )
+            return markdown
         return export_structure_markdown(markdown, result)
 
     @property
@@ -2641,14 +2618,20 @@ class OpenDataLoaderLLMConverter:
         self._resolve_figures(final_blocks, ocr_results)
         written = {f.figure_id: self._figure_text(f) for f in self.graphics}
         self._save_graphics()
-        # graphics whose crop came out blank leave the markdown
+        # graphics whose crop came out blank leave the markdown; ones with no
+        # saved crop (rejected by extract_region) fall back to their placeholder
         for figure in self.figures:
             if figure.kind == BLANK:
-                for block_id, text in ocr_results.items():
-                    if isinstance(text, str) and written[figure.figure_id] in text:
-                        ocr_results[block_id] = text.replace(
-                            written[figure.figure_id], ""
-                        )
+                replacement = ""
+            elif self.figures_dir and figure.figure_id in written and not figure.path:
+                replacement = figure.placeholder()
+            else:
+                continue
+            for block_id, text in ocr_results.items():
+                if isinstance(text, str) and written[figure.figure_id] in text:
+                    ocr_results[block_id] = text.replace(
+                        written[figure.figure_id], replacement
+                    )
 
         # Assemble
         final_md = self._markdown_assembler.assemble(final_blocks, ocr_results)
@@ -3174,11 +3157,8 @@ def _strip_heading(text, number="", part=""):
 
 def _fold_part_groups(problems):
     """
-    Rejoin a printed problem that the model split at subheadings of its own
-    parts: a statement with no parts ("Exercise 5.3 ... for the following
-    methods:") directly followed by same-numbered, stemless, unprinted
-    problems that hold only parts under a short heading ("**two by two**").
-    Each follower becomes a group of the opening problem's parts.
+    Rejoin a problem the model split at subheadings of its own parts: same-
+    numbered, stemless problems that follow it become groups of its parts.
     """
     folded = []
     for p in problems:
@@ -3379,6 +3359,11 @@ def assemble_structure(markdown: str, plan: dict, answers: list[dict]) -> dict: 
 
     for f in sorted(fragments, key=lambda f: f["start"]):
         data, e = f["data"], elements[f["element"]]
+        # a null identity ("part": null) is no identity
+        data = {
+            k: "" if v is None and k in {"problem", "part", "section"} else v
+            for k, v in data.items()
+        }
         role = data["role"]
         section = str(data.get("section") or "").strip()
         number = str(data.get("problem") or "").strip()
@@ -3800,12 +3785,9 @@ def _comment_json(data: dict) -> str:
 
 
 def export_structure_markdown(markdown: str, result: dict) -> str:
-    """Project the structure to source-order Markdown with identity and parent tags.
-
-    Text comes from source offsets, not model output. Continuations retain the
-    same node id, and printed answers retain their solution role. The header
-    names the document's kind and title; a problem's tag carries its number,
-    titles, topics and points. Exclusions and geometry stay in the JSON result.
+    """
+    Source-order markdown tagged with node identities and parents. Text comes
+    from source offsets, not model output; boilerplate is left out.
     """
     problems = {p["id"]: p for p in result.get("problems", [])}
     spans = sorted(
