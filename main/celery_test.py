@@ -4,9 +4,22 @@ import sys
 
 import ol_llm
 import pytest
-from celery.signals import worker_process_shutdown
+from celery.signals import setup_logging, worker_process_shutdown
+from mitol.observability import logging as observability_logging
 
 from main.celery import LLM_TRACE_FLUSH_TIMEOUT_MILLIS
+
+
+def test_setup_logging_keeps_structlog(mocker):
+    """The worker reapplies structlog, so Celery leaves the root logger alone"""
+    mock_configure = mocker.patch.object(observability_logging, "configure_structlog")
+
+    receivers = setup_logging.send(
+        sender=None, loglevel="INFO", logfile=None, format="", colorize=False
+    )
+
+    assert receivers
+    mock_configure.assert_called_once_with(force=True)
 
 
 @pytest.fixture
