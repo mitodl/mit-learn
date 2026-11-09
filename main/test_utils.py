@@ -6,6 +6,7 @@ from contextlib import contextmanager
 from unittest.mock import Mock
 
 import pytest
+from django.core.cache.backends.dummy import DummyCache
 from django.http.response import HttpResponse
 from rest_framework.renderers import JSONRenderer
 
@@ -139,3 +140,23 @@ class PickleableMock(Mock):
     def __reduce__(self):
         """Required method for being pickleable"""  # noqa: D401
         return (Mock, ())
+
+
+class _AlwaysFreeLock:
+    """A lock that is never held by anyone else"""
+
+    def acquire(self, blocking=True):  # noqa: ARG002, FBT002
+        return True
+
+    def release(self):
+        pass
+
+
+class LockingDummyCache(DummyCache):
+    """
+    DummyCache with django-redis's ``lock()``, for code that locks through the
+    ``redis`` cache. Every lock is free.
+    """
+
+    def lock(self, *args, **kwargs):  # noqa: ARG002
+        return _AlwaysFreeLock()

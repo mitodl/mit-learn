@@ -3397,7 +3397,7 @@ def test_a_retried_sync_keeps_the_sync_chained_after_it(mocker, warehouse_owns):
     sync still chained after it, so the programs still run once it does
     """
     mock_caches = mocker.patch("learning_resources.lib.warehouse.caches")
-    mock_caches.__getitem__.return_value.add.return_value = False
+    mock_caches.__getitem__.return_value.lock.return_value.acquire.return_value = False
     mock_apply_async = mocker.patch(
         "celery.canvas.Signature.apply_async", autospec=True
     )
@@ -3536,11 +3536,9 @@ def content_file_run(mocker, settings):
         published=True,
     )
     mock_caches = mocker.patch("learning_resources.lib.warehouse.caches")
-    lock = mock_caches.__getitem__.return_value
-    lock.add.return_value = True
-    # holds whatever token the load took it with
-    lock.get.side_effect = lambda _key: lock.add.call_args.args[1]
-    return SimpleNamespace(run=run, lock=lock)
+    cache = mock_caches.__getitem__.return_value
+    cache.lock.return_value.acquire.return_value = True
+    return SimpleNamespace(run=run, cache=cache, lock=cache.lock.return_value)
 
 
 def test_load_warehouse_content_files_reads_one_run(mocker, content_file_run):
@@ -3567,10 +3565,11 @@ def test_load_warehouse_content_files_reads_one_run(mocker, content_file_run):
         run, rows, expected_count=7, allow_mass_unpublish=False, allow_shrink=False
     )
     key = f"warehouse_content_files:{ETLSource.mitxonline.name}:{run.run_id}"
-    content_file_run.lock.add.assert_called_once_with(
-        key, ANY, timeout=tasks.CONTENT_FILE_LOAD_LOCK_SECONDS
+    content_file_run.cache.lock.assert_called_once_with(
+        key, timeout=tasks.CONTENT_FILE_LOAD_LOCK_SECONDS
     )
-    content_file_run.lock.delete.assert_called_once_with(key)
+    content_file_run.lock.acquire.assert_called_once_with(blocking=False)
+    content_file_run.lock.release.assert_called_once_with()
 
 
 @pytest.mark.parametrize("override", ["allow_mass_unpublish", "allow_shrink"])
@@ -3610,14 +3609,14 @@ def test_load_warehouse_content_files_releases_the_lock_on_failure(
         )
 
     mock_connect.return_value.close.assert_called_once_with()
-    content_file_run.lock.delete.assert_called_once()
+    content_file_run.lock.release.assert_called_once()
 
 
 def test_load_warehouse_content_files_retries_when_the_run_is_locked(
     mocker, content_file_run
 ):
     """A second load of a run waits outside the worker instead of blocking it"""
-    content_file_run.lock.add.return_value = False
+    content_file_run.lock.acquire.return_value = False
     mock_connect = mocker.patch("learning_resources.tasks.connect_to_warehouse")
     mock_retry = mocker.patch.object(
         load_warehouse_content_files, "retry", side_effect=Retry()
@@ -3633,14 +3632,14 @@ def test_load_warehouse_content_files_retries_when_the_run_is_locked(
         max_retries=tasks.CONTENT_FILE_LOAD_MAX_RETRIES,
     )
     mock_connect.assert_not_called()
-    content_file_run.lock.delete.assert_not_called()
+    content_file_run.lock.release.assert_not_called()
 
 
 def test_load_warehouse_content_files_gives_up_after_its_retries(
     mocker, content_file_run
 ):
     """Past the retry cap the run is left to the daily sync"""
-    content_file_run.lock.add.return_value = False
+    content_file_run.lock.acquire.return_value = False
     mocker.patch.object(
         load_warehouse_content_files, "retry", side_effect=MaxRetriesExceededError()
     )

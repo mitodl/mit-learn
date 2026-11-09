@@ -11,10 +11,10 @@ new backend. ``iter_rows`` and ``iter_group_stats`` bind values with ``%s``, so
 one with another paramstyle needs that passed through.
 """
 
+import contextlib
 import logging
 import re
 import time
-import uuid
 from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 
@@ -24,6 +24,7 @@ from celery.exceptions import MaxRetriesExceededError
 from django.conf import settings
 from django.core.cache import caches
 from django.core.exceptions import ImproperlyConfigured
+from redis.exceptions import LockNotOwnedError
 
 from learning_resources.etl.ownership import Pipeline, RunMode, run_mode, writing_as
 from learning_resources.etl.shadow import run_shadow
@@ -285,8 +286,9 @@ def run_locked(  # noqa: PLR0913
     """Run ``work`` holding a lock, or re-queue ``task`` while another holds it.
 
     The lock is taken without blocking, so a task waiting for it doesn't hold
-    a worker slot. A run that outlives its lock leaves the lock of the run
-    that took it next alone.
+    a worker slot. Its release compares the lock's token and deletes it in one
+    step, so a run that outlives its lock leaves the lock of the run that took
+    it next alone.
 
     Args:
         task (celery.Task): the running task, bound, which re-queues itself
@@ -302,9 +304,8 @@ def run_locked(  # noqa: PLR0913
     Raises:
         celery.exceptions.Retry: when the lock is held and retries are left
     """
-    lock = caches[SYNC_LOCK_CACHE]
-    token = uuid.uuid4().hex
-    if not lock.add(lock_key, token, timeout=lock_seconds):
+    lock = caches[SYNC_LOCK_CACHE].lock(lock_key, timeout=lock_seconds)
+    if not lock.acquire(blocking=False):
         try:
             raise task.retry(countdown=retry_seconds, max_retries=max_retries)
         except MaxRetriesExceededError:
@@ -312,8 +313,9 @@ def run_locked(  # noqa: PLR0913
     try:
         return work()
     finally:
-        if lock.get(lock_key) == token:
-            lock.delete(lock_key)
+        # raised when the lock expired before the run finished
+        with contextlib.suppress(LockNotOwnedError):
+            lock.release()
 
 
 class BaseWarehouseETLTask(Task):
