@@ -601,7 +601,8 @@ def _extract_content(  # noqa: PLR0913
         except Exception:  # noqa: BLE001
             log.warning("OCR extraction failed for %s, falling back to tika", file_path)
             content_dict = None
-        if content_dict:
+        # a blank OCR result falls through to tika rather than blanking the text
+        if content_dict and (content_dict.get("content") or "").strip():
             return content_dict
 
     content_dict = _extract_content_with_tika(

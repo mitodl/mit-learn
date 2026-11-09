@@ -1092,6 +1092,33 @@ def test_extract_content_ocr_failure_falls_back_to_tika(
     assert all(r.levelname == "WARNING" for r in ocr_records)
 
 
+@pytest.mark.parametrize("ocr_content", ["", "  \n\t ", None])
+def test_extract_content_blank_ocr_falls_back_to_tika(
+    mocker, settings, tmp_path, ocr_content
+):
+    """A blank or whitespace-only OCR result falls through to tika"""
+    settings.SKIP_TIKA = False
+    mocker.patch("learning_resources.etl.utils.pdf_is_valid", return_value=True)
+    mocker.patch("learning_resources.etl.utils._should_use_ocr", return_value=True)
+    mocker.patch(
+        "learning_resources.etl.utils._extract_content_with_ocr",
+        return_value={"content": ocr_content, "content_title": ""},
+    )
+    mock_tika = mocker.patch(
+        "learning_resources.etl.utils._extract_content_with_tika",
+        return_value={"content": "tika text", "content_title": ""},
+    )
+    result = utils._extract_content(  # noqa: SLF001
+        b"pdf bytes",
+        {"source_path": "static/doc.pdf", "file_extension": ".pdf"},
+        str(tmp_path),
+        "test-key",
+        use_ocr=True,
+    )
+    mock_tika.assert_called_once()
+    assert result["content"] == "tika text"
+
+
 # an extraction that raises is recorded as failed; one Tika gave nothing back
 # for is only skipped
 EXTRACTION_FAILURES = [
@@ -1551,6 +1578,45 @@ def test_process_olx_path_ocr_pdfs(mocker, tmp_path):
     mock_extract.assert_called_once()
     assert mock_extract.call_args.kwargs["use_ocr"] is True
     assert mock_extract.call_args.args[1]["file_extension"] == ".pdf"
+
+
+@pytest.mark.django_db
+def test_process_olx_path_ocr_pdfs_blank_ocr_keeps_tika_text(
+    mocker, settings, tmp_path
+):
+    """With ocr_pdfs, a blank OCR result for an unchanged PDF is replaced by tika"""
+    settings.SKIP_TIKA = False
+    settings.OCR_MODEL = "test_model"
+    run = LearningResourceRunFactory.create()
+    static_dir = tmp_path / "static"
+    static_dir.mkdir()
+    (static_dir / "doc.pdf").write_bytes(b"pdf bytes")
+    archive = OlxArchive(tmp_path, run.learning_resource.etl_source)
+    for _, metadata in utils.documents_from_olx(archive):
+        ContentFileFactory.create(
+            run=run,
+            key=get_edx_module_id(metadata["source_path"], run),
+            archive_checksum=metadata["archive_checksum"],
+            content="stored tika text",
+        )
+    mocker.patch("learning_resources.etl.utils.pdf_is_valid", return_value=True)
+    mock_ocr = mocker.patch(
+        "learning_resources.etl.utils._extract_content_with_ocr",
+        return_value={"content": "   ", "content_title": ""},
+    )
+    mocker.patch(
+        "learning_resources.etl.utils._extract_content_with_tika",
+        return_value={"content": "tika text", "content_title": ""},
+    )
+
+    results = list(
+        utils.process_olx_path(
+            str(tmp_path), run, overwrite=False, ocr_pdfs=True, archive=archive
+        )
+    )
+
+    mock_ocr.assert_called_once()
+    assert [result["content"] for result in results] == ["tika text"]
 
 
 def test_extract_content_ocr_uses_file_path(mocker, settings, tmp_path):
