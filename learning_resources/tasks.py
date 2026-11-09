@@ -1989,6 +1989,10 @@ def load_warehouse_content_files(  # noqa: PLR0913
                 )
                 return 0
         try:
+            run_scope = {
+                "etl_source": etl_source,
+                warehouse_content_files.RUN_COLUMN: run_id,
+            }
             conn = connect_to_warehouse()
             try:
                 rows = list(
@@ -1997,11 +2001,21 @@ def load_warehouse_content_files(  # noqa: PLR0913
                         BaseWarehouseETLTask.qualified_name(
                             warehouse_content_files.VIEWS[etl_source]
                         ),
-                        where={
-                            "etl_source": etl_source,
-                            warehouse_content_files.RUN_COLUMN: run_id,
-                        },
+                        where=run_scope,
                     )
+                )
+                unit_rows = (
+                    list(
+                        iter_rows(
+                            conn,
+                            BaseWarehouseETLTask.qualified_name(
+                                warehouse_content_files.UNIT_VIEWS[etl_source]
+                            ),
+                            where=run_scope,
+                        )
+                    )
+                    if etl_source in warehouse_content_files.UNIT_VIEWS
+                    else None
                 )
             finally:
                 conn.close()
@@ -2011,6 +2025,7 @@ def load_warehouse_content_files(  # noqa: PLR0913
                 expected_count=expected_count,
                 allow_mass_unpublish=allow_mass_unpublish is True,
                 allow_shrink=allow_shrink is True,
+                unit_rows=unit_rows,
             )
         finally:
             lock.delete(lock_key)

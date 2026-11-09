@@ -1,5 +1,6 @@
 """Tests for the warehouse-pull loading of content files"""
 
+import json
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
@@ -419,6 +420,79 @@ def test_load_run_drops_unit_links_to_unpublished_files(warehouse_owns_content_f
     assert not unit.content_files.exists()
 
 
+def _unit_row(unit_order, external_id, content_files, **overrides):
+    """Build a row of integrations__learn__content_file_units"""
+    return {
+        "etl_source": MITXONLINE,
+        "run_readable_id": "course-v1:MITxT+1+1T2026",
+        "external_id": external_id,
+        "kind": "unit",
+        "title": f"title {external_id}",
+        "url": f"https://example.com/jump_to_id/{external_id}",
+        "unit_order": unit_order,
+        "content_files": json.dumps(content_files),
+        **overrides,
+    }
+
+
+def test_transform_unit_rows_keeps_the_order_the_units_were_built_in():
+    """Units come back in unit_order, each with its files in lesson order"""
+    rows = [
+        _unit_row(1, "context", [["c", "core"]], kind="context", url=""),
+        _unit_row(0, "seq", [["b", "assessment"], ["a", "supplementary"]]),
+    ]
+
+    units = warehouse_content_files.transform_unit_rows(rows)
+
+    assert [unit["external_id"] for unit in units] == ["seq", "context"]
+    assert list(units[0]["content_files"].items()) == [
+        ("b", "assessment"),
+        ("a", "supplementary"),
+    ]
+    assert units[1] == {
+        "external_id": "context",
+        "kind": "context",
+        "title": "title context",
+        "url": "",
+        "content_files": {"c": "core"},
+    }
+
+
+def test_load_run_replaces_the_units_with_the_view_units(warehouse_owns_content_files):
+    """An Open edX run's units are the view's, linked to the files it loaded"""
+    run = _run()
+    old_unit = UnitFactory.create(run=run, external_id="old")
+    unit_rows = [
+        _unit_row(0, "seq1", [["b", "core"], ["a", "assessment"]]),
+        # no file of this unit is published in Learn, so it is dropped
+        _unit_row(1, "seq2", [["missing", "core"]]),
+        _unit_row(2, "seq3", [["a", "core"], ["missing", "core"]]),
+        _unit_row(3, "context", [], kind="context", title="Course context", url=""),
+    ]
+
+    warehouse_content_files.load_run(
+        run,
+        [_open_edx_row("a"), _open_edx_row("b")],
+        expected_count=2,
+        unit_rows=unit_rows,
+    )
+
+    assert not run.units.filter(id=old_unit.id).exists()
+    assert [
+        (unit.external_id, unit.kind, unit.position, unit.url)
+        for unit in run.units.order_by("kind", "position")
+    ] == [
+        ("context", "context", None, ""),
+        ("seq1", "unit", 0, "https://example.com/jump_to_id/seq1"),
+        ("seq3", "unit", 1, "https://example.com/jump_to_id/seq3"),
+    ]
+    seq1 = run.units.get(external_id="seq1")
+    assert [
+        (link.content_file.key, link.relation, link.position)
+        for link in seq1.unitcontentfile_set.order_by("position")
+    ] == [("b", "core", 0), ("a", "assessment", 1)]
+
+
 def test_load_run_ocw_sets_tags_completeness_and_learning_materials(
     mocker, warehouse_owns_content_files
 ):
@@ -624,7 +698,11 @@ def test_sync_allowed_to_unpublish_still_refuses_a_renamed_run(
     )
     mocker.patch(
         "learning_resources.tasks.iter_rows",
-        side_effect=lambda _conn, _view, where: iter(rows[where["run_readable_id"]]),
+        side_effect=lambda _conn, view, where: iter(
+            []
+            if view.endswith(warehouse_content_files.OPEN_EDX_UNITS_VIEW)
+            else rows[where["run_readable_id"]]
+        ),
     )
     mocker.patch("learning_resources.tasks.caches")
     failures = []
