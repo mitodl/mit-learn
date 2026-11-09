@@ -3511,6 +3511,30 @@ def test_load_warehouse_content_files_passes_the_unpublish_override(
     }
 
 
+def test_load_warehouse_content_files_loads_files_when_units_fail_to_read(
+    mocker, content_file_run
+):
+    """A failed read of the units view still loads the run's files"""
+    rows = [{"key": "a"}]
+    mocker.patch("learning_resources.tasks.connect_to_warehouse")
+    mocker.patch(
+        "learning_resources.tasks.iter_rows",
+        side_effect=[iter(rows), RuntimeError("no such table")],
+    )
+    mock_load = mocker.patch(
+        "learning_resources.tasks.warehouse_content_files.load_run", return_value=1
+    )
+
+    assert (
+        load_warehouse_content_files(
+            ETLSource.mitxonline.name, content_file_run.run.run_id
+        )
+        == 1
+    )
+    assert mock_load.call_args.args[1] == rows
+    assert mock_load.call_args.kwargs["unit_rows"] is None
+
+
 def test_load_warehouse_content_files_reads_no_units_for_ocw(mocker, settings):
     """OCW runs have no units, so only the files view is read"""
     settings.WAREHOUSE_CATALOG = "catalog"

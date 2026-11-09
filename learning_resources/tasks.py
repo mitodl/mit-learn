@@ -1953,7 +1953,9 @@ def load_warehouse_content_files(  # noqa: PLR0913
     allow_shrink: bool = False,
 ) -> int:
     """
-    Load one run's content files from the warehouse
+    Load one run's content files from the warehouse, and an Open edX run's
+    units. A failed read of the units keeps the run's units, as the archive
+    ETL does when it can't build them, and doesn't hold up the files.
 
     Args:
         etl_source (str): the run's source
@@ -2004,19 +2006,22 @@ def load_warehouse_content_files(  # noqa: PLR0913
                         where=run_scope,
                     )
                 )
-                unit_rows = (
-                    list(
-                        iter_rows(
-                            conn,
-                            BaseWarehouseETLTask.qualified_name(
-                                warehouse_content_files.UNIT_VIEWS[etl_source]
-                            ),
-                            where=run_scope,
+                unit_rows = None
+                if etl_source in warehouse_content_files.UNIT_VIEWS:
+                    try:
+                        unit_rows = list(
+                            iter_rows(
+                                conn,
+                                BaseWarehouseETLTask.qualified_name(
+                                    warehouse_content_files.UNIT_VIEWS[etl_source]
+                                ),
+                                where=run_scope,
+                            )
                         )
-                    )
-                    if etl_source in warehouse_content_files.UNIT_VIEWS
-                    else None
-                )
+                    except Exception:
+                        log.exception(
+                            "Units not read for %s run %s", etl_source, run_id
+                        )
             finally:
                 conn.close()
             return warehouse_content_files.load_run(

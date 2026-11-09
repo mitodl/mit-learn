@@ -248,6 +248,28 @@ def transform_unit_rows(rows: list[dict]) -> list[dict]:
     ]
 
 
+def load_run_units(run: LearningResourceRun, unit_rows: list[dict]):
+    """
+    Replace a run's units with its rows of the units view. As in
+    edx_shared.load_archive_units, a failure is logged rather than raised, so
+    the run's files still count as loaded, and the run keeps its units, less
+    their links to files no longer published.
+
+    Args:
+        run (LearningResourceRun): the run
+        unit_rows (list of dict): the run's rows in its units view
+    """
+    units = []
+    try:
+        units = transform_unit_rows(unit_rows)
+    except Exception:
+        log.exception("Units not read for run %s", run.run_id)
+    try:
+        loaders.load_course_units(run, units)
+    except Exception:
+        log.exception("Units not loaded for run %s", run.run_id)
+
+
 def _refuse_unpublish_by_key(
     run: LearningResourceRun, rows: list[dict], *, allow_shrink: bool
 ) -> None:
@@ -366,7 +388,7 @@ def load_run(  # noqa: PLR0913
             run, run.content_files.filter(published=True).values_list("id", flat=True)
         )
     else:
-        loaders.load_course_units(run, transform_unit_rows(unit_rows or []))
+        load_run_units(run, unit_rows or [])
     if complete and len(failed_keys) == extraction_failures:
         run.checksum = _fingerprint(etl_source, _stats_of_rows(etl_source, rows))
         run.save(update_fields=["checksum"])

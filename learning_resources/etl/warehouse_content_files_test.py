@@ -493,6 +493,31 @@ def test_load_run_replaces_the_units_with_the_view_units(warehouse_owns_content_
     ] == [("b", "core", 0), ("a", "assessment", 1)]
 
 
+@pytest.mark.parametrize(
+    "bad_row",
+    [{"content_files": "not json"}, {"unit_order": None}, {"title": None}],
+)
+def test_load_run_bad_unit_rows_keep_the_units_and_the_files(
+    warehouse_owns_content_files, bad_row
+):
+    """A unit row that can't be read or saved keeps the run's units, not its files"""
+    run = _run()
+    old_unit = UnitFactory.create(run=run, external_id="old")
+    unit_rows = [
+        _unit_row(0, "seq1", [["a", "core"]]),
+        {**_unit_row(1, "seq2", [["a", "core"]]), **bad_row},
+    ]
+
+    loaded = warehouse_content_files.load_run(
+        run, [_open_edx_row("a")], expected_count=1, unit_rows=unit_rows
+    )
+
+    assert loaded == 1
+    assert list(run.units.values_list("id", flat=True)) == [old_unit.id]
+    run.refresh_from_db()
+    assert run.checksum is not None
+
+
 def test_load_run_ocw_sets_tags_completeness_and_learning_materials(
     mocker, warehouse_owns_content_files
 ):
