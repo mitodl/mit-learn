@@ -1,19 +1,22 @@
 ---
-layout: default
-parent: RFCs
-nav_order: 3
+applies_to:
+  - "frontends/main/src/app-pages/SearchPage/**"
+  - "frontends/main/src/page-components/SearchDisplay/**"
+  - "frontends/main/src/page-components/SearchField/**"
+  - "frontends/main/src/app/(site)/search/**"
+  - "frontends/ol-components/src/components/SearchInput/**"
 ---
 
-# 0003: Search UI Framework
+# 0002. Search UI Framework
 
-{: .no_toc }
+<!-- Migrated from docs/rfcs/0003-search-ui.md. Body unchanged; header added, and the record renumbered when docs/adr/ was established. -->
 
-## Table of Contents
-
-{: .no_toc .text-delta }
-
-- Table of Contents
-  {:toc}
+| Field               | Value                                                                                                     |
+| ------------------- | --------------------------------------------------------------------------------------------------------- |
+| **Status**          | Accepted                                                                                                  |
+| **Date**            | 2019-03-05                                                                                                |
+| **Deciders**        | Matt Bertrand                                                                                             |
+| **Technical Story** | commit `8228bd151` (the PR number in its subject predates this repo's renumbering and no longer resolves) |
 
 ### Abstract
 
@@ -82,3 +85,11 @@ Regardless of the UI framework, direct ES connections from the front-end should 
 ### Testing & Rollout
 
 The current custom search UI will be enhanced with additional features and tested via the usual PR/release process.
+
+---
+
+**Review History:**
+
+| Date       | Reviewer | Decision | Notes                                                                                                  |
+| ---------- | -------- | -------- | ------------------------------------------------------------------------------------------------------ |
+| 2026-11-09 | —        | —        | Migrated to `docs/adr/` and renumbered to 0002 when the ADR directory was established. Body unchanged. |

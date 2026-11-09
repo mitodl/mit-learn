@@ -1,15 +1,8 @@
----
-layout: default
-parent: RFCs
-nav_order: 6
-has_toc: true
----
+# Front End Component Structure — Spec
 
-# RFC: Front End Component Structure
-
-**Author(s)**: Jon Kafton
-**Created**: Dec 6, 2023
-**Project**: MIT Learn
+Status: **shipped** — history. The conventions it settled are written up as current documentation in [`../architecture/front-end-component-structure.md`](../architecture/front-end-component-structure.md); read that first. This document is the reasoning behind it.
+Authored: 2023-12-06 by Jon Kafton
+Basis: migrated from `docs/rfcs/0006-front-end-component-structure.md`
 
 ## Goals
 

@@ -1,19 +1,18 @@
 ---
-layout: default
-parent: RFCs
-nav_order: 1
+applies_to:
+  - "main/settings.py"
 ---
 
-# 0001: Caching System for Third-Party Data
+# 0001. Caching System for Third-Party Data
 
-{: .no_toc }
+<!-- Migrated from docs/rfcs/0001-caching-system.md. Body unchanged; header added. -->
 
-## Table of Contents
-
-{: .no_toc .text-delta }
-
-- Table of Contents
-  {:toc}
+| Field               | Value                                               |
+| ------------------- | --------------------------------------------------- |
+| **Status**          | Accepted                                            |
+| **Date**            | 2019-02-08                                          |
+| **Deciders**        | Nathan Levesque, with stakeholders (see Conclusion) |
+| **Technical Story** | commit `9b2f8eaab`                                  |
 
 ### Abstract
 
@@ -81,3 +80,11 @@ Aside from generally needing to configure each of these with some runtime settin
 `django.cache` backed by Redis is the most appealing option in terms of familiarity and security.
 
 However, after discussion with stakeholders we're going to go with the database-backed cache as we're not certain the performance gains are worth the operational difficultly configuring our environments would be. Additionally, it was suggested a cache like Varnish in front of these external requests might be more appropriate and the database-backed approach requires the least effort to get functional.
+
+---
+
+**Review History:**
+
+| Date       | Reviewer | Decision | Notes                                                                           |
+| ---------- | -------- | -------- | ------------------------------------------------------------------------------- |
+| 2026-11-09 | —        | —        | Migrated to `docs/adr/` when the ADR directory was established. Body unchanged. |

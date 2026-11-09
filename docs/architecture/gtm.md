@@ -1,8 +1,3 @@
----
-parent: Architecture
-nav_order: 2
----
-
 # Google Tag Manager (GTM)
 
 ## What GTM is

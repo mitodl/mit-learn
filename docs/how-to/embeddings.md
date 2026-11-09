@@ -1,8 +1,3 @@
----
-parent: How-To
-nav_order: 1
----
-
 # Generating Embeddings
 
 Embeddings are used for features that rely on vector similarity such as the vector search endpoint and the similar resources carousel. They are generated and stored in our vector database - [Qdrant](https://qdrant.tech/). There are celery tasks that auto-generate embeddings for new content in addition to management commands to manually generate and store embeddings.

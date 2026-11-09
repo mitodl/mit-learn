@@ -1,8 +1,3 @@
----
-parent: How-To
-nav_order: 2
----
-
 # Cutting an ETL source over to the data platform
 
 MIT Learn's catalog can be loaded by three pipelines: the legacy Celery ETL, the warehouse pull (`BaseWarehouseETLTask`, reading OL Data Platform views in StarRocks) and the data platform's webhook push (`POST /api/v1/webhooks/learning_resources/`). The batch loaders all three share do a full sync, so a resource missing from a batch is unpublished. Only one pipeline may write a given `(etl_source, resource_type)`, and `ETLSourceOwnership` records which one.
