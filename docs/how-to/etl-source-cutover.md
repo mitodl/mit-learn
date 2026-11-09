@@ -36,28 +36,36 @@ Flip every resource type the source's legacy task writes, in one sitting, unless
 | `mitxonline`  | `course`, `program`          | `update-mitxonline-courses-every-6-hours`       | warehouse (`SyncMITxOnlineCoursesTask`, then `SyncMITxOnlineProgramsTask`) |
 | `xpro`        | `course`, `program`          | `update-xpro-courses-every-1-days`              | warehouse (`SyncXproCoursesTask`, then `SyncXproProgramsTask`)             |
 | `ocw`         | `course`                     | none (ocw-studio webhook)                       | warehouse (`SyncOCWCoursesTask`)                                           |
-| `mitpe`       | `course`, `program`          | `update-professional-ed-resources-every-1-days` | webhook (`mitpe_schedule`)                                                 |
-| `mit_climate` | `document`                   | `update-mit-climate-articles-every-1-days`      | webhook (`mit_climate_schedule`)                                           |
-| `oll`         | `course`                     | none                                            | webhook (`oll_schedule`)                                                   |
+| `mitpe`       | `course`, `program`          | `update-professional-ed-resources-every-1-days` | webhook (`mitpe_delivery_sensor`)                                          |
+| `mit_climate` | `document`                   | `update-mit-climate-articles-every-1-days`      | webhook (`mit_climate_delivery_sensor`)                                    |
+| `oll`         | `course`                     | none                                            | webhook (`oll_delivery_sensor`)                                            |
 | `podcast`     | `podcast`, `podcast_episode` | `update-podcasts`                               | warehouse (`SyncPodcastsTask`)                                             |
 | `youtube`     | `video_playlist`, `video`    | `update-youtube-videos`                         | warehouse (`SyncYouTubeTask`)                                              |
 | `ovs`         | `video_playlist`, `video`    | `update-ovs-videos`                             | webhook (already pushing, refused with `409` until flipped)                |
 | `see`         | `course`                     | `update_sloan_courses`                          | not built                                                                  |
 | `canvas`      | `course`                     | `sync_canvas_courses-every-1-weeks`             | webhook (already pushing)                                                  |
 
-The webhook schedules live in the data platform's `delivery` code location. They are registered in production only, stopped by default.
+Each webhook source is delivered by its own sensor in the data platform's `delivery` code location (`deliver_after_upstream` in `delivery/lib/scheduled_automation.py`). The sensor delivers once a day, after every integrations model the delivery asset reads has been rebuilt since the 06:00 UTC staging run, and delivers nothing on a day one of them wasn't rebuilt. The sensors are registered in production only and start stopped.
 
 OVS already pushes per record through its own webhook, which writes only while `webhook` owns OVS. Until the flip, the OVS push is refused with `409` and `get_ovs_data` keeps OVS current; after it, the push writes and `get_ovs_data` and its prune stop. Check first that the push alone keeps the full published set, because nothing will unpublish a resource the push never deletes. `ovs`/`transcript` stays `legacy` unless the push carries transcripts.
+
+OVS was flipped this way in production on 2026-10-28 and in RC on 2026-11-04. What it turned up applies to any source whose new path was already running before its flip:
+
+- OVS can't be shadowed (admin refuses a shadow on its `video_playlist` and `video` rows), so the comparison was by hand: the videos the OVS public API lists with `include_in_learn=true` against `/api/v1/videos/?platform=ovs`.
+- The two paths don't accept the same records. `OVSVideoWebhookRequestSerializer` refuses a video whose `cta_link` is off the OVS media allowlist (`webhooks/serializers.py`), where `get_ovs_data` drops the link and uses the OVS page url (`_get_resource_url` in `learning_resources/etl/ovs.py`). A video legacy loaded that way stays in Learn after the flip but stops updating, and a new one never arrives. Before flipping any source, find the records the new path refuses today: legacy is covering for them, and the flip ends that.
+- The push doesn't prune what legacy pruned. `load_ovs_playlists` unpublishes the OVS playlists missing from its load and the videos left in no published playlist. The push upserts one video and adds its playlist relationship (`load_ovs_video_from_webhook`), and a delete deletes that one video. An emptied playlist stays published, and a video moved to another collection keeps its old playlist. mit-learn #4224 and #4225 change these two points.
+- A refused push isn't retried. The data platform's `ovs_videos_discovery_sensor` keys each run on the video and its content hash and skips a key it has seen, failed runs included. Once Learn accepts the record, launch `ovs_videos_webhook_job` in Dagster for that video's partition.
 
 Canvas has no replacement yet. The platform's content_files webhook only triggers `ingest_canvas_course`, which is the legacy ingestion, so flipping `canvas`/`course` stops Canvas entirely.
 
 ## Before the flip
 
 1. The new path works end to end in QA first (see [QA rehearsal](#qa-rehearsal)).
-2. The platform's `integrations__learn__*` model for the source was rebuilt today. Check the asset's last materialization in Dagster. The delivery schedules currently fire at or before the staging rebuild (tracked in the data platform), so don't rely on the schedule's own timing yet.
-3. Shadow the source as its new owner and read the report (see [Shadow run](#shadow-run)). The first run of the new owner is a full sync, and anything published in Learn but missing from its batch will be unpublished. Explain every `unpublished`, `republished` and `created` id and every entry of `field_counts` before going further. Leave the shadow on for a few scheduled runs if the source changes daily, so the report covers more than one day's data.
+2. The platform's `integrations__learn__*` model for the source was rebuilt today. Check the asset's last materialization in Dagster. A delivery sensor waits for that rebuild, but the hand materialization that makes the first write doesn't.
+3. The new path is scheduled in this environment. The warehouse beat entries (`warehouse-sync-*`) are registered only when `STARROCKS_HOST` and `STARROCKS_USER` are set and beat isn't disabled (`main/settings_celery.py`). Check for the source's entry in `settings.CELERY_BEAT_SCHEDULE` from `./manage.py shell`. A webhook source's delivery sensor is registered only in production, and you start it after the first write (see [Flip](#flip)).
+4. Shadow the source as its new owner and read the report (see [Shadow run](#shadow-run)). The first run of the new owner is a full sync, and anything published in Learn but missing from its batch will be unpublished. Explain every `unpublished`, `republished` and `created` id and every entry of `field_counts` before going further. Leave the shadow on for a few scheduled runs if the source changes daily, so the report covers more than one day's data.
 
-4. Record the published counts per resource type for the source. They're the baseline for checking the flip.
+5. Record the published counts per resource type for the source. They're the baseline for checking the flip.
 
 ## Shadow run
 
@@ -95,11 +103,13 @@ When the report is clean, clear `shadow` and set `owner` (below). Clear `shadow`
 
 ## Flip
 
+A saved row applies to the next run or request. `get_owner` and `run_mode` read the table every time, with no cache (`learning_resources/etl/ownership.py`), so nothing needs a restart. Read the rows back from `./manage.py shell` after saving them: `ETLSourceOwnership.objects.filter(etl_source="<source>")`.
+
 For a webhook source:
 
 1. In Django admin, create a row per resource type from the table above with `owner` set to `webhook`.
 2. In Dagster, materialize the source's delivery asset by hand (e.g. `mit_learn_delivery/mitpe_webhook`). That's the first write, so it happens while you're watching.
-3. Once it checks out (below), start the schedule.
+3. Once it checks out (below), start the source's delivery sensor (e.g. `mitpe_delivery_sensor`).
 4. The webhook refuses a batch that would unpublish more than 10% of the source's published resources of a type, the limit the warehouse tasks apply. It answers `422`, writes nothing from the batch, its other groups included, and the Dagster run fails. A `sync` pair with no resources counts as unpublishing all of it, and so does a delivered resource with `published: false`, or a delivered course or program with no runs. A `test_mode` course a batch leaves out doesn't count, because the prune skips it. If you have explained a larger difference, send `"allow_mass_unpublish": true` in the request. The delivery assets can't send it yet (tracked in the data platform). A type with fewer than ten published resources is over the limit as soon as one is removed. `mitpe` programs are like that today, and `mitpe` delivers courses and programs in one batch, so a program leaving the feed stops its courses updating too until the batch is sent that way.
 
 For a warehouse source:
@@ -144,7 +154,7 @@ Between the flip and the new owner's first run, the legacy task only skips. The 
 ## Roll back
 
 1. Delete the source's rows, or set them to `legacy`.
-2. Stop the webhook schedule, or leave the warehouse beat entry alone (it skips from now on). A webhook schedule left running fails with `409` every run.
+2. Stop the delivery sensor, or leave the warehouse beat entry alone (it skips from now on). A delivery sensor left running fails with `409` on every delivery.
 3. Run the legacy task by hand, e.g. `get_mitpe_data.delay()`. Legacy is a full sync: it republishes every resource in its batch, including any the new owner unpublished, and unpublishes anything the new owner created that legacy doesn't know.
 
    OCW is the exception. Run `get_ocw_data.delay()`. Legacy OCW unpublishes nothing, so a course the warehouse unpublished stays unpublished unless its data.json is still in the bucket. Legacy skips a course whose stored `last_modified` is not older than its data.json, but it looks the course up by its primary course number, which matches the stored readable id only for a course with no term or year. `SyncOCWCoursesTask` stores the time the platform read a course as its `last_modified`, which is later than the data.json, so those few courses are skipped until they change. `force_overwrite=True` reloads them too, at the cost of extracting the text of every content file again.
@@ -155,7 +165,8 @@ Fields only the new owner writes (e.g. `podcast_episode.rss` from the platform) 
 
 ## QA rehearsal
 
-Do the whole procedure on RC first, with the QA data platform.
+Do the whole procedure on RC first, with the QA data platform. RC has its own ownership rows, so its flip changes nothing in production, and production needs the same edits afterwards.
 
-- Webhook sources: QA Dagster delivers to `api.rc.learn.mit.edu`. The delivery schedules aren't registered in QA, so materialize the asset by hand.
-- Warehouse sources: the warehouse tasks currently read views pinned to the production catalog, so a QA rehearsal isn't possible until that is fixed.
+- Webhook sources: QA Dagster delivers to `api.rc.learn.mit.edu`. The delivery sensors aren't registered in QA, so materialize the asset by hand for every delivery, not only the first.
+- Warehouse sources: RC reads the QA data platform's views. `WAREHOUSE_CATALOG` and `WAREHOUSE_SCHEMA` default to the production catalog (`main/settings_course_etl.py`), and ol-infrastructure sets them to `ol_data_lake_qa` and `ol_warehouse_qa_integrations` for QA. Those views are built from QA's copy of each source, so a difference in an RC shadow can come from the QA build rather than the pipeline, and it then says nothing about production. RC's first xPRO shadow (2026-11-04) had production URLs and image buckets on every course and program, because the QA views carry them. Fix such a difference in the platform, or set it aside as QA-only, before reading the rest of the report.
+- RC has `STARROCKS_HOST` and `STARROCKS_USER` set, so every warehouse beat entry runs there, and a row naming `warehouse` loads that source for real, unpublishing included. List RC's rows before starting: `ETLSourceOwnership.objects.exclude(owner="legacy")`.
