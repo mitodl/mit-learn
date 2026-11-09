@@ -17986,7 +17986,6 @@ components:
           type: array
           items:
             type: string
-            minLength: 1
           description: Bare names of the warehouse views the data platform rebuilt,
             e.g. integrations__learn__ocw_courses
       required:

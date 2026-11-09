@@ -3390,6 +3390,36 @@ def test_queue_warehouse_syncs_queues_nothing_for_unknown_views(mocker):
     mock_chain.assert_not_called()
 
 
+@pytest.mark.parametrize("warehouse_owns", [MITXONLINE_OWNED], indirect=True)
+def test_a_retried_sync_keeps_the_sync_chained_after_it(mocker, warehouse_owns):
+    """
+    A courses sync that finds its lock held re-queues itself with the programs
+    sync still chained after it, so the programs still run once it does
+    """
+    mock_caches = mocker.patch("learning_resources.lib.warehouse.caches")
+    mock_caches.__getitem__.return_value.add.return_value = False
+    mock_apply_async = mocker.patch(
+        "celery.canvas.Signature.apply_async", autospec=True
+    )
+    follow_up = dict(tasks.SyncMITxOnlineProgramsTask.si())
+    courses = tasks.SyncMITxOnlineCoursesTask
+
+    # a worker running the first link of queue_warehouse_syncs' chain
+    courses.push_request(
+        id="courses-run", chain=[follow_up], retries=0, called_directly=False
+    )
+    try:
+        with pytest.raises(Retry):
+            courses.run()
+    finally:
+        courses.pop_request()
+
+    retried = mock_apply_async.call_args.args[0]
+    assert retried.task == courses.name
+    assert retried.options["chain"] == [follow_up]
+    assert retried.options["retries"] == 1
+
+
 def test_warehouse_view_syncs_cover_every_catalog_sync():
     """Each catalog sync is triggered by the view it is named for"""
     by_task = dict(tasks.WAREHOUSE_VIEW_SYNCS)
@@ -3505,9 +3535,12 @@ def content_file_run(mocker, settings):
         ),
         published=True,
     )
-    mock_caches = mocker.patch("learning_resources.tasks.caches")
-    mock_caches.__getitem__.return_value.add.return_value = True
-    return SimpleNamespace(run=run, lock=mock_caches.__getitem__.return_value)
+    mock_caches = mocker.patch("learning_resources.lib.warehouse.caches")
+    lock = mock_caches.__getitem__.return_value
+    lock.add.return_value = True
+    # holds whatever token the load took it with
+    lock.get.side_effect = lambda _key: lock.add.call_args.args[1]
+    return SimpleNamespace(run=run, lock=lock)
 
 
 def test_load_warehouse_content_files_reads_one_run(mocker, content_file_run):
@@ -3535,7 +3568,7 @@ def test_load_warehouse_content_files_reads_one_run(mocker, content_file_run):
     )
     key = f"warehouse_content_files:{ETLSource.mitxonline.name}:{run.run_id}"
     content_file_run.lock.add.assert_called_once_with(
-        key, "1", timeout=tasks.CONTENT_FILE_LOAD_LOCK_SECONDS
+        key, ANY, timeout=tasks.CONTENT_FILE_LOAD_LOCK_SECONDS
     )
     content_file_run.lock.delete.assert_called_once_with(key)
 
@@ -3595,7 +3628,10 @@ def test_load_warehouse_content_files_retries_when_the_run_is_locked(
             ETLSource.mitxonline.name, content_file_run.run.run_id
         )
 
-    mock_retry.assert_called_once_with(countdown=tasks.CONTENT_FILE_LOAD_RETRY_SECONDS)
+    mock_retry.assert_called_once_with(
+        countdown=tasks.CONTENT_FILE_LOAD_RETRY_SECONDS,
+        max_retries=tasks.CONTENT_FILE_LOAD_MAX_RETRIES,
+    )
     mock_connect.assert_not_called()
     content_file_run.lock.delete.assert_not_called()
 

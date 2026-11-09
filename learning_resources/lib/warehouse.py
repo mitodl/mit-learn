@@ -52,9 +52,13 @@ _WATERMARK_SQL_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
 # two webhooks. A run that finds the lock held re-queues itself rather than
 # holding a worker slot, and gives up once the lock would have expired, leaving
 # what it would have read to the sync's next run. A worker killed mid-run holds
-# up the sync until then. A run longer than the lock no longer excludes another.
+# up the sync until then. The time limit keeps a run inside its lock, and inside
+# the hour after which the broker redelivers an unacknowledged task (kombu's
+# Redis visibility_timeout), so a redelivered copy can't prune beside it. It is
+# hard, so it fires whatever the sync is doing.
 SYNC_LOCK_CACHE = "redis"
 SYNC_LOCK_SECONDS = 60 * 60
+SYNC_TIME_LIMIT_SECONDS = 55 * 60
 SYNC_LOCK_RETRY_SECONDS = 60
 SYNC_LOCK_MAX_RETRIES = 60
 
@@ -275,6 +279,43 @@ def iter_group_stats(  # noqa: PLR0913
     yield from _fetch_rows(conn, query, params, batch_size)
 
 
+def run_locked(  # noqa: PLR0913
+    task, lock_key, work, *, lock_seconds, retry_seconds, max_retries
+):
+    """Run ``work`` holding a lock, or re-queue ``task`` while another holds it.
+
+    The lock is taken without blocking, so a task waiting for it doesn't hold
+    a worker slot. A run that outlives its lock leaves the lock of the run
+    that took it next alone.
+
+    Args:
+        task (celery.Task): the running task, bound, which re-queues itself
+        lock_key (str): what the lock excludes
+        work (Callable[[], T]): what to run holding it
+        lock_seconds (int): how long the lock lasts if it is never released
+        retry_seconds (int): how long to wait before trying again
+        max_retries (int): how many times to try again
+
+    Returns:
+        T | None: what ``work`` returned, or None once the retries are spent
+
+    Raises:
+        celery.exceptions.Retry: when the lock is held and retries are left
+    """
+    lock = caches[SYNC_LOCK_CACHE]
+    token = uuid.uuid4().hex
+    if not lock.add(lock_key, token, timeout=lock_seconds):
+        try:
+            raise task.retry(countdown=retry_seconds, max_retries=max_retries)
+        except MaxRetriesExceededError:
+            return None
+    try:
+        return work()
+    finally:
+        if lock.get(lock_key) == token:
+            lock.delete(lock_key)
+
+
 class BaseWarehouseETLTask(Task):
     """Celery task base class for warehouse-pull ETL jobs.
 
@@ -346,6 +387,8 @@ class BaseWarehouseETLTask(Task):
 
     abstract = True
     acks_late = True
+    reject_on_worker_lost = True
+    time_limit = SYNC_TIME_LIMIT_SECONDS
     table_name: str = ""
     # No default: a task that forgot to say what it writes would run as a
     # second writer next to the pair's owner.
@@ -422,31 +465,26 @@ class BaseWarehouseETLTask(Task):
         if mode == RunMode.SHADOW:
             full_refresh = True
 
-        lock = caches[SYNC_LOCK_CACHE]
-        lock_key = f"warehouse_etl:running:{self.name}"
-        token = uuid.uuid4().hex
-        if not lock.add(lock_key, token, timeout=SYNC_LOCK_SECONDS):
-            try:
-                raise self.retry(
-                    countdown=SYNC_LOCK_RETRY_SECONDS, max_retries=SYNC_LOCK_MAX_RETRIES
-                )
-            except MaxRetriesExceededError:
-                log.warning(
-                    "Gave up waiting for a run of %s, leaving it to the next one",
-                    self.name,
-                )
-                return 0
-        try:
-            return self._sync(
+        count = run_locked(
+            self,
+            f"warehouse_etl:running:{self.name}",
+            lambda: self._sync(
                 mode,
                 view_name,
                 full_refresh=full_refresh,
                 allow_mass_unpublish=allow_mass_unpublish,
+            ),
+            lock_seconds=SYNC_LOCK_SECONDS,
+            retry_seconds=SYNC_LOCK_RETRY_SECONDS,
+            max_retries=SYNC_LOCK_MAX_RETRIES,
+        )
+        if count is None:
+            log.warning(
+                "Gave up waiting for a run of %s, leaving it to the next one",
+                self.name,
             )
-        finally:
-            # a run that outlived the lock leaves the next run's lock alone
-            if lock.get(lock_key) == token:
-                lock.delete(lock_key)
+            return 0
+        return count
 
     def _sync(
         self,

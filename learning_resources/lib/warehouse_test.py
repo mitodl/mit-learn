@@ -711,6 +711,18 @@ def test_base_warehouse_etl_task_rejects_non_int_return(mock_connect):
     mock_cache.set.assert_not_called()
 
 
+def test_a_sync_stops_inside_its_lock_and_the_broker_redelivery():
+    """
+    A run can't outlive the lock that keeps a second run out, or the hour after
+    which the broker hands an unacknowledged task to another worker
+    """
+    redis_visibility_timeout = 60 * 60  # kombu's default; main/ doesn't set one
+    assert BaseWarehouseETLTask.time_limit < SYNC_LOCK_SECONDS
+    assert BaseWarehouseETLTask.time_limit < redis_visibility_timeout
+    assert _ConcreteTask().time_limit == BaseWarehouseETLTask.time_limit
+    assert BaseWarehouseETLTask.reject_on_worker_lost is True
+
+
 def test_base_warehouse_etl_task_acks_late():
     """acks_late=True, matching the rest of the ETL task fleet (get_ocw_data,
     ingest_edx_run_archive, etc.) — a worker lost mid-pull shouldn't lose

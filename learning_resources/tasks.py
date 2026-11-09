@@ -10,7 +10,7 @@ from datetime import UTC, datetime
 
 import boto3
 import celery
-from celery.exceptions import Ignore, MaxRetriesExceededError
+from celery.exceptions import Ignore
 from django.conf import settings
 from django.core.cache import caches
 from django.db import OperationalError, transaction
@@ -82,6 +82,7 @@ from learning_resources.lib.warehouse import (
     connect_to_warehouse,
     iter_group_stats,
     iter_rows,
+    run_locked,
 )
 from learning_resources.models import (
     ClaimExtraction,
@@ -2033,17 +2034,8 @@ def load_warehouse_content_files(  # noqa: PLR0913
         if run is None:
             log.info("No run to load %s content files for: %s", etl_source, run_id)
             return 0
-        lock = caches["redis"]
-        lock_key = f"warehouse_content_files:{etl_source}:{run_id}"
-        if not lock.add(lock_key, "1", timeout=CONTENT_FILE_LOAD_LOCK_SECONDS):
-            try:
-                raise self.retry(countdown=CONTENT_FILE_LOAD_RETRY_SECONDS)
-            except MaxRetriesExceededError:
-                log.warning(
-                    "Gave up waiting for a load of %s run %s", etl_source, run_id
-                )
-                return 0
-        try:
+
+        def load():
             conn = connect_to_warehouse()
             try:
                 rows = list(
@@ -2067,8 +2059,19 @@ def load_warehouse_content_files(  # noqa: PLR0913
                 allow_mass_unpublish=allow_mass_unpublish is True,
                 allow_shrink=allow_shrink is True,
             )
-        finally:
-            lock.delete(lock_key)
+
+        count = run_locked(
+            self,
+            f"warehouse_content_files:{etl_source}:{run_id}",
+            load,
+            lock_seconds=CONTENT_FILE_LOAD_LOCK_SECONDS,
+            retry_seconds=CONTENT_FILE_LOAD_RETRY_SECONDS,
+            max_retries=CONTENT_FILE_LOAD_MAX_RETRIES,
+        )
+        if count is None:
+            log.warning("Gave up waiting for a load of %s run %s", etl_source, run_id)
+            return 0
+        return count
 
 
 class SyncContentFilesTask(BaseWarehouseETLTask):
