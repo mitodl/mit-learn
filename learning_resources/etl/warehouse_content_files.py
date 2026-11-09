@@ -252,8 +252,10 @@ def load_run_units(run: LearningResourceRun, unit_rows: list[dict]):
     """
     Replace a run's units with its rows of the units view. As in
     edx_shared.load_archive_units, a failure is logged rather than raised, so
-    the run's files still count as loaded, and the run keeps its units, less
-    their links to files no longer published.
+    the run's files still count as loaded. Rows that can't be read keep the
+    run's units less their links to files no longer published; a failed load
+    keeps them as they were, links included, which unit_sources skips since it
+    reads only published files.
 
     Args:
         run (LearningResourceRun): the run
