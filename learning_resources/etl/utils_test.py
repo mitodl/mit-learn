@@ -1844,7 +1844,8 @@ def test_extract_content_ocr_uses_file_path(mocker, settings, tmp_path):
     )
 
     assert result == {"content": "# OCR", "content_title": ""}
-    mock_ocr.assert_called_once_with(pdf_path)
+    mock_ocr.assert_called_once()
+    assert mock_ocr.call_args.args[0] == pdf_path
 
 
 @pytest.mark.parametrize(
