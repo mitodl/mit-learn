@@ -1,6 +1,16 @@
 Release Notes
 =============
 
+Version 0.87.0
+--------------
+
+- Show "Free", not "Free to audit", on redesigned cards (#4275)
+- Fix ProgramAsCoursePage enroll-button test timeouts (#4286)
+- Backport PDF processing fixes and a structuring pass to the converter (#4235)
+- Delete mit_edx resources and remove ETLSource.mit_edx (#4254)
+- Treat program enrollment mode "upgrade" as paid alongside "verified" (#4195)
+- Prefer an upcoming run over an ended one on dashboard cards (#4256)
+
 Version 0.86.5
 --------------
 
