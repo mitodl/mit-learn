@@ -19,8 +19,8 @@ import SectionError from "./SectionError"
  * The view's grain is org x contract, and the three headline figures cannot be
  * honestly rolled up across contracts here:
  *
- *  - `active_learners` counts *distinct* learners per contract, so summing it
- *    double-counts anyone on two contracts.
+ *  - `actively_enrolled_learners` counts *distinct* learners per contract, so
+ *    summing it double-counts anyone on two contracts.
  *  - `seat_utilization_pct` and `completion_rate_pct` are rates; averaging
  *    rates across contracts of different sizes is simply the wrong number, and
  *    recomputing them from the raw counts is impossible whenever a count has
@@ -179,7 +179,7 @@ const ContractKpiCards: React.FC<{
               />
               <Stat
                 label="Active learners"
-                value={row.active_learners}
+                value={row.actively_enrolled_learners}
                 format={formatCount}
               />
               <Stat
