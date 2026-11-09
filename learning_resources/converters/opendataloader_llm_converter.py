@@ -43,6 +43,7 @@ import litellm
 import numpy as np
 import opendataloader_pdf
 import pdf2image
+import pymupdf
 import pypdfium2 as pdfium
 import pypdfium2.raw as pdfium_c
 from django.conf import settings
@@ -56,6 +57,19 @@ litellm.drop_params = True
 
 # pdfium is not thread-safe: every use in this process must hold this lock
 PDFIUM_LOCK = threading.RLock()
+MUPDF_LOCK = threading.Lock()
+
+LIGATURES = str.maketrans(
+    {
+        "\ufb00": "ff",
+        "\ufb01": "fi",
+        "\ufb02": "fl",
+        "\ufb03": "ffi",
+        "\ufb04": "ffl",
+        "\ufb05": "st",
+        "\ufb06": "st",
+    }
+)
 
 
 # --- Token usage ---------------------------------------------------------------
@@ -1235,6 +1249,104 @@ COMPLEX_MATH_REGEX = re.compile(
 )
 
 
+# --- Inline math ----------------------------------------------------------------
+# Inline math the math score misses, which the parsed text would flatten.
+
+INLINE_MATH_FONT = re.compile(
+    r"cmmi|cmsy|cmex|msbm|msam|eufm|eusm|rsfs|stmary|wasy|lasy|mathematicalpi|symbol|mtextra|math",
+    re.IGNORECASE,
+)
+INLINE_MATH_SYMBOL = re.compile("[α-ωΑ-Ω∫∑∏√∂∇∞≤≥≠≈±×÷→⇒∈∉⊂⊆∪∩∀∃′″]")  # noqa: RUF001
+MIN_MATH_CHARS = 3
+MIN_MATH_SYMBOLS = 3
+# sub/superscript detection, as shares of the body font size
+SCRIPT_SIZE = 0.85
+MIN_SCRIPT_SIZE = 0.4
+SCRIPT_SHIFT = 0.15
+SCRIPT_GAP = 0.5
+
+
+@dataclass
+class PageMath:
+    """Inline math counts for a page."""
+
+    math_chars: int = 0
+    symbols: int = 0
+    scripts: int = 0
+
+    @property
+    def flattened(self) -> bool:
+        """Whether the page has enough inline math to OCR."""
+        return (
+            self.math_chars >= MIN_MATH_CHARS
+            or self.symbols >= MIN_MATH_SYMBOLS
+            or self.scripts > 0
+        )
+
+    def __str__(self) -> str:
+        """Describe the counts."""
+        return (
+            f"{self.math_chars} math-font characters, {self.symbols} math symbols, "
+            f"{self.scripts} sub/superscripts"
+        )
+
+
+def page_math(page: pymupdf.Page) -> PageMath:  # noqa: C901
+    """Count a page's inline math."""
+    blocks = []
+    sizes = Counter()
+    for block in page.get_text("dict")["blocks"]:
+        spans = [
+            span
+            for line in block.get("lines", [])
+            for span in line["spans"]
+            if span["text"].strip()
+        ]
+        if spans:
+            blocks.append(spans)
+            for span in spans:
+                sizes[round(span["size"], 1)] += len(span["text"])
+    found = PageMath()
+    if not sizes:
+        return found
+    body = sizes.most_common(1)[0][0]
+
+    def touching(a, b):
+        """Whether b is right beside a on the same line."""
+        gap = max(b["bbox"][0] - a["bbox"][2], a["bbox"][0] - b["bbox"][2])
+        return gap < SCRIPT_GAP * body and abs(a["origin"][1] - b["origin"][1]) < body
+
+    for spans in blocks:
+        for span in spans:
+            text = span["text"].strip()
+            math = bool(INLINE_MATH_FONT.search(span["font"]))
+            if math:
+                found.math_chars += len(text)
+            else:
+                found.symbols += len(INLINE_MATH_SYMBOL.findall(text))
+            if not MIN_SCRIPT_SIZE * body <= span["size"] < SCRIPT_SIZE * body:
+                continue
+            neighbours = [x for x in spans if x is not span and touching(span, x)]
+            full_size = [x for x in neighbours if x["size"] >= SCRIPT_SIZE * body]
+            shifted = any(
+                abs(span["origin"][1] - x["origin"][1]) > SCRIPT_SHIFT * body
+                for x in full_size
+            )
+            beside_math = math or any(
+                INLINE_MATH_FONT.search(x["font"]) for x in neighbours
+            )
+            # flags bit 0: superscript
+            if shifted and (beside_math or span["flags"] & 1):
+                found.scripts += 1
+    return found
+
+
+def document_math(document_path) -> dict[int, PageMath]:
+    """Map page number to its inline math."""
+    with MUPDF_LOCK, pymupdf.open(document_path) as doc:
+        return {n: page_math(page) for n, page in enumerate(doc, start=1)}
+
+
 # --- Content Block Types (from JsonName.java) ---
 class BlockType:
     IMAGE = "image"
@@ -1810,7 +1922,7 @@ class MarkdownAssembler:
                     )
                 )
         flush()
-        return "\n\n".join(formatted_parts)
+        return "\n\n".join(formatted_parts).translate(LIGATURES)
 
     def _format_text_run(self, run: list[ContentBlock]) -> list[str]:
         """
@@ -2033,6 +2145,7 @@ class OpenDataLoaderLLMConverter:
         # each page's text layer as the PDF has it, and whether it draws anything
         self._layer_text: dict[int, str] = {}
         self._has_content: dict[int, bool] = {}
+        self._page_math: dict[int, PageMath] | None = None
         # opendataloader's JSON for this PDF, when it was parsed in a batch of
         # PDFs (one JVM for many files); otherwise it is parsed here
         self.json_path = Path(json_path) if json_path else None
@@ -2135,6 +2248,21 @@ class OpenDataLoaderLLMConverter:
         if len(words) >= MIN_WORDS and single > MAX_SINGLE_LETTER_SHARE * len(words):
             return "Letter-spaced text"
         return None
+
+    def _flattened_math(self, page_num: int) -> PageMath | None:
+        """Return the page's inline math if it should be OCR'd."""
+        if self._page_math is None:
+            try:
+                self._page_math = document_math(self.document_path)
+            except Exception:
+                log.warning(
+                    "Couldn't read the text layer's fonts in %s",
+                    self.document_path,
+                    exc_info=True,
+                )
+                self._page_math = {}
+        math = self._page_math.get(page_num)
+        return math if math and math.flattened else None
 
     def _is_scanned_page(self, page_num: int, blocks: list[ContentBlock]) -> bool:
         """Return whether an image covers most of the page with little text."""
@@ -2711,6 +2839,9 @@ class OpenDataLoaderLLMConverter:
             # or whose text the parser couldn't read
             elif lost := self._text_lost(page_num, page_blocks):
                 reason = lost
+            # or that sets math inline
+            elif settings.OCR_INLINE_MATH and (math := self._flattened_math(page_num)):
+                reason = f"Inline math in the text layer ({math})"
             else:
                 reason = None
             should_full_ocr = reason is not None

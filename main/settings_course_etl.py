@@ -75,6 +75,8 @@ OCR_PDF_MAX_PAGE_THRESHOLD = get_int(name="OCR_PDF_MAX_PAGE_THRESHOLD", default=
 
 # OCR the entire page if the density of math formulas exceeds this threshold
 OCR_MATH_DENSITY_THRESHOLD = get_int(name="OCR_MATH_DENSITY_THRESHOLD", default=5)
+# OCR pages whose text layer sets math inline
+OCR_INLINE_MATH = get_bool(name="OCR_INLINE_MATH", default=True)
 OCR_DEBUG_DIRECTORY = get_string(name="OCR_DEBUG_DIRECTORY", default="ocr_debug")
 # Timeout in seconds and number of retries for each OCR request
 OCR_REQUEST_TIMEOUT = get_int(name="OCR_REQUEST_TIMEOUT", default=180)

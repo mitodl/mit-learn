@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 
+import pymupdf
 import pytest
 from PIL import Image
 
@@ -22,8 +23,10 @@ from learning_resources.converters.opendataloader_llm_converter import (
     _unwrap_header_footer,
     assemble_structure,
     display_box,
+    document_math,
     export_structure_markdown,
     flatten_lists,
+    page_math,
     parse_content_block,
     parse_figure_mark,
     prepare_structure,
@@ -1187,3 +1190,56 @@ def test_list_bullets_and_full_width_labels():
         "- Degrees from MIT",
         "1．當初送不送有慶去念書",  # noqa: RUF001
     ]
+
+
+INLINE_MATH_BODY = (
+    "The car is at rest at the origin and starts to move along a straight line. " * 3
+)
+
+
+def _inline_math_pdf(tmp_path, draws):
+    """Write a PDF with one page per draw function."""
+    doc = pymupdf.open()
+    for draw in draws:
+        draw(doc.new_page())
+    path = tmp_path / "page.pdf"
+    doc.save(path)
+    return path
+
+
+def _plain_page(page):
+    page.insert_textbox(
+        pymupdf.Rect(72, 72, 540, 300), INLINE_MATH_BODY, fontname="helv", fontsize=12
+    )
+
+
+def _inline_math_page(page):
+    _plain_page(page)
+    # Φ with a lowered "total" subscript
+    page.insert_text((72, 340), "F", fontname="symb", fontsize=12)
+    page.insert_text((82, 343), "total", fontname="helv", fontsize=8)
+    page.insert_text(
+        (140, 340), "abg", fontname="symb", fontsize=12
+    )  # alpha beta gamma
+
+
+def test_inline_math_is_found_and_plain_text_is_not(tmp_path):
+    """Math set inline in a text-layer page is found; plain text is not."""
+    found = document_math(_inline_math_pdf(tmp_path, [_plain_page, _inline_math_page]))
+    assert not found[1].flattened
+    assert found[2].flattened
+    assert found[2].math_chars >= 3
+    assert found[2].scripts == 1
+
+
+def test_a_lone_math_letter_is_not_inline_math(tmp_path):
+    """One math-font letter isn't enough to OCR the page."""
+
+    def one_letter(page):
+        _plain_page(page)
+        page.insert_text((72, 340), "p", fontname="symb", fontsize=12)
+
+    with pymupdf.open(_inline_math_pdf(tmp_path, [one_letter])) as doc:
+        math = page_math(doc[0])
+    assert math.math_chars == 1
+    assert not math.flattened
