@@ -221,13 +221,14 @@ def get_mit_climate_data():
 
 
 @app.task(acks_late=True, reject_on_worker_lost=True)
-def get_content_files(
+def get_content_files(  # noqa: PLR0913
     ids: list[int],
     etl_source: str,
     keys: list[str],
     *,
     overwrite: bool = False,
     overwrite_units: bool = False,
+    ocr_pdfs: bool = False,
 ):
     """
     Task to sync edX course content files with database
@@ -244,17 +245,23 @@ def get_content_files(
     if not may_write(etl_source, CONTENT_FILE):
         return
     sync_edx_course_files(
-        etl_source, ids, keys, overwrite=overwrite, overwrite_units=overwrite_units
+        etl_source,
+        ids,
+        keys,
+        overwrite=overwrite,
+        overwrite_units=overwrite_units,
+        ocr_pdfs=ocr_pdfs,
     )
 
 
-def get_content_tasks(
+def get_content_tasks(  # noqa: PLR0913
     etl_source: str,
     *,
     chunk_size: int | None = None,
     overwrite: bool = False,
     overwrite_units: bool = False,
     learning_resource_ids: list[int] | None = None,
+    ocr_pdfs: bool = False,
 ) -> celery.group:
     """
     Return a list of grouped celery tasks for indexing edx content
@@ -273,6 +280,7 @@ def get_content_tasks(
                 archive_keys,
                 overwrite=overwrite,
                 overwrite_units=overwrite_units,
+                ocr_pdfs=ocr_pdfs,
             )
             for ids in chunks(
                 learning_resources,
@@ -423,12 +431,13 @@ def import_content_files(  # noqa: PLR0913
     overwrite=False,
     overwrite_units=False,
     learning_resource_ids=None,
+    ocr_pdfs=False,
 ):
     """Import content files for any edX-based ETL source.
 
     This task wraps get_content_tasks so that the S3 archive listing and
     task-group construction happen asynchronously in a Celery worker, rather
-    than blocking the calling task.
+    than blocking the calling task. ocr_pdfs re-extracts every PDF with LLM OCR.
     """
     return _replace_with_content_tasks(
         self,
@@ -437,6 +446,7 @@ def import_content_files(  # noqa: PLR0913
         overwrite=overwrite,
         overwrite_units=overwrite_units,
         learning_resource_ids=learning_resource_ids,
+        ocr_pdfs=ocr_pdfs,
     )
 
 
@@ -473,6 +483,7 @@ def get_ocw_courses(
     force_overwrite,
     utc_start_timestamp=None,
     skip_content_files=settings.OCW_SKIP_CONTENT_FILES,
+    ocr_pdfs=False,
 ):
     """
     Task to sync a batch of OCW Next courses
@@ -488,6 +499,7 @@ def get_ocw_courses(
         force_overwrite=force_overwrite,
         start_timestamp=utc_start_timestamp,
         skip_content_files=skip_content_files,
+        ocr_pdfs=ocr_pdfs,
     )
 
 

@@ -30,6 +30,7 @@ from learning_resources.constants import (
 )
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.utils import (
+    extract_pdf_bytes_with_ocr,
     extract_text_metadata,
     generate_course_numbers_json,
     get_content_type,
@@ -109,6 +110,8 @@ def transform_content_files(
     s3_resource: boto3.resource,
     course_prefix: str,
     force_overwrite: bool,  # noqa: FBT001
+    *,
+    ocr_pdfs: bool = False,
 ) -> dict:
     """
     Transform page and resource data from the s3 bucket into content_file data
@@ -117,6 +120,7 @@ def transform_content_files(
         s3_resource (boto3.resource): The S3 resource
         course_prefix (str):String used to query S3 bucket for course data JSONs
         force_overwrite (bool): Overwrite document text if true
+        ocr_pdfs (bool): Re-extract every PDF's text with LLM OCR
 
     Yields:
         dict: transformed content file data
@@ -142,11 +146,19 @@ def transform_content_files(
 
                 if resource_json.get("resourcetype"):
                     transformed_resource = transform_contentfile(
-                        obj.key, resource_json, s3_resource, force_overwrite
+                        obj.key,
+                        resource_json,
+                        s3_resource,
+                        force_overwrite,
+                        ocr_pdfs=ocr_pdfs,
                     )
                 else:
                     transformed_resource = transform_contentfile_legacy(
-                        obj.key, resource_json, s3_resource, force_overwrite
+                        obj.key,
+                        resource_json,
+                        s3_resource,
+                        force_overwrite,
+                        ocr_pdfs=ocr_pdfs,
                     )
                 if transformed_resource:
                     yield transformed_resource
@@ -190,6 +202,8 @@ def get_file_content(
     file_s3_path: str,
     s3_resource: boto3.resource,
     force_overwrite: bool,  # noqa: FBT001
+    *,
+    ocr_pdfs: bool = False,
 ) -> dict:
     """
     Return the text content of the file if it is a valid text file
@@ -199,6 +213,7 @@ def get_file_content(
         file_s3_path (str): S3 path for the file
         s3_resource (boto3.resource): The S3 resource
         force_overwrite (bool): Overwrite document text if true
+        ocr_pdfs (bool): Re-extract a PDF with LLM OCR, falling back to tika
     """
     ext_lower = Path(file_s3_path).suffix.lower()
     mime_type = mimetypes.types_map.get(file_s3_path)
@@ -211,8 +226,10 @@ def get_file_content(
 
         course_file_obj = ContentFile.objects.filter(key=s3_path).first()
 
+        use_ocr = ocr_pdfs and ext_lower == ".pdf"
         needs_text_update = (
             force_overwrite
+            or use_ocr
             or course_file_obj is None
             or (
                 s3_obj is not None
@@ -223,7 +240,9 @@ def get_file_content(
         if needs_text_update:
             try:
                 s3_body = s3_obj["Body"].read() if s3_obj else None
-                if s3_body:
+                if s3_body and use_ocr:
+                    content_json = extract_pdf_bytes_with_ocr(s3_body)
+                if s3_body and not content_json:
                     content_json = extract_text_metadata(
                         s3_body,
                         other_headers={"Content-Type": mime_type} if mime_type else {},
@@ -267,6 +286,8 @@ def transform_contentfile(
     contentfile_data: dict,
     s3_resource: boto3.resource,
     force_overwrite: bool,  # noqa: FBT001
+    *,
+    ocr_pdfs: bool = False,
 ) -> dict:
     """
     Transform the data from data.json (new format) for a content file
@@ -325,7 +346,14 @@ def transform_contentfile(
     if not file_s3_path.startswith("courses"):
         file_s3_path = "courses" + file_s3_path.split("courses")[1]
 
-    content_json = get_file_content(s3_path, file_s3_path, s3_resource, force_overwrite)
+    content_json = get_file_content(
+        s3_path,
+        file_s3_path,
+        s3_resource,
+        force_overwrite,
+        # not a video's transcript, which can also be a PDF
+        ocr_pdfs=ocr_pdfs and file_extension.lower() == ".pdf",
+    )
     if content_json:
         contentfile_data["content"] = content_json.get("content")
 
@@ -343,6 +371,8 @@ def transform_contentfile_legacy(
     contentfile_data: dict,
     s3_resource: boto3.resource,
     force_overwrite: bool,  # noqa: FBT001
+    *,
+    ocr_pdfs: bool = False,
 ) -> dict:
     """
     Transform the data from data.json for a content file
@@ -401,7 +431,14 @@ def transform_contentfile_legacy(
     if not file_s3_path.startswith("courses"):
         file_s3_path = "courses" + file_s3_path.split("courses")[1]
 
-    content_json = get_file_content(s3_path, file_s3_path, s3_resource, force_overwrite)
+    content_json = get_file_content(
+        s3_path,
+        file_s3_path,
+        s3_resource,
+        force_overwrite,
+        # not a video's transcript, which can also be a PDF
+        ocr_pdfs=ocr_pdfs and file_extension.lower() == ".pdf",
+    )
     if content_json:
         contentfile_data["content"] = content_json.get("content")
 
