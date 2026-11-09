@@ -112,6 +112,32 @@ def _header(source_id: str, content_file: ContentFile, relation: str) -> str:
     )
 
 
+def pack_parts(sources: list[Source], budget: int) -> list[list[Source]]:
+    """
+    Pack a unit's sources, in unit order, into consecutive parts under a budget.
+
+    A source is never split across parts. One that is over the budget by
+    itself, which the per-file limit normally prevents, is a part of its own.
+
+    Args:
+        sources (list of Source): the unit's sources, in unit order
+        budget (int): the most estimated tokens of source text in one part
+
+    Returns:
+        list of list of Source: the parts, in unit order; a single part when
+            every source fits in one call
+    """
+    parts: list[list[Source]] = []
+    tokens = 0
+    for source in sources:
+        if not parts or tokens + source.tokens > budget:
+            parts.append([])
+            tokens = 0
+        parts[-1].append(source)
+        tokens += source.tokens
+    return parts
+
+
 def unit_sources(unit: Unit, max_file_tokens: int) -> list[Source]:
     """
     Return the sources for a unit's published files with text, in unit order.

@@ -1476,6 +1476,8 @@ class ResourceProfileConfiguration(TimestampedModel):
         CONTEXT = "context", "Context"
         # claims about one unit or bin
         UNIT = "unit", "Unit"
+        # claims about a unit that was split into parts, from its parts' claims
+        UNIT_MERGE = "unit_merge", "Unit merge"
         # claims about the course as a whole, from its units' and context's claims
         RUN = "run", "Run"
 
@@ -1516,7 +1518,8 @@ class ResourceProfileConfiguration(TimestampedModel):
     )
     input_token_budget = models.PositiveIntegerField(
         default=100000,
-        help_text="Most file text one call may read. A unit over it is skipped.",
+        help_text="Most file text one call may read. A unit over it is split"
+        " into parts that are extracted separately and then merged.",
     )
 
     def __str__(self):
@@ -1531,6 +1534,9 @@ class ClaimExtraction(TimestampedModel):
     class Level(models.TextChoices):
         # a unit, bin or context unit
         UNIT = "unit", "Unit"
+        # one part of a unit too large for one call; the unit's own row merges
+        # its parts
+        UNIT_PART = "unit_part", "Unit part"
         # a run, from its units' and context unit's extractions
         RUN = "run", "Run"
 
@@ -1550,6 +1556,8 @@ class ClaimExtraction(TimestampedModel):
         on_delete=models.SET_NULL,
         related_name="claim_extractions",
     )
+    # unit_part level: the part's index within the unit, from 1
+    part = models.PositiveIntegerField(null=True, blank=True)
     # what a run-level extraction was produced for; unit-level ones use `unit`
     run = models.ForeignKey(
         LearningResourceRun,

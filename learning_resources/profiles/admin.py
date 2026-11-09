@@ -32,6 +32,7 @@ class ClaimExtractionAdmin(admin.ModelAdmin):
         "extractor_version",
         "model",
         "unit",
+        "part",
         "run",
         "published",
         "created_on",

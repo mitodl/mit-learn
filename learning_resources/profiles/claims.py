@@ -2,8 +2,8 @@
 Shared parts of resource profile claim generation.
 
 An extractor is one stage's prompt, output schema and configuration. Its
-validated output is stored in the ClaimExtraction of the unit or run it is
-for, under a key its caller builds from the call's inputs, and a call whose
+validated output is stored in the ClaimExtraction of the unit, unit part or
+run it is for, under a key its caller builds from the call's inputs, and a call whose
 key is already stored, for this unit or run or another, is skipped.
 """
 
@@ -268,7 +268,7 @@ def call_llm(extractor: ClaimExtractor, combined_prompt: str) -> tuple[BaseModel
 
 
 # --------------------------------------------------------------------------- outputs
-def _truncation_notes(sources: list[Source]) -> list[str]:
+def truncation_notes(sources: list[Source]) -> list[str]:
     return [
         f"{source.source_id} was truncated: {source.included_chars:,} of"
         f" {source.total_chars:,} characters were read"
@@ -282,7 +282,7 @@ def _stored_output(parsed: dict, sources: list[Source]) -> dict:
     output = verify_all_evidence(
         parsed, {source.source_id: source.text for source in sources}
     )
-    output["extraction_notes"] += _truncation_notes(sources)
+    output["extraction_notes"] += truncation_notes(sources)
     output["sources"] = [source.summary() for source in sources]
     return output
 
@@ -314,6 +314,7 @@ def get_or_create_extraction(  # noqa: PLR0913
     *,
     unit: Unit | None = None,
     run: LearningResourceRun | None = None,
+    part: int | None = None,
     finish: Callable[[dict], dict] | None = None,
     overwrite: bool = False,
 ) -> ClaimExtraction:
@@ -322,7 +323,8 @@ def get_or_create_extraction(  # noqa: PLR0913
 
     Units with the same inputs share the key's row, which is pointed at the
     unit asking for it, so `unit` is the unit that used the row last. The
-    unit's other rows are no longer current and are deleted, leaving it one.
+    unit's other rows at the extractor's level, and for the same part, are no
+    longer current and are deleted, leaving it one of each.
 
     Args:
         extractor (ClaimExtractor): the extractor to call
@@ -334,6 +336,8 @@ def get_or_create_extraction(  # noqa: PLR0913
         unit (Unit): the unit the call is for, for a unit-level extraction
         run (LearningResourceRun): the run the call is for, for a run-level
             extraction; exactly one of unit and run is given
+        part (int): the part of the unit the call is for, for a unit_part
+            extraction
         finish (callable): what else to do to the verified output, as plain
             data, before it is stored
         overwrite (bool): call the model even when the key is stored, and
@@ -348,7 +352,9 @@ def get_or_create_extraction(  # noqa: PLR0913
     if not overwrite:
         extraction = ClaimExtraction.objects.filter(key=key).first()
         if extraction:
-            return _store_extraction(extraction, unit=unit, run=run)
+            return _store_extraction(
+                extraction, unit=unit, run=run, level=extractor.level, part=part
+            )
     parsed, raw = call_llm(extractor, combined_prompt())
     output = _stored_output(parsed.model_dump(), sources)
     if finish:
@@ -357,8 +363,9 @@ def get_or_create_extraction(  # noqa: PLR0913
         ClaimExtraction.objects.filter(key=key).first(),
         unit=unit,
         run=run,
-        key=key,
         level=extractor.level,
+        part=part,
+        key=key,
         extractor_version=extractor.version,
         model=extractor.config.llm_model,
         output=_sanitize(output),
@@ -374,11 +381,16 @@ def _store_extraction(
     *,
     unit: Unit | None,
     run: LearningResourceRun | None,
+    level: str,
+    part: int | None = None,
     **fields,
 ) -> ClaimExtraction:
     """
     Point an extraction at its unit or run, and delete that unit's or run's
-    other extractions.
+    other extractions at the same level and part.
+
+    A split unit has a row for each part and one for the whole unit, which
+    merges them, so a unit's rows are told apart by level and part.
 
     Args:
         extraction (ClaimExtraction | None): the row for the key, if there is
@@ -387,20 +399,27 @@ def _store_extraction(
         unit (Unit | None): the unit the row is for, for a unit-level extraction
         run (LearningResourceRun | None): the run the row is for, for a
             run-level extraction; exactly one of unit and run is given
+        level (str): the row's ClaimExtraction.Level
+        part (int | None): the row's part, for a unit_part extraction
         fields: what else to set on the row
     """
     owner_field, owner = ("unit", unit) if unit is not None else ("run", run)
-    owner_filter = {owner_field: owner}
+    scope = {owner_field: owner, "level": level, "part": part}
     with transaction.atomic():
-        rows = ClaimExtraction.objects.select_for_update().filter(**owner_filter)
+        rows = ClaimExtraction.objects.select_for_update().filter(**scope)
         if extraction is None:
             extraction = rows.order_by("-updated_on", "-id").first()
         if extraction is None:
-            extraction = ClaimExtraction.objects.create(**owner_filter, **fields)
+            extraction = ClaimExtraction.objects.create(**scope, **fields)
         else:
             rows.exclude(id=extraction.id).delete()
-            if fields or getattr(extraction, f"{owner_field}_id") != owner.id:
+            if (
+                fields
+                or getattr(extraction, f"{owner_field}_id") != owner.id
+                or extraction.part != part
+            ):
                 setattr(extraction, owner_field, owner)
+                extraction.part = part
                 for name, value in fields.items():
                     setattr(extraction, name, value)
                 extraction.save()

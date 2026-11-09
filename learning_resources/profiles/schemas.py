@@ -118,6 +118,70 @@ class UnitExtraction(Strict):
     )
 
 
+# --------------------------------------------------------------------------- unit merge
+# A unit too large for one call is extracted in parts, and its parts' claims
+# are merged. Merged claims cite the part claims they come from instead of
+# quoting evidence: the evidence checked in the part calls is carried over.
+PART_CLAIM_IDS_DESCRIPTION = (
+    "Ids of the part claims this claim merges, e.g. ['P1:c2', 'P3:c1']. Cite only"
+    " claims of the same list."
+)
+
+
+class MergedConceptOutput(Strict):
+    label: str = Field(
+        description="Canonical name for the merged concept, reusable across courses"
+    )
+    description: str = Field(
+        description="1-2 sentences describing the concept as the whole unit treats it"
+    )
+    kind: Literal["concept", "method", "skill", "tool", "application"]
+    teaching_status: Literal["taught", "reviewed", "used", "mentioned"] = Field(
+        description="The strongest status it has in any part"
+    )
+    part_claim_ids: list[str] = Field(
+        min_length=1, description=PART_CLAIM_IDS_DESCRIPTION
+    )
+
+
+class MergedSkillOutput(Strict):
+    label: str
+    description: str
+    part_claim_ids: list[str] = Field(
+        min_length=1, description=PART_CLAIM_IDS_DESCRIPTION
+    )
+
+
+class MergedAssumedOutput(Strict):
+    label: str
+    description: str
+    how_used: str
+    flagged_as_prior: bool
+    part_claim_ids: list[str] = Field(
+        min_length=1, description=PART_CLAIM_IDS_DESCRIPTION
+    )
+
+
+class MergedAssessmentOutput(Strict):
+    label: str
+    description: str
+    tests_concept_labels: list[str]
+    part_claim_ids: list[str] = Field(
+        min_length=1, description=PART_CLAIM_IDS_DESCRIPTION
+    )
+
+
+class UnitMergeExtraction(Strict):
+    summary: str = Field(
+        description="3-5 sentence summary of what the whole unit teaches"
+    )
+    concepts: list[MergedConceptOutput]
+    skills: list[MergedSkillOutput]
+    assumed_knowledge: list[MergedAssumedOutput]
+    assessment_expectations: list[MergedAssessmentOutput]
+    extraction_notes: list[str] = Field(description="The parts' notes, combined")
+
+
 # --------------------------------------------------------------------------- context
 class Statement(Strict):
     text: str

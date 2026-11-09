@@ -25,6 +25,22 @@ MATERIALS
 Call the tool with the complete UnitExtraction for this unit."""
 
 
+def unit_merge_combined_prompt(
+    course_outline: str, unit_header: str, parts_block: str
+) -> str:
+    """Return the combined prompt that merges the parts of a split unit"""
+    return f"""COURSE (for orientation)
+{course_outline}
+
+UNIT
+{unit_header}
+
+PART RECORDS (parts in unit order; claim ids in brackets)
+{parts_block}
+
+Call the tool with the complete UnitMergeExtraction for the whole unit."""
+
+
 def run_combined_prompt(context_block: str, units_block: str) -> str:
     """Return the combined prompt for a run"""
     return f"""COURSE CONTEXT CLAIMS
