@@ -44,9 +44,16 @@ const makeProgramAsCourse: typeof factories.programs.program = (
   })
 const makePage = factories.pages.programPageItem
 
-// Enrollment status can be slow to resolve, so wait longer for the enroll
-// button to leave its loading state before asserting on it.
-const ENROLL_STATUS_TIMEOUT = 5000
+/**
+ * The header's "Start Learning" button. Scoped to the banner because a role
+ * query over the whole page is slow in jsdom (it computes styles for every
+ * element), and `findByRole` repeats it on every DOM change while the
+ * enrollment status loads.
+ */
+const findHeaderStartLearning = async () => {
+  const banner = await screen.findByTestId("banner-container")
+  return within(banner).findByRole("button", { name: "Start Learning" })
+}
 
 const setupApis = ({
   program,
@@ -173,12 +180,7 @@ describe("ProgramAsCoursePage", () => {
     renderWithProviders(
       <ProgramAsCoursePage readableId={program.readable_id} />,
     )
-    const buttons = await screen.findAllByRole(
-      "button",
-      { name: "Start Learning" },
-      { timeout: ENROLL_STATUS_TIMEOUT },
-    )
-    expect(buttons.length).toBeGreaterThanOrEqual(1)
+    expect(await findHeaderStartLearning()).toBeInTheDocument()
   })
 
   test("Returns 404 if no program found", async () => {
@@ -410,12 +412,7 @@ describe("ProgramAsCoursePage", () => {
       <ProgramAsCoursePage readableId={program.readable_id} />,
     )
 
-    const [enrollButton] = await screen.findAllByRole(
-      "button",
-      { name: "Start Learning" },
-      { timeout: ENROLL_STATUS_TIMEOUT },
-    )
-    await user.click(enrollButton)
+    await user.click(await findHeaderStartLearning())
 
     await waitFor(() => {
       expect(makeRequest).toHaveBeenCalledWith(
@@ -476,12 +473,7 @@ describe("ProgramAsCoursePage", () => {
     expect(
       screen.queryByText("Earn a verified certificate of completion"),
     ).not.toBeInTheDocument()
-    const enrollButtons = await screen.findAllByRole(
-      "button",
-      { name: "Start Learning" },
-      { timeout: ENROLL_STATUS_TIMEOUT },
-    )
-    expect(enrollButtons.length).toBeGreaterThanOrEqual(1)
+    expect(await findHeaderStartLearning()).toBeInTheDocument()
   })
 
   test("Hides certificate track pricing card when products are empty", async () => {
