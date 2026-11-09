@@ -380,7 +380,7 @@ def get_podcast_transcripts(episode_resources: QuerySet[LearningResource]) -> No
         # The transcript endpoint caches responses for
         # REDIS_VIEW_CACHE_DURATION, so without this an --overwrite run or a
         # feed publishing a corrected transcript would keep serving the old
-        # text for up to a day. Cleared once for the batch rather than per
+        # text until it expired. Cleared once for the batch rather than per
         # episode: the keys vary by request, so the prefix is the unit.
         clear_views_cache(key_prefix="podcast_transcript")
         log.info("Updated transcripts for %i podcast episodes", updated)

@@ -33,18 +33,17 @@ import {
   withHubspotFormId,
 } from "./test-utils/stayUpdated"
 
-import { usePostHog } from "posthog-js/react"
 import invariant from "tiny-invariant"
 import { getIdsFromReqTree } from "@/common/mitxonline"
 import { faker } from "@faker-js/faker/locale/en"
 import { PostHogEvents } from "@/common/constants"
+import { capturePostHog } from "@/common/analytics/posthog"
 
-jest.mock("posthog-js/react")
-const mockCapture = jest.fn()
-jest.mocked(usePostHog).mockReturnValue(
-  // @ts-expect-error Not mocking all of posthog
-  { capture: mockCapture },
-)
+jest.mock("@/common/analytics/posthog", () => ({
+  capturePostHog: jest.fn(),
+  initPostHog: jest.fn(),
+}))
+const mockCapture = jest.mocked(capturePostHog)
 
 const makeProgram = factories.programs.program
 const makePage = factories.pages.programPageItem

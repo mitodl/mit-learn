@@ -40,9 +40,13 @@ def _context_sources(
 def _context_key(
     extractor: ClaimExtractor, run: LearningResourceRun, sources: list[Source]
 ) -> str:
-    # the title is in the prompt, and the output repeats it
+    # the title is in the prompt, and the output repeats it. The course is in
+    # the key so that runs of one course share a row, but another course with
+    # the same title and files doesn't take it over.
     return extractor.key(
-        run.learning_resource.title, [source.cache_input() for source in sources]
+        run.learning_resource_id,
+        run.learning_resource.title,
+        [source.cache_input() for source in sources],
     )
 
 
@@ -61,7 +65,7 @@ def generate_context_claims(
             configuration when not given
         overwrite (bool): call the model even when an extraction with the
             same key is stored, and replace it. The key covers only the
-            course title and the files' text, so this is how a prompt, model
+            course, its title and the files' text, so this is how a prompt, model
             or code change is applied to stored claims.
 
     Returns:

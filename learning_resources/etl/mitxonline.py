@@ -70,7 +70,17 @@ def _fetch_data(url, params=None):
             params=params,
             headers=headers,
             timeout=settings.REQUESTS_TIMEOUT,
-        ).json()
+        )
+        response.raise_for_status()
+        try:
+            response = response.json()
+        except requests.exceptions.JSONDecodeError as exc:
+            msg = (
+                f"MITx Online API returned a non-JSON response from {url} "
+                f"(status={response.status_code}, "
+                f"content-type={response.headers.get('Content-Type')!r})"
+            )
+            raise ValueError(msg) from exc
         results = response["results"]
         yield from results
         next_url = response.get("next")

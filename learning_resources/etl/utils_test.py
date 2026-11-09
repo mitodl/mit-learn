@@ -25,6 +25,7 @@ from learning_resources.etl.olx_test import (
     START_FUTURE,
     START_LATER,
     START_PAST,
+    _colon_olx,
     _dated_olx,
     _reference_olx,
     _start,
@@ -43,6 +44,7 @@ from learning_resources.factories import (
     LearningResourceOfferorFactory,
     LearningResourceRunFactory,
     LearningResourceTopicFactory,
+    TutorProblemFileFactory,
 )
 
 pytestmark = pytest.mark.django_db
@@ -1053,12 +1055,206 @@ def test_extract_content_ocr_fallback_to_tika(mocker, settings, tmp_path):
     mock_should_use_ocr.assert_called_once_with(
         file_extension=".pdf", file_path=file_path, use_ocr=True
     )
-    mock_extract_ocr.assert_called_once_with(file_path, False)  # noqa: FBT003
+    mock_extract_ocr.assert_called_once_with(
+        file_path,
+        False,  # noqa: FBT003
+        figure_folder=utils._figure_folder("test_key", metadata),  # noqa: SLF001
+    )
     mock_extract_tika.assert_called_once_with(
         document, "application/pdf", ".pdf", "test_key"
     )
 
     assert result == {"content": "tika content", "content_title": "Tika Title"}
+
+
+@pytest.mark.parametrize(
+    ("max_pages", "is_tutor_problem", "converted"),
+    [
+        (10, False, False),
+        (10, True, True),
+        (20, False, True),
+        (0, False, True),
+    ],
+)
+def test_extract_content_with_ocr_page_limit(  # noqa: PLR0913
+    mocker, settings, tmp_path, max_pages, is_tutor_problem, converted
+):
+    """PDFs over the page limit are not OCR'd, unless the limit is 0"""
+    settings.OCR_PDF_MAX_PAGE_THRESHOLD = max_pages
+    mocker.patch(
+        "learning_resources.etl.utils.PdfReader",
+        return_value=mocker.Mock(pages=[None] * 15),
+    )
+    to_markdown = mocker.patch(
+        "learning_resources.etl.utils._pdf_to_markdown", return_value="markdown"
+    )
+    result = utils._extract_content_with_ocr(  # noqa: SLF001
+        tmp_path / "doc.pdf", is_tutor_problem
+    )
+    assert to_markdown.called is converted
+    assert result == (
+        {"content": "markdown", "content_title": ""} if converted else None
+    )
+
+
+def test_pdf_to_markdown_is_structured(mocker, tmp_path):
+    """A PDF's OCR'd content is its markdown tagged with problems and parts"""
+    converter = mocker.patch(
+        "learning_resources.converters.opendataloader_llm_converter.OpenDataLoaderLLMConverter"
+    )
+    converter.return_value.convert_to_structured_markdown.return_value = "tagged"
+    assert utils._pdf_to_markdown(tmp_path / "doc.pdf") == "tagged"  # noqa: SLF001
+    converter.assert_called_once_with(tmp_path / "doc.pdf")
+
+
+def test_figure_folder(settings):
+    """A file's figures have a folder per version, unless saving them is off"""
+    settings.OCR_SAVE_FIGURES = True
+    settings.OCR_FIGURES_STORAGE_PREFIX = "figures"
+    folder = utils._figure_folder("a/key", {"archive_checksum": "abc"})  # noqa: SLF001
+    prefix, file_folder, version = folder.split("/")
+    assert (prefix, version) == ("figures", "abc")
+    assert file_folder == utils._figure_folder("a/key", {}).split("/")[1]  # noqa: SLF001
+    assert utils._figure_folder("other/key", {}) != folder  # noqa: SLF001
+    settings.OCR_SAVE_FIGURES = False
+    assert utils._figure_folder("a/key", {"archive_checksum": "abc"}) is None  # noqa: SLF001
+
+
+@pytest.fixture
+def figure_storage(settings, tmp_path):
+    """Default storage on the file system, served from https://cdn.test/"""
+    media = tmp_path / "media"
+    settings.STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+            "OPTIONS": {"location": str(media), "base_url": "https://cdn.test/"},
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"
+        },
+    }
+    return media
+
+
+def test_pdf_to_markdown_stores_figures(mocker, figure_storage, tmp_path):
+    """Figures are saved to storage and linked by url"""
+    from learning_resources.converters.opendataloader_llm_converter import Figure
+
+    media = figure_storage
+    old = media / "figures/file/old/p1_1.png"
+    old.parent.mkdir(parents=True)
+    old.write_bytes(b"old")
+    saved = Figure("p1_1", 1, [100, 400, 300, 600], "a diagram", 612, 792)
+    unsaved = Figure("p1_2", 1, [100, 100, 300, 300], "a plot", 612, 792)
+
+    def converter(pdf_path, *, figures_dir, figure_link_prefix):
+        assert figure_link_prefix == ""
+        saved.path = figures_dir / "p1_1.png"
+        saved.path.write_bytes(b"png")
+        unsaved.path = figures_dir / "missing.png"  # its crop cannot be read
+        return mocker.Mock(
+            figures=[saved, unsaved],
+            **{
+                "convert_to_structured_markdown.return_value": (
+                    f"{saved.image_markdown('p1_1.png')}\n\n"
+                    f"{unsaved.image_markdown('missing.png')}"
+                )
+            },
+        )
+
+    mocker.patch(
+        "learning_resources.converters.opendataloader_llm_converter.OpenDataLoaderLLMConverter",
+        side_effect=converter,
+    )
+    markdown = utils._pdf_to_markdown(tmp_path / "doc.pdf", "figures/file/new")  # noqa: SLF001
+    assert (
+        saved.image_markdown("https://cdn.test/figures/file/new/p1_1.png") in markdown
+    )
+    assert unsaved.placeholder() in markdown
+    assert (media / "figures/file/new/p1_1.png").read_bytes() == b"png"
+    # older versions stay until no saved row links to them
+    assert old.exists()
+
+
+def test_extract_content_tutor_problem_figures_are_placeholders(
+    mocker, settings, tmp_path
+):
+    """Tutor problem figures are not saved to storage"""
+    settings.SKIP_TIKA = False
+    settings.OCR_SAVE_FIGURES = True
+    (tmp_path / "doc.pdf").write_bytes(b"pdf")
+    metadata = {"file_extension": ".pdf", "source_path": "doc.pdf"}
+    mocker.patch("learning_resources.etl.utils.pdf_is_valid", return_value=True)
+    mocker.patch("learning_resources.etl.utils._should_use_ocr", return_value=True)
+    extract_ocr = mocker.patch(
+        "learning_resources.etl.utils._extract_content_with_ocr",
+        return_value={"content": "markdown", "content_title": ""},
+    )
+    cleanup = mocker.patch(
+        "learning_resources.etl.utils._delete_unlinked_figure_versions"
+    )
+    utils._extract_content(  # noqa: SLF001
+        b"pdf", metadata, str(tmp_path), "key", use_ocr=True, is_tutor_problem=True
+    )
+    extract_ocr.assert_called_once_with(
+        tmp_path / "doc.pdf",
+        True,  # noqa: FBT003
+        figure_folder=None,
+    )
+    cleanup.assert_not_called()
+
+
+@pytest.mark.parametrize("converted", [True, False])
+def test_extract_content_cleans_up_figures_after_ocr(
+    mocker, settings, tmp_path, converted
+):
+    """Other figure versions are cleaned up only after a successful OCR"""
+    settings.SKIP_TIKA = False
+    settings.OCR_SAVE_FIGURES = True
+    (tmp_path / "doc.pdf").write_bytes(b"pdf")
+    metadata = {"file_extension": ".pdf", "source_path": "doc.pdf"}
+    mocker.patch("learning_resources.etl.utils.pdf_is_valid", return_value=True)
+    mocker.patch("learning_resources.etl.utils._should_use_ocr", return_value=True)
+    mocker.patch(
+        "learning_resources.etl.utils._extract_content_with_ocr",
+        return_value={"content": "markdown", "content_title": ""}
+        if converted
+        else None,
+    )
+    mocker.patch(
+        "learning_resources.etl.utils._extract_content_with_tika", return_value=None
+    )
+    cleanup = mocker.patch(
+        "learning_resources.etl.utils._delete_unlinked_figure_versions"
+    )
+    utils._extract_content(b"pdf", metadata, str(tmp_path), "key", use_ocr=True)  # noqa: SLF001
+    if converted:
+        cleanup.assert_called_once_with(utils._figure_folder("key", metadata))  # noqa: SLF001
+    else:
+        cleanup.assert_not_called()
+
+
+def test_delete_unlinked_figure_versions(figure_storage):
+    """Only other versions no saved row links to are deleted"""
+    folders = {
+        name: figure_storage / f"figures/file/{name}"
+        for name in ("new", "linked", "tutor", "unlinked")
+    }
+    for folder in folders.values():
+        folder.mkdir(parents=True)
+        (folder / "p1_1.png").write_bytes(b"png")
+    ContentFileFactory.create(
+        content="![a](https://cdn.test/figures/file/linked/p1_1.png)"
+    )
+    TutorProblemFileFactory.create(
+        run=LearningResourceRunFactory.create(),
+        content="![a](https://cdn.test/figures/file/tutor/p1_1.png)",
+    )
+    utils._delete_unlinked_figure_versions("figures/file/new")  # noqa: SLF001
+    assert (folders["new"] / "p1_1.png").exists()
+    assert (folders["linked"] / "p1_1.png").exists()
+    assert (folders["tutor"] / "p1_1.png").exists()
+    assert not (folders["unlinked"] / "p1_1.png").exists()
 
 
 def test_extract_content_ocr_failure_falls_back_to_tika(
@@ -1119,6 +1315,17 @@ def test_extract_content_blank_ocr_falls_back_to_tika(
     assert result["content"] == "tika text"
 
 
+def _extract_failing_for(name, failure):
+    """Return a fake _extract_content giving failure() for a file ending in name"""
+
+    def extract(document, metadata, olx_path, key, **kwargs):
+        if metadata["source_path"].endswith(name):
+            return failure()
+        return {"content": "text", "content_title": ""}
+
+    return extract
+
+
 # an extraction that raises is recorded as failed; one Tika gave nothing back
 # for is only skipped
 EXTRACTION_FAILURES = [
@@ -1138,15 +1345,9 @@ def test_process_olx_path_skips_failed_files(mocker, tmp_path, failure, recorded
     static_dir.mkdir()
     (static_dir / "good.html").write_text("<p>good</p>")
     (static_dir / "bad.html").write_text("<p>bad</p>")
-    bad = mocker.Mock(**failure)
-
-    def fake_extract(document, metadata, olx_path, key, **kwargs):
-        if "bad.html" in metadata["source_path"]:
-            return bad()
-        return {"content": "text", "content_title": ""}
-
     mocker.patch(
-        "learning_resources.etl.utils._extract_content", side_effect=fake_extract
+        "learning_resources.etl.utils._extract_content",
+        side_effect=_extract_failing_for("bad.html", mocker.Mock(**failure)),
     )
     failed = []
     results = list(
@@ -1674,3 +1875,55 @@ def test_extract_pdf_bytes_with_ocr(  # noqa: PLR0913
     )
 
     assert utils.extract_pdf_bytes_with_ocr(pdf_bytes) == expected
+
+
+@pytest.mark.django_db
+def test_transform_content_files_keys_colon_url_names(tmp_path, mocker):
+    """A colon-named block's file is keyed by its url_name, failed or not"""
+    run = LearningResourceRunFactory.create(run_id="course-v1:MITx+1+run")
+    olx = tmp_path / "course"
+    _colon_olx(olx)
+    mocker.patch(
+        "learning_resources.etl.utils._extract_content",
+        side_effect=_extract_failing_for(
+            "other.html", mocker.Mock(side_effect=RuntimeError("failed"))
+        ),
+    )
+    failed_keys = []
+    results = list(
+        utils.transform_content_files(
+            OlxArchive(olx), run, overwrite=True, failed_keys=failed_keys
+        )
+    )
+    block = "block-v1:MITx+1+run+type@"
+    ok = next(r for r in results if r["source_path"].endswith("h/ok.xml"))
+    assert ok["key"] == ok["edx_module_id"] == f"{block}html+block@h:ok"
+    assert failed_keys == [f"{block}html+block@h:other"]
+
+
+@pytest.mark.django_db
+def test_process_olx_path_keys_other_trees_by_source_path(tmp_path, mocker):
+    """A tree that is not OLX, like Canvas, is keyed from source_path as before"""
+    run = LearningResourceRunFactory.create()
+    # a file at the root of a shallow temp dir: its folder is not in source_path
+    path = tmp_path / "canvas123" / "page.html"
+    mocker.patch(
+        "learning_resources.etl.utils.documents_from_olx",
+        return_value=[
+            (
+                b"<p>page</p>",
+                {
+                    "content_type": CONTENT_TYPE_FILE,
+                    "file_extension": ".html",
+                    "source_path": "/page.html",
+                    "path": path,
+                },
+            )
+        ],
+    )
+    mocker.patch(
+        "learning_resources.etl.utils._extract_content",
+        return_value={"content": "text", "content_title": ""},
+    )
+    [result] = utils.process_olx_path(str(tmp_path), run, overwrite=True)
+    assert result["key"] == get_edx_module_id("/page.html", run)

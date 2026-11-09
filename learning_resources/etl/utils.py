@@ -14,7 +14,7 @@ from collections.abc import Generator, Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from decimal import Decimal
-from hashlib import md5
+from hashlib import md5, sha256
 from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -25,6 +25,8 @@ import rapidjson
 import requests
 from defusedxml import ElementTree
 from django.conf import settings
+from django.core.files import File
+from django.core.files.storage import default_storage
 from django.utils.dateparse import parse_duration
 from django.utils.text import slugify
 from PIL import Image
@@ -362,6 +364,7 @@ def documents_from_olx(archive: OlxArchive) -> Generator[tuple, None, None]:
                 # where the file is on disk; source_path is not always
                 # relative to the root the archive was read from
                 "file_path": str(path),
+                "path": path,
             },
         )
 
@@ -494,14 +497,24 @@ def pdf_is_valid(pdf_path: Path) -> bool:
     return False
 
 
-def _extract_content_with_ocr(file_path: Path, is_tutor_problem) -> dict | None:
-    """Extract content from PDF using OCR. Returns None if skipped."""
+def _extract_content_with_ocr(
+    file_path: Path, is_tutor_problem, figure_folder: str | None = None
+) -> dict | None:
+    """
+    Extract content from PDF using OCR. Returns None if skipped. Figures are
+    saved to figure_folder in the default storage, if given.
+    """
 
-    page_count = len(PdfReader(file_path).pages)
-    if page_count > settings.OCR_PDF_MAX_PAGE_THRESHOLD and not is_tutor_problem:
+    # a threshold of 0 means no page limit
+    max_pages = settings.OCR_PDF_MAX_PAGE_THRESHOLD
+    if (
+        max_pages
+        and not is_tutor_problem
+        and len(PdfReader(file_path).pages) > max_pages
+    ):
         return None
     return {
-        "content": _pdf_to_markdown(file_path),
+        "content": _pdf_to_markdown(file_path, figure_folder),
         "content_title": "",
     }
 
@@ -529,6 +542,18 @@ def extract_pdf_bytes_with_ocr(pdf_bytes: bytes) -> dict | None:
     if not content_dict or not (content_dict.get("content") or "").strip():
         return None
     return {"content": content_dict["content"]}
+
+
+def _figure_folder(key: str, metadata: dict) -> str | None:
+    """
+    Storage folder for the figures of a file's current version:
+    <OCR_FIGURES_STORAGE_PREFIX>/<hash of its key>/<its archive checksum>
+    """
+    if not settings.OCR_SAVE_FIGURES or not key:
+        return None
+    file_folder = sha256(key.encode()).hexdigest()[:32]
+    version = metadata.get("archive_checksum") or "latest"
+    return f"{settings.OCR_FIGURES_STORAGE_PREFIX}/{file_folder}/{version}"
 
 
 def _extract_content_with_tika(
@@ -596,13 +621,20 @@ def _extract_content(  # noqa: PLR0913
     if _should_use_ocr(
         file_extension=file_extension, file_path=file_path, use_ocr=use_ocr
     ):
+        # tutor solutions are access-controlled and stored figures are public, so
+        # their figures stay placeholders
+        figure_folder = None if is_tutor_problem else _figure_folder(key, metadata)
         try:
-            content_dict = _extract_content_with_ocr(file_path, is_tutor_problem)
+            content_dict = _extract_content_with_ocr(
+                file_path, is_tutor_problem, figure_folder=figure_folder
+            )
         except Exception:  # noqa: BLE001
             log.warning("OCR extraction failed for %s, falling back to tika", file_path)
             content_dict = None
         # a blank OCR result falls through to tika rather than blanking the text
         if content_dict and (content_dict.get("content") or "").strip():
+            if figure_folder:
+                _delete_unlinked_figure_versions(figure_folder)
             return content_dict
 
     content_dict = _extract_content_with_tika(
@@ -720,7 +752,6 @@ def _build_result(  # noqa: PLR0913, PLR0917
 ) -> dict:
     """Build the final result dictionary."""
     source_path = metadata.get("source_path")
-    edx_module_id = get_edx_module_id(source_path, run)
     data = {
         "key": key,
         "published": True,
@@ -729,8 +760,8 @@ def _build_result(  # noqa: PLR0913, PLR0917
         "archive_checksum": metadata.get("archive_checksum"),
         "file_extension": metadata.get("file_extension"),
         "source_path": source_path,
-        "edx_module_id": edx_module_id,
-        "url": get_url_from_module_id(edx_module_id, run, video_srt_metadata),
+        "edx_module_id": key,
+        "url": get_url_from_module_id(key, run, video_srt_metadata),
         **content_dict,
     }
 
@@ -739,7 +770,7 @@ def _build_result(  # noqa: PLR0913, PLR0917
         content_dict.get("content"),
         olx_path,
         source_path,
-        edx_module_id,
+        key,
         video_srt_metadata,
     )
     return data
@@ -767,6 +798,22 @@ def reconcile_release_dates(
     return hidden
 
 
+def hide_unreleased_files(
+    run: LearningResourceRun, key_dates: dict[str, datetime | None]
+) -> None:
+    """
+    Set release_date on the run's rows from key_dates, before a load. The reindex
+    after loading never runs if the load fails, so drop newly hidden rows from
+    the indexes now.
+    """
+    if reconcile_release_dates(run, key_dates):
+        from learning_resources_search import tasks as search_tasks
+        from vector_search import tasks as vector_tasks
+
+        search_tasks.deindex_run_content_files.delay(run.id, unpublished_only=True)
+        vector_tasks.remove_unpublished_run_content_files.delay(run.id)
+
+
 def process_olx_path(  # noqa: PLR0913
     olx_path: str,
     run: LearningResourceRun,
@@ -778,6 +825,7 @@ def process_olx_path(  # noqa: PLR0913
     ocr_pdfs=False,
     failed_source_paths: list | None = None,
     archive: OlxArchive | None = None,
+    failed_keys: list | None = None,
 ) -> Generator[dict, None, None]:
     """
     Process OLX path and yield content dictionaries. Rows are dated from the
@@ -786,7 +834,8 @@ def process_olx_path(  # noqa: PLR0913
     failed_source_paths is a caller-owned list appended to in place with the
     source_path of each file whose processing raises; it is only complete once
     the generator is fully exhausted. A file Tika yields nothing for is not a
-    failure. archive is the OlxArchive of olx_path, if the caller has one to
+    failure. failed_keys, likewise, gets each such file's ContentFile key.
+    archive is the OlxArchive of olx_path, if the caller has one to
     share; the file types it reads are then the ones ingested, and a different
     valid_file_types raises ValueError.
 
@@ -804,18 +853,17 @@ def process_olx_path(  # noqa: PLR0913
         raise ValueError(msg)
     video_srt_metadata = archive.video_metadata(run)
     key_dates = archive.key_dates(run)
-    if not is_tutor_problem_file_import and reconcile_release_dates(run, key_dates):
-        from learning_resources_search import tasks as search_tasks
-        from vector_search import tasks as vector_tasks
-
-        # the reindex after loading never runs if the load fails, so drop
-        # newly hidden rows from the indexes now
-        search_tasks.deindex_run_content_files.delay(run.id, unpublished_only=True)
-        vector_tasks.remove_unpublished_run_content_files.delay(run.id)
+    if not is_tutor_problem_file_import:
+        hide_unreleased_files(run, key_dates)
 
     for document, metadata in documents_from_olx(archive):
         source_path = metadata.get("source_path")
-        key = get_edx_module_id(source_path, run)
+        # only an OLX tree's paths can be keyed from where they sit in it
+        key = (
+            archive.key(metadata["path"], run)
+            if archive.is_olx
+            else get_edx_module_id(source_path, run)
+        )
         try:
             existing_record = _get_existing_record(
                 source_path, key, run, is_tutor_problem_file_import
@@ -849,6 +897,8 @@ def process_olx_path(  # noqa: PLR0913
             )
             if failed_source_paths is not None:
                 failed_source_paths.append(source_path)
+            if failed_keys is not None:
+                failed_keys.append(key)
             continue
 
         yield _build_result(
@@ -907,19 +957,14 @@ def transform_content_files(
     Yields:
         dict: content from file
     """
-    failed_source_paths = []
     yield from process_olx_path(
         str(archive.root),
         run,
         overwrite=overwrite,
         ocr_pdfs=ocr_pdfs,
-        failed_source_paths=failed_source_paths,
         archive=archive,
+        failed_keys=failed_keys,
     )
-    if failed_keys is not None:
-        failed_keys.extend(
-            get_edx_module_id(source_path, run) for source_path in failed_source_paths
-        )
 
 
 def course_units_from_archive(
@@ -1384,16 +1429,81 @@ def parse_resource_commitment(commitment_str: str) -> CommitmentConfig:
     return CommitmentConfig(commitment=commitment_str or "")
 
 
-def _pdf_to_markdown(pdf_path):
+def _pdf_to_markdown(pdf_path, figure_folder: str | None = None):
     """
-    Convert a PDF file to markdown using an llm
+    Convert a PDF file to markdown using an llm, tagged with its problems,
+    parts and solutions. With a figure_folder, its figures are saved there in the
+    default storage and linked by url; otherwise they are placeholder comments.
     """
     from learning_resources.converters.opendataloader_llm_converter import (
         OpenDataLoaderLLMConverter,
     )
 
-    converter = OpenDataLoaderLLMConverter(pdf_path)
-    return converter.convert_to_markdown()
+    if not figure_folder:
+        return OpenDataLoaderLLMConverter(pdf_path).convert_to_structured_markdown()
+    with TemporaryDirectory() as figures_dir:
+        # figures are linked by file name until they are saved
+        converter = OpenDataLoaderLLMConverter(
+            pdf_path, figures_dir=Path(figures_dir), figure_link_prefix=""
+        )
+        return _store_figures(
+            converter.convert_to_structured_markdown(), converter.figures, figure_folder
+        )
+
+
+def _store_figures(markdown: str, figures: list, folder: str) -> str:
+    """
+    Save each figure crop the converter wrote to the default storage and link it
+    from the markdown by its url. A figure that fails to save becomes a
+    placeholder comment.
+    """
+    for figure in figures:
+        if not figure.path:
+            continue
+        written = figure.image_markdown(figure.path.name)
+        try:
+            name = f"{folder}/{figure.path.name}"
+            # the same version converted again replaces its figures
+            if default_storage.exists(name):
+                default_storage.delete(name)
+            with figure.path.open("rb") as image:
+                name = default_storage.save(name, File(image))
+            stored = figure.image_markdown(default_storage.url(name))
+        except Exception:
+            log.exception("Saving figure %s failed", figure.figure_id)
+            stored = figure.placeholder()
+        markdown = markdown.replace(written, stored)
+    return markdown
+
+
+def _figure_version_linked(folder: str) -> bool:
+    """Whether a saved ContentFile or TutorProblemFile still links to a folder."""
+    link = f"{folder}/"
+    return (
+        ContentFile.objects.filter(content__contains=link).exists()
+        or TutorProblemFile.objects.filter(content__contains=link).exists()
+    )
+
+
+def _delete_unlinked_figure_versions(folder: str) -> None:
+    """
+    Delete the figures saved for a file's other versions once no saved row
+    links to them. Rows are loaded after every file is transformed (and a load
+    can fail), so the version they link to stays until a later conversion.
+    """
+    file_folder, _, version = folder.rpartition("/")
+    try:
+        versions, _ = default_storage.listdir(file_folder)
+        for other in versions:
+            if other == version or _figure_version_linked(f"{file_folder}/{other}"):
+                continue
+            _, names = default_storage.listdir(f"{file_folder}/{other}")
+            for name in names:
+                default_storage.delete(f"{file_folder}/{other}/{name}")
+    except FileNotFoundError:
+        return
+    except Exception:
+        log.exception("Deleting old figures in %s failed", file_folder)
 
 
 def pdf_to_base64_images(pdf_path, fmt="JPEG", max_size=2000, quality=85):

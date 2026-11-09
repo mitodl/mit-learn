@@ -1,20 +1,19 @@
 "use client"
 
-import { env } from "@/env"
 import React, { useCallback, useMemo } from "react"
 import { useAppSearchParams } from "@/common/useAppSearchParams"
 import { LinkAdapter, styled } from "ol-components"
 import { styled as smootStyled } from "@mitodl/smoot-design"
 import { RiSparkling2Line } from "@remixicon/react"
-import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
 import { LearningResource, ResourceTypeEnum } from "api"
 import {
   useLearningResourceByReadableId,
   useLearningResourceDetailSetCache,
 } from "api/hooks/learningResources"
 import { FeatureFlags } from "@/common/feature_flags"
-import { PostHogEvents } from "@/common/constants"
+import { analytics } from "@/common/analytics"
 import { RESOURCE_DRAWER_PARAMS, setResourceParams } from "@/common/urls"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { isSyllabusChatEnabled } from "@/page-components/AiChat/syllabusChatConfig"
 
 const AskTimCard = styled.div(({ theme }) => ({
@@ -77,7 +76,6 @@ type ProductPageAskTimButtonProps = {
 export const ProductPageAskTimButton: React.FC<
   ProductPageAskTimButtonProps
 > = ({ resource }) => {
-  const posthog = usePostHog()
   const searchParams = useAppSearchParams()
   const seedDetailCache = useLearningResourceDetailSetCache(resource)
   const categoryLabel = resource.resource_category.toLowerCase()
@@ -93,16 +91,14 @@ export const ProductPageAskTimButton: React.FC<
 
   const onClick = useCallback(() => {
     seedDetailCache()
-    if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
-      posthog.capture(PostHogEvents.AskTimClicked, {
-        type: "syllabus_bot",
-        resourceId: resource.id,
-        readableId: resource.readable_id,
-        resourceType: resource.resource_type,
-        platformCode: resource.platform?.code,
-      })
-    }
-  }, [posthog, resource, seedDetailCache])
+    analytics.askTimClicked({
+      type: "syllabus_bot",
+      resourceId: resource.id,
+      readableId: resource.readable_id,
+      resourceType: resource.resource_type,
+      platformCode: resource.platform?.code,
+    })
+  }, [resource, seedDetailCache])
 
   return (
     <AskTimCard>
@@ -125,11 +121,11 @@ type ProductPageAskTimSectionProps = {
 export const ProductPageAskTimSection: React.FC<
   ProductPageAskTimSectionProps
 > = ({ readableId, resourceType }) => {
-  const courseChatEnabled = useFeatureFlagEnabled(FeatureFlags.LrDrawerChatbot)
-  const programChatEnabled = useFeatureFlagEnabled(FeatureFlags.PrDrawerChatbot)
+  const courseChatEnabled = useFeatureFlag(FeatureFlags.LrDrawerChatbot)
+  const programChatEnabled = useFeatureFlag(FeatureFlags.PrDrawerChatbot)
   const flagEnabled =
     resourceType === "course" ? courseChatEnabled : programChatEnabled
-  const chatEnabledForType = isSyllabusChatEnabled() && !!flagEnabled
+  const chatEnabledForType = isSyllabusChatEnabled() && flagEnabled
 
   const { data: resource, isSuccess } = useLearningResourceByReadableId(
     readableId,

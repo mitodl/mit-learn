@@ -7,23 +7,22 @@ import type { LearningResource } from "api"
 import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
 import { getByImageSrc, queryByImageSrc } from "ol-test-utilities"
 import { PlatformEnum, ResourceTypeEnum } from "api"
-import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
-import type { PostHog } from "posthog-js"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
+import { capturePostHog } from "@/common/analytics/posthog"
 import { FeatureFlags } from "@/common/feature_flags"
 import CallToActionSection from "./CallToActionSection"
 import type { ImageConfig } from "ol-components"
 import { kebabCase } from "lodash"
 
-jest.mock("posthog-js/react")
+jest.mock("@/common/useFeatureFlag")
+jest.mock("@/common/analytics/posthog", () => ({
+  capturePostHog: jest.fn(),
+  initPostHog: jest.fn(),
+}))
 
-const mockUsePostHog = jest.mocked(usePostHog)
-const mockCapture = jest.fn() as PostHog["capture"]
-const posthog = {
-  capture: mockCapture,
-} as PostHog
-mockUsePostHog.mockReturnValue(posthog)
-const mockUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
-mockUseFeatureFlagEnabled.mockReturnValue(false)
+const mockCapturePostHog = jest.mocked(capturePostHog)
+const mockUseFeatureFlag = jest.mocked(useFeatureFlag)
+mockUseFeatureFlag.mockReturnValue(false)
 
 const IMG_CONFIG: ImageConfig = {
   width: 385,
@@ -399,7 +398,7 @@ describe("CallToActionSection", () => {
     }
 
     it("links to internal OCW page when flag is ON for OCW course", () => {
-      mockUseFeatureFlagEnabled.mockImplementation(
+      mockUseFeatureFlag.mockImplementation(
         (flag) => flag === FeatureFlags.OcwProductPages,
       )
       const resource = ocwResource({ resource_type: ResourceTypeEnum.Course })
@@ -418,7 +417,7 @@ describe("CallToActionSection", () => {
     })
 
     it("uses external URL with UTM params when flag is OFF for OCW course", () => {
-      mockUseFeatureFlagEnabled.mockReturnValue(false)
+      mockUseFeatureFlag.mockReturnValue(false)
       const resource = ocwResource({ resource_type: ResourceTypeEnum.Course })
 
       renderWithProviders(
@@ -437,7 +436,7 @@ describe("CallToActionSection", () => {
     })
 
     it("does not transform non-OCW course URL when only OcwProductPages flag is ON", () => {
-      mockUseFeatureFlagEnabled.mockImplementation(
+      mockUseFeatureFlag.mockImplementation(
         (flag) => flag === FeatureFlags.OcwProductPages,
       )
       const resource = factories.learningResources.resource({
@@ -461,7 +460,7 @@ describe("CallToActionSection", () => {
     })
 
     it("transforms OCW non-course URL when flag is ON", () => {
-      mockUseFeatureFlagEnabled.mockImplementation(
+      mockUseFeatureFlag.mockImplementation(
         (flag) => flag === FeatureFlags.OcwProductPages,
       )
       const resource = ocwResource({
@@ -509,7 +508,7 @@ describe("CallToActionSection", () => {
       const link = screen.getByRole("link", { name: "Learn More" })
       link.click()
 
-      expect(mockCapture).toHaveBeenCalledWith("cta_clicked", {
+      expect(mockCapturePostHog).toHaveBeenCalledWith("cta_clicked", {
         resource,
         label: "Learn More",
       })

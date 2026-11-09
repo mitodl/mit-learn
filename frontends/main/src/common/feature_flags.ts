@@ -20,19 +20,9 @@ export enum FeatureFlags {
   AccountManagement = "account-management",
   SelfServiceRefunds = "self-service-refunds",
   DisableHybridSearch = "disable-hybrid-search",
-  MultipleRunContextMenus = "multiple-run-context-menus",
   ProgramLetters = "program-letters",
   B2BDataConsent = "b2b-data-consent",
   DepartmentPageRedesign = "department-page-redesign",
   ContactUs = "contact-us",
   ResourceCardRedesign = "resource-card-redesign",
 }
-
-/**
- * A special flag that indicates feature flags are in their bootstrapped state,
- * not yet loaded from PostHog server.
- *
- * DO NOT add this flag to PostHog!
- */
-export const INTERNAL_BOOTSTRAPPING_FLAG =
-  "__flags_are_bootstrapped_do_not_add_this_to_posthog__"

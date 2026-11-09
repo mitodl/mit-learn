@@ -6,8 +6,9 @@ the concrete backend is selected at connect time via
 today, but any engine exposing a standard Python DB-API 2.0 cursor
 (``execute`` / ``fetchmany`` / ``description`` — e.g. DuckDB) is a drop-in
 addition: add a ``_connect_<backend>`` function and register it in
-``_CONNECTORS`` below. ``iter_rows`` and ``BaseWarehouseETLTask`` need no
-changes to support a new backend.
+``_CONNECTORS`` below. ``BaseWarehouseETLTask`` needs no changes to support a
+new backend. ``iter_rows`` and ``iter_group_stats`` bind values with ``%s``, so
+one with another paramstyle needs that passed through.
 """
 
 import logging
@@ -121,49 +122,39 @@ def connect_to_warehouse():
     return conn
 
 
-def iter_rows(conn, view_name, *, since=None, batch_size=1000):
-    """Iterate over rows in a warehouse view as column-keyed dicts.
-
-    Args:
-        conn: An open DB-API connection.
-        view_name (str): Schema-qualified view name, e.g.
-            ``"ol_data_lake_production.ol_warehouse_production_integrations."
-            "integrations__learn__ocw_courses"``. A bare ``schema.table``
-            name also works if the connection's default database supplies
-            the catalog. Must contain only alphanumeric characters,
-            underscores, and dots.
-        since (datetime | None): If given, only rows whose ``last_modified``
-            column is greater than this timestamp are returned — every
-            ``integrations__learn__*`` view exposes ``last_modified`` per the
-            contract in ol-data-platform's docs/learn_marts_contract.md, so
-            this is safe to assume for any view passed here. ``None`` (the
-            default) pulls every row.
-        batch_size (int): Rows fetched per round-trip.
-
-    Yields:
-        dict: One row, keyed by column name.
+def _check_view_name(view_name):
+    """
+    Refuse a view name that isn't a dotted identifier.
 
     Raises:
-        ValueError: If *view_name* contains characters that could allow SQL injection.
+        ValueError: If *view_name* contains characters that could allow SQL
+            injection.
     """
     if not _SAFE_IDENTIFIER.match(view_name):
         msg = f"Unsafe view name: {view_name!r}"
         raise ValueError(msg)
 
-    query = f"SELECT * FROM {view_name}"  # noqa: S608
-    if since is not None:
-        # `since` is produced by our own watermark tracking, never user
-        # input, so a formatted literal is safe here (no parameterization
-        # needed). A bare quoted string, NOT a `TIMESTAMP '...'` literal —
-        # confirmed against a live StarRocks instance that the `TIMESTAMP`
-        # keyword form is a syntax error there (StarRocks implicitly casts
-        # a string literal compared against a DATETIME column instead).
-        watermark = since.strftime(_WATERMARK_SQL_FORMAT)[:-3]
-        query += f" WHERE last_modified > '{watermark}'"
 
+def _equal_conditions(where):
+    """
+    Build the SQL conditions and parameters for column = value pairs.
+
+    Raises:
+        ValueError: If a column name is not a plain identifier.
+    """
+    where = where or {}
+    for column in where:
+        if not _SAFE_NAME_PART.match(column):
+            msg = f"Unsafe column name: {column!r}"
+            raise ValueError(msg)
+    return [f"{column} = %s" for column in where], list(where.values())
+
+
+def _fetch_rows(conn, query, params, batch_size):
+    """Run a query and yield its rows as column-keyed dicts."""
     cur = conn.cursor()
     try:
-        cur.execute(query)
+        cur.execute(query, params or None)
         # Read columns from the first non-empty batch rather than
         # immediately after execute(): some DB-API drivers only populate
         # `description` once results start arriving, not at execute()
@@ -179,6 +170,96 @@ def iter_rows(conn, view_name, *, since=None, batch_size=1000):
                 yield dict(zip(columns, row))
     finally:
         cur.close()
+
+
+def iter_rows(conn, view_name, *, since=None, where=None, batch_size=1000):
+    """Iterate over rows in a warehouse view as column-keyed dicts.
+
+    The connection's default cursor reads the whole result into memory at
+    ``execute``, whatever ``batch_size`` says, so a view too large to hold
+    has to be read through ``where``.
+
+    Args:
+        conn: An open DB-API connection.
+        view_name (str): Schema-qualified view name, e.g.
+            ``"ol_data_lake_production.ol_warehouse_production_integrations."
+            "integrations__learn__ocw_courses"``. A bare ``schema.table``
+            name also works if the connection's default database supplies
+            the catalog. Must contain only alphanumeric characters,
+            underscores, and dots.
+        since (datetime | None): If given, only rows whose ``last_modified``
+            column is greater than this timestamp are returned — every
+            ``integrations__learn__*`` view exposes ``last_modified`` per the
+            contract in ol-data-platform's docs/learn_marts_contract.md, so
+            this is safe to assume for any view passed here. ``None`` (the
+            default) pulls every row.
+        where (dict | None): Column names and the values they must equal.
+        batch_size (int): Rows fetched per round-trip.
+
+    Yields:
+        dict: One row, keyed by column name.
+
+    Raises:
+        ValueError: If *view_name* or a column in *where* contains characters
+            that could allow SQL injection.
+    """
+    _check_view_name(view_name)
+    conditions, params = _equal_conditions(where)
+    if since is not None:
+        # `since` is produced by our own watermark tracking, never user
+        # input, so a formatted literal is safe here (no parameterization
+        # needed). A bare quoted string, NOT a `TIMESTAMP '...'` literal —
+        # confirmed against a live StarRocks instance that the `TIMESTAMP`
+        # keyword form is a syntax error there (StarRocks implicitly casts
+        # a string literal compared against a DATETIME column instead).
+        watermark = since.strftime(_WATERMARK_SQL_FORMAT)[:-3]
+        conditions.append(f"last_modified > '{watermark}'")
+
+    query = f"SELECT * FROM {view_name}"  # noqa: S608
+    if conditions:
+        query += f" WHERE {' AND '.join(conditions)}"
+    yield from _fetch_rows(conn, query, params, batch_size)
+
+
+def iter_group_stats(  # noqa: PLR0913
+    conn, view_name, group_by, *, columns=(), where=None, batch_size=1000
+):
+    """Iterate over one row of aggregates per value of a column of a view.
+
+    For a view too large to read whole, to tell which groups are worth reading.
+
+    Args:
+        conn: An open DB-API connection.
+        view_name (str): The view, as for ``iter_rows``.
+        group_by (str): The column to group by.
+        columns (Sequence[str]): Columns to aggregate.
+        where (dict | None): Column names and the values they must equal.
+        batch_size (int): Rows fetched per round-trip.
+
+    Yields:
+        dict: ``group_by``'s value, ``row_count``, and ``<column>_count`` (rows
+        where it is not null) and ``<column>_max`` for each of ``columns``.
+
+    Raises:
+        ValueError: If *view_name* or a column contains characters that could
+            allow SQL injection.
+    """
+    _check_view_name(view_name)
+    for column in (group_by, *columns):
+        if not _SAFE_NAME_PART.match(column):
+            msg = f"Unsafe column name: {column!r}"
+            raise ValueError(msg)
+
+    aggregates = "".join(
+        f", COUNT({column}) AS {column}_count, MAX({column}) AS {column}_max"
+        for column in columns
+    )
+    conditions, params = _equal_conditions(where)
+    query = f"SELECT {group_by}, COUNT(*) AS row_count{aggregates} FROM {view_name}"  # noqa: S608
+    if conditions:
+        query += f" WHERE {' AND '.join(conditions)}"
+    query += f" GROUP BY {group_by}"
+    yield from _fetch_rows(conn, query, params, batch_size)
 
 
 class BaseWarehouseETLTask(Task):

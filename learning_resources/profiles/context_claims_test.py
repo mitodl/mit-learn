@@ -169,14 +169,17 @@ def test_generate_context_claims_cached(fake_llm):
 
 
 def test_context_reused_by_other_run(fake_llm):
-    """Another run of the course with the same files reuses the extraction"""
+    """Another run of the course with the same files takes over the extraction"""
     run = _build_run()
     first = generate_context_claims(run)
     other_run = _build_run(
         LearningResourceRunFactory.create(learning_resource=run.learning_resource)
     )
 
-    assert generate_context_claims(other_run) == first
+    reused = generate_context_claims(other_run)
+
+    assert reused.pk == first.pk
+    assert reused.unit == other_run.units.get(kind=Unit.Kind.CONTEXT)
     assert len(fake_llm.calls) == 1
 
 
@@ -190,14 +193,33 @@ def test_context_of_other_course_with_same_files(fake_llm):
     assert other_run.learning_resource.title in fake_llm.calls[1][1]
 
 
-def test_changed_context_file_reruns_context(fake_llm):
-    """A changed context file reruns the context and stores a new extraction"""
+def test_context_of_other_course_with_same_title(fake_llm):
+    """Another course with the same title and files gets its own context"""
     run = _build_run()
-    generate_context_claims(run)
-    _add_file(run.units.get(kind=Unit.Kind.CONTEXT), "Grading: 50% exams.", position=1)
-    generate_context_claims(run)
+    first = generate_context_claims(run)
+    other_run = _build_run(
+        LearningResourceRunFactory.create(
+            learning_resource__title=run.learning_resource.title
+        )
+    )
 
-    assert ClaimExtraction.objects.count() == 2
+    second = generate_context_claims(other_run)
+
+    assert second.pk != first.pk
+    first.refresh_from_db()
+    assert first.unit == run.units.get(kind=Unit.Kind.CONTEXT)
+    assert second.unit == other_run.units.get(kind=Unit.Kind.CONTEXT)
+    assert len(fake_llm.calls) == 2
+
+
+def test_changed_context_file_reruns_context(fake_llm):
+    """A changed context file reruns the context and replaces its extraction"""
+    run = _build_run()
+    first = generate_context_claims(run)
+    _add_file(run.units.get(kind=Unit.Kind.CONTEXT), "Grading: 50% exams.", position=1)
+
+    assert generate_context_claims(run).key != first.key
+    assert ClaimExtraction.objects.count() == 1
     assert len(fake_llm.calls) == 2
 
 

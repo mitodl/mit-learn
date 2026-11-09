@@ -15,9 +15,11 @@ export const LearningResourceContext =
 
 export const useLearningResource = (id: number) => {
   const { resources, isLoading } = useContext(LearningResourceContext)
+  const resource = resources[id]
 
   return {
-    resource: resources[id],
-    isLoading,
+    resource,
+    // Per card: one that already has its data never goes back to loading.
+    isLoading: isLoading && !resource,
   }
 }

@@ -8,7 +8,7 @@ import {
 } from "@/test-utils"
 import userEvent from "@testing-library/user-event"
 import { urls, factories } from "api/mitxonline-test-utils"
-import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { FeatureFlags } from "@/common/feature_flags"
 import {
   contractAdminView,
@@ -18,14 +18,11 @@ import {
 } from "@/common/urls"
 import ContractManagerNav from "./ContractManagerNav"
 
-jest.mock("posthog-js/react", () => ({
-  ...jest.requireActual("posthog-js/react"),
-  useFeatureFlagEnabled: jest.fn(),
-}))
-const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
+jest.mock("@/common/useFeatureFlag")
+const mockedUseFeatureFlag = jest.mocked(useFeatureFlag)
 
 const enableFlags = (...flags: FeatureFlags[]) =>
-  mockedUseFeatureFlagEnabled.mockImplementation((flag) =>
+  mockedUseFeatureFlag.mockImplementation((flag) =>
     flags.includes(flag as FeatureFlags),
   )
 

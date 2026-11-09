@@ -2,12 +2,11 @@
 Step 1 of resource profile generation: claims for one unit.
 
 A unit's files are sent to the model in one call, and its validated output is
-stored in ClaimExtraction under a key built from the text of its files and
-the course outline its prompt is given. A call whose key is already stored is
-skipped, so a unit whose files and course outline haven't changed is never
-sent twice, even from another run of the course. The prompt and model are
-left out of the key: after changing them, stored claims are regenerated only
-with overwrite.
+stored in ClaimExtraction under a key built from its course, its own title and
+kind, and the text of its files. A call whose key is already stored is
+skipped, so a unit whose files haven't changed is never sent twice, even from
+another run of the course. Another course's unit with the same title and files
+has a key of its own, since units sharing a key share one row.
 """
 
 from learning_resources.models import (
@@ -104,8 +103,9 @@ def generate_unit_claims(
         unit (Unit): the unit or bin
         overwrite (bool): call the model even when an extraction with the
             same key is stored, and replace it. The key covers only the
-            files' text and the prompt's outline and header, so this is how a
-            prompt, model or code change is applied to stored claims.
+            course, the unit's title and kind and the files' text, so this is
+            how a change to the prompt, model, code or course outline is
+            applied to stored claims.
 
     Returns:
         ClaimExtraction | None: the unit's extraction, or None when the unit
@@ -129,7 +129,12 @@ def generate_unit_claims(
     header = _unit_header(unit, unit_ids)
     return get_or_create_extraction(
         extractor,
-        extractor.key([source.cache_input() for source in sources], outline, header),
+        extractor.key(
+            unit.run.learning_resource_id,
+            unit.title,
+            unit.kind,
+            [source.cache_input() for source in sources],
+        ),
         lambda: prompts.unit_combined_prompt(
             outline,
             header,
