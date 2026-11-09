@@ -1,6 +1,16 @@
 Release Notes
 =============
 
+Version 0.87.1
+--------------
+
+- run level claims (#4270)
+- Management command for running pdf to markdown for arbitrary courses (#4281)
+- Remove Sloan news/events ETL (#4274)
+- upgrade qdrant (#4267)
+- Read OLX blocks whose url_name has a colon (#4264)
+- Remove the unused org-wide analytics page (#4273)
+
 Version 0.87.0
 --------------
 
