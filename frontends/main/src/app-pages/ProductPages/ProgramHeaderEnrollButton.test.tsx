@@ -59,7 +59,7 @@ describe("ProgramHeaderEnrollButton", () => {
     renderWithProviders(<ProgramHeaderEnrollButton program={program} />)
 
     expect(
-      await screen.findByRole("button", { name: "Earn Certificate - $899" }),
+      await screen.findByRole("button", { name: "Earn Certificate – $899" }),
     ).toBeInTheDocument()
   })
 
@@ -74,7 +74,7 @@ describe("ProgramHeaderEnrollButton", () => {
     renderWithProviders(<ProgramHeaderEnrollButton program={program} />)
 
     expect(
-      await screen.findByRole("button", { name: "Enroll in Program - $899" }),
+      await screen.findByRole("button", { name: "Enroll in Program – $899" }),
     ).toBeInTheDocument()
   })
 
@@ -91,7 +91,7 @@ describe("ProgramHeaderEnrollButton", () => {
 
     expect(
       await screen.findByRole("button", {
-        name: "Enroll in Program - $250 – $1,000",
+        name: "Enroll in Program – $250 - $1,000",
       }),
     ).toBeInTheDocument()
   })
@@ -109,7 +109,7 @@ describe("ProgramHeaderEnrollButton", () => {
     )
 
     expect(
-      await screen.findByRole("button", { name: "Enroll - $899" }),
+      await screen.findByRole("button", { name: "Enroll – $899" }),
     ).toBeInTheDocument()
   })
 
@@ -129,7 +129,7 @@ describe("ProgramHeaderEnrollButton", () => {
 
     expect(
       await screen.findByRole("button", {
-        name: "Upgrade to Full Program - $599",
+        name: "Upgrade to Full Program – $599",
       }),
     ).toBeInTheDocument()
   })
@@ -151,7 +151,7 @@ describe("ProgramHeaderEnrollButton", () => {
     )
 
     expect(
-      await screen.findByRole("button", { name: "Enroll - $899" }),
+      await screen.findByRole("button", { name: "Enroll – $899" }),
     ).toBeInTheDocument()
   })
 
@@ -177,7 +177,7 @@ describe("ProgramHeaderEnrollButton", () => {
     renderWithProviders(<ProgramHeaderEnrollButton program={program} />)
 
     expect(
-      await screen.findByRole("button", { name: "Enroll in Program - $250" }),
+      await screen.findByRole("button", { name: "Enroll in Program – $250" }),
     ).toBeInTheDocument()
   })
 

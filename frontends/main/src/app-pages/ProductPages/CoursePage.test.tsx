@@ -464,7 +464,7 @@ describe("CoursePage", () => {
 
       // The suffix is mobile-only by media query, which jsdom does not apply.
       expect(
-        await screen.findByRole("button", { name: "Enroll - $899" }),
+        await screen.findByRole("button", { name: "Enroll – $899" }),
       ).toBeInTheDocument()
     })
 
@@ -503,7 +503,7 @@ describe("CoursePage", () => {
 
       const banner = await screen.findByTestId("banner-container")
       expect(
-        await within(banner).findByRole("button", { name: "Enroll - $599" }),
+        await within(banner).findByRole("button", { name: "Enroll – $599" }),
       ).toBeInTheDocument()
     })
 
@@ -621,7 +621,7 @@ describe("CoursePage", () => {
         // InfoBox's plain "Enroll".
         const banner = await screen.findByTestId("banner-container")
         const headerBtn = await within(banner).findByRole("button", {
-          name: /^Enroll - /,
+          name: /^Enroll – /,
         })
         await act(async () => {
           headerBtn.click()

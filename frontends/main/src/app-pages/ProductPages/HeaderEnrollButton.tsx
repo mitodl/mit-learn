@@ -45,17 +45,12 @@ const HeaderAlertSizer = styled.div(({ theme }) => ({
   },
 }))
 
-/**
- * On mobile the banner button is the primary CTA and spans the column, so it
- * names the price.
- */
 const MobilePrice = styled.span(({ theme }) => ({
   [theme.breakpoints.up("sm")]: { display: "none" },
 }))
 
 type HeaderEnrollButtonProps = {
   state: EnrollAreaState
-  /** The InfoBox's certificate price; appended to a paid action on mobile. */
   price?: string | null
   isStatusLoading: boolean
   isPending: boolean
@@ -90,7 +85,8 @@ const HeaderEnrollButton: React.FC<HeaderEnrollButtonProps> = ({
 
   if (state.status === "options") {
     const action = state.options[0]
-    const showPrice = action.kind === "paid" && !!price
+    const buttonPrice =
+      action.kind === "paid" && price ? price.replace(" – ", " - ") : null
     return (
       <HeaderButtonSlot>
         <Stack gap="12px" alignItems="flex-start">
@@ -102,7 +98,7 @@ const HeaderEnrollButton: React.FC<HeaderEnrollButtonProps> = ({
             variant="bordered"
             announceStatus={false}
             labelSuffix={
-              showPrice ? <MobilePrice> - {price}</MobilePrice> : null
+              buttonPrice ? <MobilePrice> – {buttonPrice}</MobilePrice> : null
             }
           />
           {/* This hook instance's mutations are local to the header button, so
