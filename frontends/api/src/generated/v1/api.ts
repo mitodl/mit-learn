@@ -3817,6 +3817,15 @@ export type VideoResourceResourceTypeEnum =
 export type VideoStreamingUrl = string
 
 /**
+ * Serializer for the ``/api/v1/webhooks/warehouse_views_rebuilt/`` endpoint.  ``views`` are plain strings, not choices: a view no sync reads is logged and skipped, rather than rejecting the batch it came in.
+ */
+export interface WarehouseViewsWebhookRequestRequest {
+  /**
+   * Bare names of the warehouse views the data platform rebuilt, e.g. integrations__learn__ocw_courses
+   */
+  views: Array<string>
+}
+/**
  * Serializer for webhook responses.
  */
 export interface WebhookResponse {
@@ -25454,6 +25463,60 @@ export const WebhooksApiAxiosParamCreator = function (
         options: localVarRequestOptions,
       }
     },
+    /**
+     * Webhook handler for the OL Data Platform\'s \"these views were rebuilt\" message. It queues a full run of each catalog sync that reads one of them, so a change reaches MIT Learn without waiting for the sync\'s daily run.  A 200 says the syncs were queued, not that anything was loaded: each sync checks ownership when it runs, and does nothing until the warehouse owns its source. A view no sync reads is skipped and named in the response, so that one bad name can\'t reject the rest of a batch.
+     * @param {WarehouseViewsWebhookRequestRequest} WarehouseViewsWebhookRequestRequest
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    webhooksWarehouseViewsRebuiltCreate: async (
+      WarehouseViewsWebhookRequestRequest: WarehouseViewsWebhookRequestRequest,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'WarehouseViewsWebhookRequestRequest' is not null or undefined
+      assertParamExists(
+        "webhooksWarehouseViewsRebuiltCreate",
+        "WarehouseViewsWebhookRequestRequest",
+        WarehouseViewsWebhookRequestRequest,
+      )
+      const localVarPath = `/api/v1/webhooks/warehouse_views_rebuilt/`
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
+
+      const localVarRequestOptions = {
+        method: "POST",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
+
+      localVarHeaderParameter["Content-Type"] = "application/json"
+      localVarHeaderParameter["Accept"] = "application/json"
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+      localVarRequestOptions.data = serializeDataIfNeeded(
+        WarehouseViewsWebhookRequestRequest,
+        localVarRequestOptions,
+        configuration,
+      )
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
   }
 }
 
@@ -25607,6 +25670,39 @@ export const WebhooksApiFp = function (configuration?: Configuration) {
           configuration,
         )(axios, localVarOperationServerBasePath || basePath)
     },
+    /**
+     * Webhook handler for the OL Data Platform\'s \"these views were rebuilt\" message. It queues a full run of each catalog sync that reads one of them, so a change reaches MIT Learn without waiting for the sync\'s daily run.  A 200 says the syncs were queued, not that anything was loaded: each sync checks ownership when it runs, and does nothing until the warehouse owns its source. A view no sync reads is skipped and named in the response, so that one bad name can\'t reject the rest of a batch.
+     * @param {WarehouseViewsWebhookRequestRequest} WarehouseViewsWebhookRequestRequest
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async webhooksWarehouseViewsRebuiltCreate(
+      WarehouseViewsWebhookRequestRequest: WarehouseViewsWebhookRequestRequest,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<WebhookResponse>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.webhooksWarehouseViewsRebuiltCreate(
+          WarehouseViewsWebhookRequestRequest,
+          options,
+        )
+      const localVarOperationServerIndex = configuration?.serverIndex ?? 0
+      const localVarOperationServerBasePath =
+        operationServerMap["WebhooksApi.webhooksWarehouseViewsRebuiltCreate"]?.[
+          localVarOperationServerIndex
+        ]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, localVarOperationServerBasePath || basePath)
+    },
   }
 }
 
@@ -25692,6 +25788,23 @@ export const WebhooksApiFactory = function (
         )
         .then((request) => request(axios, basePath))
     },
+    /**
+     * Webhook handler for the OL Data Platform\'s \"these views were rebuilt\" message. It queues a full run of each catalog sync that reads one of them, so a change reaches MIT Learn without waiting for the sync\'s daily run.  A 200 says the syncs were queued, not that anything was loaded: each sync checks ownership when it runs, and does nothing until the warehouse owns its source. A view no sync reads is skipped and named in the response, so that one bad name can\'t reject the rest of a batch.
+     * @param {WebhooksApiWebhooksWarehouseViewsRebuiltCreateRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    webhooksWarehouseViewsRebuiltCreate(
+      requestParameters: WebhooksApiWebhooksWarehouseViewsRebuiltCreateRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<WebhookResponse> {
+      return localVarFp
+        .webhooksWarehouseViewsRebuiltCreate(
+          requestParameters.WarehouseViewsWebhookRequestRequest,
+          options,
+        )
+        .then((request) => request(axios, basePath))
+    },
   }
 }
 
@@ -25732,6 +25845,13 @@ export interface WebhooksApiWebhooksLearningResourcesCreateRequest {
  */
 export interface WebhooksApiWebhooksOvsVideosCreateRequest {
   readonly OVSVideoWebhookRequestRequest?: OVSVideoWebhookRequestRequest
+}
+
+/**
+ * Request parameters for webhooksWarehouseViewsRebuiltCreate operation in WebhooksApi.
+ */
+export interface WebhooksApiWebhooksWarehouseViewsRebuiltCreateRequest {
+  readonly WarehouseViewsWebhookRequestRequest: WarehouseViewsWebhookRequestRequest
 }
 
 /**
@@ -25809,6 +25929,24 @@ export class WebhooksApi extends BaseAPI {
     return WebhooksApiFp(this.configuration)
       .webhooksOvsVideosCreate(
         requestParameters.OVSVideoWebhookRequestRequest,
+        options,
+      )
+      .then((request) => request(this.axios, this.basePath))
+  }
+
+  /**
+   * Webhook handler for the OL Data Platform\'s \"these views were rebuilt\" message. It queues a full run of each catalog sync that reads one of them, so a change reaches MIT Learn without waiting for the sync\'s daily run.  A 200 says the syncs were queued, not that anything was loaded: each sync checks ownership when it runs, and does nothing until the warehouse owns its source. A view no sync reads is skipped and named in the response, so that one bad name can\'t reject the rest of a batch.
+   * @param {WebhooksApiWebhooksWarehouseViewsRebuiltCreateRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   */
+  public webhooksWarehouseViewsRebuiltCreate(
+    requestParameters: WebhooksApiWebhooksWarehouseViewsRebuiltCreateRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return WebhooksApiFp(this.configuration)
+      .webhooksWarehouseViewsRebuiltCreate(
+        requestParameters.WarehouseViewsWebhookRequestRequest,
         options,
       )
       .then((request) => request(this.axios, this.basePath))

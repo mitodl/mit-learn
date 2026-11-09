@@ -3336,6 +3336,73 @@ def test_ocw_sync_task_reads_nothing_it_does_not_own(mocker):
     assert not LearningResource.objects.exists()
 
 
+def test_queue_warehouse_syncs_queues_the_sync_that_reads_a_view(mocker):
+    """A rebuilt OCW course view queues one full SyncOCWCoursesTask"""
+    mock_chain = mocker.patch("learning_resources.tasks.celery.chain")
+
+    assert tasks.queue_warehouse_syncs(["integrations__learn__ocw_courses"]) == (
+        [tasks.SyncOCWCoursesTask.name],
+        [],
+    )
+
+    mock_chain.assert_called_once_with(tasks.SyncOCWCoursesTask.si())
+    mock_chain.return_value.delay.assert_called_once_with()
+
+
+def test_queue_warehouse_syncs_chains_a_sources_programs_after_its_courses(mocker):
+    """
+    Programs look their courses up, so a source's programs follow its courses.
+    Each source gets its own chain, and a view no sync reads is returned.
+    """
+    mock_chain = mocker.patch("learning_resources.tasks.celery.chain")
+
+    queued, unknown = tasks.queue_warehouse_syncs(
+        [
+            "integrations__learn__xpro_programs",
+            "integrations__learn__nonsense",
+            # the MITx Online program sync reads the course view too
+            "integrations__learn__mitxonline_courses",
+            "integrations__learn__mitxonline_runs",
+        ]
+    )
+
+    assert queued == [
+        tasks.SyncXproProgramsTask.name,
+        tasks.SyncMITxOnlineCoursesTask.name,
+        tasks.SyncMITxOnlineProgramsTask.name,
+    ]
+    assert unknown == ["integrations__learn__nonsense"]
+    assert mock_chain.call_args_list == [
+        mocker.call(tasks.SyncXproProgramsTask.si()),
+        mocker.call(
+            tasks.SyncMITxOnlineCoursesTask.si(), tasks.SyncMITxOnlineProgramsTask.si()
+        ),
+    ]
+    assert mock_chain.return_value.delay.call_count == 2
+
+
+def test_queue_warehouse_syncs_queues_nothing_for_unknown_views(mocker):
+    """A batch of names no sync reads queues nothing"""
+    mock_chain = mocker.patch("learning_resources.tasks.celery.chain")
+
+    assert tasks.queue_warehouse_syncs(["a", "b"]) == ([], ["a", "b"])
+
+    mock_chain.assert_not_called()
+
+
+def test_warehouse_view_syncs_cover_every_catalog_sync():
+    """Each catalog sync is triggered by the view it is named for"""
+    by_task = dict(tasks.WAREHOUSE_VIEW_SYNCS)
+    for task in (
+        tasks.SyncOCWCoursesTask,
+        tasks.SyncXproCoursesTask,
+        tasks.SyncXproProgramsTask,
+        tasks.SyncMITxOnlineCoursesTask,
+        tasks.SyncMITxOnlineProgramsTask,
+    ):
+        assert task.table_name in by_task[task]
+
+
 def _warehouse_owns_content_files(etl_source):
     factories.ETLSourceOwnershipFactory.create(
         etl_source=etl_source,

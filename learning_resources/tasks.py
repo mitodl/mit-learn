@@ -1924,6 +1924,61 @@ class SyncOCWCoursesTask(BaseWarehouseETLTask):
 SyncOCWCoursesTask = app.register_task(SyncOCWCoursesTask())
 
 
+# The catalog syncs, each with the views it reads, in the order a batch naming
+# several queues them: programs look their courses up, so a source's programs
+# follow its courses.
+WAREHOUSE_VIEW_SYNCS = (
+    (SyncOCWCoursesTask, {"integrations__learn__ocw_courses"}),
+    (
+        SyncXproCoursesTask,
+        {"integrations__learn__xpro_courses", "integrations__learn__xpro_runs"},
+    ),
+    (SyncXproProgramsTask, {"integrations__learn__xpro_programs"}),
+    (
+        SyncMITxOnlineCoursesTask,
+        {
+            "integrations__learn__mitxonline_courses",
+            "integrations__learn__mitxonline_runs",
+        },
+    ),
+    (
+        SyncMITxOnlineProgramsTask,
+        {
+            "integrations__learn__mitxonline_programs",
+            "integrations__learn__mitxonline_program_children",
+            "integrations__learn__mitxonline_courses",
+        },
+    ),
+)
+
+
+def queue_warehouse_syncs(view_names):
+    """
+    Queue a full run of each catalog sync that reads one of the named views.
+
+    A source's syncs are chained in WAREHOUSE_VIEW_SYNCS order, and the sources
+    run side by side. Each sync checks ownership when it runs, so this queues
+    them whoever owns the source.
+
+    Args:
+        view_names (Iterable[str]): bare view names, e.g.
+            "integrations__learn__ocw_courses"
+
+    Returns:
+        tuple[list[str], list[str]]: the names of the tasks queued, and the
+        view names no sync reads
+    """
+    named = set(view_names)
+    to_queue = [task for task, views in WAREHOUSE_VIEW_SYNCS if views & named]
+    read = set().union(*(views for _, views in WAREHOUSE_VIEW_SYNCS))
+    by_source = {}
+    for task in to_queue:
+        by_source.setdefault(task.writes[0], []).append(task.si())
+    for signatures in by_source.values():
+        celery.chain(*signatures).delay()
+    return [task.name for task in to_queue], sorted(named - read)
+
+
 # Two loads of one run at once could prune on a read that predates the other's
 # upserts. The time limit keeps a load inside the lock, and inside the hour after
 # which the broker redelivers an unacknowledged task, and it is hard because

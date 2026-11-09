@@ -14,11 +14,13 @@ one with another paramstyle needs that passed through.
 import logging
 import re
 import time
+import uuid
 from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 
 import sentry_sdk
 from celery import Task
+from celery.exceptions import MaxRetriesExceededError
 from django.conf import settings
 from django.core.cache import caches
 from django.core.exceptions import ImproperlyConfigured
@@ -44,6 +46,17 @@ _SAFE_NAME_PART = re.compile(r"^[a-zA-Z0-9_]+\Z")
 # domain data.
 WAREHOUSE_STATE_CACHE = "durable"
 _WATERMARK_SQL_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
+
+# A run of a sync holds a lock, so that two runs of it never prune at once on
+# reads that predate each other's writes: the daily beat entry and a webhook, or
+# two webhooks. A run that finds the lock held re-queues itself rather than
+# holding a worker slot, and gives up once the lock would have expired, leaving
+# what it would have read to the sync's next run. A worker killed mid-run holds
+# up the sync until then. A run longer than the lock no longer excludes another.
+SYNC_LOCK_CACHE = "redis"
+SYNC_LOCK_SECONDS = 60 * 60
+SYNC_LOCK_RETRY_SECONDS = 60
+SYNC_LOCK_MAX_RETRIES = 60
 
 # Subtracted from the wall-clock watermark before it's stored: this consumer
 # doesn't know the warehouse's own build/replication lag, so a row modified
@@ -288,6 +301,9 @@ class BaseWarehouseETLTask(Task):
     it as the task body instead of running its bound
     ``run()``/``fetch_and_upsert()`` methods.
 
+    One run of a task syncs at a time, whoever queued it. A run queued while
+    another holds the task's lock re-queues itself (see ``SYNC_LOCK_SECONDS``).
+
     Two sync modes, selected by the ``full_refresh`` kwarg passed to
     ``run()``/``.delay()``/``.apply_async()``:
 
@@ -406,6 +422,41 @@ class BaseWarehouseETLTask(Task):
         if mode == RunMode.SHADOW:
             full_refresh = True
 
+        lock = caches[SYNC_LOCK_CACHE]
+        lock_key = f"warehouse_etl:running:{self.name}"
+        token = uuid.uuid4().hex
+        if not lock.add(lock_key, token, timeout=SYNC_LOCK_SECONDS):
+            try:
+                raise self.retry(
+                    countdown=SYNC_LOCK_RETRY_SECONDS, max_retries=SYNC_LOCK_MAX_RETRIES
+                )
+            except MaxRetriesExceededError:
+                log.warning(
+                    "Gave up waiting for a run of %s, leaving it to the next one",
+                    self.name,
+                )
+                return 0
+        try:
+            return self._sync(
+                mode,
+                view_name,
+                full_refresh=full_refresh,
+                allow_mass_unpublish=allow_mass_unpublish,
+            )
+        finally:
+            # a run that outlived the lock leaves the next run's lock alone
+            if lock.get(lock_key) == token:
+                lock.delete(lock_key)
+
+    def _sync(
+        self,
+        mode: RunMode,
+        view_name: str,
+        *,
+        full_refresh: bool,
+        allow_mass_unpublish: bool,
+    ) -> int:
+        """Run one sync that ``run`` has decided to make, holding its lock."""
         since = None if full_refresh else self._get_watermark()
         # Captured before the fetch, not after: a row modified while the
         # fetch is in flight must still be picked up by the *next*

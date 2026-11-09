@@ -6,10 +6,11 @@ database setup required.
 """
 
 from datetime import UTC, datetime, timedelta
-from unittest.mock import MagicMock, patch
+from unittest.mock import ANY, MagicMock, patch
 
 import django
 import pytest
+from celery.exceptions import MaxRetriesExceededError, Retry
 from django.conf import settings as django_settings
 from django.core.exceptions import ImproperlyConfigured
 from django.test import override_settings
@@ -46,6 +47,10 @@ from learning_resources.etl.ownership import (
 from learning_resources.factories import ETLSourceOwnershipFactory
 from learning_resources.lib.warehouse import (
     _WATERMARK_LOOKBACK,
+    SYNC_LOCK_CACHE,
+    SYNC_LOCK_MAX_RETRIES,
+    SYNC_LOCK_RETRY_SECONDS,
+    SYNC_LOCK_SECONDS,
     BaseWarehouseETLTask,
     connect_to_warehouse,
     iter_group_stats,
@@ -742,7 +747,10 @@ def test_full_refresh_defaults_to_true_and_passes_since_none(mock_connect):
 
     assert result == 7
     assert task.seen_since is None
-    mock_caches.__getitem__.assert_not_called()
+    # only the sync lock
+    assert {c.args for c in mock_caches.__getitem__.call_args_list} == {
+        (SYNC_LOCK_CACHE,)
+    }
 
 
 @patch("learning_resources.lib.warehouse.connect_to_warehouse")
@@ -760,8 +768,9 @@ def test_incremental_reads_watermark_and_passes_it_through(mock_connect):
 
     assert result == 7
     assert task.seen_since is stored_watermark
-    mock_cache.get.assert_called_once_with(
-        "warehouse_etl:last_synced_at:test.RecordingTask"
+    # first the watermark, then the sync lock on the way out
+    assert mock_cache.get.call_args_list[0].args == (
+        "warehouse_etl:last_synced_at:test.RecordingTask",
     )
 
 
@@ -809,7 +818,11 @@ def test_full_refresh_does_not_advance_watermark(mock_connect):
     with patch("learning_resources.lib.warehouse.caches") as mock_caches:
         task.run(full_refresh=True)
 
-    mock_caches.__getitem__.assert_not_called()
+    # only the sync lock
+    assert {c.args for c in mock_caches.__getitem__.call_args_list} == {
+        (SYNC_LOCK_CACHE,)
+    }
+    mock_caches.__getitem__.return_value.set.assert_not_called()
 
 
 @patch("learning_resources.lib.warehouse.connect_to_warehouse")
@@ -888,3 +901,99 @@ def test_qualified_name_qualifies_any_view_with_the_warehouse_settings():
         )
     with pytest.raises(ValueError, match="Unsafe warehouse identifier"):
         _ConcreteTask.qualified_name("other; drop table x")
+
+
+# ---------------------------------------------------------------------------
+# One run at a time
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("task_class", [_ConcreteTask, _ErrorTask])
+@patch("learning_resources.lib.warehouse.connect_to_warehouse")
+def test_run_holds_the_sync_lock_until_it_finishes(mock_connect, task_class):
+    """A run takes the task's lock before reading and lets it go, even on error"""
+    mock_lock = MagicMock()
+    mock_lock.add.return_value = True
+    mock_lock.get.side_effect = lambda _key: mock_lock.add.call_args.args[1]
+    mock_connect.return_value = MagicMock()
+
+    with (
+        patch("learning_resources.lib.warehouse.caches") as mock_caches,
+        patch("learning_resources.lib.warehouse.sentry_sdk"),
+    ):
+        mock_caches.__getitem__.return_value = mock_lock
+        try:
+            task_class().run()
+        except RuntimeError:
+            assert task_class is _ErrorTask
+
+    mock_caches.__getitem__.assert_any_call(SYNC_LOCK_CACHE)
+    key = f"warehouse_etl:running:{task_class.name}"
+    mock_lock.add.assert_called_once_with(key, ANY, timeout=SYNC_LOCK_SECONDS)
+    mock_lock.delete.assert_called_once_with(key)
+
+
+@patch("learning_resources.lib.warehouse.connect_to_warehouse")
+def test_run_that_outlived_its_lock_leaves_the_next_runs_lock(mock_connect):
+    """A run whose lock expired and was taken by another run doesn't release it"""
+    mock_lock = MagicMock()
+    mock_lock.add.return_value = True
+    mock_lock.get.return_value = "another run's token"
+    mock_connect.return_value = MagicMock()
+
+    with patch("learning_resources.lib.warehouse.caches") as mock_caches:
+        mock_caches.__getitem__.return_value = mock_lock
+        assert _ConcreteTask().run() == 42
+
+    mock_lock.delete.assert_not_called()
+
+
+@patch("learning_resources.lib.warehouse.connect_to_warehouse")
+def test_run_requeues_while_another_run_holds_the_lock(mock_connect):
+    """A run that finds the lock held re-queues itself rather than waiting in the worker"""
+    mock_lock = MagicMock()
+    mock_lock.add.return_value = False
+    task = _ConcreteTask()
+
+    with (
+        patch("learning_resources.lib.warehouse.caches") as mock_caches,
+        patch.object(task, "retry", side_effect=Retry()) as mock_retry,
+    ):
+        mock_caches.__getitem__.return_value = mock_lock
+        with pytest.raises(Retry):
+            task.run()
+
+    mock_retry.assert_called_once_with(
+        countdown=SYNC_LOCK_RETRY_SECONDS, max_retries=SYNC_LOCK_MAX_RETRIES
+    )
+    mock_lock.delete.assert_not_called()
+    mock_connect.assert_not_called()
+
+
+@patch("learning_resources.lib.warehouse.connect_to_warehouse")
+def test_run_gives_up_to_the_next_run_after_its_retries(mock_connect):
+    """Past the retry cap, what the run would have read is left to the next run"""
+    mock_lock = MagicMock()
+    mock_lock.add.return_value = False
+    task = _ConcreteTask()
+
+    with (
+        patch("learning_resources.lib.warehouse.caches") as mock_caches,
+        patch.object(task, "retry", side_effect=MaxRetriesExceededError()),
+    ):
+        mock_caches.__getitem__.return_value = mock_lock
+        assert task.run() == 0
+
+    mock_lock.delete.assert_not_called()
+    mock_connect.assert_not_called()
+
+
+def test_run_takes_no_lock_when_the_warehouse_does_not_own_the_pair():
+    """A run that skips for ownership doesn't hold up one that would write"""
+    with (
+        patch("learning_resources.lib.warehouse.run_mode", return_value=RunMode.SKIP),
+        patch("learning_resources.lib.warehouse.caches") as mock_caches,
+    ):
+        assert _CatalogTask().run() == 0
+
+    mock_caches.__getitem__.assert_not_called()
