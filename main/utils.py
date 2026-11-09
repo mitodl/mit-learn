@@ -71,7 +71,7 @@ def _cached_response(request, cached_data):
     return HttpResponse(cached_data, content_type="application/json")
 
 
-def _mark_shared(response, *, shared: bool):
+def _mark_shared(request, response, *, shared: bool):
     """
     Stamp a response that the view cache will serve to any user.
 
@@ -81,10 +81,16 @@ def _mark_shared(response, *, shared: bool):
     the `bypass` predicate is likewise uncached. Both must stay private, which
     is why this is driven by `only_anonymous` rather than applied wholesale.
 
+    Only the JSON representation is user-independent. The same cached data
+    rendered by DRF's browsable API comes out as HTML carrying the signed-in
+    user's identity and a CSRF token, on the hit path as well as the miss, so a
+    negotiated response is left unstamped and falls through to the middleware's
+    private default.
+
     The stamp is read by CachePolicyMiddleware. It never enters the cache —
     only rendered bytes are stored — so it is re-applied on every hit.
     """
-    if shared:
+    if shared and not _needs_negotiated_response(request):
         set_cache_policy(response, CachePolicy.SHARED)
     return response
 
@@ -177,6 +183,7 @@ def _cache_page_ignoring_cookies(  # noqa: C901
                 cached_data = await cache_backend.aget(cache_key)
                 if cached_data is not None:
                     return _mark_shared(
+                        request,
                         _cached_response(request, cached_data),
                         shared=not only_anonymous,
                     )
@@ -189,7 +196,7 @@ def _cache_page_ignoring_cookies(  # noqa: C901
                     _cache_response_json(
                         cache_backend, cache_key, cache_timeout, response
                     )
-                    _mark_shared(response, shared=not only_anonymous)
+                    _mark_shared(request, response, shared=not only_anonymous)
 
                 return response
 
@@ -222,6 +229,7 @@ def _cache_page_ignoring_cookies(  # noqa: C901
             cached_data = cache_backend.get(cache_key)
             if cached_data is not None:
                 return _mark_shared(
+                    request,
                     _cached_response(request, cached_data),
                     shared=not only_anonymous,
                 )
@@ -233,7 +241,7 @@ def _cache_page_ignoring_cookies(  # noqa: C901
             # cache hits skip DRF serialization entirely
             if response.status_code == 200:  # noqa: PLR2004
                 _cache_response_json(cache_backend, cache_key, cache_timeout, response)
-                _mark_shared(response, shared=not only_anonymous)
+                _mark_shared(request, response, shared=not only_anonymous)
 
             return response
 

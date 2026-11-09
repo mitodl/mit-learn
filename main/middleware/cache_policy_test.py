@@ -10,6 +10,10 @@ from django.urls import reverse
 
 from main.cache_policy import CachePolicy, set_cache_policy
 from main.middleware.cache_policy import CachePolicyMiddleware
+from main.middleware.cookie_tombstones import (
+    CookieTombstone,
+    insert_tombstone_middleware,
+)
 
 # No django_db marker: the middleware reads `user.is_authenticated` and the
 # response's cookies, nothing that touches the database. AnonymousUser is a
@@ -71,6 +75,40 @@ def test_existing_cache_control_is_not_clobbered(mocker):
     response["Cache-Control"] = "max-age=900"
     result = _middleware(response, mocker)(_request(mocker, authenticated=True))
     assert result["Cache-Control"] == "max-age=900"
+
+
+def test_a_cookie_outranks_an_existing_cache_control(mocker):
+    """
+    ApisixUserMiddleware calls login(), which cycles the session, so the first
+    request of a signed-in session leaves with a Set-Cookie -- including on the
+    RSS feed, which carries its own max-age=900. A shared cache honouring that
+    max-age would store one user's session cookie and hand it to the next 900
+    seconds of readers.
+    """
+    response = HttpResponse()
+    response["Cache-Control"] = "max-age=900"
+    response.set_cookie("sessionid", "abc123")
+
+    result = _middleware(response, mocker)(_request(mocker, authenticated=True))
+
+    assert "no-store" in result["Cache-Control"]
+    # Merged, not replaced: every cookie-free request still gets the feed's
+    # own freshness.
+    assert "max-age=900" in result["Cache-Control"]
+
+
+def test_a_cookie_outranks_the_shared_stamp(mocker):
+    """
+    A cache_page_for_all_users response is shared by design, but the session
+    cookie attached to it on the way out is not. The stamp must not suppress
+    no-store for that one request.
+    """
+    response = set_cache_policy(HttpResponse(), CachePolicy.SHARED)
+    response.set_cookie("sessionid", "abc123")
+
+    result = _middleware(response, mocker)(_request(mocker, authenticated=True))
+
+    assert "no-store" in result["Cache-Control"]
 
 
 def test_shared_stamp_survives_an_authenticated_request(mocker):
@@ -183,3 +221,27 @@ def test_chain_leaves_an_anonymous_public_response_cacheable(client):
 
     assert response.status_code == HTTPStatus.OK
     assert "no-store" not in response.get("Cache-Control", "")
+
+
+@pytest.mark.django_db
+def test_chain_marks_a_tombstone_deletion_response_no_store(client, settings):
+    """
+    SILENT FAILURE GUARD, for the one configuration that moves this middleware
+    relative to another cookie setter.
+
+    CookieTombstoneMiddleware adds its deletion cookies during its own response
+    phase. Prepended to MIDDLEWARE -- the obvious placement -- that phase runs
+    last, after the cache policy has already been decided, and an otherwise
+    anonymous public response leaves with a Set-Cookie and no no-store. Nothing
+    else in this file would notice, because COOKIE_TOMBSTONES is unset in the
+    default test settings.
+    """
+    settings.COOKIE_TOMBSTONES = [CookieTombstone(name="legacy_cookie")]
+    settings.MIDDLEWARE = insert_tombstone_middleware(tuple(django_settings.MIDDLEWARE))
+    client.cookies["legacy_cookie"] = "stale"
+
+    response = client.get(reverse("lr:v1:courses_api-list"))
+
+    assert response.status_code == HTTPStatus.OK
+    assert "legacy_cookie" in response.cookies, "expected a deletion cookie"
+    assert "no-store" in response["Cache-Control"]

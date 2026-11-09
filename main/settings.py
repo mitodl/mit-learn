@@ -29,7 +29,10 @@ from main.envs import (
     get_list_of_str,
     get_string,
 )
-from main.middleware.cookie_tombstones import parse_cookie_tombstones
+from main.middleware.cookie_tombstones import (
+    insert_tombstone_middleware,
+    parse_cookie_tombstones,
+)
 from main.sentry import init_sentry
 from main.settings_celery import *  # noqa: F403
 from main.settings_course_etl import *  # noqa: F403
@@ -255,8 +258,7 @@ SESSION_COOKIE_NAME = get_string("SESSION_COOKIE_NAME", "sessionid")
 SESSION_COOKIE_SECURE = get_bool("SESSION_COOKIE_SECURE", True)  # noqa: FBT003
 
 if COOKIE_TOMBSTONES:
-    tombstone_middleware = "main.middleware.cookie_tombstones.CookieTombstoneMiddleware"
-    MIDDLEWARE = (tombstone_middleware, *MIDDLEWARE)
+    MIDDLEWARE = insert_tombstone_middleware(MIDDLEWARE)
 
 # enable the nplusone profiler only in debug mode
 if DEBUG:

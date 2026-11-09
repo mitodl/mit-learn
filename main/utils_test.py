@@ -380,6 +380,19 @@ def _get(view, path="/test/", user=None):
     return response.render() if hasattr(response, "render") else response
 
 
+def _get_html(view, path="/test/", user=None):
+    """
+    Issue a GET that content-negotiates to the browsable API.
+
+    Left unrendered: the stamp is applied by the decorator, and rendering the
+    browsable API template is beside the point.
+    """
+    request = APIRequestFactory().get(path, HTTP_ACCEPT="text/html")
+    if user is not None:
+        force_authenticate(request, user=user)
+    return view(request)
+
+
 def test_view_cache_end_to_end(view_cache):
     """The second request is served from cache with identical JSON."""
     view = _decorated_api_view()
@@ -869,4 +882,31 @@ def test_non_200_response_is_not_stamped_shared(view_cache):
     """Only 200s are cached, so only 200s are shared."""
     response = _get(_decorated_api_view(status=404))
 
+    assert get_cache_policy(response) is None
+
+
+def test_browsable_api_html_is_not_stamped_shared(view_cache):
+    """
+    The cached data is user-independent; the browsable API's rendering of it is
+    not. DRF's default renderer classes include BrowsableAPIRenderer and
+    nothing here overrides them, so an authenticated Accept: text/html request
+    turns a shared payload into HTML carrying that user's identity. Stamping it
+    SHARED would hand the middleware a reason not to mark it private.
+    """
+    response = _get_html(_decorated_api_view(), user=UserFactory.build())
+
+    assert get_cache_policy(response) is None
+
+
+def test_browsable_api_html_is_not_stamped_shared_on_hit(view_cache):
+    """
+    The cache key ignores Accept, so HTML is served from an entry a JSON
+    request stored. The hit path builds its own response and must reach the
+    same conclusion as the miss path.
+    """
+    view = _decorated_api_view()
+    _get(view)
+    response = _get_html(view, user=UserFactory.build())
+
+    assert view.calls["count"] == 1
     assert get_cache_policy(response) is None
