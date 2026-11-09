@@ -45,9 +45,9 @@ const PRICES: Record<string, PricePanel> = {
     primary: "$3,750",
     certificate: "Professional Certificate",
   },
-  "Free to audit": {
+  "Free, certificate": {
     tone: "light",
-    primary: "Free to audit",
+    primary: "Free",
     certificate: "Professional Certificate",
     certificatePrice: "$50",
   },
@@ -66,9 +66,9 @@ const LONG_RANGES: Record<string, PricePanel> = {
     primary: "$12,500 – $35,000",
     certificate: "Professional Certificate",
   },
-  "Free to audit, certificate range": {
+  "Free, certificate range": {
     tone: "light",
-    primary: "Free to audit",
+    primary: "Free",
     certificate: "Professional Certificate",
     certificatePrice: "$1,250 – $3,500",
   },
@@ -89,7 +89,7 @@ const meta: Meta<ResourceCardViewProps> = {
       { label: "Starts", value: "Sep 30, 2026" },
       { label: "Format", value: "Online" },
     ],
-    price: PRICES["Free to audit"],
+    price: PRICES["Free, certificate"],
     lang: "en",
     layout: "vertical",
     size: "medium",

@@ -23,7 +23,7 @@ import { useFeatureFlag } from "@/common/useFeatureFlag"
 import {
   ResourceCardSkeleton,
   ResourceCardView,
-  freeToAuditPanel,
+  freePanel,
   startsMetadata,
 } from "@/page-components/ResourceCardView/ResourceCardView"
 import type {
@@ -174,11 +174,14 @@ const getPricePanel = (
     : undefined
   switch (getEnrollmentType(enrollmentModes)) {
     case "free":
-      return { tone: "light", primary: "Free", certificate }
+      return freePanel({ certificate })
     case "paid":
       return { tone: "dark", primary: price ?? "Paid", certificate }
     case "both":
-      return freeToAuditPanel(certificateType, price)
+      return freePanel({
+        certificate: certificateType,
+        certificatePrice: price ?? undefined,
+      })
     default:
       return { tone: "neutral", certificate }
   }

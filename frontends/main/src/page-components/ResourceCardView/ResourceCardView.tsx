@@ -46,17 +46,10 @@ const startsMetadata = (
   ]
 }
 
-const freeToAuditPanel = (
-  certificateType: string,
-  certificatePrice: string | null | undefined,
-  license?: string,
-): PricePanel => ({
-  tone: "light",
-  primary: "Free to audit",
-  certificate: certificateType,
-  certificatePrice: certificatePrice ?? undefined,
-  license,
-})
+/** The light panel reading "Free", for every resource that is free to take. */
+const freePanel = (
+  details: Pick<PricePanel, "certificate" | "certificatePrice" | "license">,
+): PricePanel => ({ tone: "light", primary: "Free", ...details })
 
 type CardAction = {
   label: string
@@ -697,12 +690,7 @@ const ResourceCardSkeleton: React.FC<
   )
 }
 
-export {
-  ResourceCardView,
-  ResourceCardSkeleton,
-  startsMetadata,
-  freeToAuditPanel,
-}
+export { ResourceCardView, ResourceCardSkeleton, freePanel, startsMetadata }
 export type {
   ResourceCardSize,
   CardLayoutProps,
