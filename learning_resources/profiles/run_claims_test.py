@@ -541,5 +541,5 @@ def test_limitations(fake_llm, run_inputs):
     ]
 
     assert [item["text"] for item in limitations] == [
-        "Files over the per-file limit, read only in part: 1.",
+        "Files too long to read in full, read only in part: 1.",
     ]
