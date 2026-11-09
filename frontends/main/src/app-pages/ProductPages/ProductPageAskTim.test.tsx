@@ -6,24 +6,21 @@ import {
   ProductPageAskTimButton,
   ProductPageAskTimSection,
 } from "./ProductPageAskTim"
-import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
+import { capturePostHog } from "@/common/analytics/posthog"
 import { FeatureFlags } from "@/common/feature_flags"
 import { PostHogEvents } from "@/common/constants"
 import { RESOURCE_DRAWER_PARAMS } from "@/common/urls"
 import { slugify } from "@/common/slugs"
 import { ResourceTypeEnum, type LearningResource } from "api"
 
-jest.mock("posthog-js/react", () => ({
-  ...jest.requireActual("posthog-js/react"),
-  useFeatureFlagEnabled: jest.fn(),
-  usePostHog: jest.fn(),
+jest.mock("@/common/useFeatureFlag")
+jest.mock("@/common/analytics/posthog", () => ({
+  capturePostHog: jest.fn(),
+  initPostHog: jest.fn(),
 }))
-const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
-const mockCapture = jest.fn()
-jest.mocked(usePostHog).mockReturnValue(
-  // @ts-expect-error Not mocking all of posthog
-  { capture: mockCapture },
-)
+const mockedUseFeatureFlag = jest.mocked(useFeatureFlag)
+const mockCapturePostHog = jest.mocked(capturePostHog)
 
 const setupLearnResource = (
   resource: LearningResource = factories.learningResources.course({
@@ -101,7 +98,7 @@ describe("ProductPageAskTimSection", () => {
     delete window.__ENV
     process.env.NEXT_PUBLIC_LEARN_AI_SYLLABUS_ENDPOINT =
       "https://example.com/syllabus"
-    mockedUseFeatureFlagEnabled.mockImplementation((flag) => {
+    mockedUseFeatureFlag.mockImplementation((flag) => {
       if (flag === FeatureFlags.LrDrawerChatbot) return true
       if (flag === FeatureFlags.PrDrawerChatbot) return true
       return false
@@ -147,7 +144,7 @@ describe("ProductPageAskTimSection", () => {
   test("hides button and skips fetch when the flag is off (env still on)", async () => {
     // beforeEach leaves NEXT_PUBLIC_LEARN_AI_SYLLABUS_ENDPOINT set, so this
     // isolates the per-type flag as the gate that suppresses the network call.
-    mockedUseFeatureFlagEnabled.mockReturnValue(false)
+    mockedUseFeatureFlag.mockReturnValue(false)
     const { resource } = setupLearnResource()
 
     renderWithProviders(
@@ -234,7 +231,7 @@ describe("ProductPageAskTimSection", () => {
 
   test("does not fetch the resource when chat is disabled", async () => {
     delete process.env.NEXT_PUBLIC_LEARN_AI_SYLLABUS_ENDPOINT
-    mockedUseFeatureFlagEnabled.mockReturnValue(false)
+    mockedUseFeatureFlag.mockReturnValue(false)
     const { resource } = setupLearnResource()
 
     renderWithProviders(
@@ -256,7 +253,7 @@ describe("ProductPageAskTimSection", () => {
 
   test("clicking Ask TIM sets syllabus_only query param and fires PostHog", async () => {
     process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"
-    mockCapture.mockClear()
+    mockCapturePostHog.mockClear()
     const { resource } = setupLearnResource()
 
     const { location } = renderWithProviders(
@@ -279,7 +276,7 @@ describe("ProductPageAskTimSection", () => {
     expect(
       location.current.searchParams.has(RESOURCE_DRAWER_PARAMS.syllabus),
     ).toBe(false)
-    expect(mockCapture).toHaveBeenCalledWith(
+    expect(mockCapturePostHog).toHaveBeenCalledWith(
       PostHogEvents.AskTimClicked,
       expect.objectContaining({
         type: "syllabus_bot",

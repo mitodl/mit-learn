@@ -84,10 +84,10 @@ type ResourceCardViewProps = ResourceCardContent &
     pushUrl?: PushUrl
     onLinkClick?: React.MouseEventHandler<HTMLAnchorElement>
     /**
-     * The card's one action (a bookmark): the horizontal price panel fits one
-     * button beside its first line.
+     * In order: a vertical card stacks them down the image's corner, a
+     * horizontal card lines them up at the end of the metadata row.
      */
-    action?: CardAction
+    actions?: CardAction[]
     headingLevel: HeadingLevel
     className?: string
   }
@@ -120,17 +120,16 @@ const NARROW = "@container (max-width: 240px)"
  */
 const IMAGE_SIZES = "(max-width: 600px) 100vw, 600px"
 
-/** Distance from the action button to the edges of its cell. */
-const ACTION_INSET = 12
-const ACTION_SIZE = 32
-/** The band the action occupies, measured in from the edges of its cell. */
-const ACTION_BAND = ACTION_INSET + ACTION_SIZE
-/** Between a price line and the action button beside it. */
-const ACTION_GAP = 8
-const PRICE_PADDING_BLOCK = 12
-const PRICE_PADDING_INLINE = 16
-/** The primary price line's leading, as a multiple of its font size. */
-const PRIMARY_LEADING = 1.5
+/** Every action's target; the design draws smaller buttons. */
+const ACTION_TARGET = 32
+/** Vertical: the circle the design draws. */
+const ACTION_CIRCLE = 28
+/** Horizontal: the icon the design draws. */
+const ACTION_ICON = 18
+/** Horizontal: between the icons. */
+const ACTION_ICON_GAP = 16
+/** Horizontal: between the metadata and the first icon. */
+const ACTIONS_CLEARANCE = 16
 
 type RootProps = {
   layout: CardLayoutProps["layout"]
@@ -230,11 +229,18 @@ const Image = styled(NextImage)({
   objectFit: "cover",
 })
 
+type ContentProps = {
+  /** Horizontal: actions but no metadata row for them to end. */
+  reserveActionsRow: boolean
+}
+
 /**
  * Metadata sits at the bottom whenever the card is taller than its content (a
  * taller neighbour in a row, or a horizontal card's image or price panel).
  */
-const Content = styled.div({
+const Content = styled("div", {
+  shouldForwardProp: (prop) => prop !== "reserveActionsRow",
+})<ContentProps>(({ reserveActionsRow }) => ({
   gridArea: "content",
   display: "flex",
   flexDirection: "column",
@@ -247,9 +253,11 @@ const Content = styled.div({
   },
   [HORIZONTAL]: {
     gap: "12px",
-    padding: "8px 16px",
+    // Without metadata, keep its row (the 12px gap, a 16px line and the 8px
+    // padding) so a long title or parent name stops above the actions.
+    padding: reserveActionsRow ? "8px 16px 36px" : "8px 16px",
   },
-})
+}))
 
 const TitleBlock = styled.div({
   display: "flex",
@@ -266,20 +274,16 @@ const TypeLabel = styled.span(({ theme }) => ({
  * Hover colors and underlines the heading, which the link inherits, so it
  * survives hosts that reset link styles, as articles do for embeds.
  *
- * `minHeight` reserves the three lines the link clamps to, so vertical titles
- * always take them.
+ * The heading reserves no height for a longer title. The results grid and the
+ * carousels stretch each card to the tallest beside it, so they stay level,
+ * and a card in a column is only as tall as its own title.
  */
 const Heading = styled.h2(({ theme }) => ({
   ...theme.typography.subtitle1,
   lineHeight: 1.5,
-  minHeight: "4.5em",
   margin: 0,
   color: theme.custom.colors.darkGray2,
-  [NARROW]: {
-    ...theme.typography.subtitle2,
-    minHeight: `calc(3 * ${theme.typography.subtitle2.lineHeight})`,
-  },
-  [HORIZONTAL]: { minHeight: 0 },
+  [NARROW]: { ...theme.typography.subtitle2 },
   [CARD_HOVER]: {
     color: theme.custom.colors.red,
     textDecoration: "underline",
@@ -296,7 +300,7 @@ const TitleLink = styled(LinkAdapter)({
   textDecoration: "none",
   display: "-webkit-box",
   WebkitBoxOrient: "vertical",
-  WebkitLineClamp: 3,
+  WebkitLineClamp: 2,
   overflow: "hidden",
   "&::after": {
     content: '""',
@@ -312,12 +316,20 @@ const Secondary = styled.span(({ theme }) => ({
   [NARROW]: { marginTop: 0 },
 }))
 
-const Metadata = styled.dl(({ theme }) => ({
+type MetadataProps = {
+  /** Horizontal: the action buttons sit at the end of the row. */
+  actionCount: number
+}
+
+/** Flows in a row, wrapping, but stacks in a narrow card. */
+const Metadata = styled("dl", {
+  shouldForwardProp: (prop) => prop !== "actionCount",
+})<MetadataProps>(({ theme, actionCount }) => ({
   ...theme.typography.body3,
   margin: 0,
   display: "flex",
-  flexDirection: "column",
-  gap: "6px",
+  flexWrap: "wrap",
+  gap: "4px 12px",
   color: theme.custom.colors.darkGray2,
   "& > div": {
     display: "flex",
@@ -329,10 +341,13 @@ const Metadata = styled.dl(({ theme }) => ({
     color: theme.custom.colors.silverGrayDark,
   },
   dd: { minWidth: 0 },
+  [NARROW]: { flexDirection: "column" },
   [HORIZONTAL]: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: "8px 12px",
+    paddingInlineEnd: actionCount
+      ? actionCount * ACTION_ICON +
+        (actionCount - 1) * ACTION_ICON_GAP +
+        ACTIONS_CLEARANCE
+      : 0,
   },
 }))
 
@@ -340,14 +355,11 @@ type PriceProps = {
   tone: PricePanel["tone"]
   /** The panel has no price lines. */
   empty: boolean
-  /** Horizontal: the action button shares this cell. */
-  reserveAction: boolean
 }
 
 const Price = styled("div", {
-  shouldForwardProp: (prop) =>
-    prop !== "tone" && prop !== "empty" && prop !== "reserveAction",
-})<PriceProps>(({ theme, tone, empty, reserveAction }) => {
+  shouldForwardProp: (prop) => prop !== "tone" && prop !== "empty",
+})<PriceProps>(({ theme, tone, empty }) => {
   const { colors } = theme.custom
   const border = `1px solid ${colors.lightGray2}`
   const dark = tone === "dark"
@@ -355,19 +367,10 @@ const Price = styled("div", {
   // is set off by its color, the white (no price) one is meant to read as part
   // of the card, and a horizontal panel is inset.
   const divided = tone === "light"
-  // Horizontal: the band the action occupies is at the panel's top right, and
-  // the lines are centred, so the first line can run through the band. It
-  // reserves the button's width, and the top row's floor keeps it low enough
-  // that the second line starts below the band, whatever the panel's height.
-  // That is what a float at the top right would do, but a float moves with
-  // the centred lines and the button must not. The floor is sized against
-  // the primary line; the one panel without one (neutral, certificate only)
-  // has a single line.
-  const firstLineFloor = `calc(${ACTION_BAND - PRICE_PADDING_BLOCK}px - ${PRIMARY_LEADING} * ${theme.typography.subtitle1.fontSize})`
   return {
     gridArea: "price",
     display: empty ? "none" : "block",
-    padding: `${PRICE_PADDING_BLOCK}px ${PRICE_PADDING_INLINE}px`,
+    padding: "12px 16px",
     backgroundColor: {
       dark: colors.darkGray2,
       light: colors.lightGray0,
@@ -379,41 +382,24 @@ const Price = styled("div", {
       padding: "8px 12px",
     },
     [HORIZONTAL]: {
-      display: empty && !reserveAction ? "none" : "grid",
-      // Slack, the lines, slack: equal slack centres the lines. The column
-      // must not grow to a long word's min-content, or the lines leave the
-      // panel instead of wrapping.
-      gridTemplateColumns: "minmax(0, 1fr)",
-      gridTemplateRows: `minmax(${reserveAction ? firstLineFloor : 0}, 1fr) auto minmax(0, 1fr)`,
+      display: empty ? "none" : "flex",
+      flexDirection: "column",
+      justifyContent: "center",
       borderTop: "none",
       borderRadius: "4px",
     },
   }
 })
 
-const Lines = styled("div", {
-  shouldForwardProp: (prop) => prop !== "reserveAction",
-})<Pick<PriceProps, "reserveAction">>(({ reserveAction }) => ({
+const Lines = styled.div({
   display: "flex",
   flexDirection: "column",
   gap: "4px",
-  [HORIZONTAL]: {
-    gridRow: 2,
-    "> :first-child": reserveAction
-      ? {
-          paddingInlineEnd: ACTION_BAND - PRICE_PADDING_INLINE + ACTION_GAP,
-          // A price line is a flex box with its text as an anonymous item,
-          // whose min-content is its longest word; beside the button that
-          // word may not fit, so let it break rather than reach it.
-          overflowWrap: "anywhere",
-        }
-      : undefined,
-  },
-}))
+})
 
 const PrimaryLine = styled.span(({ theme }) => ({
   ...theme.typography.subtitle1,
-  lineHeight: PRIMARY_LEADING,
+  lineHeight: 1.5,
   [NARROW]: { ...theme.typography.subtitle2 },
 }))
 
@@ -457,47 +443,52 @@ const CertificateIcon = styled(RiAwardLine)({
   },
 })
 
-type ActionButtonProps = {
-  filled: boolean
-  tone: PricePanel["tone"]
-}
+/**
+ * Vertical: stacked down the image's top-right corner. Horizontal: in a row at
+ * the end of the content's metadata line, which reserves their width.
+ */
+const Actions = styled.div({
+  gridArea: "image",
+  alignSelf: "start",
+  justifySelf: "end",
+  zIndex: 1,
+  // 12px from the card's edge, inside its 1px border.
+  margin: "11px",
+  display: "flex",
+  flexDirection: "column",
+  gap: "8px",
+  [HORIZONTAL]: {
+    gridArea: "content",
+    alignSelf: "end",
+    flexDirection: "row",
+    gap: ACTION_ICON_GAP,
+    // The content's inline padding, and its bottom padding less the 2px the
+    // icons stand taller than the metadata's 16px line, so their tops align.
+    margin: "0 16px 6px 0",
+  },
+})
 
-/** Vertical: top-right of the image. Horizontal: top-right of the price panel. */
+/**
+ * Vertical: a 28px circle. Horizontal: a bare 18px icon. Either way the
+ * button's negative margin grows its target to 32px without moving anything;
+ * the circle is its background, clipped to the content box.
+ */
 const ActionButton = styled("button", {
-  shouldForwardProp: (prop) => prop !== "filled" && prop !== "tone",
-})<ActionButtonProps>(({ theme, filled, tone }) => {
+  shouldForwardProp: (prop) => prop !== "filled",
+})<{ filled: boolean }>(({ theme, filled }) => {
   const { colors } = theme.custom
-  const outlined = (border: string, icon: string, hover: string) => ({
-    backgroundColor: "transparent",
-    borderColor: border,
-    color: icon,
-    "&:hover": {
-      backgroundColor: "transparent",
-      borderColor: hover,
-      color: hover,
-    },
-  })
-  // One [HORIZONTAL] key: a second one in a spread would replace it.
-  const horizontal = filled
-    ? {}
-    : tone === "dark"
-      ? outlined(colors.darkGray1, colors.silverGrayLight, colors.white)
-      : outlined(colors.lightGray2, colors.silverGrayDark, colors.darkGray1)
   return {
-    gridArea: "image",
-    alignSelf: "start",
-    justifySelf: "end",
-    zIndex: 1,
-    margin: ACTION_INSET,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     boxSizing: "border-box",
-    width: ACTION_SIZE,
-    height: ACTION_SIZE,
-    padding: 0,
+    width: ACTION_TARGET,
+    height: ACTION_TARGET,
+    margin: (ACTION_CIRCLE - ACTION_TARGET) / 2,
+    padding: (ACTION_TARGET - ACTION_CIRCLE) / 2,
+    backgroundClip: "content-box",
+    border: "none",
     borderRadius: "50%",
-    border: "1px solid transparent",
     cursor: "pointer",
     svg: { width: "16px", height: "16px" },
     ...(filled
@@ -514,7 +505,16 @@ const ActionButton = styled("button", {
             color: colors.darkGray2,
           },
         }),
-    [HORIZONTAL]: { gridArea: "price", ...horizontal },
+    [HORIZONTAL]: {
+      margin: (ACTION_ICON - ACTION_TARGET) / 2,
+      backgroundColor: "transparent",
+      color: filled ? colors.red : colors.darkGray1,
+      svg: { width: ACTION_ICON, height: ACTION_ICON },
+      "&:hover": {
+        backgroundColor: "transparent",
+        color: filled ? colors.mitRed : colors.red,
+      },
+    },
   }
 })
 
@@ -545,7 +545,7 @@ const ResourceCardView: React.FC<ResourceCardViewProps> = ({
   href,
   pushUrl,
   onLinkClick,
-  action,
+  actions = [],
   headingLevel,
   className,
 }) => {
@@ -571,7 +571,7 @@ const ResourceCardView: React.FC<ResourceCardViewProps> = ({
       layout={layout}
       size={size}
     >
-      <Grid priceColumn={!priceEmpty || !!action}>
+      <Grid priceColumn={!priceEmpty}>
         <ImageFrame>
           {!imageSrc && placeholderIcon ? (
             <PlaceholderIcon aria-hidden>{placeholderIcon}</PlaceholderIcon>
@@ -587,7 +587,9 @@ const ResourceCardView: React.FC<ResourceCardViewProps> = ({
             />
           )}
         </ImageFrame>
-        <Content>
+        <Content
+          reserveActionsRow={actions.length > 0 && metadata.length === 0}
+        >
           <TitleBlock>
             <TypeLabel id={typeId}>{typeLabel}</TypeLabel>
             <Heading as={`h${headingLevel}`} lang={lang}>
@@ -605,7 +607,7 @@ const ResourceCardView: React.FC<ResourceCardViewProps> = ({
             )}
           </TitleBlock>
           {metadata.length > 0 && (
-            <Metadata id={metadataId}>
+            <Metadata id={metadataId} actionCount={actions.length}>
               {metadata.map(({ label, value }) => (
                 <div key={label}>
                   <dt>{label}:</dt>
@@ -615,13 +617,8 @@ const ResourceCardView: React.FC<ResourceCardViewProps> = ({
             </Metadata>
           )}
         </Content>
-        <Price
-          id={priceId}
-          tone={price.tone}
-          empty={priceEmpty}
-          reserveAction={!!action}
-        >
-          <Lines reserveAction={!!action}>
+        <Price id={priceId} tone={price.tone} empty={priceEmpty}>
+          <Lines>
             {price.primary && <PrimaryLine>{price.primary}</PrimaryLine>}
             {price.certificate && (
               <PriceLine tone={price.tone}>
@@ -643,18 +640,24 @@ const ResourceCardView: React.FC<ResourceCardViewProps> = ({
             )}
           </Lines>
         </Price>
-        {/* Last in the DOM, so Tab reaches the card link before the action. */}
-        {action && (
-          <ActionButton
-            type="button"
-            aria-label={action.label}
-            aria-haspopup="dialog"
-            filled={action.filled}
-            tone={price.tone}
-            onClick={action.onClick}
-          >
-            {action.icon}
-          </ActionButton>
+        {/* Last in the DOM, so Tab reaches the card link before the actions. */}
+        {actions.length > 0 && (
+          <Actions>
+            {actions.map((action, index) => (
+              <ActionButton
+                // Not the label: it changes with membership, and a new key
+                // remounts the button, dropping its focus.
+                key={index}
+                type="button"
+                aria-label={action.label}
+                aria-haspopup="dialog"
+                filled={action.filled}
+                onClick={action.onClick}
+              >
+                {action.icon}
+              </ActionButton>
+            ))}
+          </Actions>
         )}
       </Grid>
     </Root>
@@ -674,7 +677,7 @@ const ResourceCardSkeleton: React.FC<
         <ImageFrame>
           <Skeleton variant="rectangular" width="100%" height="100%" />
         </ImageFrame>
-        <Content>
+        <Content reserveActionsRow={false}>
           <TitleBlock>
             <Skeleton variant="text" width="30%" />
             <Heading as="div">
@@ -683,8 +686,8 @@ const ResourceCardSkeleton: React.FC<
           </TitleBlock>
           <Skeleton variant="text" width="60%" />
         </Content>
-        <Price tone="neutral" empty={false} reserveAction={false}>
-          <Lines reserveAction={false}>
+        <Price tone="neutral" empty={false}>
+          <Lines>
             <Skeleton variant="text" width="50%" />
             <Skeleton variant="text" width="80%" />
           </Lines>

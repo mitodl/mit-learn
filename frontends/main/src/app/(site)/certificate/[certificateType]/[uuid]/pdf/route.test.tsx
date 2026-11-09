@@ -1,95 +1,82 @@
-import { pxToPt, getNameStyles } from "./utils"
+import React from "react"
+import type { NextRequest } from "next/server"
+import { render, screen } from "@testing-library/react"
+import { pdf } from "@react-pdf/renderer"
+import { factories, setMockResponse } from "api/test-utils"
+import * as mitxonline from "api/mitxonline-test-utils"
+import { GET } from "./route"
+import { pxToPt } from "./utils"
 
-jest.mock("@react-pdf/renderer", () => ({
-  Document: "Document",
-  Page: "Page",
-  View: "View",
-  Text: "Text",
-  Svg: "Svg",
-  G: "G",
-  Path: "Path",
-  Font: {
-    register: jest.fn(),
-    registerHyphenationCallback: jest.fn(),
-  },
-  Image: "Image",
-  pdf: jest.fn(),
-}))
+jest.mock("@react-pdf/renderer", () => {
+  const primitive =
+    (name: string) =>
+    ({
+      style,
+      children,
+    }: {
+      style?: { lineHeight?: number }
+      children?: React.ReactNode
+    }) => (
+      <div data-testid={`pdf-${name}`} data-line-height={style?.lineHeight}>
+        {children}
+      </div>
+    )
+  return {
+    Document: primitive("Document"),
+    Page: primitive("Page"),
+    View: primitive("View"),
+    Text: primitive("Text"),
+    Svg: primitive("Svg"),
+    G: primitive("G"),
+    Path: primitive("Path"),
+    Image: primitive("Image"),
+    Font: { register: jest.fn(), registerHyphenationCallback: jest.fn() },
+    pdf: jest.fn(() => ({
+      toBuffer: jest.fn().mockResolvedValue(Buffer.from("")),
+    })),
+  }
+})
 
 describe("Certificate PDF", () => {
   describe("pxToPt", () => {
-    it("converts pixels to points correctly", () => {
-      expect(pxToPt(96)).toBeCloseTo(57.6) // 96 * (72/96) * 0.8
-      expect(pxToPt(52)).toBeCloseTo(31.2) // 52 * 0.75 * 0.8
-      expect(pxToPt(206)).toBeCloseTo(123.6)
-      expect(pxToPt(950)).toBeCloseTo(570)
+    it("maps the 1414 x 1093px Figma frame onto Letter landscape (792 x 612pt)", () => {
+      expect(pxToPt(1414)).toBeCloseTo(792)
+      expect(pxToPt(1093)).toBeCloseTo(612, 0)
+      expect(pxToPt(0)).toBe(0)
     })
   })
 
-  describe("Name scaling to ensure page fit", () => {
-    const baseFontSize = pxToPt(52)
-    const baselineTop = pxToPt(206)
+  // react-pdf multiplies a unitless lineHeight by fontSize, so a point value
+  // passed as a bare number puts lines hundreds of points apart (hq#13842).
+  it("gives every text line height as a ratio of its font size", async () => {
+    const certificate = factories.mitxonline.programCertificate()
+    // The two-line badge label only appears on program certificates
+    certificate.program.program_type = "Series"
+    setMockResponse.get(
+      mitxonline.urls.certificates.programCertificatesRetrieve({
+        uuid: certificate.uuid,
+      }),
+      certificate,
+    )
 
-    it("keeps short names <= 23 chars at full size", () => {
-      const shortName = "Wolfgang Amadeus Mozart"
-      const styles = getNameStyles(shortName)
-
-      expect(styles.fontSize).toBeCloseTo(baseFontSize)
-      expect(styles.top).toBeCloseTo(baselineTop)
+    await GET({} as NextRequest, {
+      params: Promise.resolve({
+        certificateType: "program",
+        uuid: certificate.uuid,
+      }),
     })
 
-    it("scales medium-length names <= 33 chars proportionally", () => {
-      const mediumName = "Sir Bartholomew Fizzlewhisk III"
-      const styles = getNameStyles(mediumName)
+    render(jest.mocked(pdf).mock.calls[0][0])
+    const lineHeights = screen
+      .getAllByTestId("pdf-Text")
+      .map((el) => el.getAttribute("data-line-height"))
+      .filter((value) => value !== null)
+      .map(Number)
 
-      expect(styles.fontSize).toBeLessThan(baseFontSize)
-      expect(styles.fontSize).toBeGreaterThan(baseFontSize * 0.35)
-
-      expect(styles.top).toBeGreaterThan(baselineTop)
-    })
-
-    it("scales longer names <= 47 chars more aggressively", () => {
-      const longName = "Dr. Maximilian Thunderbolt von Schnitzelhausen"
-      const styles = getNameStyles(longName)
-
-      expect(styles.fontSize).toBeLessThan(baseFontSize)
-      expect(styles.top).toBeGreaterThan(baselineTop)
-
-      const mediumName = "Sir Bartholomew Fizzlewhisk III"
-      const mediumStyles = getNameStyles(mediumName)
-      expect(styles.fontSize).toBeLessThan(mediumStyles.fontSize)
-    })
-
-    it("applies minimum scale factor of 35% for very long names <= 112 chars", () => {
-      const veryLongName =
-        "His Excellency Count Maximilian Cornelius Archibald Pumpernickel-Wigglesworth-Thunderbolt-Whiskerdoodle III"
-      const styles = getNameStyles(veryLongName)
-
-      const minFontSize = baseFontSize * 0.35
-      expect(styles.fontSize).toBeCloseTo(minFontSize)
-
-      const maxOffset = baseFontSize - minFontSize
-      expect(styles.top).toBeCloseTo(baselineTop + maxOffset)
-    })
-
-    it("maintains baseline alignment when scaling names", () => {
-      const names = [
-        "Wolfgang Amadeus Mozart",
-        "Sir Bartholomew Fizzlewhisk III",
-        "Princess Anastasia Beauregard-Winterstone",
-        "Dr. Maximilian Thunderbolt von Schnitzelhausen",
-        "Captain Cornelius Pumpernickel-Whiskerdoodle Jones",
-        "Lady Penelope Wigglesworth-Featherstone de la Fontaine",
-        "Professor Archibald Bartholomew Higginbotham-Waffletop IV",
-      ]
-
-      names.forEach((name) => {
-        const styles = getNameStyles(name)
-
-        // The baseline position should be consistent: baseline = top + fontSize
-        const baseline = styles.top + styles.fontSize
-        expect(baseline).toBeCloseTo(baselineTop + baseFontSize, 1)
-      })
+    expect(lineHeights.length).toBeGreaterThan(0)
+    lineHeights.forEach((lineHeight) => {
+      expect(lineHeight).toBeGreaterThanOrEqual(1)
+      expect(lineHeight).toBeLessThanOrEqual(2)
     })
   })
 })

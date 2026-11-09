@@ -9939,7 +9939,6 @@ paths:
         name: source
         schema:
           enum:
-          - mit_edx
           - mitpe
           - mitxonline
           - oll
@@ -9954,7 +9953,6 @@ paths:
           type: string
           minLength: 1
         description: |-
-          * `mit_edx` - mit_edx
           * `mitpe` - mitpe
           * `mitxonline` - mitxonline
           * `oll` - oll
@@ -10039,6 +10037,14 @@ paths:
         A video group the webhook owns is not compared in a shadow run, and its
         entry carries an ``error`` in place of the counts. A group the webhook
         neither owns nor shadows rejects the whole batch with 409.
+
+        A batch whose load would unpublish more than 10% of the published resources
+        of any pair it prunes, a declared pair with no resources included, is
+        rejected whole with 422, the limit the warehouse syncs apply. A truncated
+        batch and a bad model build look like that from here, and only MIT Learn
+        holds the published set to compare against. ``allow_mass_unpublish`` skips
+        the check. A shadow run is not refused: its counts report what the load
+        would unpublish.
       tags:
       - webhooks
       requestBody:
@@ -13788,6 +13794,9 @@ components:
         unpublishing everything MIT Learn holds for it, so a source that stops
         publishing a type can say so. A batch with neither resources nor ``sync``
         is rejected: it names no pair, so the request would silently no-op.
+
+        ``allow_mass_unpublish`` skips the limit on how much of a pair a batch may
+        unpublish, for a removal the sender knows is real.
       properties:
         resources:
           type: array
@@ -13798,6 +13807,9 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/LearningResourceSyncPairRequest'
+        allow_mass_unpublish:
+          type: boolean
+          default: false
       required:
       - resources
     LearningResourceWebhookResponse:
@@ -16834,7 +16846,6 @@ components:
       - Next start date ascending
     SourceEnum:
       enum:
-      - mit_edx
       - mitpe
       - mitxonline
       - oll
@@ -16848,7 +16859,6 @@ components:
       - ovs
       type: string
       description: |-
-        * `mit_edx` - mit_edx
         * `mitpe` - mitpe
         * `mitxonline` - mitxonline
         * `oll` - oll
@@ -16861,7 +16871,6 @@ components:
         * `canvas` - canvas
         * `ovs` - ovs
       x-enum-descriptions:
-      - mit_edx
       - mitpe
       - mitxonline
       - oll

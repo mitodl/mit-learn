@@ -4929,8 +4929,7 @@ export const SortbyEnum = {
 } as const
 
 /**
- * * `mit_edx` - mit_edx
- * `mitpe` - mitpe
+ * * `mitpe` - mitpe
  * `mitxonline` - mitxonline
  * `oll` - oll
  * `ocw` - ocw
@@ -4946,8 +4945,6 @@ export type SourceEnum = (typeof SourceEnum)[keyof typeof SourceEnum]
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const SourceEnum = {
-  /** mit_edx */
-  mit_edx: "mit_edx",
   /** mitpe */
   mitpe: "mitpe",
   /** mitxonline */
@@ -13773,8 +13770,7 @@ export type WebhooksContentFilesCreateParams = {
    */
   course_readable_id?: string | null
   /**
-   * * `mit_edx` - mit_edx
-   * `mitpe` - mitpe
+   * * `mitpe` - mitpe
    * `mitxonline` - mitxonline
    * `oll` - oll
    * `ocw` - ocw
@@ -13795,7 +13791,6 @@ export type WebhooksContentFilesCreateSource =
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const WebhooksContentFilesCreateSource = {
-  mit_edx: "mit_edx",
   mitpe: "mitpe",
   mitxonline: "mitxonline",
   oll: "oll",

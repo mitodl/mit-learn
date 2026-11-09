@@ -1,6 +1,7 @@
 import React from "react"
 import { screen, fireEvent } from "@testing-library/react"
-import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
+import { capturePostHog } from "@/common/analytics/posthog"
 import MitxOnlineResourceCard, {
   mitxOnlineCardContent,
 } from "./MitxOnlineResourceCard"
@@ -22,16 +23,13 @@ import { DEFAULT_RESOURCE_IMG, LocalDate } from "ol-utilities"
 import { getByImageSrc, queryByImageSrc } from "ol-test-utilities"
 import type { MitxOnlineResourceCardProps } from "./MitxOnlineResourceCard"
 
-jest.mock("posthog-js/react", () => ({
-  ...jest.requireActual("posthog-js/react"),
-  useFeatureFlagEnabled: jest.fn(),
-  usePostHog: jest.fn(),
+jest.mock("@/common/useFeatureFlag")
+
+jest.mock("@/common/analytics/posthog", () => ({
+  capturePostHog: jest.fn(),
+  initPostHog: jest.fn(),
 }))
-const mockCapture = jest.fn()
-jest.mocked(usePostHog).mockReturnValue(
-  // @ts-expect-error Not mocking all of posthog
-  { capture: mockCapture },
-)
+const mockCapture = jest.mocked(capturePostHog)
 
 jest.mock("@/page-components/ResourceCardView/ResourceCardView", () => {
   const actual = jest.requireActual(
@@ -51,15 +49,11 @@ const renderCard = (props: MitxOnlineResourceCardProps) =>
 const freeMode = factories.courses.enrollmentMode({ requires_payment: false })
 const paidMode = factories.courses.enrollmentMode({ requires_payment: true })
 
-/**
- * Off is the unresolved `undefined` PostHog returns before flags load, which
- * must render the legacy card just as an explicit `false` does.
- */
 const setRedesignFlag = (enabled: boolean) => {
   jest
-    .mocked(useFeatureFlagEnabled as (flag: string) => boolean | undefined)
-    .mockImplementation((flag) =>
-      enabled && flag === FeatureFlags.ResourceCardRedesign ? true : undefined,
+    .mocked(useFeatureFlag)
+    .mockImplementation(
+      (flag) => enabled && flag === FeatureFlags.ResourceCardRedesign,
     )
 }
 

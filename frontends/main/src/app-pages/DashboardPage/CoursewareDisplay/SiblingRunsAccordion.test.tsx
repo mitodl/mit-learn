@@ -13,18 +13,6 @@ import { faker } from "@faker-js/faker/locale/en"
 import moment from "moment"
 import { SiblingRunsPanel, SiblingRunsToggle } from "./SiblingRunsAccordion"
 import { setupOrderHistory } from "./test-utils"
-import { useFeatureFlagEnabled } from "posthog-js/react"
-import { FeatureFlags } from "@/common/feature_flags"
-
-jest.mock("posthog-js/react")
-
-const setPerRunMenus = (enabled: boolean) => {
-  jest
-    .mocked(useFeatureFlagEnabled)
-    .mockImplementation((flag) =>
-      flag === FeatureFlags.MultipleRunContextMenus ? enabled : false,
-    )
-}
 
 beforeEach(() => {
   // Each row resolves its own Receipt item from the order history; default to
@@ -36,7 +24,6 @@ beforeEach(() => {
     mitxonline.urls.userMe.get(),
     mitxonline.factories.user.user({ is_staff: false }),
   )
-  setPerRunMenus(true)
 })
 
 const makeEnrollment = (
@@ -610,18 +597,6 @@ describe("per-run context menus", () => {
     await expandAccordion()
     await user.click(await screen.findByRole("button", { name: SIBLING_MENU }))
   }
-
-  test("no row menus when the flag is off", async () => {
-    setPerRunMenus(false)
-    const { render } = setupTwoRuns()
-    render()
-    await expandAccordion()
-    // The rows themselves still render; only the menus are withheld.
-    expect(await screen.findByText("Current run:")).toBeInTheDocument()
-    expect(
-      screen.queryByRole("button", { name: /More options for/ }),
-    ).not.toBeInTheDocument()
-  })
 
   test("every row, including the current run, has its own menu", async () => {
     const enrollment = makeEnrollment()

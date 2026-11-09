@@ -15,36 +15,29 @@ import invariant from "tiny-invariant"
 import type { Channel } from "api/v0"
 import { ChannelTypeEnum } from "api/v0"
 import ChannelPage from "./ChannelPage"
-import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { FeatureFlags } from "@/common/feature_flags"
 import { PostHogEvents } from "@/common/constants"
+import { capturePostHog } from "@/common/analytics/posthog"
 
-jest.mock("posthog-js/react", () => ({
-  ...jest.requireActual("posthog-js/react"),
-  useFeatureFlagEnabled: jest.fn(),
-  usePostHog: jest.fn(),
+jest.mock("@/common/useFeatureFlag")
+
+jest.mock("@/common/analytics/posthog", () => ({
+  capturePostHog: jest.fn(),
+  initPostHog: jest.fn(),
 }))
 jest.mock("@/common/useFeatureFlagsLoaded")
 
-const mockedUseFeatureFlagEnabled = jest.mocked(
-  useFeatureFlagEnabled as (flag: string) => boolean | undefined,
-)
+const mockedUseFeatureFlag = jest.mocked(useFeatureFlag)
 
-const mockCapture = jest.fn()
-jest.mocked(usePostHog).mockReturnValue(
-  // @ts-expect-error Not mocking all of posthog
-  { capture: mockCapture },
-)
+const mockCapture = jest.mocked(capturePostHog)
 
 /**
- * Mock the named flags, leaving every other flag `undefined`—PostHog's value
- * for "not loaded / not set".
+ * Mock the named flags, leaving every other flag off.
  */
 const mockFeatureFlags = (flags: Partial<Record<FeatureFlags, boolean>>) => {
-  mockedUseFeatureFlagEnabled.mockImplementation(
-    (flag) => flags[flag as FeatureFlags],
-  )
+  mockedUseFeatureFlag.mockImplementation((flag) => flags[flag] ?? false)
 }
 
 // jest clears calls between tests but not implementations, so reset flags
@@ -52,8 +45,8 @@ const mockFeatureFlags = (flags: Partial<Record<FeatureFlags, boolean>>) => {
 // one; the cases that need a flag set it for themselves.
 beforeEach(() => {
   mockFeatureFlags({})
-  /* The page holds a spinner until the flags are in rather than render on a
-     bootstrapped value, so without this every case here waits on one. */
+  /* The page holds a spinner until the flags are in rather than render on an
+     env default, so without this every case here waits on one. */
   jest.mocked(useFeatureFlagsLoaded).mockReturnValue(true)
 })
 

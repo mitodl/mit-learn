@@ -32,7 +32,7 @@ import {
   withHubspotFormId,
 } from "./test-utils/stayUpdated"
 
-import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import invariant from "tiny-invariant"
 import { getOutlineCoursewareId } from "./util"
 import { FeatureFlags } from "@/common/feature_flags"
@@ -40,10 +40,10 @@ import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 
 jest.mock("posthog-js/react", () => ({
   ...jest.requireActual("posthog-js/react"),
-  useFeatureFlagEnabled: jest.fn(),
   usePostHog: jest.fn(() => ({ capture: jest.fn() })),
 }))
-const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
+jest.mock("@/common/useFeatureFlag")
+const mockedUseFeatureFlag = jest.mocked(useFeatureFlag)
 
 jest.mock("next-nprogress-bar", () => ({
   useRouter: () => ({ push: jest.fn() }),
@@ -156,7 +156,7 @@ const waitForCoursePageToSettle = async (pageTitle: string) => {
 
 describe("CoursePage", () => {
   beforeEach(() => {
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
   })
 
   test("Page has expected headings", async () => {
@@ -264,7 +264,7 @@ describe("CoursePage", () => {
   })
 
   test("Hides course content section when course outline flag is disabled", async () => {
-    mockedUseFeatureFlagEnabled.mockImplementation(
+    mockedUseFeatureFlag.mockImplementation(
       (flag) => flag !== FeatureFlags.CourseOutlineSection,
     )
     const course = makeCourse()

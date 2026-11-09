@@ -2,8 +2,9 @@
 Shared parts of resource profile claim generation.
 
 An extractor is one stage's prompt, output schema and configuration. Its
-validated output is stored in ClaimExtraction under a key its caller builds
-from the call's inputs, and a call whose key is already stored is skipped.
+validated output is stored in the unit's ClaimExtraction under a key its
+caller builds from the call's inputs, and a call whose key is already stored,
+for this unit or another, is skipped.
 """
 
 import hashlib
@@ -16,6 +17,7 @@ from functools import cached_property
 from typing import Union, get_args, get_origin
 
 from django.conf import settings
+from django.db import transaction
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langchain_litellm import ChatLiteLLM
 from pydantic import BaseModel, ValidationError
@@ -306,7 +308,11 @@ def get_or_create_extraction(  # noqa: PLR0913
     overwrite: bool = False,
 ) -> ClaimExtraction:
     """
-    Return the stored extraction for a key, calling the model if there is none.
+    Return the extraction for a key, calling the model if there is none.
+
+    Units with the same inputs share the key's row, which is pointed at the
+    unit asking for it, so `unit` is the unit that used the row last. The
+    unit's other rows are no longer current and are deleted, leaving it one.
 
     Args:
         extractor (ClaimExtractor): the extractor to call
@@ -327,20 +333,50 @@ def get_or_create_extraction(  # noqa: PLR0913
     if not overwrite:
         extraction = ClaimExtraction.objects.filter(key=key).first()
         if extraction:
-            return extraction
+            return _store_extraction(unit, extraction)
     parsed, raw = call_llm(extractor, combined_prompt())
     output = _stored_output(parsed.model_dump(), sources)
     if finish:
         output = finish(output)
-    extraction, _ = ClaimExtraction.objects.update_or_create(
+    return _store_extraction(
+        unit,
+        ClaimExtraction.objects.filter(key=key).first(),
         key=key,
-        defaults={
-            "level": extractor.level,
-            "extractor_version": extractor.version,
-            "model": extractor.config.llm_model,
-            "output": _sanitize(output),
-            "raw_response": sanitize_llm_text(raw),
-            "unit": unit,
-        },
+        level=extractor.level,
+        extractor_version=extractor.version,
+        model=extractor.config.llm_model,
+        output=_sanitize(output),
+        raw_response=sanitize_llm_text(raw),
+        # a replaced extraction is unpublished until the next claim generation
+        # sweep of its course publishes it again
+        published=False,
     )
+
+
+def _store_extraction(
+    unit: Unit, extraction: ClaimExtraction | None, **fields
+) -> ClaimExtraction:
+    """
+    Make an extraction the unit's, and delete the unit's other extractions.
+
+    Args:
+        unit (Unit): the unit
+        extraction (ClaimExtraction | None): the row for the key, if there is
+            one; otherwise the unit's latest row is reused for the key, or a
+            row is created
+        fields: what else to set on the row
+    """
+    with transaction.atomic():
+        rows = ClaimExtraction.objects.select_for_update().filter(unit=unit)
+        if extraction is None:
+            extraction = rows.order_by("-updated_on", "-id").first()
+        if extraction is None:
+            extraction = ClaimExtraction.objects.create(unit=unit, **fields)
+        else:
+            rows.exclude(id=extraction.id).delete()
+            if fields or extraction.unit_id != unit.id:
+                extraction.unit = unit
+                for name, value in fields.items():
+                    setattr(extraction, name, value)
+                extraction.save()
     return extraction

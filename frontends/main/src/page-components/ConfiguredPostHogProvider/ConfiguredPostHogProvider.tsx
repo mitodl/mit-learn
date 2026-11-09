@@ -1,150 +1,135 @@
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import posthog from "posthog-js"
-import type { BootstrapConfig } from "posthog-js"
-import { PostHogContext, PostHogProvider, usePostHog } from "posthog-js/react"
+import { PostHogProvider } from "posthog-js/react"
 import { useUserMe } from "api/hooks/user"
-import { INTERNAL_BOOTSTRAPPING_FLAG } from "@/common/feature_flags"
-import { env, fullEnv } from "@/env"
-
-type FlagValue = boolean | string
-
-/**
- * posthog-js/react reads a bootstrapped flag as enabled when it is truthy, so
- * "false" has to become `false`: left as a string it would read as on.
- */
-const parseFlagValue = (value: string): FlagValue => {
-  const lowered = value.toLowerCase()
-  if (lowered === "true") return true
-  if (lowered === "false") return false
-  return value
-}
+import type { CurrentUser } from "api/hooks/user"
+import { FeatureFlagsLoadedContext } from "@/common/useFeatureFlagsLoaded"
+import { env } from "@/env"
+import { getFirstFlagLoad, loadFlags } from "@/bootstrap/posthog"
 
 /**
- * Compute PostHog bootstrap feature flags from the runtime env (fullEnv()).
- * Previously computed at build time from process.env in next.config.js, which
- * bakes empty values when the image is built in CI without per-env values.
+ * After this long, pages waiting on useFeatureFlagsLoaded stop waiting, even if
+ * PostHog hasn't answered.
  */
-const getBootstrapFeatureFlags = (): Record<string, FlagValue> | null => {
-  if (typeof window === "undefined") return null
-  const prefix = env("NEXT_PUBLIC_POSTHOG_FEATURE_PREFIX") ?? "FEATURE_"
-  const envSource = fullEnv()
-  const fullPrefix = `NEXT_PUBLIC_${prefix}`
-  const flags: Record<string, FlagValue> = {}
+const FLAGS_LOADED_CAP_MS = 10_000
 
-  for (const [key, value] of Object.entries(envSource)) {
-    if (value !== undefined && key.startsWith(fullPrefix)) {
-      const flagName = key.replace(fullPrefix, "").replaceAll("_", "-")
-      flags[flagName] = parseFlagValue(value)
-    }
+/**
+ * Posthog docs recommend calling `posthog.identify` on signin and
+ * `posthog.reset` on signout. But signin and signout generally occur on the
+ * SSO server, which users could get to via other means.
+ *
+ * So instead, when page first loads:
+ * 1. Identify user (noop if user already identified)
+ * 2. If user is not authenticated AND posthog thinks they are not anonymous,
+ *    then reset their posthog state.
+ *
+ * Returns the flag load for the new identity when this changed it, else null.
+ */
+const syncIdentity = (user: CurrentUser): Promise<void> | null => {
+  if (user.is_authenticated) {
+    /**
+     * Identify by the Keycloak global id rather than our Django user id.
+     * This posthog project is shared with other MIT applications, and
+     * mitxpro identifies people by its own integer user ids, so integer ids
+     * collide across applications. Users with no global id are left
+     * unidentified rather than identified by a colliding id.
+     */
+    if (!user.global_id) return null
+    const previousId = posthog.get_distinct_id()
+    posthog.identify(user.global_id)
+    /**
+     * identify reloads flags only when it changes the distinct id. This load
+     * joins that reload: while a request is in flight, posthog-js serves
+     * later loads from the follow-up request it queues for the new id.
+     */
+    return posthog.get_distinct_id() === previousId ? null : loadFlags()
   }
-
-  return Object.keys(flags).length > 0 ? flags : null
+  if (posthog.get_property("$user_state") === "anonymous") return null
+  posthog.reset()
+  return loadFlags()
 }
 
-const PosthogIdentifier = () => {
-  const { data: user } = useUserMe()
-  const posthog = usePostHog()
+const KeyedPostHogProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const [flagsLoaded, setFlagsLoaded] = useState(false)
+  /** The flag load for the identity this page currently has. */
+  const currentLoad = useRef<Promise<void>>(undefined)
+  const cap = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const { data: user, isError } = useUserMe()
 
   /**
-   * Posthog docs recommend calling `posthog.identify` on signin and
-   * `posthog.reset` on signout. But signin and signout generally occur on the
-   * SSO server, which users could get to via other means.
+   * Adopts the first flag load bootstrapPostHog started. Declared before the
+   * identity effect, so `currentLoad` is set by the time that runs: React runs
+   * a component's effects in order.
    *
-   * So instead, when page first loads:
-   * 1. Identify user (noop if user already identified)
-   * 2. If user is not authenticated AND posthog thinks they are not anonymous,
-   *    then reset their posthog state.
+   * With no first load, posthog isn't running on this page (it's in an iframe,
+   * or init threw), so there's nothing to wait for. That's decided here rather
+   * than by rendering the keyless provider, because the server can't tell:
+   * it renders with flags not yet loaded, and so must the hydration render.
+   *
+   * Strict Mode replays this effect after the identity effect has run, on the
+   * same refs, so it keeps a load the identity effect already set.
    */
   useEffect(() => {
-    if (!user) return
-    const anonymous = posthog.get_property("$user_state") === "anonymous"
-    if (user.is_authenticated) {
-      /**
-       * Identify by the Keycloak global id rather than our Django user id.
-       * This posthog project is shared with other MIT applications, and
-       * mitxpro identifies people by its own integer user ids, so integer ids
-       * collide across applications. Users with no global id are left
-       * unidentified rather than identified by a colliding id.
-       */
-      if (user.global_id) {
-        posthog.identify(user.global_id)
-      }
-    } else if (!anonymous) {
-      posthog.reset()
+    const firstLoad = getFirstFlagLoad()
+    if (!firstLoad) {
+      setFlagsLoaded(true)
+      return
     }
-  }, [user, posthog])
-  return null
-}
-
-/**
- * Without an api key nothing ever loads flags from a PostHog server, so the
- * env flags are the final values rather than placeholders. They go into the
- * context's bootstrap slot, which posthog-js/react's hooks read while the
- * client has loaded no flags. Set after mount, as the keyed path's init is, so
- * the server render and hydration agree.
- */
-const EnvFlagsProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
-  const [bootstrap, setBootstrap] = useState<BootstrapConfig>()
-  useEffect(() => {
-    setBootstrap({ featureFlags: getBootstrapFeatureFlags() ?? {} })
-  }, [])
-  return (
-    <PostHogContext.Provider value={{ client: posthog, bootstrap }}>
-      {children}
-    </PostHogContext.Provider>
-  )
-}
-
-const ConfiguredPostHogProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
-  useEffect(() => {
-    const POSTHOG_API_KEY = env("NEXT_PUBLIC_POSTHOG_API_KEY")
-    const POSTHOG_API_HOST = env("NEXT_PUBLIC_POSTHOG_API_HOST")
-    const POSTHOG_UI_HOST = env("NEXT_PUBLIC_POSTHOG_UI_HOST")
-    if (POSTHOG_API_KEY) {
-      const featureFlags = getBootstrapFeatureFlags()
-      posthog.init(POSTHOG_API_KEY, {
-        api_host: POSTHOG_API_HOST,
-        ui_host: POSTHOG_UI_HOST,
-        /**
-         * Pins the posthog-js default set to a known date. Without it,
-         * capture_pageview resolves to `true` (hard page loads only) rather
-         * than "history_change", so App Router navigations produce no
-         * $pageview. At posthog-js 1.297.2 this date changes nothing else:
-         * the other two defaults it gates (rageclick, session_recording) both
-         * flip on 2025-11-30.
-         */
-        defaults: "2025-05-24",
-        // Scope the posthog cookie to this site's exact domain. Posthog
-        // defaults this to true, which sets the cookie on the root domain
-        // (e.g. mit.edu), sharing it with every other site there.
-        cross_subdomain_cookie: false,
-        bootstrap: {
-          featureFlags: featureFlags
-            ? {
-                ...featureFlags,
-                [INTERNAL_BOOTSTRAPPING_FLAG]: true,
-              }
-            : undefined,
-        },
-      })
-    }
+    currentLoad.current ??= firstLoad
+    cap.current = setTimeout(() => {
+      console.warn(
+        `PostHog feature flags did not load within ${FLAGS_LOADED_CAP_MS / 1000}s; pages waiting on flags now decide on stored flags or env defaults.`,
+      )
+      setFlagsLoaded(true)
+    }, FLAGS_LOADED_CAP_MS)
+    return () => clearTimeout(cap.current)
   }, [])
 
-  if (!env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
-    return <EnvFlagsProvider>{children}</EnvFlagsProvider>
-  }
+  /**
+   * Flags are final once they're evaluated for the identity this page ends
+   * up with: after /me, and after any reload identify or reset starts. The
+   * page's first /flags response may be for the anonymous id. A /me change
+   * that leaves the identity alone (a refetch with new profile data) keeps
+   * waiting on the current identity's load. A load that a later identity
+   * change has replaced is ignored, so an anonymous answer that lands after
+   * /me has identified the visitor doesn't mark flags loaded. Without a
+   * current load, posthog isn't running, so there's no identity to sync.
+   */
+  useEffect(() => {
+    if (!currentLoad.current || (!user && !isError)) return
+    const load = (user ? syncIdentity(user) : null) ?? currentLoad.current
+    currentLoad.current = load
+    load.then(() => {
+      if (load !== currentLoad.current) return
+      clearTimeout(cap.current)
+      setFlagsLoaded(true)
+    })
+  }, [user, isError])
 
   return (
     <PostHogProvider client={posthog}>
-      <PosthogIdentifier />
-      {children}
+      <FeatureFlagsLoadedContext.Provider value={flagsLoaded}>
+        {children}
+      </FeatureFlagsLoadedContext.Provider>
     </PostHogProvider>
   )
 }
 
+/**
+ * Without an api key nothing loads flags from a PostHog server, so the env
+ * defaults that useFeatureFlag falls back to are final, and
+ * useFeatureFlagsLoaded keeps its default, `true`.
+ */
+const ConfiguredPostHogProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const apiKey = env("NEXT_PUBLIC_POSTHOG_API_KEY")
+  if (!apiKey) {
+    return <PostHogProvider client={posthog}>{children}</PostHogProvider>
+  }
+  return <KeyedPostHogProvider>{children}</KeyedPostHogProvider>
+}
+
 export default ConfiguredPostHogProvider
-export { PosthogIdentifier }

@@ -3,7 +3,7 @@ import { renderWithProviders, screen, user, within } from "@/test-utils"
 import { act, waitFor } from "@testing-library/react"
 import { setMockResponse } from "api/test-utils"
 import { factories, urls } from "api/mitxonline-test-utils"
-import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { allowConsoleErrors } from "ol-test-utilities"
 import { ForbiddenError } from "@/common/errors"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
@@ -17,15 +17,10 @@ jest.mock("next/image", () => ({
   },
 }))
 
-jest.mock("posthog-js/react", () => ({
-  ...jest.requireActual("posthog-js/react"),
-  useFeatureFlagEnabled: jest.fn(),
-}))
+jest.mock("@/common/useFeatureFlag")
 jest.mock("@/common/useFeatureFlagsLoaded")
 const mockedUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
-const mockedUseFeatureFlagEnabled = jest.mocked(
-  useFeatureFlagEnabled as (flag: string) => boolean | undefined,
-)
+const mockedUseFeatureFlag = jest.mocked(useFeatureFlag)
 
 const managerOrgsUrl = urls.organization.managerOrganizationsList()
 const managerContractDetailUrl = urls.contracts.managerContractDetail
@@ -62,7 +57,7 @@ const makeOrgWithContract = () => {
 describe("ContractAdminPage", () => {
   beforeEach(() => {
     mockedUseFeatureFlagsLoaded.mockReturnValue(false)
-    mockedUseFeatureFlagEnabled.mockReturnValue(undefined)
+    mockedUseFeatureFlag.mockReturnValue(false)
     setMockResponse.get(
       urls.userMe.get(),
       factories.user.user({ email: "manager@test.com" }),
@@ -71,19 +66,7 @@ describe("ContractAdminPage", () => {
 
   test("throws ForbiddenError when feature flag is disabled", () => {
     mockedUseFeatureFlagsLoaded.mockReturnValue(true)
-    mockedUseFeatureFlagEnabled.mockReturnValue(false)
-    allowConsoleErrors()
-
-    expect(() =>
-      renderWithProviders(
-        <ContractAdminPage orgSlug="any-org" contractSlug="any-contract" />,
-      ),
-    ).toThrow(ForbiddenError)
-  })
-
-  test("throws ForbiddenError when flags are loaded but flag is absent", () => {
-    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
-    mockedUseFeatureFlagEnabled.mockReturnValue(undefined)
+    mockedUseFeatureFlag.mockReturnValue(false)
     allowConsoleErrors()
 
     expect(() =>
@@ -95,7 +78,7 @@ describe("ContractAdminPage", () => {
 
   test("renders a skeleton while PostHog flags are still loading", () => {
     mockedUseFeatureFlagsLoaded.mockReturnValue(false)
-    mockedUseFeatureFlagEnabled.mockReturnValue(undefined)
+    mockedUseFeatureFlag.mockReturnValue(false)
 
     renderWithProviders(
       <ContractAdminPage orgSlug="any-org" contractSlug="any-contract" />,
@@ -109,7 +92,7 @@ describe("ContractAdminPage", () => {
 
   test("shows 'Something went wrong' when the manager orgs API call fails", async () => {
     mockedUseFeatureFlagsLoaded.mockReturnValue(true)
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
     allowConsoleErrors()
 
     setMockResponse.get(managerOrgsUrl, "Internal Server Error", { code: 500 })
@@ -123,7 +106,7 @@ describe("ContractAdminPage", () => {
 
   test("shows 'Access denied' when user is not a manager for the requested org", async () => {
     mockedUseFeatureFlagsLoaded.mockReturnValue(true)
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
 
     const otherOrg = factories.organizations.organization({})
     setMockResponse.get(managerOrgsUrl, {
@@ -142,7 +125,7 @@ describe("ContractAdminPage", () => {
 
   test("shows 'Contract not found' when org is found but contract slug does not match", async () => {
     mockedUseFeatureFlagsLoaded.mockReturnValue(true)
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
 
     const { org } = makeOrgWithContract()
     setMockResponse.get(managerOrgsUrl, {
@@ -164,7 +147,7 @@ describe("ContractAdminPage", () => {
 
   test("renders org name and contract name when flag is on and user is a manager", async () => {
     mockedUseFeatureFlagsLoaded.mockReturnValue(true)
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
 
     const { org, contract } = makeOrgWithContract()
     setMockResponse.get(managerOrgsUrl, {
@@ -197,7 +180,7 @@ describe("ContractAdminPage", () => {
 
   test("renders seat count from contract detail", async () => {
     mockedUseFeatureFlagsLoaded.mockReturnValue(true)
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
 
     const { org, contract } = makeOrgWithContract()
     setMockResponse.get(managerOrgsUrl, {
@@ -227,7 +210,7 @@ describe("ContractAdminPage", () => {
 
   test("renders per-status stats from contract detail", async () => {
     mockedUseFeatureFlagsLoaded.mockReturnValue(true)
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
 
     const { org, contract } = makeOrgWithContract()
     setMockResponse.get(managerOrgsUrl, {
@@ -275,7 +258,7 @@ describe("ContractAdminPage", () => {
 
   test("Redeemed tab filters to redeemed codes only", async () => {
     mockedUseFeatureFlagsLoaded.mockReturnValue(true)
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
 
     const { org, contract } = makeOrgWithContract()
     setMockResponse.get(managerOrgsUrl, {
@@ -377,7 +360,7 @@ describe("ContractAdminPage", () => {
 
     beforeEach(() => {
       mockedUseFeatureFlagsLoaded.mockReturnValue(true)
-      mockedUseFeatureFlagEnabled.mockReturnValue(true)
+      mockedUseFeatureFlag.mockReturnValue(true)
       mockAnchorClick.mockClear()
       mockCreateObjectURL.mockClear()
       mockRevokeObjectURL.mockClear()
@@ -721,7 +704,7 @@ describe("ContractAdminPage", () => {
   describe("header stat counts refresh after mutations", () => {
     test("bulk-assigning seats updates Unassigned and Pending counts", async () => {
       mockedUseFeatureFlagsLoaded.mockReturnValue(true)
-      mockedUseFeatureFlagEnabled.mockReturnValue(true)
+      mockedUseFeatureFlag.mockReturnValue(true)
 
       const { org, contract } = makeOrgWithContract()
       setMockResponse.get(managerOrgsUrl, {
@@ -791,7 +774,7 @@ describe("ContractAdminPage", () => {
 
     test("releasing a seat updates Unassigned and Pending counts", async () => {
       mockedUseFeatureFlagsLoaded.mockReturnValue(true)
-      mockedUseFeatureFlagEnabled.mockReturnValue(true)
+      mockedUseFeatureFlag.mockReturnValue(true)
 
       const { org, contract } = makeOrgWithContract()
       setMockResponse.get(managerOrgsUrl, {
@@ -864,7 +847,7 @@ describe("ContractAdminPage", () => {
 
   test("Pending tab filters to assigned codes only", async () => {
     mockedUseFeatureFlagsLoaded.mockReturnValue(true)
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
 
     const { org, contract } = makeOrgWithContract()
     setMockResponse.get(managerOrgsUrl, {
@@ -926,7 +909,7 @@ describe("ContractAdminPage", () => {
 
   test("Failed tab filters to codes whose invite email failed", async () => {
     mockedUseFeatureFlagsLoaded.mockReturnValue(true)
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
 
     const { org, contract } = makeOrgWithContract()
     setMockResponse.get(managerOrgsUrl, {
@@ -990,7 +973,7 @@ describe("ContractAdminPage", () => {
 
   test("empty Failed tab explains that nothing failed", async () => {
     mockedUseFeatureFlagsLoaded.mockReturnValue(true)
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
 
     const { org, contract } = makeOrgWithContract()
     setMockResponse.get(managerOrgsUrl, {
@@ -1060,7 +1043,7 @@ describe("ContractAdminPage", () => {
 
   test("empty state blames the search, not the filter, while a query is active", async () => {
     mockedUseFeatureFlagsLoaded.mockReturnValue(true)
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
 
     // Drive the clock: the 300ms search debounce plus the request it triggers
     // has to fit inside findBy's timeout, which is a race a loaded machine
@@ -1144,7 +1127,7 @@ describe("ContractAdminPage", () => {
 
   test("marks the table busy and dims stale rows while a filter change is in flight", async () => {
     mockedUseFeatureFlagsLoaded.mockReturnValue(true)
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
 
     const { org, contract } = makeOrgWithContract()
     setMockResponse.get(managerOrgsUrl, {
@@ -1236,7 +1219,7 @@ describe("ContractAdminPage", () => {
   // "done" while it's still silently revalidating.
   test("revisiting a tab invalidated by a row mutation stays busy/dimmed until the refetch resolves", async () => {
     mockedUseFeatureFlagsLoaded.mockReturnValue(true)
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
 
     const { org, contract } = makeOrgWithContract()
     setMockResponse.get(managerOrgsUrl, {
@@ -1396,7 +1379,7 @@ describe("ContractAdminPage", () => {
 
     beforeEach(() => {
       mockedUseFeatureFlagsLoaded.mockReturnValue(true)
-      mockedUseFeatureFlagEnabled.mockReturnValue(true)
+      mockedUseFeatureFlag.mockReturnValue(true)
     })
 
     test("shows 'Pending' for an assigned code with no email_status yet", async () => {
@@ -1554,7 +1537,7 @@ describe("ContractAdminPage", () => {
   describe("uncapped contract (no seat cap)", () => {
     beforeEach(() => {
       mockedUseFeatureFlagsLoaded.mockReturnValue(true)
-      mockedUseFeatureFlagEnabled.mockReturnValue(true)
+      mockedUseFeatureFlag.mockReturnValue(true)
     })
 
     const setupUncapped = (

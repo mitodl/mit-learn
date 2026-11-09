@@ -386,6 +386,47 @@ describe("dashboardViewModel", () => {
       ).toEqual(currentEnrollment)
     })
 
+    test("prefers an upcoming run over an ended one", () => {
+      const endedRun = factories.courses.courseRun({
+        id: 101,
+        start_date: daysFromNow(-400),
+        end_date: daysFromNow(-370),
+      })
+      const upcomingRun = factories.courses.courseRun({
+        id: 202,
+        start_date: daysFromNow(150),
+        end_date: daysFromNow(240),
+      })
+      const course = factories.courses.course({
+        courseruns: [endedRun, upcomingRun],
+      })
+      const endedEnrollment = factories.enrollment.courseEnrollment({
+        run: {
+          id: endedRun.id,
+          start_date: endedRun.start_date,
+          end_date: endedRun.end_date,
+        },
+        certificate: null,
+        grades: [],
+      })
+      const upcomingEnrollment = factories.enrollment.courseEnrollment({
+        run: {
+          id: upcomingRun.id,
+          start_date: upcomingRun.start_date,
+          end_date: upcomingRun.end_date,
+        },
+        certificate: null,
+        grades: [],
+      })
+
+      expect(
+        selectBestEnrollment(course, [endedEnrollment, upcomingEnrollment]),
+      ).toEqual(upcomingEnrollment)
+      expect(
+        selectBestEnrollment(course, [upcomingEnrollment, endedEnrollment]),
+      ).toEqual(upcomingEnrollment)
+    })
+
     test("when every run is upcoming, prefers the soonest one", () => {
       const soonerRun = factories.courses.courseRun({
         id: 101,

@@ -756,6 +756,22 @@ def reconcile_release_dates(
     return hidden
 
 
+def hide_unreleased_files(
+    run: LearningResourceRun, key_dates: dict[str, datetime | None]
+) -> None:
+    """
+    Set release_date on the run's rows from key_dates, before a load. The reindex
+    after loading never runs if the load fails, so drop newly hidden rows from
+    the indexes now.
+    """
+    if reconcile_release_dates(run, key_dates):
+        from learning_resources_search import tasks as search_tasks
+        from vector_search import tasks as vector_tasks
+
+        search_tasks.deindex_run_content_files.delay(run.id, unpublished_only=True)
+        vector_tasks.remove_unpublished_run_content_files.delay(run.id)
+
+
 def process_olx_path(  # noqa: PLR0913
     olx_path: str,
     run: LearningResourceRun,
@@ -789,14 +805,8 @@ def process_olx_path(  # noqa: PLR0913
         raise ValueError(msg)
     video_srt_metadata = archive.video_metadata(run)
     key_dates = archive.key_dates(run)
-    if not is_tutor_problem_file_import and reconcile_release_dates(run, key_dates):
-        from learning_resources_search import tasks as search_tasks
-        from vector_search import tasks as vector_tasks
-
-        # the reindex after loading never runs if the load fails, so drop
-        # newly hidden rows from the indexes now
-        search_tasks.deindex_run_content_files.delay(run.id, unpublished_only=True)
-        vector_tasks.remove_unpublished_run_content_files.delay(run.id)
+    if not is_tutor_problem_file_import:
+        hide_unreleased_files(run, key_dates)
 
     for document, metadata in documents_from_olx(archive):
         source_path = metadata.get("source_path")

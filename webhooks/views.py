@@ -35,6 +35,7 @@ from learning_resources.etl.ownership import (
     writing_as,
 )
 from learning_resources.etl.shadow import run_shadow
+from learning_resources.etl.warehouse_guards import mass_unpublish_refusal
 from learning_resources.models import LearningResource
 from learning_resources.tasks import ingest_canvas_course, ingest_edx_run_archive
 from learning_resources.utils import (
@@ -232,6 +233,14 @@ class LearningResourceWebhookView(BaseWebhookView):
     A video group the webhook owns is not compared in a shadow run, and its
     entry carries an ``error`` in place of the counts. A group the webhook
     neither owns nor shadows rejects the whole batch with 409.
+
+    A batch whose load would unpublish more than 10% of the published resources
+    of any pair it prunes, a declared pair with no resources included, is
+    rejected whole with 422, the limit the warehouse syncs apply. A truncated
+    batch and a bad model build look like that from here, and only MIT Learn
+    holds the published set to compare against. ``allow_mass_unpublish`` skips
+    the check. A shadow run is not refused: its counts report what the load
+    would unpublish.
     """
 
     permission_classes = []
@@ -309,6 +318,19 @@ class LearningResourceWebhookView(BaseWebhookView):
                         ],
                     }
                 )
+            # After the shadow branch: a shadow writes nothing, and its report
+            # is where to see what the load would unpublish.
+            refusal = (
+                None
+                if serializer.validated_data["allow_mass_unpublish"]
+                else first_mass_unpublish_refusal(grouped)
+            )
+            if refusal:
+                log.warning("learning_resources webhook rejected: %s", refusal)
+                return Response(
+                    {"status": "error", "message": refusal},
+                    status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                )
             summary = load_learning_resource_groups(grouped)
         log.info("learning_resources webhook processed: %s", summary)
         clear_views_cache()
@@ -323,6 +345,8 @@ _SUPPORTED_TYPES = {
     LearningResourceType.document.name,
     LearningResourceType.video.name,
 }
+# load_videos upserts what it is given and leaves the rest of a source alone.
+_PRUNED_TYPES = _SUPPORTED_TYPES - {LearningResourceType.video.name}
 
 
 def _load_resource_group(etl_source, resource_type, resources):
@@ -386,6 +410,59 @@ def group_modes(grouped):
         for etl_source, resource_type in grouped
         if resource_type in _SUPPORTED_TYPES
     }
+
+
+def kept_readable_ids(resource_type, resources):
+    """
+    Return the readable_ids a group's load will leave published. The loaders
+    upsert row by row, so a repeated readable_id ends as its last row leaves it.
+    upsert_course_or_program unpublishes a course or program with no runs, and
+    a row with no ``published`` key keeps the value before it.
+    """
+    kept = {}
+    for resource in resources:
+        readable_id = resource["readable_id"]
+        has_runs = resource_type == LearningResourceType.document.name or resource.get(
+            "runs"
+        )
+        kept[readable_id] = has_runs and resource.get(
+            "published", kept.get(readable_id, True)
+        )
+    return {readable_id for readable_id, is_kept in kept.items() if is_kept}
+
+
+def omitted_test_mode_course_ids(etl_source, resources):
+    """
+    Return the source's published test_mode courses a batch leaves out, which
+    load_courses does not prune. load_programs and load_documents do prune theirs.
+    """
+    return set(
+        LearningResource.objects.filter(
+            etl_source=etl_source,
+            resource_type=LearningResourceType.course.name,
+            published=True,
+            test_mode=True,
+        )
+        .exclude(readable_id__in=[resource["readable_id"] for resource in resources])
+        .values_list("readable_id", flat=True)
+    )
+
+
+def first_mass_unpublish_refusal(grouped):
+    """
+    Return why the first group over the unpublish limit is refused, or None if
+    none is, checking every pruned group before any of them loads.
+    """
+    for (etl_source, resource_type), resources in grouped.items():
+        if resource_type not in _PRUNED_TYPES:
+            continue
+        kept_ids = kept_readable_ids(resource_type, resources)
+        if resource_type == LearningResourceType.course.name:
+            kept_ids |= omitted_test_mode_course_ids(etl_source, resources)
+        refusal = mass_unpublish_refusal(etl_source, resource_type, kept_ids)
+        if refusal:
+            return refusal
+    return None
 
 
 def load_learning_resource_groups(grouped):

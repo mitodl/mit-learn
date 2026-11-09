@@ -29,7 +29,10 @@ import {
   getCourseDateText,
   hasCourseStaffRole,
 } from "./courseDateUtils"
-import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
+import {
+  isPaidProgramEnrollmentMode,
+  isVerifiedEnrollmentMode,
+} from "@/common/mitxonline"
 import { RiArrowUpCircleLine, RiAwardLine, RiMore2Line } from "@remixicon/react"
 import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
 import { useComplianceGate } from "@/common/mitxonline/useComplianceGate"
@@ -334,7 +337,7 @@ export const EnrolledCourseCard = ({
     !(run?.upgrade_deadline && isInPast(run.upgrade_deadline))
   const isVerifiedProgramEnrollment =
     Boolean(ancestorContext?.useVerifiedEnrollment) ||
-    isVerifiedEnrollmentMode(
+    isPaidProgramEnrollmentMode(
       ancestorContext?.programEnrollment?.enrollment_mode,
     )
   const enrollmentStatus = getDashboardEnrollmentStatus({
@@ -522,7 +525,12 @@ export const EnrolledCourseCard = ({
     })
   }
 
-  menuItems.push(...getRunMenuItems({ enrollment, title, receiptResolution }))
+  const hasMultipleRuns = (siblingEnrollments?.length ?? 0) > 0
+  // With several runs, each accordion row carries its own run's actions, so
+  // the card keeps only course-level items rather than an unlabeled duplicate.
+  if (!hasMultipleRuns) {
+    menuItems.push(...getRunMenuItems({ enrollment, title, receiptResolution }))
+  }
 
   const menuButton = (
     <MenuButton
@@ -556,7 +564,6 @@ export const EnrolledCourseCard = ({
       </Stack>
     )
 
-  const hasMultipleRuns = (siblingEnrollments?.length ?? 0) > 0
   const showEnrollmentStatusIcon =
     !isContractPageResource && isModule && isCompact
   const runCount = (siblingEnrollments?.length ?? 0) + 1

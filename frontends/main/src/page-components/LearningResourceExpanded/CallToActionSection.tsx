@@ -2,7 +2,6 @@ import { env } from "@/env"
 import React, { useState } from "react"
 import styled from "@emotion/styled"
 import { default as NextImage } from "next/image"
-import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
 import {
   Skeleton,
   theme,
@@ -37,7 +36,7 @@ import {
   RiTwitterXLine,
 } from "@remixicon/react"
 import type { User } from "api/hooks/user"
-import { PostHogEvents } from "@/common/constants"
+import { analytics } from "@/common/analytics"
 import { kebabCase } from "lodash"
 import {
   FACEBOOK_SHARE_BASE_URL,
@@ -48,6 +47,7 @@ import {
 import { parentPodcastIds, videoPlaylistIds } from "@/common/slugs"
 import { FeatureFlags } from "@/common/feature_flags"
 import { externalLinkProps } from "@/common/utils"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 
 const NEXT_PUBLIC_ORIGIN = env("NEXT_PUBLIC_ORIGIN")
 
@@ -383,10 +383,9 @@ const CallToActionSection = ({
   onAddToLearningPathClick?: LearningResourceCardProps["onAddToLearningPathClick"]
   onAddToUserListClick?: LearningResourceCardProps["onAddToUserListClick"]
 }) => {
-  const posthog = usePostHog()
   const [shareExpanded, setShareExpanded] = useState(false)
   const [copyText, setCopyText] = useState("Copy Link")
-  const ocwProductPages = useFeatureFlagEnabled(FeatureFlags.OcwProductPages)
+  const ocwProductPages = useFeatureFlag(FeatureFlags.OcwProductPages)
 
   if (hide) {
     return null
@@ -430,12 +429,7 @@ const CallToActionSection = ({
           size="medium"
           href={url}
           onClick={() => {
-            if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
-              posthog.capture(PostHogEvents.CallToActionClicked, {
-                resource,
-                label: cta,
-              })
-            }
+            analytics.ctaClicked({ resource, label: cta })
           }}
           data-ph-action="click-cta"
           data-ph-offered-by={offeredBy?.code}

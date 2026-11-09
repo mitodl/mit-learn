@@ -14,13 +14,13 @@ import {
 } from "api"
 import { factories } from "api/test-utils"
 import { faker } from "@faker-js/faker/locale/en"
-import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { FeatureFlags } from "@/common/feature_flags"
 import { ocwLearnPageView } from "@/common/urls"
 
-jest.mock("posthog-js/react")
+jest.mock("@/common/useFeatureFlag")
 
-const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
+const mockedUseFeatureFlag = jest.mocked(useFeatureFlag)
 
 // This is a pipe followed by a zero-width space
 const SEPARATOR = "|​"
@@ -44,7 +44,7 @@ const formatTestDate = (isoDate: string): string => {
 }
 
 beforeEach(() => {
-  mockedUseFeatureFlagEnabled.mockReturnValue(false)
+  mockedUseFeatureFlag.mockReturnValue(false)
 })
 
 describe("Learning resource info section pricing", () => {
@@ -477,7 +477,7 @@ describe("Learning resource info section parent course", () => {
       expectedHref: (url: string) => ocwLearnPageView(url),
     },
   ])("$caseName", ({ ocwProductPagesEnabled, expectedHref }) => {
-    mockedUseFeatureFlagEnabled.mockImplementation(
+    mockedUseFeatureFlag.mockImplementation(
       (flag) => ocwProductPagesEnabled && flag === FeatureFlags.OcwProductPages,
     )
 

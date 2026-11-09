@@ -11,7 +11,7 @@ import {
 } from "@/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { makeRequest } from "api/test-utils"
-import { setupCoursePricing } from "./test-utils"
+import { PAID_PROGRAM_ENROLLMENT_MODES, setupCoursePricing } from "./test-utils"
 import { faker } from "@faker-js/faker/locale/en"
 import moment from "moment"
 import { cartesianProduct } from "ol-test-utilities"
@@ -909,9 +909,16 @@ describe.each([
   // ---------------------------------------------------------------------------
 
   describe("Verified Program Enrollment", () => {
-    test.each(ENROLLMENT_TRIGGERS)(
-      "Clicking $trigger on course in verified program does one-click enrollment",
-      async ({ trigger }) => {
+    test.each(
+      ENROLLMENT_TRIGGERS.flatMap(({ trigger }) =>
+        PAID_PROGRAM_ENROLLMENT_MODES.map((enrollmentMode) => ({
+          trigger,
+          enrollmentMode,
+        })),
+      ),
+    )(
+      "Clicking $trigger on course in $enrollmentMode program does one-click enrollment",
+      async ({ trigger, enrollmentMode }) => {
         const userData = mitxUser()
         setMockResponse.get(mitxonline.urls.userMe.get(), userData)
 
@@ -928,7 +935,7 @@ describe.each([
 
         const programEnrollment =
           mitxonline.factories.enrollment.programEnrollmentV3({
-            enrollment_mode: "verified",
+            enrollment_mode: enrollmentMode,
           })
 
         const programEnrollmentEndpoint =

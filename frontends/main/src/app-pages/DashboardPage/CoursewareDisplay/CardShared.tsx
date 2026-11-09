@@ -142,6 +142,8 @@ const MenuButton = styled(ActionButton)<{
       borderRadius: "4px",
       border: `1px solid ${theme.custom.colors.lightGray2}`,
     },
+    // The button's display: inline-flex beats the browser's [hidden] rule.
+    "&[hidden]": { visibility: "hidden" },
   },
   status !== EnrollmentStatus.Completed &&
     status !== EnrollmentStatus.Enrolled && {
