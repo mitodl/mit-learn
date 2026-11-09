@@ -3,6 +3,7 @@
 import pytest
 from django.core.management import CommandError, call_command
 
+from learning_resources.constants import LearningResourceType
 from learning_resources.etl.constants import ETLSource
 from learning_resources.factories import (
     ContentFileFactory,
@@ -32,6 +33,7 @@ def mock_tasks(mocker):
 
 def _resource(etl_source, **kwargs):
     """Create a resource of a source with one PDF content file"""
+    kwargs.setdefault("resource_type", LearningResourceType.course.name)
     resource = LearningResourceFactory.create(etl_source=etl_source, **kwargs)
     ContentFileFactory.create(
         run=LearningResourceRunFactory.create(learning_resource=resource),
@@ -110,6 +112,28 @@ def test_llm_ocr_pdfs_unsupported(mock_tasks, capsys, etl_source, url, message):
     mock_ocw.si.assert_not_called()
     err = capsys.readouterr().err
     assert message in err
+    assert "Nothing to process" in err
+
+
+@pytest.mark.parametrize(
+    "resource_type",
+    [LearningResourceType.document.name, LearningResourceType.program.name],
+)
+def test_llm_ocr_pdfs_non_course(mock_tasks, capsys, resource_type):
+    """Non-course resources, e.g. OCW learning material PDFs, are skipped"""
+    mock_import, mock_ocw = mock_tasks
+    resource = _resource(
+        ETLSource.ocw.name,
+        resource_type=resource_type,
+        url="https://ocw.mit.edu/courses/16-01-fall-2005/resources/resource/",
+    )
+
+    call_command("llm_ocr_pdfs", "--resource-ids", str(resource.id))
+
+    mock_import.si.assert_not_called()
+    mock_ocw.si.assert_not_called()
+    err = capsys.readouterr().err
+    assert f"{resource_type} resources are not supported, only courses" in err
     assert "Nothing to process" in err
 
 
