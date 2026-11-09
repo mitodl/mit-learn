@@ -5,7 +5,6 @@ import {
   user,
   screen,
   expectProps,
-  waitFor,
   expectWindowNavigation,
 } from "@/test-utils"
 import type { User } from "api/hooks/user"
@@ -19,20 +18,15 @@ import {
 } from "../Dialogs/AddToListDialog"
 import type { ResourceCardProps } from "./ResourceCard"
 import { urls, factories, setMockResponse } from "api/test-utils"
+import type { LearningResource } from "api"
 import { RESOURCE_DRAWER_PARAMS } from "@/common/urls"
 import { slugify } from "@/common/slugs"
 import invariant from "tiny-invariant"
-import { LearningResourceCard } from "ol-components"
-import { useFeatureFlag } from "@/common/useFeatureFlag"
-import { FeatureFlags } from "@/common/feature_flags"
 import { learningResourceQueries } from "api/hooks/learningResources"
-import type { LearningResource } from "api"
 import {
   ResourceCardSkeleton,
   ResourceCardView,
 } from "../ResourceCardView/ResourceCardView"
-
-jest.mock("@/common/useFeatureFlag")
 
 jest.mock("../ResourceCardView/ResourceCardView", () => {
   const actual = jest.requireActual("../ResourceCardView/ResourceCardView")
@@ -41,15 +35,6 @@ jest.mock("../ResourceCardView/ResourceCardView", () => {
     ...actual,
     ResourceCardView: jest.fn(actual.ResourceCardView),
     ResourceCardSkeleton: jest.fn(actual.ResourceCardSkeleton),
-  }
-})
-
-jest.mock("ol-components", () => {
-  const actual = jest.requireActual("ol-components")
-  return {
-    __esModule: true,
-    ...actual,
-    LearningResourceCard: jest.fn(actual.LearningResourceCard),
   }
 })
 
@@ -105,14 +90,6 @@ const setupCard = ({
   return { resource, view, location, queryClient }
 }
 
-const setRedesignFlag = (enabled: boolean) => {
-  jest
-    .mocked(useFeatureFlag)
-    .mockImplementation(
-      (flag) => enabled && flag === FeatureFlags.ResourceCardRedesign,
-    )
-}
-
 beforeEach(() => {
   jest.clearAllMocks()
 })
@@ -128,250 +105,142 @@ beforeEach(() => {
 const HOST_URL = "/c/topic/data-science?sortby=new"
 const HOST_PATHNAME = "/c/[channelType]/[name]"
 
-const LEGACY = {
-  card: "legacy",
-  flag: false,
-  bookmarkName: (resource: LearningResource) =>
-    `Bookmark ${resource.resource_category}`,
-  learningPathName: () => "Add to Learning Path",
-}
-const REDESIGNED = {
-  card: "redesigned",
-  flag: true,
-  bookmarkName: (resource: LearningResource) => `Bookmark: ${resource.title}`,
-  learningPathName: (resource: LearningResource) =>
-    `Add to learning path: ${resource.title}`,
-}
+describe("ResourceCard", () => {
+  const bookmarkName = (resource: LearningResource) =>
+    `Bookmark: ${resource.title}`
+  const learningPathName = (resource: LearningResource) =>
+    `Add to learning path: ${resource.title}`
 
-/**
- * Behaviour both cards share. The redesigned card runs only with
- * `isList: false`: its `list` only picks its layout, which the redesigned-only
- * block covers.
- */
-describe.each([
-  { ...LEGACY, isList: false },
-  { ...LEGACY, isList: true },
-  { ...REDESIGNED, isList: false },
-])(
-  "ResourceCard ($card, isList=$isList)",
-  ({ flag, isList, bookmarkName, learningPathName }) => {
-    beforeEach(() => {
-      setRedesignFlag(flag)
-    })
-
-    const setup = (options: SetupOptions = {}) =>
-      setupCard({ ...options, isList })
-
-    test("Applies className to the resource card", () => {
-      const { view } = setup({ props: { className: "test-class" } })
-      expect(view.container.firstChild).toHaveClass("test-class")
-    })
-
-    test("Clicking the bookmark opens AddToUserListDialog when authenticated", async () => {
-      const showModal = jest.mocked(NiceModal.show)
-
-      const { resource } = setup({ user: { is_authenticated: true } })
-      const addToUserListButton = await screen.findByRole("button", {
-        name: bookmarkName(resource),
-      })
-
-      expect(showModal).not.toHaveBeenCalled()
-      await user.click(addToUserListButton)
-      expect(showModal).toHaveBeenLastCalledWith(AddToUserListDialog, {
-        resourceId: resource.id,
-      })
-    })
-
-    test("Clicking 'Add to User List' opens signup popover if not authenticated", async () => {
-      const { resource } = setup({
-        user: { is_authenticated: false },
-      })
-      const addToUserListButton = await screen.findByRole("button", {
-        name: bookmarkName(resource),
-      })
-      await user.click(addToUserListButton)
-      const dialog = screen.getByRole("dialog")
-      expect(dialog).toBeVisible()
-      expect(dialog).toHaveTextContent("Sign Up")
-    })
-
-    test.each([
-      {
-        user: { is_authenticated: true, is_learning_path_editor: false },
-        expectAddToLearningPathButton: false,
-      },
-      {
-        user: { is_authenticated: true, is_learning_path_editor: true },
-        expectAddToLearningPathButton: true,
-      },
-      {
-        user: { is_authenticated: false },
-        expectAddToLearningPathButton: false,
-      },
-    ])(
-      "Shows 'Add to Learning Path' only to a learning path editor",
-      async ({ user, expectAddToLearningPathButton }) => {
-        const { resource } = setup({ user })
-        await screen.findByRole("button", { name: bookmarkName(resource) })
-
-        const addToLearningPathButton = screen.queryByRole("button", {
-          name: learningPathName(resource),
-        })
-        expect(!!addToLearningPathButton).toBe(expectAddToLearningPathButton)
-      },
-    )
-
-    test("Clicking 'Add to Learning Path' opens AddToLearningPathDialog", async () => {
-      const showModal = jest.mocked(NiceModal.show)
-      const { resource } = setup({
-        user: { is_learning_path_editor: true, is_authenticated: true },
-      })
-
-      await user.click(
-        await screen.findByRole("button", { name: learningPathName(resource) }),
-      )
-      expect(showModal).toHaveBeenLastCalledWith(AddToLearningPathDialog, {
-        resourceId: resource.id,
-      })
-    })
-
-    test("Card links to the resource's learn_url regardless of host page", () => {
-      const { resource } = setup({ url: HOST_URL })
-
-      const link = screen.getByRole("link", {
-        name: new RegExp(resource.title),
-      })
-
-      // What crawlers follow: the resource's own page where it has one, else
-      // its drawer. The backend decides, so the card does no URL building.
-      expect(link).toHaveAttribute("href", resource.learn_url)
-    })
-
-    test("Clicking the title opens the drawer in place and caches the resource", async () => {
-      const onCardClick = jest.fn()
-      const { resource, location, queryClient } = setup({
-        url: HOST_URL,
-        props: { onCardClick },
-      })
-
-      await user.click(
-        screen.getByRole("link", { name: new RegExp(resource.title) }),
-      )
-
-      expect(location.current.pathname).toBe(HOST_PATHNAME)
-      const params = location.current.searchParams
-      expect(params.get("sortby")).toBe("new")
-      expect(params.get(RESOURCE_DRAWER_PARAMS.resource)).toBe(
-        String(resource.id),
-      )
-      expect(params.get(RESOURCE_DRAWER_PARAMS.resource_title)).toBe(
-        slugify(resource.title),
-      )
-      expect(
-        queryClient.getQueryData(
-          learningResourceQueries.detail(resource.id).queryKey,
-        ),
-      ).toEqual(resource)
-      expect(onCardClick).toHaveBeenCalledTimes(1)
-    })
-
-    /**
-     * The modifier list itself is pinned per-key in LinkAdapter.test.tsx;
-     * this checks only that the chain from the card's title link down to
-     * LinkAdapter still delivers the modifier state, so one key is enough.
-     */
-    test("Meta-click on the title is left to the browser, so no URL is pushed", async () => {
-      const { resource, location } = setup({ url: HOST_URL })
-      const u = user.setup()
-      await u.keyboard("{Meta>}")
-
-      await expectWindowNavigation(() =>
-        u.click(screen.getByRole("link", { name: new RegExp(resource.title) })),
-      )
-
-      expect(
-        location.current.searchParams.has(RESOURCE_DRAWER_PARAMS.resource),
-      ).toBe(false)
-    })
-  },
-)
-
-/**
- * Cases that depend on the legacy card's props or its body click handler. The
- * redesigned card's body clicks land on the title link's overlay, which jsdom
- * can't exercise.
- */
-describe("ResourceCard (legacy only)", () => {
-  beforeEach(() => {
-    setRedesignFlag(false)
+  test("Applies className to the resource card", () => {
+    const { view } = setupCard({ props: { className: "test-class" } })
+    expect(view.container.firstChild).toHaveClass("test-class")
   })
 
-  test.each([{ isList: false }, { isList: true }])(
-    "Clicking the card body pushes the same URL as the title (isList=$isList)",
-    async ({ isList }) => {
-      const { resource, location, view } = setupCard({
-        url: HOST_URL,
-        isList,
-      })
-      const card = view.container.firstElementChild
-      invariant(card instanceof HTMLElement)
+  test("Clicking the bookmark opens AddToUserListDialog when authenticated", async () => {
+    const showModal = jest.mocked(NiceModal.show)
 
-      await user.click(card)
+    const { resource } = setupCard({ user: { is_authenticated: true } })
+    const addToUserListButton = await screen.findByRole("button", {
+      name: bookmarkName(resource),
+    })
 
-      expect(location.current.pathname).toBe(HOST_PATHNAME)
-      expect(location.current.searchParams.get("sortby")).toBe("new")
-      expect(
-        location.current.searchParams.get(RESOURCE_DRAWER_PARAMS.resource),
-      ).toBe(String(resource.id))
-    },
-  )
+    expect(showModal).not.toHaveBeenCalled()
+    await user.click(addToUserListButton)
+    expect(showModal).toHaveBeenLastCalledWith(AddToUserListDialog, {
+      resourceId: resource.id,
+    })
+  })
+
+  test("Clicking 'Add to User List' opens signup popover if not authenticated", async () => {
+    const { resource } = setupCard({
+      user: { is_authenticated: false },
+    })
+    const addToUserListButton = await screen.findByRole("button", {
+      name: bookmarkName(resource),
+    })
+    await user.click(addToUserListButton)
+    const dialog = screen.getByRole("dialog")
+    expect(dialog).toBeVisible()
+    expect(dialog).toHaveTextContent("Sign Up")
+  })
 
   test.each([
     {
-      userList: { inList: true },
-      learningPath: { inList: true },
+      user: { is_authenticated: true, is_learning_path_editor: false },
+      expectAddToLearningPathButton: false,
     },
     {
-      userList: { inList: false },
-      learningPath: { inList: true },
+      user: { is_authenticated: true, is_learning_path_editor: true },
+      expectAddToLearningPathButton: true,
     },
     {
-      userList: { inList: true },
-      learningPath: { inList: false },
-    },
-    {
-      userList: { inList: false },
-      learningPath: { inList: false },
+      user: { is_authenticated: false },
+      expectAddToLearningPathButton: false,
     },
   ])(
-    "'Add to ...' buttons are filled based on membership in list",
-    async ({ userList, learningPath }) => {
-      const resource = makeResource()
+    "Shows 'Add to Learning Path' only to a learning path editor",
+    async ({ user, expectAddToLearningPathButton }) => {
+      const { resource } = setupCard({ user })
+      await screen.findByRole("button", { name: bookmarkName(resource) })
 
-      setupCard({
-        user: { is_authenticated: true, is_learning_path_editor: true },
-        props: { resource },
-        userListMemberships: userList.inList
-          ? [{ id: 1, parent: 123, child: resource.id }]
-          : [],
-        learningPathMemberships: learningPath.inList
-          ? [{ id: 2, parent: 456, child: resource.id }]
-          : [],
+      const addToLearningPathButton = screen.queryByRole("button", {
+        name: learningPathName(resource),
       })
-
-      await waitFor(() => {
-        expectProps(LearningResourceCard, {
-          inLearningPath: learningPath.inList,
-          inUserList: userList.inList,
-        })
-      })
+      expect(!!addToLearningPathButton).toBe(expectAddToLearningPathButton)
     },
   )
-})
 
-describe("ResourceCard (redesigned only)", () => {
-  beforeEach(() => {
-    setRedesignFlag(true)
+  test("Clicking 'Add to Learning Path' opens AddToLearningPathDialog", async () => {
+    const showModal = jest.mocked(NiceModal.show)
+    const { resource } = setupCard({
+      user: { is_learning_path_editor: true, is_authenticated: true },
+    })
+
+    await user.click(
+      await screen.findByRole("button", { name: learningPathName(resource) }),
+    )
+    expect(showModal).toHaveBeenLastCalledWith(AddToLearningPathDialog, {
+      resourceId: resource.id,
+    })
+  })
+
+  test("Card links to the resource's learn_url regardless of host page", () => {
+    const { resource } = setupCard({ url: HOST_URL })
+
+    const link = screen.getByRole("link", {
+      name: new RegExp(resource.title),
+    })
+
+    // What crawlers follow: the resource's own page where it has one, else
+    // its drawer. The backend decides, so the card does no URL building.
+    expect(link).toHaveAttribute("href", resource.learn_url)
+  })
+
+  test("Clicking the title opens the drawer in place and caches the resource", async () => {
+    const onCardClick = jest.fn()
+    const { resource, location, queryClient } = setupCard({
+      url: HOST_URL,
+      props: { onCardClick },
+    })
+
+    await user.click(
+      screen.getByRole("link", { name: new RegExp(resource.title) }),
+    )
+
+    expect(location.current.pathname).toBe(HOST_PATHNAME)
+    const params = location.current.searchParams
+    expect(params.get("sortby")).toBe("new")
+    expect(params.get(RESOURCE_DRAWER_PARAMS.resource)).toBe(
+      String(resource.id),
+    )
+    expect(params.get(RESOURCE_DRAWER_PARAMS.resource_title)).toBe(
+      slugify(resource.title),
+    )
+    expect(
+      queryClient.getQueryData(
+        learningResourceQueries.detail(resource.id).queryKey,
+      ),
+    ).toEqual(resource)
+    expect(onCardClick).toHaveBeenCalledTimes(1)
+  })
+
+  /**
+   * The modifier list itself is pinned per-key in LinkAdapter.test.tsx;
+   * this checks only that the chain from the card's title link down to
+   * LinkAdapter still delivers the modifier state, so one key is enough.
+   */
+  test("Meta-click on the title is left to the browser, so no URL is pushed", async () => {
+    const { resource, location } = setupCard({ url: HOST_URL })
+    const u = user.setup()
+    await u.keyboard("{Meta>}")
+
+    await expectWindowNavigation(() =>
+      u.click(screen.getByRole("link", { name: new RegExp(resource.title) })),
+    )
+
+    expect(
+      location.current.searchParams.has(RESOURCE_DRAWER_PARAMS.resource),
+    ).toBe(false)
   })
 
   const lastViewProps = () => {

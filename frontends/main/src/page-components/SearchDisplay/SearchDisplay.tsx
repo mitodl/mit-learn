@@ -39,8 +39,6 @@ import {
   SearchModeEnumDescriptions,
 } from "api"
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
-import { FeatureFlags } from "@/common/feature_flags"
-import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { useAdminSearchParams } from "api/hooks/adminSearchParams"
 import {
   AvailableFacets,
@@ -460,18 +458,14 @@ const StyledResultsContainer = styled.div<{ fetching: boolean }>(
 )
 
 /**
- * The results as rows, for the default layout. The redesigned cards stand
- * further apart, and further still when stacked on a phone.
+ * The results as rows, for the default layout, further apart when stacked on a
+ * phone.
  */
-const ResultsList = styled(PlainList, {
-  shouldForwardProp: (prop) => prop !== "redesign",
-})<{ redesign: boolean }>(({ theme, redesign }) => ({
-  "> li + li": redesign
-    ? {
-        marginTop: "16px",
-        [theme.breakpoints.down("sm")]: { marginTop: "24px" },
-      }
-    : { marginTop: "8px" },
+const ResultsList = styled(PlainList)(({ theme }) => ({
+  "> li + li": {
+    marginTop: "16px",
+    [theme.breakpoints.down("sm")]: { marginTop: "24px" },
+  },
 }))
 
 /**
@@ -911,8 +905,6 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
   // controls, so there is nothing to fetch while hybrid search is active.
   const { data: adminParams, isLoading: isAdminParamsLoading } =
     useAdminSearchParams(expandAdminOptions && !hybridSearchActive)
-
-  const redesign = useFeatureFlag(FeatureFlags.ResourceCardRedesign)
 
   const scrollHook = useRef<HTMLDivElement>(null)
   const resultsHeadingRef = useRef<HTMLHeadingElement>(null)
@@ -1534,7 +1526,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                         ))}
                     </CardGrid>
                   ) : (
-                    <ResultsList redesign={redesign}>
+                    <ResultsList>
                       {Array(PAGE_SIZE)
                         .fill(null)
                         .map((a, index) => (
@@ -1561,7 +1553,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                       ))}
                     </CardGrid>
                   ) : (
-                    <ResultsList redesign={redesign}>
+                    <ResultsList>
                       {displayData.results.map((resource: LearningResource) => (
                         <li key={resource.id}>
                           <ResourceCard
