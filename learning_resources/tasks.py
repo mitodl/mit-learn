@@ -109,7 +109,7 @@ from learning_resources_search.exceptions import RetryError
 from main.celery import app
 from main.constants import ISOFORMAT
 from main.decorators import cooldown_task
-from main.utils import chunks, clear_views_cache, now_in_utc, run_on_worker_loop
+from main.utils import chunks, now_in_utc, run_on_worker_loop
 
 log = logging.getLogger(__name__)
 
@@ -2107,27 +2107,3 @@ class SyncXproContentFilesTask(SyncContentFilesTask):
 
 
 SyncXproContentFilesTask = app.register_task(SyncXproContentFilesTask())
-
-
-@app.task(acks_late=True, reject_on_worker_lost=True)
-def unpublish_mit_edx_resources():
-    """Unpublish every mit_edx resource. The rows stay, so it is safe to rerun."""
-    mit_edx = ETLSource.mit_edx.name
-    resources = LearningResource.objects.filter(etl_source=mit_edx)
-    resources.update(published=False, test_mode=False)
-    for resource in resources:
-        resource_unpublished_actions(resource)
-
-    # item_count only counts published children, so reindex the lists that
-    # held one
-    parents = (
-        LearningResource.objects.filter(
-            published=True, children__child__etl_source=mit_edx
-        )
-        .exclude(etl_source=mit_edx)
-        .distinct()
-    )
-    for parent in parents:
-        resource_upserted_actions(parent, percolate=False, generate_embeddings=True)
-
-    clear_views_cache()

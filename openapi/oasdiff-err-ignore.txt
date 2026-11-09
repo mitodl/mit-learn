@@ -49,3 +49,14 @@
 # Sentry MIT-LEARN-4VG
 2026-10-28 GET /api/v0/program_certificates/ the response property `items/program_letter_generate_url` became nullable for the status `200`
 2026-10-28 GET /api/v0/program_certificates/ the response property `items/program_letter_share_url` became nullable for the status `200`
+
+# Removing the retired mit_edx ETL source. ol-data-platform stopped sending
+# mit_edx content file webhooks (mitodl/ol-data-platform#3251).
+# https://github.com/mitodl/mit-learn/pull/4254
+2026-11-04 POST /api/v1/webhooks/content_files/ removed the enum value `mit_edx` from the `query` request parameter `source`
+2026-11-04 POST /api/v1/webhooks/content_files/ removed the enum value `mit_edx` of the request property `source` (media type: application/json)
+2026-11-04 POST /api/v1/webhooks/content_files/ removed the enum value `mit_edx` of the request property `source` (media type: application/x-www-form-urlencoded)
+2026-11-04 POST /api/v1/webhooks/content_files/ removed the enum value `mit_edx` of the request property `source` (media type: multipart/form-data)
+2026-11-04 POST /api/v1/webhooks/content_files/delete/ removed the enum value `mit_edx` of the request property `source` (media type: application/json)
+2026-11-04 POST /api/v1/webhooks/content_files/delete/ removed the enum value `mit_edx` of the request property `source` (media type: application/x-www-form-urlencoded)
+2026-11-04 POST /api/v1/webhooks/content_files/delete/ removed the enum value `mit_edx` of the request property `source` (media type: multipart/form-data)
