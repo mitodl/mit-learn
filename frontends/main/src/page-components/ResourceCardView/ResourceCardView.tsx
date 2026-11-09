@@ -76,10 +76,7 @@ type ResourceCardViewProps = ResourceCardContent &
     href: string
     pushUrl?: PushUrl
     onLinkClick?: React.MouseEventHandler<HTMLAnchorElement>
-    /**
-     * In order: a vertical card stacks them down the image's corner, a
-     * horizontal card lines them up at the end of the metadata row.
-     */
+    /** In order, at the foot of the content, the last one beside the last metadata line. */
     actions?: CardAction[]
     headingLevel: HeadingLevel
     className?: string
@@ -115,14 +112,8 @@ const IMAGE_SIZES = "(max-width: 600px) 100vw, 600px"
 
 /** Every action's target; the design draws smaller buttons. */
 const ACTION_TARGET = 32
-/** Vertical: the circle the design draws. */
-const ACTION_CIRCLE = 28
-/** Horizontal: the icon the design draws. */
+/** The icon the design draws. */
 const ACTION_ICON = 18
-/** Horizontal: between the icons. */
-const ACTION_ICON_GAP = 16
-/** Horizontal: between the metadata and the first icon. */
-const ACTIONS_CLEARANCE = 16
 
 type RootProps = {
   layout: CardLayoutProps["layout"]
@@ -222,18 +213,11 @@ const Image = styled(NextImage)({
   objectFit: "cover",
 })
 
-type ContentProps = {
-  /** Horizontal: actions but no metadata row for them to end. */
-  reserveActionsRow: boolean
-}
-
 /**
- * Metadata sits at the bottom whenever the card is taller than its content (a
+ * The footer sits at the bottom whenever the card is taller than its content (a
  * taller neighbour in a row, or a horizontal card's image or price panel).
  */
-const Content = styled("div", {
-  shouldForwardProp: (prop) => prop !== "reserveActionsRow",
-})<ContentProps>(({ reserveActionsRow }) => ({
+const Content = styled.div({
   gridArea: "content",
   display: "flex",
   flexDirection: "column",
@@ -246,11 +230,17 @@ const Content = styled("div", {
   },
   [HORIZONTAL]: {
     gap: "12px",
-    // Without metadata, keep its row (the 12px gap, a 16px line and the 8px
-    // padding) so a long title or parent name stops above the actions.
-    padding: reserveActionsRow ? "8px 16px 36px" : "8px 16px",
+    padding: "8px 16px",
   },
-}))
+})
+
+/** The metadata, with the actions beside it, the last one beside its last line. */
+const Footer = styled.div({
+  display: "flex",
+  alignItems: "flex-end",
+  justifyContent: "flex-end",
+  gap: "16px",
+})
 
 const TitleBlock = styled.div({
   display: "flex",
@@ -309,16 +299,11 @@ const Secondary = styled.span(({ theme }) => ({
   [NARROW]: { marginTop: 0 },
 }))
 
-type MetadataProps = {
-  /** Horizontal: the action buttons sit at the end of the row. */
-  actionCount: number
-}
-
 /** Flows in a row, wrapping, but stacks in a narrow card. */
-const Metadata = styled("dl", {
-  shouldForwardProp: (prop) => prop !== "actionCount",
-})<MetadataProps>(({ theme, actionCount }) => ({
+const Metadata = styled.dl(({ theme }) => ({
   ...theme.typography.body3,
+  flex: 1,
+  minWidth: 0,
   margin: 0,
   display: "flex",
   flexWrap: "wrap",
@@ -326,7 +311,14 @@ const Metadata = styled("dl", {
   color: theme.custom.colors.darkGray2,
   "& > div": {
     display: "flex",
+    // A value too long to follow its term starts its own line, rather than
+    // breaking mid-word beside it.
+    flexWrap: "wrap",
     gap: "4px",
+    // A flex item won't shrink below its min-content width (the term plus the
+    // value's longest word), so a long unbroken value would overflow under the
+    // actions instead of wrapping.
+    minWidth: 0,
   },
   "dt, dd": { margin: 0 },
   dt: {
@@ -334,13 +326,11 @@ const Metadata = styled("dl", {
     color: theme.custom.colors.silverGrayDark,
   },
   dd: { minWidth: 0 },
-  [NARROW]: { flexDirection: "column" },
-  [HORIZONTAL]: {
-    paddingInlineEnd: actionCount
-      ? actionCount * ACTION_ICON +
-        (actionCount - 1) * ACTION_ICON_GAP +
-        ACTIONS_CLEARANCE
-      : 0,
+  [NARROW]: {
+    flexDirection: "column",
+    // A wrapping column sizes its rows to the widest one rather than to the
+    // list, so a long row would push them all past it, under the actions.
+    flexWrap: "nowrap",
   },
 }))
 
@@ -437,34 +427,24 @@ const CertificateIcon = styled(RiAwardLine)({
 })
 
 /**
- * Vertical: stacked down the image's top-right corner. Horizontal: in a row at
- * the end of the content's metadata line, which reserves their width.
+ * Above the title link's stretched overlay, so clicks reach the buttons.
+ * Stacked, so they take one icon's width from the metadata, except in a
+ * horizontal card, which has the width for a row.
  */
 const Actions = styled.div({
-  gridArea: "image",
-  alignSelf: "start",
-  justifySelf: "end",
+  flex: "none",
+  position: "relative",
   zIndex: 1,
-  // 12px from the card's edge, inside its 1px border.
-  margin: "11px",
   display: "flex",
   flexDirection: "column",
-  gap: "8px",
-  [HORIZONTAL]: {
-    gridArea: "content",
-    alignSelf: "end",
-    flexDirection: "row",
-    gap: ACTION_ICON_GAP,
-    // The content's inline padding, and its bottom padding less the 2px the
-    // icons stand taller than the metadata's 16px line, so their tops align.
-    margin: "0 16px 6px 0",
-  },
+  gap: "16px",
+  [HORIZONTAL]: { flexDirection: "row" },
 })
 
 /**
- * Vertical: a 28px circle. Horizontal: a bare 18px icon. Either way the
- * button's negative margin grows its target to 32px without moving anything;
- * the circle is its background, clipped to the content box.
+ * A bare 18px icon in a box one metadata line tall, so the last icon centres
+ * on the last metadata line at any font size. The negative margins grow the
+ * target to 32px without moving anything.
  */
 const ActionButton = styled("button", {
   shouldForwardProp: (prop) => prop !== "filled",
@@ -474,40 +454,19 @@ const ActionButton = styled("button", {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    boxSizing: "border-box",
     width: ACTION_TARGET,
     height: ACTION_TARGET,
-    margin: (ACTION_CIRCLE - ACTION_TARGET) / 2,
-    padding: (ACTION_TARGET - ACTION_CIRCLE) / 2,
-    backgroundClip: "content-box",
+    marginInline: (ACTION_ICON - ACTION_TARGET) / 2,
+    marginBlock: `calc((${theme.typography.body3.lineHeight} - ${ACTION_TARGET}px) / 2)`,
+    padding: 0,
     border: "none",
+    // Rounds the focus outline.
     borderRadius: "50%",
+    backgroundColor: "transparent",
     cursor: "pointer",
-    svg: { width: "16px", height: "16px" },
-    ...(filled
-      ? {
-          backgroundColor: colors.red,
-          color: colors.white,
-          "&:hover": { backgroundColor: colors.mitRed },
-        }
-      : {
-          backgroundColor: colors.white,
-          color: colors.darkGray1,
-          "&:hover": {
-            backgroundColor: colors.lightGray2,
-            color: colors.darkGray2,
-          },
-        }),
-    [HORIZONTAL]: {
-      margin: (ACTION_ICON - ACTION_TARGET) / 2,
-      backgroundColor: "transparent",
-      color: filled ? colors.red : colors.darkGray1,
-      svg: { width: ACTION_ICON, height: ACTION_ICON },
-      "&:hover": {
-        backgroundColor: "transparent",
-        color: filled ? colors.mitRed : colors.red,
-      },
-    },
+    color: filled ? colors.red : colors.darkGray1,
+    svg: { width: ACTION_ICON, height: ACTION_ICON },
+    "&:hover": { color: filled ? colors.mitRed : colors.red },
   }
 })
 
@@ -580,9 +539,7 @@ const ResourceCardView: React.FC<ResourceCardViewProps> = ({
             />
           )}
         </ImageFrame>
-        <Content
-          reserveActionsRow={actions.length > 0 && metadata.length === 0}
-        >
+        <Content>
           <TitleBlock>
             <TypeLabel id={typeId}>{typeLabel}</TypeLabel>
             <Heading as={`h${headingLevel}`} lang={lang}>
@@ -599,15 +556,37 @@ const ResourceCardView: React.FC<ResourceCardViewProps> = ({
               <Secondary id={parentId}>From {parentCourseName}</Secondary>
             )}
           </TitleBlock>
-          {metadata.length > 0 && (
-            <Metadata id={metadataId} actionCount={actions.length}>
-              {metadata.map(({ label, value }) => (
-                <div key={label}>
-                  <dt>{label}:</dt>
-                  <dd>{value}</dd>
-                </div>
-              ))}
-            </Metadata>
+          {(metadata.length > 0 || actions.length > 0) && (
+            <Footer>
+              {metadata.length > 0 && (
+                <Metadata id={metadataId}>
+                  {metadata.map(({ label, value }) => (
+                    <div key={label}>
+                      <dt>{label}:</dt>
+                      <dd>{value}</dd>
+                    </div>
+                  ))}
+                </Metadata>
+              )}
+              {actions.length > 0 && (
+                <Actions>
+                  {actions.map((action, index) => (
+                    <ActionButton
+                      // Not the label: it changes with membership, and a new
+                      // key remounts the button, dropping its focus.
+                      key={index}
+                      type="button"
+                      aria-label={action.label}
+                      aria-haspopup="dialog"
+                      filled={action.filled}
+                      onClick={action.onClick}
+                    >
+                      {action.icon}
+                    </ActionButton>
+                  ))}
+                </Actions>
+              )}
+            </Footer>
           )}
         </Content>
         <Price id={priceId} tone={price.tone} empty={priceEmpty}>
@@ -633,25 +612,6 @@ const ResourceCardView: React.FC<ResourceCardViewProps> = ({
             )}
           </Lines>
         </Price>
-        {/* Last in the DOM, so Tab reaches the card link before the actions. */}
-        {actions.length > 0 && (
-          <Actions>
-            {actions.map((action, index) => (
-              <ActionButton
-                // Not the label: it changes with membership, and a new key
-                // remounts the button, dropping its focus.
-                key={index}
-                type="button"
-                aria-label={action.label}
-                aria-haspopup="dialog"
-                filled={action.filled}
-                onClick={action.onClick}
-              >
-                {action.icon}
-              </ActionButton>
-            ))}
-          </Actions>
-        )}
       </Grid>
     </Root>
   )
@@ -670,7 +630,7 @@ const ResourceCardSkeleton: React.FC<
         <ImageFrame>
           <Skeleton variant="rectangular" width="100%" height="100%" />
         </ImageFrame>
-        <Content reserveActionsRow={false}>
+        <Content>
           <TitleBlock>
             <Skeleton variant="text" width="30%" />
             <Heading as="div">
