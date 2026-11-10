@@ -137,6 +137,22 @@ def test_migrate_usernames_skips_people_widgets_without_renamed_users():
     assert empty.configuration == {}
 
 
+def test_migrate_usernames_rerun_renames_nothing():
+    """A second --apply finds nothing left to rename"""
+    user = UserFactory.create(username="jdoe", email="next@example.com")
+    UserFactory.create(username="next@example.com", email="last@example.com")
+    UserFactory.create(username="jane", email="shared@example.com")
+    UserFactory.create(username="janet", email="shared@example.com")
+    call_command("migrate_usernames", "--apply", stdout=StringIO())
+    out = StringIO()
+
+    call_command("migrate_usernames", "--apply", stdout=out)
+
+    user.refresh_from_db()
+    assert user.username == "next@example.com"
+    assert "Renamed 0 users" in out.getvalue()
+
+
 def test_migrate_usernames_dry_run_changes_nothing():
     """Without --apply, the command reports and leaves usernames alone"""
     user = UserFactory.create(username="jdoe", email="jdoe@example.com")
