@@ -156,8 +156,7 @@ const Shortcut = styled(Link)(({ theme }) => ({
   borderRadius: "4px",
   color: theme.custom.colors.darkGray2,
   "&:hover": {
-    borderColor: theme.custom.colors.lightGray2,
-    backgroundColor: theme.custom.colors.white,
+    borderColor: theme.custom.colors.darkGray2,
   },
   svg: {
     flexShrink: 0,
