@@ -74,15 +74,15 @@ def _rename_widget_people(new_usernames):
     :type new_usernames: dict[str, str]
     """
     widgets = WidgetInstance.objects.select_for_update().filter(
-        widget_type=PeopleWidgetSerializer.name
+        widget_type=PeopleWidgetSerializer.name,
+        configuration__people__has_any_keys=list(new_usernames),
     )
     for widget in widgets:
-        people = widget.configuration["people"]
-        if any(username in new_usernames for username in people):
-            widget.configuration["people"] = [
-                new_usernames.get(username, username) for username in people
-            ]
-            widget.save(update_fields=["configuration"])
+        widget.configuration["people"] = [
+            new_usernames.get(username, username)
+            for username in widget.configuration["people"]
+        ]
+        widget.save(update_fields=["configuration"])
 
 
 def rename_users():
