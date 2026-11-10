@@ -13,6 +13,7 @@ from django.db.models import Max, Q, QuerySet
 from learning_resources.constants import (
     CONTENT_TYPE_PAGE,
     OCW_CONTENT_CATEGORY_LECTURE_VIDEOS,
+    OCW_CONTENT_CATEGORY_PRACTICE_AND_ASSIGNMENT,
     OCW_COURSE_CONTENT_CATEGORY_MAPPING,
     OCW_INSTRUCTOR_INSIGHTS_TAG,
     OCW_VISIBLE_TAGS,
@@ -42,6 +43,10 @@ from learning_resources.etl.ownership import (
     may_write,
     run_mode,
 )
+from learning_resources.etl.practice_problems import (
+    ParsedDocument,
+    parse_structured_problems,
+)
 from learning_resources.etl.utils import enough_youtube_matches, most_common_topics
 from learning_resources.models import (
     ContentFile,
@@ -59,6 +64,7 @@ from learning_resources.models import (
     LearningResourceTopic,
     Podcast,
     PodcastEpisode,
+    PracticeProblem,
     Program,
     RunInstructorRelationship,
     TutorProblemFile,
@@ -1302,18 +1308,37 @@ def load_course_units(run: LearningResourceRun, units_data: list[dict]) -> list[
     return unit_ids
 
 
+# solutions files restate the problems of their problem set or exam, which
+# are read from that file instead
+PRACTICE_PROBLEM_SOLUTION_TAGS = frozenset({"Exams Solutions", "Problem Set Solutions"})
+PRACTICE_PROBLEM_TAGS = frozenset(
+    tag
+    for tag, category in OCW_COURSE_CONTENT_CATEGORY_MAPPING.items()
+    if category == OCW_CONTENT_CATEGORY_PRACTICE_AND_ASSIGNMENT
+)
+# a problem's description: its text, up to this many characters
+PRACTICE_PROBLEM_DESCRIPTION_CHARS = 1000
+
+
 def load_learning_materials(
     course_run: LearningResourceRun,
     content_file_ids: list[int],
 ):
     """
-    Create learning material objects from ocw content files
+    Create learning material objects from ocw content files.
+
+    With CREATE_HIDDEN_OCW_LEARNING_MATERIALS, a converted problem set or exam
+    PDF ("Practice & Assignment" tags) becomes a learning material per problem
+    instead of one for the whole file; a file with no problems read from it
+    becomes none.
     """
     material_ids = []
     if settings.CREATE_HIDDEN_OCW_LEARNING_MATERIALS:
         promoted_ocw_file_types = set(OCW_COURSE_CONTENT_CATEGORY_MAPPING.keys())
+        practice_problem_tags = PRACTICE_PROBLEM_TAGS
     else:
         promoted_ocw_file_types = set(OCW_VISIBLE_TAGS)
+        practice_problem_tags = frozenset()
 
     content_files = (
         ContentFile.objects.filter(id__in=content_file_ids)
@@ -1325,9 +1350,23 @@ def load_learning_materials(
         learning_material_tags = {
             tag.name for tag in content_file.content_tags.all()
         } & promoted_ocw_file_types
-        if content_file.content_type != CONTENT_TYPE_PAGE and learning_material_tags:
+        problem_tags = learning_material_tags & practice_problem_tags
+        whole_file_tags = learning_material_tags - practice_problem_tags
+        problems = (
+            parse_structured_problems(content_file.content)
+            if problem_tags
+            and not problem_tags & PRACTICE_PROBLEM_SOLUTION_TAGS
+            and content_file.content_type != CONTENT_TYPE_PAGE
+            and (content_file.file_extension or "").lower() == ".pdf"
+            else None
+        )
+        if problems and problems.problems:
+            material_ids.extend(
+                load_practice_problems(course_run, content_file, problem_tags, problems)
+            )
+        if content_file.content_type != CONTENT_TYPE_PAGE and whole_file_tags:
             material_ids.append(
-                load_learning_material(course_run, content_file, learning_material_tags)
+                load_learning_material(course_run, content_file, whole_file_tags)
             )
 
         # OCW lecture videos combine youtube and ocw data and are
@@ -1346,12 +1385,123 @@ def load_learning_materials(
             content_file.save()
             update_index(direct_resource, newly_created=False)
 
+    unpublish_stale_practice_problems(course_run, material_ids)
     course_run.learning_resource.resources.set(
         LearningResource.objects.filter(id__in=material_ids).only("id"),
         through_defaults={
             "relation_type": LearningResourceRelationTypes.COURSE_LEARNING_MATERIALS
         },
     )
+
+
+def _practice_problem_description(statement: str, parts: list[str]) -> str:
+    """Return the problem's text for search and cards, cut at a word"""
+    text = " ".join(" ".join([statement, *parts]).split())
+    if len(text) <= PRACTICE_PROBLEM_DESCRIPTION_CHARS:
+        return text
+    return text[:PRACTICE_PROBLEM_DESCRIPTION_CHARS].rsplit(" ", 1)[0] + "…"
+
+
+def load_practice_problems(
+    course_run: LearningResourceRun,
+    content_file: ContentFile,
+    learning_material_tags: set[str],
+    document: ParsedDocument,
+) -> list[int]:
+    """
+    Create or update a "Practice & Assignment" learning material for each
+    problem read from a content file's structured markdown
+
+    Returns:
+        list[int]: the ids of the problems' learning resources
+    """
+    run_resource = course_run.learning_resource
+    resource_ids = []
+    used_ids = set()
+    for problem in document.problems:
+        # problems are identified by their printed number, so a file converted
+        # again keeps its problems' ids (and their places in user lists)
+        suffix = f"problem-{problem.number}" if problem.number else problem.node_id
+        if suffix in used_ids:
+            suffix = f"{suffix}-{problem.node_id}"
+        used_ids.add(suffix)
+        title = problem.display_title
+        if not problem.friendly_title and content_file.title:
+            title = f"{content_file.title}: {title}"
+        parts = [{"label": part.label, "body": part.body} for part in problem.parts]
+        url = content_file.url
+        if url and problem.pages:
+            url = f"{url}#page={problem.pages[0]}"
+
+        with transaction.atomic():
+            learning_resource, created = LearningResource.objects.update_or_create(
+                readable_id=f"{course_run.run_id}-{content_file.key}#{suffix}",
+                platform=run_resource.platform,
+                resource_type=LearningResourceType.document.name,
+                defaults={
+                    "title": title[:256],
+                    "description": _practice_problem_description(
+                        problem.statement, [part["body"] for part in parts]
+                    ),
+                    "url": url,
+                    "etl_source": run_resource.etl_source,
+                    "offered_by": run_resource.offered_by,
+                    "published": True,
+                    "resource_category": OCW_CONTENT_CATEGORY_PRACTICE_AND_ASSIGNMENT,
+                },
+            )
+            PracticeProblem.objects.update_or_create(
+                learning_resource=learning_resource,
+                defaults={
+                    "content_file": content_file,
+                    "node_id": problem.node_id,
+                    "number": problem.number,
+                    "document_title": (document.title or content_file.title or "")[
+                        :256
+                    ],
+                    "statement": problem.statement,
+                    "parts": parts,
+                    "solution": problem.solution,
+                    "pages": problem.pages,
+                    "topics": [topic[:256] for topic in problem.topics],
+                    "points": problem.points[:64],
+                },
+            )
+            load_content_tags(
+                learning_resource, learning_material_tags, is_content_file=False
+            )
+            if content_file.image_src:
+                load_image(learning_resource, {"url": content_file.image_src})
+
+        update_index(learning_resource, created)
+        resource_ids.append(learning_resource.id)
+
+    # the file is shown as its problems, not as a whole
+    if content_file.direct_learning_resource_id:
+        whole_file = content_file.direct_learning_resource
+        content_file.direct_learning_resource = None
+        content_file.save()
+        if whole_file.resource_type != LearningResourceType.video.name:
+            whole_file.published = False
+            whole_file.save()
+            update_index(whole_file, newly_created=False)
+    return resource_ids
+
+
+def unpublish_stale_practice_problems(
+    course_run: LearningResourceRun, material_ids: list[int]
+):
+    """
+    Unpublish the run's practice problems that were not loaded again: their
+    file is gone, was converted again without them, or is no longer promoted
+    """
+    stale = LearningResource.objects.filter(
+        practice_problem__content_file__run=course_run, published=True
+    ).exclude(id__in=material_ids)
+    for learning_resource in stale:
+        learning_resource.published = False
+        learning_resource.save()
+        update_index(learning_resource, newly_created=False)
 
 
 def load_learning_material(

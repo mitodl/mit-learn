@@ -74,6 +74,7 @@ from learning_resources.etl.ownership import (
     OwnershipError,
     shadowing,
 )
+from learning_resources.etl.practice_problems_test import structured_markdown
 from learning_resources.etl.utils import get_s3_prefix_for_source
 from learning_resources.etl.xpro import _parse_datetime
 from learning_resources.factories import (
@@ -108,6 +109,7 @@ from learning_resources.models import (
     LearningResourceRelationship,
     LearningResourceRun,
     PodcastEpisode,
+    PracticeProblem,
     Program,
     TutorProblemFile,
     Unit,
@@ -4267,33 +4269,23 @@ def test_load_learning_materials(
     )
 
     if create_hidden_ocw_learning_materials:
-        # Programming assignments and Open Textbooks are promoted
-        assert load_learning_materials_spy.call_count == 2
-        load_learning_materials_spy.assert_any_call(
-            ocw_course.learning_resource.runs.first(),
-            assignments_content_file,
-            {"Programming Assignments"},
-        )
+        # Open Textbooks are promoted; the assignment was not converted to
+        # structured markdown, so it has no problems and is not promoted
+        assert load_learning_materials_spy.call_count == 1
         load_learning_materials_spy.assert_any_call(
             ocw_course.learning_resource.runs.first(),
             textbook_content_file,
             {"Open Textbooks"},
         )
         resource_relationships = ocw_course.learning_resource.children.all()
-        assert resource_relationships.count() == 2
-
-        # Verify resource categories
-        categories = set(
+        assert resource_relationships.count() == 1
+        assert set(
             resource_relationships.values_list("child__resource_category", flat=True)
-        )
-        assert categories == {
-            OCW_CONTENT_CATEGORY_OPEN_TEXTBOOKS,
-            "Practice & Assignment",
-        }
+        ) == {OCW_CONTENT_CATEGORY_OPEN_TEXTBOOKS}
 
-        # 2 load_learning_material calls (each calls update_index)
+        # 1 load_learning_material call (which calls update_index)
         # + 1 for unpublishing no_longer_relevant_resource
-        assert mock_index.call_count == 3
+        assert mock_index.call_count == 2
 
         no_longer_relevant_resource.refresh_from_db()
         assert no_longer_relevant_resource.published is False
@@ -4404,6 +4396,151 @@ def test_load_learning_materials_preserves_videos(mocker, settings):
 
     # update_index should not have been called (no changes needed)
     mock_index.assert_not_called()
+
+
+def _practice_problem_setup(
+    content=None, tag="Problem Sets", extension=".pdf", **file_kwargs
+):
+    """Create an OCW course run with a problem set PDF"""
+    ocw = LearningResourcePlatformFactory.create(code=PlatformType.ocw.name)
+    ocw_course = CourseFactory.create(
+        platform=ocw.code,
+        learning_resource__is_course=True,
+    )
+    run = ocw_course.learning_resource.runs.first()
+    content_file = ContentFileFactory.create(
+        run=run,
+        content_tags=[LearningResourceContentTagFactory.create(name=tag)],
+        content_type=CONTENT_TYPE_FILE,
+        file_extension=extension,
+        title="Problem Set 1",
+        url="https://ocw.mit.edu/courses/x/resources/ps1.pdf",
+        image_src=None,
+        content=structured_markdown() if content is None else content,
+        **file_kwargs,
+    )
+    return run, content_file
+
+
+@pytest.mark.django_db
+def test_load_learning_materials_practice_problems(mocker, settings):
+    """A structured problem set PDF becomes a learning material per problem"""
+    settings.CREATE_HIDDEN_OCW_LEARNING_MATERIALS = True
+    whole_file = LearningResourceFactory.create(
+        resource_type=LearningResourceType.document.name, published=True
+    )
+    run, content_file = _practice_problem_setup(direct_learning_resource=whole_file)
+    mock_index = mocker.patch("learning_resources.etl.loaders.update_index")
+
+    loaders.load_learning_materials(run, [content_file.id])
+
+    problems = PracticeProblem.objects.filter(content_file=content_file).order_by(
+        "number"
+    )
+    assert [p.number for p in problems] == ["1", "2"]
+    first, second = problems
+    resource = first.learning_resource
+    assert resource.readable_id == f"{run.run_id}-{content_file.key}#problem-1"
+    assert resource.resource_type == LearningResourceType.document.name
+    assert resource.resource_category == "Practice & Assignment"
+    assert resource.title == "Car and Bicycle Rider"
+    assert resource.url == f"{content_file.url}#page=1"
+    assert resource.published is True
+    assert resource.platform == run.learning_resource.platform
+    assert resource.offered_by == run.learning_resource.offered_by
+    assert resource.description.startswith("A car moves at speed $v_0$. Find")
+    assert list(resource.resource_tags.values_list("name", flat=True)) == [
+        "Problem Sets"
+    ]
+    assert first.statement == "A car moves at speed $v_0$."
+    assert [part["label"] for part in first.parts] == ["a", "b"]
+    assert first.solution
+    assert first.pages == [1, 2]
+    assert first.document_title == "Problem Set 1"
+    # no friendly title: the file's title names the problem
+    assert second.learning_resource.title == "Problem Set 1: Problem 2"
+
+    assert set(
+        run.learning_resource.children.filter(
+            relation_type=LearningResourceRelationTypes.COURSE_LEARNING_MATERIALS
+        ).values_list("child_id", flat=True)
+    ) == {first.learning_resource_id, second.learning_resource_id}
+
+    # the whole file is no longer a learning material
+    whole_file.refresh_from_db()
+    assert whole_file.published is False
+    content_file.refresh_from_db()
+    assert content_file.direct_learning_resource is None
+    mock_index.assert_any_call(whole_file, newly_created=False)
+    mock_index.assert_any_call(first.learning_resource, True)  # noqa: FBT003
+
+
+@pytest.mark.django_db
+def test_load_learning_materials_practice_problems_reloaded(mocker, settings):
+    """Loading again keeps problems' ids and unpublishes problems that are gone"""
+    settings.CREATE_HIDDEN_OCW_LEARNING_MATERIALS = True
+    run, content_file = _practice_problem_setup()
+    mocker.patch("learning_resources.etl.loaders.update_index")
+    loaders.load_learning_materials(run, [content_file.id])
+    ids = dict(PracticeProblem.objects.values_list("number", "learning_resource_id"))
+
+    # converted again without problem 2
+    content_file.content = structured_markdown().split('<!-- node: {"id": "n6"')[0]
+    content_file.save()
+    loaders.load_learning_materials(run, [content_file.id])
+
+    assert PracticeProblem.objects.get(number="1").learning_resource_id == ids["1"]
+    assert LearningResource.objects.get(id=ids["1"]).published is True
+    assert LearningResource.objects.get(id=ids["2"]).published is False
+    assert list(run.learning_resource.children.values_list("child_id", flat=True)) == [
+        ids["1"]
+    ]
+
+    # the file is no longer loaded with the run
+    loaders.load_learning_materials(run, [])
+    assert LearningResource.objects.get(id=ids["1"]).published is False
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("hidden_materials", "content", "tag", "extension"),
+    [
+        # prod: Practice & Assignment files are not promoted
+        (False, None, "Problem Sets", ".pdf"),
+        # not converted, or structuring failed its checks
+        (True, "Plain text from tika", "Problem Sets", ".pdf"),
+        (True, structured_markdown(status="needs_review"), "Exams", ".pdf"),
+        # a solutions file, by its kind or its tag
+        (True, structured_markdown(kind="solutions"), "Problem Sets", ".pdf"),
+        (True, None, "Problem Set Solutions", ".pdf"),
+        # not a practice and assignment file, or not a pdf
+        (True, None, "Lecture Notes", ".pdf"),
+        (True, None, "Problem Sets", ".docx"),
+    ],
+    ids=[
+        "setting-off",
+        "unstructured",
+        "needs-review",
+        "solutions-kind",
+        "solutions-tag",
+        "tag",
+        "docx",
+    ],
+)
+def test_load_learning_materials_no_practice_problems(  # noqa: PLR0913
+    mocker, settings, hidden_materials, content, tag, extension
+):
+    """Files with no problems to read, or with the setting off, get no problems"""
+    settings.CREATE_HIDDEN_OCW_LEARNING_MATERIALS = hidden_materials
+    run, content_file = _practice_problem_setup(
+        content=content, tag=tag, extension=extension
+    )
+    mocker.patch("learning_resources.etl.loaders.update_index")
+
+    loaders.load_learning_materials(run, [content_file.id])
+
+    assert not PracticeProblem.objects.exists()
+    assert not run.learning_resource.children.exists()
 
 
 @pytest.mark.django_db

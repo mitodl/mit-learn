@@ -241,15 +241,16 @@ def test_ocw_courses_etl(
         ]
     )
 
-    # Open Textbook resources are always created regardless of
-    # CREATE_HIDDEN_OCW_LEARNING_MATERIALS. Activity Assignments are only created
-    # when CREATE_HIDDEN_OCW_LEARNING_MATERIALS is True.
+    # Open Textbook resources are always created. The Activity Assignment is
+    # not converted to structured markdown, so it has no problems to become
+    # learning materials, with or without CREATE_HIDDEN_OCW_LEARNING_MATERIALS.
     if skip_content_files:
         assert learning_materials.count() == 0
-    elif create_hidden_ocw_learning_materials:
-        assert learning_materials.count() == 2
     else:
         assert learning_materials.count() == 1
+        assert not learning_materials.filter(
+            resource_category="Practice & Assignment"
+        ).exists()
 
     if not skip_content_files:
         textbook = learning_materials.get(title="Textbook Title")
@@ -259,19 +260,6 @@ def test_ocw_courses_etl(
             "Open Textbooks"
         ]
         assert textbook.resource_category == OCW_CONTENT_CATEGORY_OPEN_TEXTBOOKS
-
-    if not skip_content_files and create_hidden_ocw_learning_materials:
-        activity = learning_materials.get(title="Resource Title")
-        assert (
-            activity.readable_id
-            == "97db384ef34009a64df7cb86cf701979-courses/16-01-unified-engineering-i-ii-iii-iv-fall-2005-spring-2006/resources/resource/"
-        )
-        assert activity.platform.code == PlatformType.ocw.name
-        assert activity.offered_by.code == OfferedBy.ocw.name
-        assert list(activity.resource_tags.values_list("name", flat=True)) == [
-            "Activity Assignments"
-        ]
-        assert activity.resource_category == "Practice & Assignment"
 
 
 @mock_aws
