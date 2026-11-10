@@ -24,6 +24,7 @@ from learning_resources.profiles.claims import (
 from learning_resources.profiles.context_claims import (
     generate_context_claims,
     load_context_extractor,
+    merge_context_outputs,
 )
 from learning_resources.profiles.schemas import CourseContextOut
 
@@ -317,6 +318,40 @@ def test_context_over_budget_split(fake_llm):
     assert output["description"]["evidence"][0]["source_id"] == "S01"
     assert output["prerequisites_status"] == "stated"
     assert [source["source_id"] for source in output["sources"]] == ["S01", "S02"]
+
+
+def _prerequisite(statement, course_ref, source_id):
+    return {
+        "label": "Calculus",
+        "statement": statement,
+        "kind": "prerequisite",
+        "course_ref": course_ref,
+        "evidence": [{"source_id": source_id, "passage": statement, "locator": None}],
+    }
+
+
+def test_merge_keeps_distinct_prerequisites():
+    """Prerequisites with one label but other courses are kept apart"""
+    first, second = (
+        _context_out(
+            f"=== SOURCE {source_id} | x ===\nsome source text here"
+        ).model_dump()
+        for source_id in ("S01", "S02")
+    )
+    first["prerequisites"] = [_prerequisite("18.01 is required", "18.01", "S01")]
+    second["prerequisites"] = [
+        _prerequisite("18.02 is required", "18.02", "S02"),
+        # the first part's requirement again, differing only in case
+        _prerequisite("18.01 is Required.", "18.01", "S02"),
+    ]
+
+    prerequisites = merge_context_outputs([first, second], [])["prerequisites"]
+
+    assert [prereq["course_ref"] for prereq in prerequisites] == ["18.01", "18.02"]
+    assert [item["source_id"] for item in prerequisites[0]["evidence"]] == [
+        "S01",
+        "S02",
+    ]
 
 
 def test_split_context_cached(fake_llm):

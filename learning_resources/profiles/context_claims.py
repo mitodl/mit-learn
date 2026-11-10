@@ -91,6 +91,19 @@ def _dedupe_by(items: list[dict], key) -> list[dict]:
     return list(merged.values())
 
 
+def _prerequisite_key(prerequisite: dict) -> tuple:
+    """
+    Return what makes a prerequisite the same requirement as another: two
+    "Calculus" prerequisites that cite 18.01 and 18.02 are both kept
+    """
+    return (
+        normalize(prerequisite["label"]),
+        prerequisite["kind"],
+        normalize(prerequisite["statement"]),
+        normalize(prerequisite.get("course_ref") or ""),
+    )
+
+
 def merge_context_outputs(outputs: list[dict], sources: list[Source]) -> dict:
     """
     Combine the outputs of a split context unit's parts into its output.
@@ -125,10 +138,7 @@ def merge_context_outputs(outputs: list[dict], sources: list[Source]) -> dict:
             (output["prerequisites_status"] for output in outputs),
             key=PREREQUISITES_STATUS_ORDER.index,
         ),
-        "prerequisites": _dedupe_by(
-            all_items("prerequisites"),
-            lambda prereq: (normalize(prereq["label"]), prereq["kind"]),
-        ),
+        "prerequisites": _dedupe_by(all_items("prerequisites"), _prerequisite_key),
         "required_materials": _dedupe_by(all_items("required_materials"), by_text),
         "instructional_outline": _dedupe_by(
             all_items("instructional_outline"),
