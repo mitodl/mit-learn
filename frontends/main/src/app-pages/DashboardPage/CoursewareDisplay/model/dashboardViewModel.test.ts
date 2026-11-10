@@ -2153,12 +2153,16 @@ describe("dashboardViewModel", () => {
           id,
           start_date: daysFromNow(startDays),
           end_date: daysFromNow(startDays + 30),
+          certificate_available_date: daysFromNow(startDays + 30),
+          is_self_paced: false,
           is_enrollable: false,
         })
       const openRun = factories.courses.courseRun({
         id: 30,
         start_date: daysFromNow(60),
         end_date: daysFromNow(150),
+        certificate_available_date: daysFromNow(150),
+        is_self_paced: false,
         is_enrollable: true,
       })
       const enrollmentIn = (
@@ -2177,6 +2181,8 @@ describe("dashboardViewModel", () => {
             id: run.id,
             start_date: run.start_date,
             end_date: run.end_date,
+            certificate_available_date: run.certificate_available_date,
+            is_self_paced: run.is_self_paced,
             course: { id: course.id, title: course.title },
           },
         })
@@ -2218,6 +2224,41 @@ describe("dashboardViewModel", () => {
         const resolved = resolveDisplayedRunAndEnrollment(course, [enrollment])
         expect(resolved.displayedEnrollment).toEqual(enrollment)
         expect(resolved.pastEnrollments).toEqual([])
+      })
+
+      test("keeps showing the enrollment while its certificates are still to come", () => {
+        const ended = {
+          ...endedRun(10, -60),
+          certificate_available_date: daysFromNow(14),
+        }
+        const course = factories.courses.course({
+          id: 1,
+          courseruns: [ended, openRun],
+          next_run_id: openRun.id,
+        })
+        const enrollment = enrollmentIn(course, ended)
+
+        const resolved = resolveDisplayedRunAndEnrollment(course, [enrollment])
+        expect(resolved.displayedEnrollment).toEqual(enrollment)
+        expect(resolved.pastEnrollments).toEqual([])
+      })
+
+      test("offers the next run when a self-paced run's certificate date is still ahead", () => {
+        const ended = {
+          ...endedRun(10, -60),
+          certificate_available_date: daysFromNow(14),
+          is_self_paced: true,
+        }
+        const course = factories.courses.course({
+          id: 1,
+          courseruns: [ended, openRun],
+          next_run_id: openRun.id,
+        })
+        const enrollment = enrollmentIn(course, ended)
+
+        const resolved = resolveDisplayedRunAndEnrollment(course, [enrollment])
+        expect(resolved.displayedRun).toEqual(openRun)
+        expect(resolved.pastEnrollments).toEqual([enrollment])
       })
 
       test("keeps showing the enrollment when a run hasn't ended", () => {

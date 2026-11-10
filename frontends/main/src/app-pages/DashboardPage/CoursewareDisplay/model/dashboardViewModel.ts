@@ -24,6 +24,7 @@ import type {
   V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v3"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
+import { isInPast } from "ol-utilities"
 import { getRunTimeState } from "../courseDateUtils"
 import type { RunTimeState } from "../courseDateUtils"
 import {
@@ -692,7 +693,9 @@ const filterEnrollmentsForContract = (
  * decides), the course is offered again: the card shows that run with Start,
  * and the ended enrollments move under its "Course runs" toggle. A
  * certificate on any run means the course is done, so it is never offered
- * again.
+ * again. Nor while an instructor-paced run's certificates are still to come
+ * (`certificate_available_date` in the future), since a learner who passed
+ * gets theirs then.
  *
  * Not when the learner is already in the next run. That happens with an
  * archived run: it has ended but stays open, so it can be the next run.
@@ -710,6 +713,13 @@ const getRunToStartAgain = (
   )
   if (courseEnrollments.length === 0) return null
   if (pickCertificateEnrollment(courseEnrollments)) return null
+  const certificatePending = courseEnrollments.some(
+    (e) =>
+      !e.run.is_self_paced &&
+      !!e.run.certificate_available_date &&
+      isInPast(e.run.certificate_available_date) === false,
+  )
+  if (certificatePending) return null
   const allEnded = courseEnrollments.every(
     (e) => getRunTimeState(e.run.start_date, e.run.end_date) === "ended",
   )
