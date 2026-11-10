@@ -73,6 +73,7 @@ const MenuRow = styled.span({
   alignItems: "flex-start",
   gap: "8px",
   width: "100%",
+  lineHeight: "20px",
 })
 
 const MenuBox = styled.span<{ checked: boolean }>(({ theme, checked }) => ({

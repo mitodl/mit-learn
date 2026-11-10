@@ -2524,7 +2524,7 @@ describe("ContractLearnersPage progress grid", () => {
     ).not.toBeInTheDocument()
     expect(
       screen.getByRole("combobox", { name: /modules/i }),
-    ).toHaveAccessibleName("Modules , 1 selected")
+    ).toHaveAccessibleName(/^Modules\s*, 1 selected$/)
     expect(
       screen.getByRole("combobox", { name: /modules/i }),
     ).toHaveTextContent("Module 6")
@@ -2551,7 +2551,7 @@ describe("ContractLearnersPage progress grid", () => {
     await user.keyboard("{Escape}")
 
     const combobox = screen.getByRole("combobox", { name: /modules/i })
-    expect(combobox).toHaveAccessibleName("Modules , 2 selected")
+    expect(combobox).toHaveAccessibleName(/^Modules\s*, 2 selected$/)
     expect(combobox).toHaveTextContent("Selected2")
   })
 

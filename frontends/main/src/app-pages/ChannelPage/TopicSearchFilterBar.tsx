@@ -139,6 +139,7 @@ const FreeCheckbox = styled(Checkbox)(({ theme }) => ({
 const MenuCount = styled.span(({ theme }) => ({
   ...theme.typography.body3,
   color: theme.custom.colors.silverGrayDark,
+  lineHeight: "inherit",
   marginLeft: "auto",
   paddingLeft: "8px",
 }))
