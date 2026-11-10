@@ -2,8 +2,9 @@ import React from "react"
 import { styled } from "ol-components"
 import { ButtonLink } from "@mitodl/smoot-design"
 import { RiArrowRightLine, RiHeartFill } from "@remixicon/react"
+import { getEducatorShareStoryUrl } from "@/common/config"
 import { Section, SectionInner } from "./SectionLayout"
-import { OCW_GIVE_URL, OCW_SHARE_STORY_URL } from "./links"
+import { OCW_GIVE_URL } from "./links"
 
 const Inner = styled(SectionInner)(({ theme }) => ({
   padding: "80px 0",
@@ -71,41 +72,48 @@ const Heart = styled(RiHeartFill)(({ theme }) => ({
   color: theme.custom.colors.red,
 }))
 
-const SupportShareSection: React.FC = () => (
-  <Section>
-    <Inner>
-      <Banner>
-        <SupportPanel>
-          <Text>
-            <Heading>Support the educator community</Heading>
-            <Body>Help keep MIT teaching resources free on MIT Learn.</Body>
-          </Text>
-          <ButtonLink
-            variant="bordered"
-            size="large"
-            href={OCW_GIVE_URL}
-            endIcon={<Heart aria-hidden />}
-          >
-            Give now
-          </ButtonLink>
-        </SupportPanel>
-        <SharePanel>
-          <Text>
-            <Heading>Share your story</Heading>
-            <Body>Inspire other educators with your experience.</Body>
-          </Text>
-          <ButtonLink
-            variant="primary"
-            size="large"
-            href={OCW_SHARE_STORY_URL}
-            endIcon={<RiArrowRightLine aria-hidden />}
-          >
-            Share your story
-          </ButtonLink>
-        </SharePanel>
-      </Banner>
-    </Inner>
-  </Section>
-)
+const SupportShareSection: React.FC = () => {
+  const shareStoryUrl = getEducatorShareStoryUrl()
+  return (
+    <Section>
+      <Inner>
+        <Banner>
+          <SupportPanel>
+            <Text>
+              <Heading>Support the educator community</Heading>
+              <Body>Help keep MIT teaching resources free on MIT Learn.</Body>
+            </Text>
+            <ButtonLink
+              variant="bordered"
+              size="large"
+              href={OCW_GIVE_URL}
+              endIcon={<Heart aria-hidden />}
+            >
+              Give now
+            </ButtonLink>
+          </SupportPanel>
+          {shareStoryUrl ? (
+            <SharePanel>
+              <Text>
+                <Heading>Share your story</Heading>
+                <Body>Inspire other educators with your experience.</Body>
+              </Text>
+              <ButtonLink
+                variant="primary"
+                size="large"
+                href={shareStoryUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                endIcon={<RiArrowRightLine aria-hidden />}
+              >
+                Share your story
+              </ButtonLink>
+            </SharePanel>
+          ) : null}
+        </Banner>
+      </Inner>
+    </Section>
+  )
+}
 
 export default SupportShareSection

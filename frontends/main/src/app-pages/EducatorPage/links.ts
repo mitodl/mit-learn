@@ -25,7 +25,6 @@ export const SEARCH_VIDEOS_AND_PODCASTS = querifiedSearchUrl([
 ])
 
 export const OCW_GIVE_URL = "https://giving.mit.edu/give/to/ocw/"
-export const OCW_SHARE_STORY_URL = "https://ocw.mit.edu/give/share-your-story/"
 export const OCW_NEWSLETTER_URL = "https://ocw.mit.edu/newsletter/"
 
 export const OCW_SOCIAL = {

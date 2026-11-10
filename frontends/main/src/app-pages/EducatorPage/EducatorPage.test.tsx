@@ -10,12 +10,7 @@ import {
   TEACHING_PODCAST_EPISODES_PARAMS,
   TEACHING_VIDEOS_PARAMS,
 } from "./queryParams"
-import {
-  OCW_GIVE_URL,
-  OCW_NEWSLETTER_URL,
-  OCW_SHARE_STORY_URL,
-  OCW_SOCIAL,
-} from "./links"
+import { OCW_GIVE_URL, OCW_NEWSLETTER_URL, OCW_SOCIAL } from "./links"
 
 jest.mock("@/common/analytics/posthog", () => ({
   capturePostHog: jest.fn(),
@@ -247,7 +242,7 @@ describe("EducatorPage teaching practices", () => {
 })
 
 describe("EducatorPage static sections", () => {
-  test("links to licensing, giving and sharing pages", () => {
+  test("links to the licensing and giving pages", () => {
     setupApis()
     renderWithProviders(<EducatorPage />)
     expect(
@@ -259,9 +254,34 @@ describe("EducatorPage static sections", () => {
       "href",
       OCW_GIVE_URL,
     )
-    expect(
-      screen.getByRole("link", { name: "Share your story" }),
-    ).toHaveAttribute("href", OCW_SHARE_STORY_URL)
+  })
+
+  describe("Share your story", () => {
+    const SHARE_STORY_URL = "https://forms.example.com/share-your-story"
+    afterEach(() => {
+      delete process.env.NEXT_PUBLIC_EDUCATOR_SHARE_STORY_URL
+    })
+
+    test("links to the configured form in a new tab", () => {
+      process.env.NEXT_PUBLIC_EDUCATOR_SHARE_STORY_URL = SHARE_STORY_URL
+      setupApis()
+      renderWithProviders(<EducatorPage />)
+      const link = screen.getByRole("link", { name: "Share your story" })
+      expect(link).toHaveAttribute("href", SHARE_STORY_URL)
+      expect(link).toHaveAttribute("target", "_blank")
+    })
+
+    test("is not rendered when the form URL is unset", () => {
+      setupApis()
+      renderWithProviders(<EducatorPage />)
+      screen.getByRole("link", { name: "Give now" })
+      expect(
+        screen.queryByRole("heading", { name: "Share your story" }),
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole("link", { name: "Share your story" }),
+      ).not.toBeInTheDocument()
+    })
   })
 
   test.each([
