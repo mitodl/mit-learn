@@ -24,13 +24,13 @@ The GTM container is loaded in the root `(site)` layout: `frontends/main/src/app
 | `GTM_PREVIEW`     | GTM environment/preview identifier (e.g. `env-3`). Matches the snippet provided by Google Tag Manager install instructions |
 | `GTM_COOKIES_WIN` | Optional, defaults to `"x"` if unset. Matches the snippet provided by Google Tag Manager install instructions              |
 
-These are server-side variables (no `NEXT_PUBLIC_` prefix); the layout reads them at render time and bakes them into the GTM script and `<noscript>` iframe URLs. If `GTM_TRACKING_ID`, `GTM_AUTH`, or `GTM_PREVIEW` is missing, GTM is skipped entirely. Local values live in `env/frontend.local.env`; see `env/frontend.local.example.env` and `env/shared.local.example.env` for the template (dev values are copied from the GTM Environments UI).
+If `GTM_TRACKING_ID`, `GTM_AUTH`, or `GTM_PREVIEW` is missing, GTM is skipped entirely. Local values live in `env/frontend.local.env`; see `env/frontend.local.example.env` and `env/shared.local.example.env` for the template (dev values are copied from the GTM Environments UI).
 
 ### Pushing events
 
 Analytics code lives in `frontends/main/src/common/analytics/`, in two layers:
 
-- **`index.ts` — the `analytics` facade.** This is the only thing application code imports (`import { analytics } from "@/common/analytics"`). Each method is named for the user action (`analytics.courseEnrolled`, `analytics.siteSearched`, …) and routes it to GTM, PostHog, or both. ESLint (`import/no-restricted-paths` in `frontends/.eslintrc.js`) stops anything under `app/`, `app-pages/` or `page-components/` from importing `gtm.ts` or `posthog.ts` directly; test files are exempt so they can mock the adapters.
+- **`index.ts` — the `analytics` facade.** This is the only thing application code imports (`import { analytics } from "@/common/analytics"`). Each method is named for the user action (`analytics.courseEnrolled`, `analytics.siteSearched`, …) and routes it to GTM, PostHog, or both. ESLint (`import/no-restricted-paths` in `frontends/.eslintrc.js`) stops anything under `app/`, `app-pages/` or `page-components/` from importing `gtm.ts` or `posthog.ts` directly.
 - **`gtm.ts` — the GTM adapter.** At the top of the module is a single low-level primitive:
 
   ```ts
@@ -47,18 +47,7 @@ Analytics code lives in `frontends/main/src/common/analytics/`, in two layers:
 
   Every GTM event is a small `track*` wrapper around `pushGtmEvent` that names the event and shapes its payload (e.g. `trackCourseEnrolled`, `trackSiteSearch`). Only the facade calls these wrappers, and nothing outside `gtm.ts` calls `pushGtmEvent` or touches `window.dataLayer` (apart from the GTM loader snippet in the layout). This keeps event names and payload keys centralized in one place rather than scattered as string literals across the app.
 
-`posthog.ts` is the PostHog adapter at the same level as `gtm.ts`.
-
-`searchFilters.ts` exports `useTrackedFilterSetters`, which wraps the search-filter setters from `@mitodl/course-search-utils` so every filter control on a page reports through one place. The search page (`SearchPage.tsx`) and channel pages (`ChannelSearch.tsx`) both use it. It sends PostHog `SearchFilterUpdate` on every filter change, and GTM `filter-course-catalog` only when a checkbox value is _added_.
-
-### Arrival tracking and UTM helpers
-
-The four arrival events (`landing-page-arrival`, `google-ad-arrival` / `linkedin-ad-arrival`, `organic-social-click`, `return-visit`) are fired by the `AnalyticsTracker` component in `frontends/main/src/app/(site)/SiteProviders.tsx`, on the first page load of each browser session. It uses two storage keys:
-
-- `sessionStorage["gtm_landing_page_tracked"]` — set on the first page load of the session, so the arrival events fire only once per session.
-- `localStorage["gtm_has_visited"]` — set on the first-ever visit, so a later session can be recognised as a return visit.
-
-If storage is unavailable, the arrival events fire on every full page load instead of once per session, and `return-visit` never fires.
+### UTM helpers
 
 `frontends/main/src/common/analytics/utm.ts` parses `utm_source`, `utm_medium`, `utm_campaign`, `utm_term`, `utm_content`, `gclid` and `li_fat_id` from the URL query string and classifies the traffic (all string comparisons are case-insensitive):
 
@@ -66,11 +55,11 @@ If storage is unavailable, the arrival events fire on every full page load inste
 - **LinkedIn ad**: `li_fat_id` is present, or `utm_source=linkedin` with `utm_medium` one of `cpc`, `paid`, `paid-social`, `paidsocial`.
 - **Organic social**: `utm_medium` is one of `social`, `social-organic`, `organic-social`, `organicsocial` (any source).
 
-`analytics.adArrived` (`trackAdArrival` in `gtm.ts`) fires at most one ad-arrival event: if a visit matches both the Google and LinkedIn rules, only `google-ad-arrival` fires.
+`analytics.adArrived` (`trackAdArrival` in `gtm.ts`) fires at most one ad-arrival event.
 
 ## Event reference table
 
-Quick reference — read a row to get the event's facade method and GTM helper, the moment in the visitor's journey that triggers it, and what information it carries. Unless noted otherwise, a payload field is left out when its value is missing.
+Quick reference — read a row to get the event's facade method and GTM helper, the moment in the visitor's journey that triggers it, and what information it carries.
 
 | Event name              | `analytics` method              | GTM helper                 | Fires when                                                                                                                                                                                                                                                                                                                                             | Payload                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | ----------------------- | ------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
