@@ -251,15 +251,110 @@ def test_context_unit_without_text(fake_llm):
     assert fake_llm.calls == []
 
 
-def test_context_over_budget(fake_llm):
-    """A context unit over the input budget makes no call"""
-    ResourceProfileConfiguration.objects.filter(stage="context").update(
-        input_token_budget=10
-    )
-    run = _build_run()
+# each of _build_split_run's context files fits the budget, but not both
+SPLIT_BUDGET = 60
 
-    assert generate_context_claims(run) is None
-    assert fake_llm.calls == []
+
+def _split_budget(budget=SPLIT_BUDGET):
+    ResourceProfileConfiguration.objects.filter(
+        stage=ResourceProfileConfiguration.Stage.CONTEXT
+    ).update(input_token_budget=budget)
+
+
+def _build_split_run():
+    """Return a run whose context unit has two files"""
+    run = _build_run()
+    _add_file(
+        run.units.get(kind=Unit.Kind.CONTEXT),
+        "Grading: half of the grade is the exams, half the problem sets.",
+        position=1,
+    )
+    return run
+
+
+def _parts(run):
+    return list(
+        ClaimExtraction.objects.filter(
+            unit=run.units.get(kind=Unit.Kind.CONTEXT),
+            level=ClaimExtraction.Level.UNIT_PART,
+        ).order_by("part")
+    )
+
+
+def test_context_over_budget_split(fake_llm):
+    """A context unit over the input budget is extracted in parts, then combined"""
+    _split_budget()
+    run = _build_split_run()
+
+    extraction = generate_context_claims(run)
+
+    assert [name for name, _ in fake_llm.calls] == ["context", "context"]
+    first, second = (prompt for _, prompt in fake_llm.calls)
+    assert "PART 1 of the course context: sources S01-S01" in first
+    assert "=== SOURCE S02" not in first
+    assert "PART 2 of the course context: sources S02-S02" in second
+    assert "=== SOURCE S01" not in second
+
+    parts = _parts(run)
+    assert [part.part for part in parts] == [1, 2]
+    assert {part.raw_response for part in parts} == {"context raw"}
+    assert extraction.level == ClaimExtraction.Level.UNIT
+    assert extraction.part is None
+    assert extraction.extractor_version.endswith("-merge")
+    assert extraction.raw_response == ""
+
+    output = extraction.output
+    # each part gives the same claims, so they are combined into one
+    assert len(output["stated_audience"]) == 1
+    assert [item["source_id"] for item in output["stated_audience"][0]["evidence"]] == [
+        "S01",
+        "S02",
+    ]
+    assert len(output["prerequisites"]) == 1
+    assert output["instructional_outline"] == [
+        {"unit_label": "Week 1", "title": "Kinematics"}
+    ]
+    assert output["description"]["evidence"][0]["source_id"] == "S01"
+    assert output["prerequisites_status"] == "stated"
+    assert [source["source_id"] for source in output["sources"]] == ["S01", "S02"]
+
+
+def test_split_context_cached(fake_llm):
+    """A split context unit whose files haven't changed makes no call"""
+    _split_budget()
+    run = _build_split_run()
+    first = generate_context_claims(run)
+
+    assert generate_context_claims(run) == first
+    assert len(fake_llm.calls) == 2
+    assert len(_parts(run)) == 2
+
+
+def test_split_context_overwrite(fake_llm):
+    """Overwrite reruns every part and replaces the combined extraction"""
+    _split_budget()
+    run = _build_split_run()
+    first = generate_context_claims(run)
+
+    second = generate_context_claims(run, overwrite=True)
+
+    assert len(fake_llm.calls) == 4
+    assert second.pk == first.pk
+    assert len(_parts(run)) == 2
+
+
+def test_context_no_longer_split(fake_llm):
+    """A context unit that fits in one call again loses its parts"""
+    _split_budget()
+    run = _build_split_run()
+    generate_context_claims(run)
+    _split_budget(100000)
+
+    extraction = generate_context_claims(run)
+
+    assert _parts(run) == []
+    assert extraction.raw_response == "context raw"
+    assert ClaimExtraction.objects.count() == 1
 
 
 def test_failed_context(mocker):

@@ -1,7 +1,13 @@
-def context_unit_combined_prompt(course_title: str, sources_block: str) -> str:
-    """Return the combined prompt for the context unit"""
+def context_unit_combined_prompt(
+    course_title: str, sources_block: str, part_note: str | None = None
+) -> str:
+    """
+    Return the combined prompt for the context unit, or for one part of it
+    when the context unit is split
+    """
+    part = f"\n{part_note}\n" if part_note else ""
     return f"""Course: {course_title}
-
+{part}
 Extract the course context from the following sources.
 
 {sources_block}

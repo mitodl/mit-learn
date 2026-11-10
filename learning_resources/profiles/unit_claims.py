@@ -27,8 +27,11 @@ from learning_resources.models import (
 from learning_resources.profiles import prompts
 from learning_resources.profiles.claims import (
     ClaimExtractor,
+    delete_parts,
+    extract_parts,
     get_or_create_extraction,
     load_extractor,
+    merge_evidence,
     truncation_notes,
 )
 from learning_resources.profiles.schemas import UnitExtraction, UnitMergeExtraction
@@ -197,18 +200,6 @@ def _parts_block(parts: list[ClaimExtraction], part_sources: list[list[Source]])
     return "\n".join(lines)
 
 
-def _merged_evidence(cited: list[dict]) -> list[dict]:
-    """Return the cited part claims' evidence, without repeats"""
-    evidence, seen = [], set()
-    for claim in cited:
-        for item in claim.get("evidence", []):
-            marker = (item["source_id"], item["passage"])
-            if marker not in seen:
-                seen.add(marker)
-                evidence.append(item)
-    return evidence
-
-
 def resolve_merged_claims(output: dict, parts: list[ClaimExtraction]) -> dict:
     """
     Turn a merge output's part claim citations into evidence, and check it.
@@ -245,7 +236,7 @@ def resolve_merged_claims(output: dict, parts: list[ClaimExtraction]) -> dict:
                 continue
             cited = [claims[claim_id][1] for claim_id in ids]
             merged["part_claim_ids"] = ids
-            merged["evidence"] = _merged_evidence(cited)
+            merged["evidence"] = merge_evidence(cited)
             # status and prior flag come from the cited claims only, so the
             # merge can't make a claim stronger than any part found it
             if field == "concepts":
@@ -298,44 +289,23 @@ def _generate_split_unit_claims(
     """
     Extract each part of a split unit, then merge them into the unit's claims.
 
-    Source ids run through the whole unit, so a part's evidence cites the same
-    ids as the unit's sources and is carried into the merge unchanged. A part
-    is keyed by its sources' ids and text and the number of parts, which its
-    prompt depends on; the merge is keyed by its parts' keys and outputs.
+    The merge is keyed by its parts' keys and outputs.
     """
     sources = [source for files in part_sources for source in files]
-    part_extractor = load_unit_part_extractor()
     merge_extractor = load_unit_merge_extractor()
-    parts = []
-    for index, files in enumerate(part_sources, 1):
-        part_header = _part_header(header, index, files)
-        parts.append(
-            get_or_create_extraction(
-                part_extractor,
-                part_extractor.key(
-                    *_unit_key_inputs(unit),
-                    index,
-                    len(part_sources),
-                    [[source.source_id, source.cache_input()] for source in files],
-                ),
-                lambda files=files, part_header=part_header: (
-                    prompts.unit_combined_prompt(
-                        outline,
-                        part_header,
-                        "\n".join(source.block for source in files),
-                    )
-                ),
-                files,
-                unit=unit,
-                part=index,
-                finish=_number_claims,
-                overwrite=overwrite,
-            )
-        )
-    # parts beyond the current count are left from a longer split
-    ClaimExtraction.objects.filter(
-        unit=unit, level=ClaimExtraction.Level.UNIT_PART, part__gt=len(parts)
-    ).delete()
+    parts = extract_parts(
+        load_unit_part_extractor(),
+        unit,
+        part_sources,
+        _unit_key_inputs(unit),
+        lambda index, files: prompts.unit_combined_prompt(
+            outline,
+            _part_header(header, index, files),
+            "\n".join(source.block for source in files),
+        ),
+        finish=_number_claims,
+        overwrite=overwrite,
+    )
     return get_or_create_extraction(
         merge_extractor,
         merge_extractor.key(
@@ -399,9 +369,7 @@ def generate_unit_claims(
             unit, part_sources, outline, header, overwrite=overwrite
         )
     # the unit fits in one call now; parts from an earlier split aren't current
-    ClaimExtraction.objects.filter(
-        unit=unit, level=ClaimExtraction.Level.UNIT_PART
-    ).delete()
+    delete_parts(unit)
     return get_or_create_extraction(
         extractor,
         extractor.key(
