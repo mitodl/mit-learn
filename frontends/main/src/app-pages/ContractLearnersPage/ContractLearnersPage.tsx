@@ -7,7 +7,6 @@ import {
   useQueryClient,
 } from "@tanstack/react-query"
 import Image from "next/image"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import { RiCheckLine } from "@remixicon/react"
 import {
   Container,
@@ -48,10 +47,15 @@ import {
   TableRow,
 } from "@/components/B2BTable/B2BTable"
 import { matchOrganizationBySlug } from "@/common/utils"
-import { ForbiddenError, isForbiddenResponse } from "@/common/errors"
+import {
+  ForbiddenError,
+  isAnalyticsNotLoaded,
+  isForbiddenResponse,
+} from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { analytics } from "@/common/analytics"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
 import ContractManagerNav from "@/components/ContractManagerNav/ContractManagerNav"
 import SectionHeader, {
@@ -301,6 +305,7 @@ const PAGE_SIZE = 25
 /** Below the API's max_page_size rather than pinned to it — that setting is env-overridable, and this only costs one extra round trip on a large contract. */
 const CSV_EXPORT_PAGE_SIZE = 500
 const UNAVAILABLE_MESSAGE_ID = "learner-analytics-unavailable-message"
+const NOT_LOADED_MESSAGE_ID = "learner-analytics-not-loaded-message"
 
 const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: ALL, label: "All learners" },
@@ -535,6 +540,13 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
    * reads as "no learners" instead of surfacing the error state below.
    */
   const hasLoadError = rowsQuery.isError || totalQuery.isError
+  /**
+   * The contract exists in MITx Online but the warehouse has not loaded it
+   * yet. Not an error a retry can fix, so it gets its own message.
+   */
+  const notLoaded = [rowsQuery, totalQuery, courseRunsQuery].some((query) =>
+    isAnalyticsNotLoaded(query.error),
+  )
 
   const retryFailedQueries = () => {
     rowsQuery.refetch()
@@ -542,7 +554,14 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   }
 
   const handleExport = useCallback(async () => {
-    if (isExporting || !canQuery || !moduleResolved || !orgUuid || !contractId)
+    if (
+      isExporting ||
+      !canQuery ||
+      notLoaded ||
+      !moduleResolved ||
+      !orgUuid ||
+      !contractId
+    )
       return
     setIsExporting(true)
     try {
@@ -572,6 +591,10 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
         "Enrolled on",
         "Last activity",
         "Not started or inactive 30+ days",
+        "Days active",
+        "Videos watched",
+        "Problems attempted",
+        "Chatbot interactions",
       ])
       const body = all.map((row) => {
         const status = getDisplayStatus(row)
@@ -590,6 +613,10 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
               ? "Yes"
               : "No"
             : "",
+          row.days_active?.toString(),
+          row.videos_watched?.toString(),
+          row.problems_attempted?.toString(),
+          row.chatbot_interactions?.toString(),
         ])
       })
       const csv = [header, ...body].join("\n")
@@ -617,6 +644,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   }, [
     isExporting,
     canQuery,
+    notLoaded,
     moduleResolved,
     orgUuid,
     contractId,
@@ -738,8 +766,16 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
             <ExportWrapper>
               <Button
                 variant="bordered"
-                aria-disabled={isExporting || !canQuery || !moduleResolved}
-                aria-describedby={canQuery ? undefined : UNAVAILABLE_MESSAGE_ID}
+                aria-disabled={
+                  isExporting || !canQuery || notLoaded || !moduleResolved
+                }
+                aria-describedby={
+                  !canQuery
+                    ? UNAVAILABLE_MESSAGE_ID
+                    : notLoaded
+                      ? NOT_LOADED_MESSAGE_ID
+                      : undefined
+                }
                 aria-busy={isExporting || (canQuery && !moduleResolved)}
                 onClick={handleExport}
               >
@@ -758,6 +794,11 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
         {!canQuery ? (
           <Typography id={UNAVAILABLE_MESSAGE_ID} variant="body1">
             Learner analytics is not available in this environment.
+          </Typography>
+        ) : notLoaded ? (
+          <Typography id={NOT_LOADED_MESSAGE_ID} variant="body1">
+            Learner data for {contract.name} will be available once it has been
+            loaded. Please check back later.
           </Typography>
         ) : hasLoadError ? (
           <Alert severity="error">
@@ -1034,10 +1075,8 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
 
 const ContractLearnersPage: React.FC<ContractLearnersPageProps> = (props) => {
   const flagsLoaded = useFeatureFlagsLoaded()
-  const analyticsEnabled = useFeatureFlagEnabled(
-    FeatureFlags.B2BAnalyticsDashboard,
-  )
-  const learnerAnalyticsEnabled = useFeatureFlagEnabled(
+  const analyticsEnabled = useFeatureFlag(FeatureFlags.B2BAnalyticsDashboard)
+  const learnerAnalyticsEnabled = useFeatureFlag(
     FeatureFlags.B2BLearnerAnalytics,
   )
   const enabled = analyticsEnabled && learnerAnalyticsEnabled

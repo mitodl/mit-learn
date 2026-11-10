@@ -2,14 +2,14 @@
 
 import React from "react"
 import { notFound } from "next/navigation"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 
 const HacksnackFlagGate: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const hacksnackEnabled = useFeatureFlagEnabled(FeatureFlags.Hacksnack)
+  const hacksnackEnabled = useFeatureFlag(FeatureFlags.Hacksnack)
   const flagsLoaded = useFeatureFlagsLoaded()
 
   if (!flagsLoaded) return null

@@ -5,15 +5,16 @@ learning_resources tasks
 import datetime as datetime_module
 import logging
 import uuid
+from collections import Counter
 from datetime import UTC, datetime
 
 import boto3
 import celery
-from celery.exceptions import Ignore
+from celery.exceptions import Ignore, MaxRetriesExceededError
 from django.conf import settings
 from django.core.cache import caches
-from django.db import OperationalError
-from django.db.models import Q
+from django.db import OperationalError, transaction
+from django.db.models import F, Q
 from django.utils import timezone
 
 from learning_resources.api import (
@@ -36,6 +37,7 @@ from learning_resources.etl import (
     pipelines,
     podcast,
     shadow,
+    warehouse_content_files,
     warehouse_media,
     warehouse_mitxonline,
     warehouse_ocw,
@@ -77,12 +79,16 @@ from learning_resources.etl.utils import (
 from learning_resources.lib.warehouse import (
     WAREHOUSE_STATE_CACHE,
     BaseWarehouseETLTask,
+    connect_to_warehouse,
+    iter_group_stats,
     iter_rows,
 )
 from learning_resources.models import (
+    ClaimExtraction,
     ContentFile,
     LearningResource,
     LearningResourceRun,
+    Unit,
     VideoChannel,
 )
 from learning_resources.site_scrapers.utils import scraper_for_site
@@ -103,7 +109,7 @@ from learning_resources_search.exceptions import RetryError
 from main.celery import app
 from main.constants import ISOFORMAT
 from main.decorators import cooldown_task
-from main.utils import chunks, clear_views_cache, now_in_utc, run_on_worker_loop
+from main.utils import chunks, now_in_utc, run_on_worker_loop
 
 log = logging.getLogger(__name__)
 
@@ -215,13 +221,14 @@ def get_mit_climate_data():
 
 
 @app.task(acks_late=True, reject_on_worker_lost=True)
-def get_content_files(
+def get_content_files(  # noqa: PLR0913
     ids: list[int],
     etl_source: str,
     keys: list[str],
     *,
     overwrite: bool = False,
     overwrite_units: bool = False,
+    ocr_pdfs: bool = False,
 ):
     """
     Task to sync edX course content files with database
@@ -238,17 +245,23 @@ def get_content_files(
     if not may_write(etl_source, CONTENT_FILE):
         return
     sync_edx_course_files(
-        etl_source, ids, keys, overwrite=overwrite, overwrite_units=overwrite_units
+        etl_source,
+        ids,
+        keys,
+        overwrite=overwrite,
+        overwrite_units=overwrite_units,
+        ocr_pdfs=ocr_pdfs,
     )
 
 
-def get_content_tasks(
+def get_content_tasks(  # noqa: PLR0913
     etl_source: str,
     *,
     chunk_size: int | None = None,
     overwrite: bool = False,
     overwrite_units: bool = False,
     learning_resource_ids: list[int] | None = None,
+    ocr_pdfs: bool = False,
 ) -> celery.group:
     """
     Return a list of grouped celery tasks for indexing edx content
@@ -267,6 +280,7 @@ def get_content_tasks(
                 archive_keys,
                 overwrite=overwrite,
                 overwrite_units=overwrite_units,
+                ocr_pdfs=ocr_pdfs,
             )
             for ids in chunks(
                 learning_resources,
@@ -417,12 +431,13 @@ def import_content_files(  # noqa: PLR0913
     overwrite=False,
     overwrite_units=False,
     learning_resource_ids=None,
+    ocr_pdfs=False,
 ):
     """Import content files for any edX-based ETL source.
 
     This task wraps get_content_tasks so that the S3 archive listing and
     task-group construction happen asynchronously in a Celery worker, rather
-    than blocking the calling task.
+    than blocking the calling task. ocr_pdfs re-extracts every PDF with LLM OCR.
     """
     return _replace_with_content_tasks(
         self,
@@ -431,6 +446,7 @@ def import_content_files(  # noqa: PLR0913
         overwrite=overwrite,
         overwrite_units=overwrite_units,
         learning_resource_ids=learning_resource_ids,
+        ocr_pdfs=ocr_pdfs,
     )
 
 
@@ -467,6 +483,7 @@ def get_ocw_courses(
     force_overwrite,
     utc_start_timestamp=None,
     skip_content_files=settings.OCW_SKIP_CONTENT_FILES,
+    ocr_pdfs=False,
 ):
     """
     Task to sync a batch of OCW Next courses
@@ -482,6 +499,7 @@ def get_ocw_courses(
         force_overwrite=force_overwrite,
         start_timestamp=utc_start_timestamp,
         skip_content_files=skip_content_files,
+        ocr_pdfs=ocr_pdfs,
     )
 
 
@@ -1434,6 +1452,173 @@ def generate_all_credential_metadata(
     return len(generation_tasks)
 
 
+def unit_claims_resource_ids() -> list[int]:
+    """
+    Return the published courses that have units on any run.
+
+    The task resolves each course's best run, which isn't queryable, and skips
+    a course whose best run has no units.
+    """
+    return list(
+        LearningResource.objects.filter(
+            published=True,
+            resource_type=LearningResourceType.course.name,
+            runs__units__isnull=False,
+        )
+        .distinct()
+        .values_list("id", flat=True)
+    )
+
+
+@app.task(acks_late=True)
+def generate_claims_for_resource(
+    resource_id: int, *, overwrite: bool = False
+) -> dict | None:
+    """
+    Generate resource profile claims for a course's best run: step 1 for its
+    context unit, then each of its units and bins, and step 2 for the run.
+
+    The context and the units don't depend on each other, so one that fails is
+    logged and skipped without costing the rest; running again retries only
+    what failed, since stored extractions are reused. The run's claims are
+    generated only when none failed: claims missing a unit would misjudge
+    which knowledge the course teaches before it is needed.
+
+    The extractions the best run uses are then the course's only published
+    ones: see publish_claim_extractions.
+
+    Args:
+        resource_id (int): the LearningResource id
+        overwrite (bool): regenerate claims that are already stored
+
+    Returns:
+        dict | None: counts of context, unit and run extractions that were
+            extracted, skipped (no text, over the input budget, or for the run,
+            a failed unit) and failed, or None when the best run has no units
+    """
+    # deferred: the claim modules import the AI libraries, kept out of boot
+    from learning_resources.profiles.context_claims import generate_context_claims
+    from learning_resources.profiles.run_claims import generate_run_claims
+    from learning_resources.profiles.unit_claims import generate_unit_claims
+
+    resource = LearningResource.objects.get(id=resource_id)
+    run = resource.best_run
+    if not run or not run.units.exists():
+        log.info("No units to generate claims for in %s", resource.readable_id)
+        publish_claim_extractions(resource, [])
+        return None
+
+    stats = Counter()
+    # ids of the best run's extractions
+    current_ids = []
+
+    def _extract(kind, external_id, generate):
+        """Return the extraction, or None, and whether the call failed"""
+        try:
+            extraction = generate()
+        except Exception:
+            log.exception(
+                "Claim extraction failed for %s %s of run %s",
+                kind,
+                external_id,
+                run.run_id,
+            )
+            stats[f"{kind}_failed"] += 1
+            return None, True
+        if extraction:
+            current_ids.append(extraction.id)
+        stats[f"{kind}_extracted" if extraction else f"{kind}_skipped"] += 1
+        return extraction, False
+
+    context, any_failed = None, False
+    if run.units.filter(kind=Unit.Kind.CONTEXT).exists():
+        context, any_failed = _extract(
+            Unit.Kind.CONTEXT,
+            "context",
+            lambda: generate_context_claims(run, overwrite=overwrite),
+        )
+    units = run.units.exclude(kind=Unit.Kind.CONTEXT).order_by(
+        F("position").asc(nulls_last=True), "external_id"
+    )
+    unit_extractions = []
+    for unit in units:
+        extraction, failed = _extract(
+            Unit.Kind.UNIT,
+            unit.external_id,
+            lambda unit=unit: generate_unit_claims(unit, overwrite=overwrite),
+        )
+        any_failed = any_failed or failed
+        unit_extractions.append((unit, extraction))
+    if any_failed:
+        log.info(
+            "Not generating run claims for %s: a unit or the context failed",
+            run.run_id,
+        )
+        stats["run_skipped"] += 1
+    else:
+        _extract(
+            "run",
+            run.run_id,
+            lambda: generate_run_claims(
+                run, context, unit_extractions, overwrite=overwrite
+            ),
+        )
+    publish_claim_extractions(resource, current_ids)
+    log.info("Generated claims for %s: %s", resource.readable_id, dict(stats))
+    return dict(stats)
+
+
+def publish_claim_extractions(
+    resource: LearningResource, current_ids: list[int]
+) -> None:
+    """
+    Publish a course's current claim extractions and unpublish the rest.
+
+    The rest are those of runs that aren't the best run, and of best-run
+    units, or the best run itself, that failed or were skipped this time,
+    whose rows weren't brought up to date. Rows whose unit or run was deleted,
+    which no course sweeps, are unpublished too.
+
+    Args:
+        resource (LearningResource): the course
+        current_ids (list of int): ids of the best run's extractions
+    """
+    extractions = ClaimExtraction.objects.filter(
+        Q(unit__run__learning_resource=resource) | Q(run__learning_resource=resource)
+    )
+    with transaction.atomic():
+        extractions.filter(id__in=current_ids, published=False).update(published=True)
+        extractions.filter(published=True).exclude(id__in=current_ids).update(
+            published=False
+        )
+        ClaimExtraction.objects.filter(
+            published=True, unit__isnull=True, run__isnull=True
+        ).update(published=False)
+
+
+@app.task(acks_late=True)
+def generate_all_claims(resource_ids: list[int], *, overwrite: bool = False) -> int:
+    """
+    Queue resource profile claim generation for each resource.
+
+    Step 1 (context and unit claims) and step 2 (run claims) both run.
+
+    Args:
+        resource_ids (list of int): the LearningResource ids
+        overwrite (bool): regenerate claims that are already stored
+
+    Returns:
+        int: how many courses were queued
+    """
+    celery.group(
+        [
+            generate_claims_for_resource.si(resource_id, overwrite=overwrite)
+            for resource_id in resource_ids
+        ]
+    ).apply_async()
+    return len(resource_ids)
+
+
 # Names the SyncYouTubeTask run whose playlist loads are current. Kept where
 # the warehouse watermarks are, so it outlives a cache flush.
 YOUTUBE_SYNC_GENERATION_KEY = "warehouse_etl:youtube_sync_generation"
@@ -1778,25 +1963,186 @@ class SyncOCWCoursesTask(BaseWarehouseETLTask):
 SyncOCWCoursesTask = app.register_task(SyncOCWCoursesTask())
 
 
-@app.task(acks_late=True, reject_on_worker_lost=True)
-def unpublish_mit_edx_resources():
-    """Unpublish every mit_edx resource. The rows stay, so it is safe to rerun."""
-    mit_edx = ETLSource.mit_edx.name
-    resources = LearningResource.objects.filter(etl_source=mit_edx)
-    resources.update(published=False, test_mode=False)
-    for resource in resources:
-        resource_unpublished_actions(resource)
+# Two loads of one run at once could prune on a read that predates the other's
+# upserts. The time limit keeps a load inside the lock, and inside the hour after
+# which the broker redelivers an unacknowledged task, and it is hard because
+# load_content_file swallows a soft limit's exception. A worker killed mid-load
+# holds up the run until the lock expires. A load that finds it held tries again
+# until the same hour is up, then leaves the run to the next daily sync.
+CONTENT_FILE_LOAD_LOCK_SECONDS = 60 * 60
+CONTENT_FILE_LOAD_TIME_LIMIT_SECONDS = 55 * 60
+CONTENT_FILE_LOAD_RETRY_SECONDS = 60
+CONTENT_FILE_LOAD_MAX_RETRIES = 60
 
-    # item_count only counts published children, so reindex the lists that
-    # held one
-    parents = (
-        LearningResource.objects.filter(
-            published=True, children__child__etl_source=mit_edx
+
+@app.task(
+    bind=True,
+    acks_late=True,
+    reject_on_worker_lost=True,
+    max_retries=CONTENT_FILE_LOAD_MAX_RETRIES,
+    time_limit=CONTENT_FILE_LOAD_TIME_LIMIT_SECONDS,
+)
+def load_warehouse_content_files(  # noqa: PLR0913
+    self,
+    etl_source: str,
+    run_id: str,
+    expected_count: int | None = None,
+    *,
+    allow_mass_unpublish: bool = False,
+    allow_shrink: bool = False,
+) -> int:
+    """
+    Load one run's content files from the warehouse
+
+    Args:
+        etl_source (str): the run's source
+        run_id (str): the run's run_id, which is its run_readable_id in the view
+        expected_count (int | None): the number of rows the caller saw for the
+            run. Any other number skips the prune (see
+            warehouse_content_files.load_run)
+        allow_mass_unpublish (bool): lift the limit on how many of the run's
+            published files the load may unpublish
+        allow_shrink (bool): let the files a drop in the run's count explains
+            go past the limit, still holding changed keys to it (what a sync
+            run with allow_mass_unpublish queues)
+
+    Returns:
+        int: the number of files loaded
+    """
+    with writing_as(Pipeline.WAREHOUSE):
+        # ownership can change between the sync that queued this and now
+        if not may_write(etl_source, CONTENT_FILE):
+            return 0
+        run = warehouse_content_files.loadable_run(etl_source, run_id)
+        if run is None:
+            log.info("No run to load %s content files for: %s", etl_source, run_id)
+            return 0
+        lock = caches["redis"]
+        lock_key = f"warehouse_content_files:{etl_source}:{run_id}"
+        if not lock.add(lock_key, "1", timeout=CONTENT_FILE_LOAD_LOCK_SECONDS):
+            try:
+                raise self.retry(countdown=CONTENT_FILE_LOAD_RETRY_SECONDS)
+            except MaxRetriesExceededError:
+                log.warning(
+                    "Gave up waiting for a load of %s run %s", etl_source, run_id
+                )
+                return 0
+        try:
+            conn = connect_to_warehouse()
+            try:
+                rows = list(
+                    iter_rows(
+                        conn,
+                        BaseWarehouseETLTask.qualified_name(
+                            warehouse_content_files.VIEWS[etl_source]
+                        ),
+                        where={
+                            "etl_source": etl_source,
+                            warehouse_content_files.RUN_COLUMN: run_id,
+                        },
+                    )
+                )
+            finally:
+                conn.close()
+            return warehouse_content_files.load_run(
+                run,
+                rows,
+                expected_count=expected_count,
+                allow_mass_unpublish=allow_mass_unpublish is True,
+                allow_shrink=allow_shrink is True,
+            )
+        finally:
+            lock.delete(lock_key)
+
+
+class SyncContentFilesTask(BaseWarehouseETLTask):
+    """
+    Warehouse-pull sync of one source's content files. Each source has its own
+    subclass, because ownership is per source and ``writes`` names one.
+
+    Always reads the view's per-run aggregates, whatever ``since`` is, and queues
+    one load_warehouse_content_files per changed run: the view is too large to
+    read whole. A shadow of content_file is refused, so a run writes or skips.
+
+    A run that would unpublish more than warehouse_guards.MAX_UNPUBLISH_SHARE of
+    the published files fails before queueing anything, and each load checks its
+    own run by key (warehouse_content_files.load_run). Queue it with
+    ``allow_mass_unpublish=True`` when the removal is real. That lifts the sync's
+    check, and each load it queues gets ``allow_shrink``, so a run's count drop
+    goes through but a run whose keys changed beyond it is still refused.
+    """
+
+    abstract = True
+    writes = None
+
+    def fetch_and_upsert(
+        self,
+        conn,
+        *,
+        since=None,  # noqa: ARG002
+        allow_mass_unpublish: bool = False,
+    ) -> int:
+        """Read one row per run from the view and queue a load of each changed run."""
+        etl_source = self.writes[0]
+        to_load = warehouse_content_files.runs_to_load(
+            etl_source,
+            list(
+                iter_group_stats(
+                    conn,
+                    self.view_name,
+                    warehouse_content_files.RUN_COLUMN,
+                    columns=warehouse_content_files.FINGERPRINT_COLUMNS[etl_source],
+                    where={"etl_source": etl_source},
+                )
+            ),
+            allow_mass_unpublish=allow_mass_unpublish,
         )
-        .exclude(etl_source=mit_edx)
-        .distinct()
-    )
-    for parent in parents:
-        resource_upserted_actions(parent, percolate=False, generate_embeddings=True)
+        log.info("Queueing %d %s runs' content files", len(to_load), etl_source)
+        for run_id, row_count in to_load:
+            load_warehouse_content_files.delay(
+                etl_source, run_id, row_count, allow_shrink=allow_mass_unpublish
+            )
+        return len(to_load)
 
-    clear_views_cache()
+
+class SyncOCWContentFilesTask(SyncContentFilesTask):
+    """
+    Replaces what ocw_courses_etl loads with a course once ETLSourceOwnership
+    names the warehouse for ocw content_file, including the course's completeness
+    and learning materials.
+    """
+
+    name = "learning_resources.tasks.SyncOCWContentFilesTask"
+    table_name = warehouse_content_files.OCW_VIEW
+    writes = (ETLSource.ocw.name, [CONTENT_FILE])
+
+
+SyncOCWContentFilesTask = app.register_task(SyncOCWContentFilesTask())
+
+
+class SyncMITxOnlineContentFilesTask(SyncContentFilesTask):
+    """
+    Replaces import_all_mitxonline_files once ETLSourceOwnership names the
+    warehouse for mitxonline content_file.
+    """
+
+    name = "learning_resources.tasks.SyncMITxOnlineContentFilesTask"
+    table_name = warehouse_content_files.OPEN_EDX_VIEW
+    writes = (ETLSource.mitxonline.name, [CONTENT_FILE])
+
+
+SyncMITxOnlineContentFilesTask = app.register_task(SyncMITxOnlineContentFilesTask())
+
+
+class SyncXproContentFilesTask(SyncContentFilesTask):
+    """
+    Replaces import_all_xpro_files once ETLSourceOwnership names the warehouse
+    for xpro content_file.
+    """
+
+    name = "learning_resources.tasks.SyncXproContentFilesTask"
+    table_name = warehouse_content_files.OPEN_EDX_VIEW
+    writes = (ETLSource.xpro.name, [CONTENT_FILE])
+
+
+SyncXproContentFilesTask = app.register_task(SyncXproContentFilesTask())

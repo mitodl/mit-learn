@@ -6,14 +6,14 @@ import { programCertificates as programCertificateFactory } from "api/test-utils
 import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 import { receiptView } from "@/common/urls"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
-import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { ProgramEnrollmentCard } from "./ProgramEnrollmentCard"
-import { setupOrderHistory } from "./test-utils"
+import { PAID_PROGRAM_ENROLLMENT_MODES, setupOrderHistory } from "./test-utils"
 
-jest.mock("posthog-js/react")
+jest.mock("@/common/useFeatureFlag")
 
-const mockedUseFeatureFlagEnabled = jest
-  .mocked(useFeatureFlagEnabled)
+const mockedUseFeatureFlag = jest
+  .mocked(useFeatureFlag)
   .mockImplementation(() => false)
 
 // Verified cards look up their order; default to none, tests override.
@@ -103,36 +103,42 @@ describe.each([
     ).not.toBeInTheDocument()
   })
 
-  test("shows 'Certificate track' for verified enrollment without a certificate", () => {
-    const programEnrollment =
-      mitxonline.factories.enrollment.programEnrollmentV3({
-        enrollment_mode: "verified",
-        certificate: null,
-      })
-    renderWithProviders(
-      <ProgramEnrollmentCard programEnrollment={programEnrollment} />,
-    )
-    expect(within(getCard()).getByTestId("upgraded-banner")).toHaveTextContent(
-      "Certificate track",
-    )
-  })
+  test.each(PAID_PROGRAM_ENROLLMENT_MODES)(
+    "shows 'Certificate track' for %s enrollment without a certificate",
+    (enrollmentMode) => {
+      const programEnrollment =
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          enrollment_mode: enrollmentMode,
+          certificate: null,
+        })
+      renderWithProviders(
+        <ProgramEnrollmentCard programEnrollment={programEnrollment} />,
+      )
+      expect(
+        within(getCard()).getByTestId("upgraded-banner"),
+      ).toHaveTextContent("Certificate track")
+    },
+  )
 
-  test("shows 'View Certificate' in place of 'Certificate track' when verified enrollment has a certificate", () => {
-    const programEnrollment =
-      mitxonline.factories.enrollment.programEnrollmentV3({
-        enrollment_mode: "verified",
-        certificate: { uuid: "abc", link: "https://example.com/cert/" },
-      })
-    renderWithProviders(
-      <ProgramEnrollmentCard programEnrollment={programEnrollment} />,
-    )
-    expect(
-      within(getCard()).queryByTestId("upgraded-banner"),
-    ).not.toBeInTheDocument()
-    expect(
-      within(getCard()).getAllByRole("link", { name: /View Certificate/ }),
-    ).toHaveLength(1)
-  })
+  test.each(PAID_PROGRAM_ENROLLMENT_MODES)(
+    "shows 'View Certificate' in place of 'Certificate track' when %s enrollment has a certificate",
+    (enrollmentMode) => {
+      const programEnrollment =
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          enrollment_mode: enrollmentMode,
+          certificate: { uuid: "abc", link: "https://example.com/cert/" },
+        })
+      renderWithProviders(
+        <ProgramEnrollmentCard programEnrollment={programEnrollment} />,
+      )
+      expect(
+        within(getCard()).queryByTestId("upgraded-banner"),
+      ).not.toBeInTheDocument()
+      expect(
+        within(getCard()).getAllByRole("link", { name: /View Certificate/ }),
+      ).toHaveLength(1)
+    },
+  )
 
   test("does not show 'Certificate track' for audit enrollment", () => {
     const programEnrollment =
@@ -218,25 +224,28 @@ describe.each([
     ).not.toBeInTheDocument()
   })
 
-  test("context menu hides Unenroll for verified enrollment", async () => {
-    const program = mitxonline.factories.programs.simpleProgram({
-      display_mode: null,
-    })
-    const programEnrollment =
-      mitxonline.factories.enrollment.programEnrollmentV3({
-        program,
-        enrollment_mode: "verified",
+  test.each(PAID_PROGRAM_ENROLLMENT_MODES)(
+    "context menu hides Unenroll for %s enrollment",
+    async (enrollmentMode) => {
+      const program = mitxonline.factories.programs.simpleProgram({
+        display_mode: null,
       })
-    renderWithProviders(
-      <ProgramEnrollmentCard programEnrollment={programEnrollment} />,
-    )
-    await user.click(
-      within(getCard()).getByRole("button", { name: "More options" }),
-    )
-    expect(
-      screen.queryByRole("menuitem", { name: "Unenroll" }),
-    ).not.toBeInTheDocument()
-  })
+      const programEnrollment =
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          program,
+          enrollment_mode: enrollmentMode,
+        })
+      renderWithProviders(
+        <ProgramEnrollmentCard programEnrollment={programEnrollment} />,
+      )
+      await user.click(
+        within(getCard()).getByRole("button", { name: "More options" }),
+      )
+      expect(
+        screen.queryByRole("menuitem", { name: "Unenroll" }),
+      ).not.toBeInTheDocument()
+    },
+  )
 
   test("Receipt appears for verified program enrollment", async () => {
     const programEnrollment =
@@ -320,15 +329,17 @@ describe("ProgramEnrollmentCard program letter", () => {
   const setup = ({
     flagEnabled,
     mitxonlineProgramId,
+    shareUrl = SHARE_URL,
   }: {
     flagEnabled: boolean
     mitxonlineProgramId: number | null
+    shareUrl?: string | null
   }) => {
-    mockedUseFeatureFlagEnabled.mockReturnValue(flagEnabled)
+    mockedUseFeatureFlag.mockReturnValue(flagEnabled)
     setMockResponse.get(urls.programCertificates.list(), [
       programCertificateFactory.programCertificate({
         mitxonline_program_id: mitxonlineProgramId,
-        program_letter_share_url: SHARE_URL,
+        program_letter_share_url: shareUrl,
       }),
     ])
     const programEnrollment =
@@ -374,11 +385,26 @@ describe("ProgramEnrollmentCard program letter", () => {
     ).not.toBeInTheDocument()
   })
 
+  test("is hidden when the matching certificate has no letter", async () => {
+    // A certificate for a program with no MicroMasters id (e.g. DEDP Public
+    // Policy) has a null share url: there is no letter content for it.
+    setup({
+      flagEnabled: true,
+      mitxonlineProgramId: PROGRAM_ID,
+      shareUrl: null,
+    })
+    await openMenu()
+
+    expect(
+      screen.queryByRole("menuitem", { name: "Program Letter" }),
+    ).not.toBeInTheDocument()
+  })
+
   test("is hidden when the certificate request fails, leaving the rest of the menu intact", async () => {
     // Deliberate: a failed lookup is indistinguishable from having no
     // certificate, because the failed response is both the letter url and the
     // only signal that the learner has a letter. See useProgramLetterMenuItem.
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
     setMockResponse.get(urls.programCertificates.list(), null, { code: 500 })
     const programEnrollment =
       mitxonline.factories.enrollment.programEnrollmentV3({

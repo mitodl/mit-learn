@@ -5,7 +5,18 @@ import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
 import { getByImageSrc, queryByImageSrc } from "ol-test-utilities"
 import { renderWithTheme, screen, user, within } from "@/test-utils"
 import { ResourceCardView } from "./ResourceCardView"
-import type { CardLayoutProps, ResourceCardViewProps } from "./ResourceCardView"
+import type {
+  CardAction,
+  CardLayoutProps,
+  ResourceCardViewProps,
+} from "./ResourceCardView"
+
+const makeAction = (): CardAction => ({
+  label: faker.lorem.sentence(),
+  filled: faker.datatype.boolean(),
+  icon: <span aria-hidden />,
+  onClick: jest.fn(),
+})
 
 const makeProps = (): ResourceCardViewProps => {
   const title = faker.lorem.words(3)
@@ -35,12 +46,7 @@ const makeProps = (): ResourceCardViewProps => {
     href: `/${faker.lorem.slug()}`,
     pushUrl: `?resource=${faker.number.int()}`,
     onLinkClick: jest.fn(),
-    action: {
-      label: faker.lorem.sentence(),
-      filled: faker.datatype.boolean(),
-      icon: <span aria-hidden />,
-      onClick: jest.fn(),
-    },
+    actions: [makeAction(), makeAction()],
     headingLevel: faker.helpers.arrayElement([2, 3, 4, 5, 6] as const),
     className: faker.lorem.word(),
   }
@@ -61,7 +67,7 @@ describe("ResourceCardView", () => {
     expect(props.onLinkClick).toHaveBeenCalledTimes(1)
   })
 
-  test("The link is described by the type, parent, metadata, and price, but not the action", () => {
+  test("The link is described by the type, parent, metadata, and price, but not the actions", () => {
     const props = makeProps()
     renderWithTheme(<ResourceCardView {...props} />)
     const link = screen.getByRole("link", { name: props.title })
@@ -76,9 +82,11 @@ describe("ResourceCardView", () => {
       .map((text) => escapeRegExp(text))
       .join(".*")
     expect(link).toHaveAccessibleDescription(new RegExp(inOrder))
-    expect(link).not.toHaveAccessibleDescription(
-      new RegExp(escapeRegExp(props.action!.label)),
-    )
+    props.actions!.forEach(({ label }) => {
+      expect(link).not.toHaveAccessibleDescription(
+        new RegExp(escapeRegExp(label)),
+      )
+    })
   })
 
   test("Metadata is a description list of div-wrapped term/definition pairs", () => {
@@ -97,23 +105,41 @@ describe("ResourceCardView", () => {
     })
   })
 
-  test("The action is a dialog-opening button after the price panel", async () => {
+  test("The actions are dialog-opening buttons, in order, after the title link and outside the metadata and price panel", async () => {
     const props = makeProps()
+    const [first, second] = props.actions!
     renderWithTheme(<ResourceCardView {...props} />)
-    const button = screen.getByRole("button", { name: props.action!.label })
-    expect(screen.getAllByRole("button")).toEqual([button])
+    const buttons = screen.getAllByRole("button")
+    expect(buttons.map((b) => b.getAttribute("aria-label"))).toEqual([
+      first.label,
+      second.label,
+    ])
     const link = screen.getByRole("link", { name: props.title })
     const panelId = link.getAttribute("aria-describedby")!.split(" ").at(-1)!
     const panel = document.getElementById(panelId)!
     expect(panel).toHaveTextContent(props.price.primary!)
     expect(within(panel).queryAllByRole("button")).toEqual([])
-    expect(button).toHaveAttribute("aria-haspopup", "dialog")
-    expect(
-      panel.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy()
-    await user.click(button)
-    expect(props.action!.onClick).toHaveBeenCalledTimes(1)
+    const metadata = screen.getAllByRole("term")[0].closest("dl")!
+    expect(within(metadata).queryAllByRole("button")).toEqual([])
+    buttons.forEach((button) => {
+      expect(button).toHaveAttribute("aria-haspopup", "dialog")
+      expect(
+        link.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy()
+    })
+    await user.click(buttons[1])
+    expect(second.onClick).toHaveBeenCalledTimes(1)
+    expect(first.onClick).not.toHaveBeenCalled()
     expect(props.onLinkClick).not.toHaveBeenCalled()
+  })
+
+  test("A card without metadata still has its actions", () => {
+    const props = { ...makeProps(), metadata: [] }
+    renderWithTheme(<ResourceCardView {...props} />)
+    expect(screen.queryByRole("term")).toBeNull()
+    expect(
+      screen.getAllByRole("button").map((b) => b.getAttribute("aria-label")),
+    ).toEqual(props.actions!.map(({ label }) => label))
   })
 
   test.each([

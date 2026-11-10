@@ -3350,11 +3350,10 @@ export const SortbyEnum = {
 export type SortbyEnum = (typeof SortbyEnum)[keyof typeof SortbyEnum]
 
 /**
- * * `mit_edx` - mit_edx * `mitpe` - mitpe * `mitxonline` - mitxonline * `oll` - oll * `ocw` - ocw * `podcast` - podcast * `mit_climate` - mit_climate * `see` - see * `xpro` - xpro * `youtube` - youtube * `canvas` - canvas * `ovs` - ovs
+ * * `mitpe` - mitpe * `mitxonline` - mitxonline * `oll` - oll * `ocw` - ocw * `podcast` - podcast * `mit_climate` - mit_climate * `see` - see * `xpro` - xpro * `youtube` - youtube * `canvas` - canvas * `ovs` - ovs
  */
 
 export const SourceEnumDescriptions = {
-  mit_edx: "mit_edx",
   mitpe: "mitpe",
   mitxonline: "mitxonline",
   oll: "oll",
@@ -3369,10 +3368,6 @@ export const SourceEnumDescriptions = {
 } as const
 
 export const SourceEnum = {
-  /**
-   * mit_edx
-   */
-  MitEdx: "mit_edx",
   /**
    * mitpe
    */
@@ -25225,7 +25220,7 @@ export const WebhooksApiAxiosParamCreator = function (
   return {
     /**
      * Webhook handler for ContentFile updates
-     * @param {WebhooksContentFilesCreateSourceEnum} source * &#x60;mit_edx&#x60; - mit_edx * &#x60;mitpe&#x60; - mitpe * &#x60;mitxonline&#x60; - mitxonline * &#x60;oll&#x60; - oll * &#x60;ocw&#x60; - ocw * &#x60;podcast&#x60; - podcast * &#x60;mit_climate&#x60; - mit_climate * &#x60;see&#x60; - see * &#x60;xpro&#x60; - xpro * &#x60;youtube&#x60; - youtube * &#x60;canvas&#x60; - canvas * &#x60;ovs&#x60; - ovs
+     * @param {WebhooksContentFilesCreateSourceEnum} source * &#x60;mitpe&#x60; - mitpe * &#x60;mitxonline&#x60; - mitxonline * &#x60;oll&#x60; - oll * &#x60;ocw&#x60; - ocw * &#x60;podcast&#x60; - podcast * &#x60;mit_climate&#x60; - mit_climate * &#x60;see&#x60; - see * &#x60;xpro&#x60; - xpro * &#x60;youtube&#x60; - youtube * &#x60;canvas&#x60; - canvas * &#x60;ovs&#x60; - ovs
      * @param {ContentFileWebHookRequestRequest} ContentFileWebHookRequestRequest
      * @param {string} [content_path]
      * @param {string | null} [course_id]
@@ -25470,7 +25465,7 @@ export const WebhooksApiFp = function (configuration?: Configuration) {
   return {
     /**
      * Webhook handler for ContentFile updates
-     * @param {WebhooksContentFilesCreateSourceEnum} source * &#x60;mit_edx&#x60; - mit_edx * &#x60;mitpe&#x60; - mitpe * &#x60;mitxonline&#x60; - mitxonline * &#x60;oll&#x60; - oll * &#x60;ocw&#x60; - ocw * &#x60;podcast&#x60; - podcast * &#x60;mit_climate&#x60; - mit_climate * &#x60;see&#x60; - see * &#x60;xpro&#x60; - xpro * &#x60;youtube&#x60; - youtube * &#x60;canvas&#x60; - canvas * &#x60;ovs&#x60; - ovs
+     * @param {WebhooksContentFilesCreateSourceEnum} source * &#x60;mitpe&#x60; - mitpe * &#x60;mitxonline&#x60; - mitxonline * &#x60;oll&#x60; - oll * &#x60;ocw&#x60; - ocw * &#x60;podcast&#x60; - podcast * &#x60;mit_climate&#x60; - mit_climate * &#x60;see&#x60; - see * &#x60;xpro&#x60; - xpro * &#x60;youtube&#x60; - youtube * &#x60;canvas&#x60; - canvas * &#x60;ovs&#x60; - ovs
      * @param {ContentFileWebHookRequestRequest} ContentFileWebHookRequestRequest
      * @param {string} [content_path]
      * @param {string | null} [course_id]
@@ -25705,7 +25700,7 @@ export const WebhooksApiFactory = function (
  */
 export interface WebhooksApiWebhooksContentFilesCreateRequest {
   /**
-   * * &#x60;mit_edx&#x60; - mit_edx * &#x60;mitpe&#x60; - mitpe * &#x60;mitxonline&#x60; - mitxonline * &#x60;oll&#x60; - oll * &#x60;ocw&#x60; - ocw * &#x60;podcast&#x60; - podcast * &#x60;mit_climate&#x60; - mit_climate * &#x60;see&#x60; - see * &#x60;xpro&#x60; - xpro * &#x60;youtube&#x60; - youtube * &#x60;canvas&#x60; - canvas * &#x60;ovs&#x60; - ovs
+   * * &#x60;mitpe&#x60; - mitpe * &#x60;mitxonline&#x60; - mitxonline * &#x60;oll&#x60; - oll * &#x60;ocw&#x60; - ocw * &#x60;podcast&#x60; - podcast * &#x60;mit_climate&#x60; - mit_climate * &#x60;see&#x60; - see * &#x60;xpro&#x60; - xpro * &#x60;youtube&#x60; - youtube * &#x60;canvas&#x60; - canvas * &#x60;ovs&#x60; - ovs
    */
   readonly source: WebhooksContentFilesCreateSourceEnum
 
@@ -25821,7 +25816,6 @@ export class WebhooksApi extends BaseAPI {
 }
 
 export const WebhooksContentFilesCreateSourceEnum = {
-  MitEdx: "mit_edx",
   Mitpe: "mitpe",
   Mitxonline: "mitxonline",
   Oll: "oll",

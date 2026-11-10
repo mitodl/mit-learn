@@ -3,10 +3,10 @@ import React from "react"
 import { Typography, styled } from "ol-components"
 import { ButtonLink } from "@mitodl/smoot-design"
 import { RiArrowRightLine } from "@remixicon/react"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { programPageView } from "@/common/urls"
 import { analytics } from "@/common/analytics"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 
 const UAI_PROGRAM_READABLE_ID = "program-v1:UAI+B2C"
 
@@ -243,7 +243,7 @@ const CTAButton = styled(ButtonLink)(({ theme }) => ({
 }))
 
 const UAIAnnouncementCard: React.FC = () => {
-  const showUAICard = useFeatureFlagEnabled(FeatureFlags.UniversalAI)
+  const showUAICard = useFeatureFlag(FeatureFlags.UniversalAI)
 
   const ctaHref = programPageView({
     readable_id: UAI_PROGRAM_READABLE_ID,

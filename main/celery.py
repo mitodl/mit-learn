@@ -7,7 +7,8 @@ import os
 import sys
 
 from celery import Celery
-from celery.signals import worker_process_shutdown
+from celery.signals import setup_logging, worker_process_shutdown
+from mitol.observability.celery import setup_celery_logging
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "main.settings")
 
@@ -38,10 +39,19 @@ app.conf.task_routes = {
         "queue": "edx_content"
     },
     "learning_resources.tasks.import_content_files": {"queue": "edx_content"},
+    "learning_resources.tasks.load_warehouse_content_files": {"queue": "edx_content"},
     "learning_resources.tasks.ingest_edx_run_archive": {"queue": "edx_content"},
     "learning_resources.tasks.ingest_canvas_course": {"queue": "edx_content"},
     "learning_resources.tasks.sync_canvas_courses": {"queue": "edx_content"},
 }
+
+
+# Without a receiver Celery swaps the root logger's handler for a plain-text
+# one, so pool children log in a format `| json` can't parse, and it redirects
+# stdout through the `celery` logger, which drops task results and prints.
+# The worker's `-l` flag is ignored from here on; LOG_LEVEL sets the level.
+setup_logging.connect(setup_celery_logging)
+
 
 # How long a recycled pool child waits for ol-llm's span exporters to send.
 LLM_TRACE_FLUSH_TIMEOUT_MILLIS = 10_000

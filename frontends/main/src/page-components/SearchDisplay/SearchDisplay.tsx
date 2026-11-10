@@ -453,13 +453,20 @@ const PaginationContainer = styled.div`
 
 const StyledResultsContainer = styled.div<{ fetching: boolean }>(
   ({ fetching }) => ({
-    "ul > li + li": {
-      marginTop: "8px",
-    },
-
     opacity: fetching ? 0.5 : 1,
   }),
 )
+
+/**
+ * The results as rows, for the default layout, further apart when stacked on a
+ * phone.
+ */
+const ResultsList = styled(PlainList)(({ theme }) => ({
+  "> li + li": {
+    marginTop: "16px",
+    [theme.breakpoints.down("sm")]: { marginTop: "24px" },
+  },
+}))
 
 /**
  * The results as a grid, for `resultsLayout="cards"`: four across at desktop,
@@ -482,18 +489,6 @@ const CardGrid = styled(PlainList)(({ theme }) => ({
   },
   [theme.breakpoints.down("sm")]: {
     gridTemplateColumns: "minmax(0, 1fr)",
-  },
-  /**
-   * The results container spaces a list of rows by pushing each item below
-   * the one before it. A grid does not want that: `gap` already spaces these
-   * both ways, and the margin lands inside the row, so every card but the
-   * first in a row sits lower than its neighbours.
-   *
-   * Doubled to outweigh that rule, which names an ancestor and so starts
-   * ahead of anything this can say about its own children.
-   */
-  "&& > li + li": {
-    marginTop: 0,
   },
   /**
    * The card fixes its own width to the one its size is drawn at -- 300px for
@@ -1531,7 +1526,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                         ))}
                     </CardGrid>
                   ) : (
-                    <PlainList itemSpacing={1.5}>
+                    <ResultsList>
                       {Array(PAGE_SIZE)
                         .fill(null)
                         .map((a, index) => (
@@ -1543,7 +1538,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                             />
                           </li>
                         ))}
-                    </PlainList>
+                    </ResultsList>
                   )
                 ) : displayData && (displayData.results?.length ?? 0) > 0 ? (
                   resultsLayout === "cards" ? (
@@ -1558,7 +1553,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                       ))}
                     </CardGrid>
                   ) : (
-                    <PlainList itemSpacing={1.5}>
+                    <ResultsList>
                       {displayData.results.map((resource: LearningResource) => (
                         <li key={resource.id}>
                           <ResourceCard
@@ -1568,7 +1563,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                           />
                         </li>
                       ))}
-                    </PlainList>
+                    </ResultsList>
                   )
                 ) : resultsLayout === "cards" ? (
                   <NoResults

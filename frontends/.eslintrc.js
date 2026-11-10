@@ -15,6 +15,28 @@ const COMPONENT_HIERARCHY_ZONES = [
 ]
 
 /**
+ * Flag reads go through useFeatureFlag, so every flag read falls back to its
+ * env default the same way and hydrates with the server's value (see its
+ * docstring for why posthog's own hooks don't). A `patterns` entry rather than
+ * a `paths` one: a second `paths` entry for posthog-js/react (the usePostHog
+ * ban below) would replace it.
+ */
+const POSTHOG_FLAG_HOOKS_PATTERN = {
+  group: ["posthog-js/react"],
+  importNames: [
+    "useFeatureFlagEnabled",
+    "useFeatureFlagVariantKey",
+    "useFeatureFlagPayload",
+    "useFeatureFlagResult",
+    "useActiveFeatureFlags",
+    "PostHogFeature",
+  ],
+  message:
+    "Read feature flags with useFeatureFlag from '@/common/useFeatureFlag', which falls back to the flag's env default.",
+  allowTypeImports: true,
+}
+
+/**
  * Shared paths/patterns for @typescript-eslint/no-restricted-imports.
  * Extracted so that overrides can spread these alongside their own entries
  * rather than replacing them — ESLint 8 legacy overrides swap rule options
@@ -48,6 +70,7 @@ const BASE_RESTRICTED_PATHS = [
 ]
 
 const BASE_RESTRICTED_PATTERNS = [
+  POSTHOG_FLAG_HOOKS_PATTERN,
   {
     group: ["next/navigation"],
     importNames: ["useRouter"],

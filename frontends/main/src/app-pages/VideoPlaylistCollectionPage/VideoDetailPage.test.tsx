@@ -3,14 +3,14 @@ import user from "@testing-library/user-event"
 import { setMockResponse, urls, factories } from "api/test-utils"
 import { absoluteUrl, videoDetailPath } from "@/common/urls"
 import { renderWithProviders, screen } from "@/test-utils"
-import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import VideoDetailPage from "./VideoDetailPage"
 import { ResourceTypeEnum } from "api/v1"
 import type { VideoResource, VideoPlaylistResource } from "api/v1"
 
-jest.mock("posthog-js/react")
-const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
+jest.mock("@/common/useFeatureFlag")
+const mockedUseFeatureFlag = jest.mocked(useFeatureFlag)
 jest.mock("@/common/useFeatureFlagsLoaded")
 const mockedUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
 
@@ -100,7 +100,7 @@ describe("VideoDetailPage", () => {
   beforeEach(() => {
     jest.clearAllMocks()
     // VideoDetailPage renders when the flag is enabled
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
     mockedUseFeatureFlagsLoaded.mockReturnValue(true)
   })
 

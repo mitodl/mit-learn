@@ -1,15 +1,15 @@
 "use client"
 
 import React from "react"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import { ContactUsLauncher } from "@mitodl/smoot-design/contact-us"
 import { useUserMe } from "api/hooks/user"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { isContactUsEnabled, getContactUsSettings } from "./contactUsConfig"
 
 const ContactUsLauncherGate: React.FC = () => {
-  const enabled = useFeatureFlagEnabled(FeatureFlags.ContactUs)
+  const enabled = useFeatureFlag(FeatureFlags.ContactUs)
   const flagsLoaded = useFeatureFlagsLoaded()
   const { data: user } = useUserMe()
   const authed = user?.is_authenticated ? user : undefined

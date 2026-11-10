@@ -4,7 +4,8 @@ import {
   factories as mitxFactories,
   mockEnrollmentEligible,
 } from "api/mitxonline-test-utils"
-import { makeCourse } from "./test-utils/userPricing"
+import { makeCourse, setupRunPricing } from "./test-utils/userPricing"
+import { DiscountTypeEnum } from "@mitodl/mitxonline-api-axios/v0"
 import type {
   CoursePageItem,
   CourseWithCourseRunsSerializerV2,
@@ -32,7 +33,7 @@ import {
   withHubspotFormId,
 } from "./test-utils/stayUpdated"
 
-import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import invariant from "tiny-invariant"
 import { getOutlineCoursewareId } from "./util"
 import { FeatureFlags } from "@/common/feature_flags"
@@ -40,10 +41,10 @@ import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 
 jest.mock("posthog-js/react", () => ({
   ...jest.requireActual("posthog-js/react"),
-  useFeatureFlagEnabled: jest.fn(),
   usePostHog: jest.fn(() => ({ capture: jest.fn() })),
 }))
-const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
+jest.mock("@/common/useFeatureFlag")
+const mockedUseFeatureFlag = jest.mocked(useFeatureFlag)
 
 jest.mock("next-nprogress-bar", () => ({
   useRouter: () => ({ push: jest.fn() }),
@@ -156,7 +157,7 @@ const waitForCoursePageToSettle = async (pageTitle: string) => {
 
 describe("CoursePage", () => {
   beforeEach(() => {
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
   })
 
   test("Page has expected headings", async () => {
@@ -264,7 +265,7 @@ describe("CoursePage", () => {
   })
 
   test("Hides course content section when course outline flag is disabled", async () => {
-    mockedUseFeatureFlagEnabled.mockImplementation(
+    mockedUseFeatureFlag.mockImplementation(
       (flag) => flag !== FeatureFlags.CourseOutlineSection,
     )
     const course = makeCourse()
@@ -442,6 +443,70 @@ describe("CoursePage", () => {
       }
     })
 
+    test("paid header button names the InfoBox price", async () => {
+      const run = mitxFactories.courses.courseRun({
+        is_enrollable: true,
+        is_upgradable: true,
+        is_archived: false,
+        enrollment_modes: [paidMode],
+        products: [mitxFactories.courses.product({ price: "899.00" })],
+      })
+      const course = makeCourse({
+        next_run_id: run.id,
+        courseruns: [run],
+        min_price: 899,
+        max_price: 899,
+      })
+      const page = makePage({ course_details: course })
+      setupApis({ course, page })
+      renderWithProviders(<CoursePage readableId={course.readable_id} />)
+      await waitForCoursePageToSettle(page.title)
+
+      // The suffix is mobile-only by media query, which jsdom does not apply.
+      expect(
+        await screen.findByRole("button", { name: "Enroll – $899" }),
+      ).toBeInTheDocument()
+    })
+
+    test("discounted learner: header button names today's price", async () => {
+      const product = mitxFactories.courses.product({ price: "899.00" })
+      const run = mitxFactories.courses.courseRun({
+        is_enrollable: true,
+        is_upgradable: true,
+        is_archived: false,
+        enrollment_modes: [paidMode],
+        products: [product],
+      })
+      const course = makeCourse({
+        next_run_id: run.id,
+        courseruns: [run],
+        min_price: 899,
+        max_price: 899,
+      })
+      const page = makePage({ course_details: course })
+      setupApis({ course, page })
+      setMockResponse.get(
+        learnUrls.userMe.get(),
+        learnFactories.user.user({ is_authenticated: true }),
+      )
+      setMockResponse.get(mitxUrls.enrollment.enrollmentsListV3(), [])
+      setupRunPricing(run, {
+        user_price: "599",
+        discount: mitxFactories.products.userPricingDiscount({
+          amount_off: "300",
+          discount_type: DiscountTypeEnum.DollarsOff,
+        }),
+      })
+
+      renderWithProviders(<CoursePage readableId={course.readable_id} />)
+      await waitForCoursePageToSettle(page.title)
+
+      const banner = await screen.findByTestId("banner-container")
+      expect(
+        await within(banner).findByRole("button", { name: "Enroll – $599" }),
+      ).toBeInTheDocument()
+    })
+
     test("enrolled scenario: header shows Enrolled link", async () => {
       const run = mitxFactories.courses.courseRun({
         is_enrollable: true,
@@ -552,11 +617,14 @@ describe("CoursePage", () => {
 
         renderWithProviders(<CoursePage readableId={course.readable_id} />)
 
-        const enrollBtns = await screen.findAllByRole("button", {
-          name: "Enroll",
+        // The header's paid button carries the price, so this cannot be the
+        // InfoBox's plain "Enroll".
+        const banner = await screen.findByTestId("banner-container")
+        const headerBtn = await within(banner).findByRole("button", {
+          name: /^Enroll – /,
         })
         await act(async () => {
-          enrollBtns[0].click()
+          headerBtn.click()
         })
 
         await waitFor(() => {

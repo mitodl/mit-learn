@@ -4,18 +4,15 @@ import { renderWithProviders, screen, within, user } from "@/test-utils"
 import { urls, setMockResponse, factories, makeRequest } from "api/test-utils"
 import { urls as mitxonlineUrls } from "api/mitxonline-test-utils"
 import type { LearningResourcesUserSubscriptionApiLearningResourcesUserSubscriptionCheckListRequest as CheckSubscriptionRequest } from "api"
-import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { FeatureFlags } from "@/common/feature_flags"
 import { AccountAction, accountAction } from "@/common/urls"
 
-jest.mock("posthog-js/react", () => ({
-  ...jest.requireActual("posthog-js/react"),
-  useFeatureFlagEnabled: jest.fn(),
-}))
-const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
+jest.mock("@/common/useFeatureFlag")
+const mockedUseFeatureFlag = jest.mocked(useFeatureFlag)
 
 const enableAccountManagement = (enabled: boolean) => {
-  mockedUseFeatureFlagEnabled.mockImplementation((flag) =>
+  mockedUseFeatureFlag.mockImplementation((flag) =>
     flag === FeatureFlags.AccountManagement ? enabled : false,
   )
 }

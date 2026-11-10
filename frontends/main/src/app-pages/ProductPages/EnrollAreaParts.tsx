@@ -163,6 +163,8 @@ export type EnrollButtonProps = {
   variant?: ButtonProps["variant"]
   announceStatus?: boolean
   fullWidth?: boolean
+  /** Rendered after the label, inside the button. */
+  labelSuffix?: React.ReactNode
 }
 
 export const EnrollButton: React.FC<EnrollButtonProps> = ({
@@ -173,6 +175,7 @@ export const EnrollButton: React.FC<EnrollButtonProps> = ({
   variant = "primary",
   announceStatus = true,
   fullWidth = false,
+  labelSuffix,
 }) => {
   const isBusy = loading || pending
   // While busy the label is hidden behind the spinner, so give the button an
@@ -203,7 +206,16 @@ export const EnrollButton: React.FC<EnrollButtonProps> = ({
           ) : undefined
         }
       >
-        {isBusy ? null : action.label}
+        {isBusy ? null : labelSuffix ? (
+          // One element, so the button's flex layout neither drops the
+          // suffix's leading space nor wraps the two as separate items.
+          <span>
+            {action.label}
+            {labelSuffix}
+          </span>
+        ) : (
+          action.label
+        )}
       </Button>
     </ButtonWrapper>
   )

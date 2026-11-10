@@ -18,8 +18,6 @@ from news_events.etl import (
     mitpe_events,
     mitpe_news,
     ol_events,
-    sloan_exec_news,
-    sloan_webinars,
 )
 
 load_sources = curry(loaders.load_feed_sources)
@@ -34,27 +32,6 @@ medium_mit_news_etl = when_owned(
         medium_mit_news.extract,
     ),
 )
-
-# Pipeline for Sloan blog
-sloan_exec_news_etl = when_owned(
-    "sloan_exec_news",
-    FeedType.news.name,
-    compose(
-        load_sources(FeedType.news.name),
-        sloan_exec_news.transform,
-        sloan_exec_news.extract,
-    ),
-)
-sloan_webinars_etl = when_owned(
-    "sloan_webinars",
-    FeedType.events.name,
-    compose(
-        load_sources(FeedType.events.name),
-        sloan_webinars.transform,
-        sloan_webinars.extract,
-    ),
-)
-
 
 # Pipeline for Open Learning Events
 ol_events_etl = when_owned(

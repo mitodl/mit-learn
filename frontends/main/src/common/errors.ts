@@ -15,4 +15,32 @@ const isForbiddenResponse = (error: unknown): boolean => {
   return status === 401 || status === 403
 }
 
-export { ForbiddenError, isForbiddenResponse }
+const NOT_LOADED_CODES: unknown[] = [
+  "organization_not_loaded",
+  "contract_not_loaded",
+]
+
+/**
+ * Whether the analytics API refused a request because it has no data for the
+ * organization or contract yet.
+ *
+ * MITx Online knows about an organization or contract as soon as it is
+ * created, but the warehouse the analytics API reads only picks it up on its
+ * next load. Until then the API answers a manager with a 404 whose
+ * `detail.code` names what is missing, so the page can say the data is on its
+ * way instead of reporting a failure. The org routes only ever answer
+ * `organization_not_loaded` and the contract routes `contract_not_loaded`.
+ */
+const isAnalyticsNotLoaded = (error: unknown): boolean => {
+  const response = (
+    error as {
+      response?: { status?: number; data?: { detail?: { code?: unknown } } }
+    } | null
+  )?.response
+  return (
+    response?.status === 404 &&
+    NOT_LOADED_CODES.includes(response.data?.detail?.code)
+  )
+}
+
+export { ForbiddenError, isForbiddenResponse, isAnalyticsNotLoaded }
