@@ -182,8 +182,11 @@ const HeroSection: React.FC = () => {
   const router = useRouter()
   const [searchText, setSearchText] = useState("")
 
+  // Scoped to OCW, like the shortcuts below: its courses are the openly
+  // licensed ones this page is about.
   const search = useCallback(
-    (query: string) => router.push(querifiedSearchUrl({ q: query })),
+    (query: string) =>
+      router.push(querifiedSearchUrl({ q: query, offered_by: "ocw" })),
     [router],
   )
 

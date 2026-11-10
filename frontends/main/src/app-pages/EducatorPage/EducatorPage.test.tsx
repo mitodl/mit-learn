@@ -76,7 +76,7 @@ describe("EducatorPage hero", () => {
     screen.getByText("Educator")
   })
 
-  test("submitting the search goes to the search page", async () => {
+  test("submitting the search goes to an OCW-scoped search", async () => {
     setupApis()
     const { location } = renderWithProviders(<EducatorPage />)
     const searchbox = screen.getByRole("textbox", { name: /search for/i })
@@ -86,12 +86,12 @@ describe("EducatorPage hero", () => {
     expect(location.current).toEqual(
       expect.objectContaining({
         pathname: "/search",
-        search: "?q=linear+algebra",
+        search: "?q=linear+algebra&offered_by=ocw",
       }),
     )
   })
 
-  test("the Search button searches and records the search", async () => {
+  test("the Search button runs an OCW-scoped search and records it", async () => {
     setupApis()
     const siteSearched = jest.spyOn(analytics, "siteSearched")
     const { location } = renderWithProviders(<EducatorPage />)
@@ -104,7 +104,10 @@ describe("EducatorPage hero", () => {
     invariant(button, "Expected the Search text button")
     await user.click(button)
     expect(location.current).toEqual(
-      expect.objectContaining({ pathname: "/search", search: "?q=climate" }),
+      expect.objectContaining({
+        pathname: "/search",
+        search: "?q=climate&offered_by=ocw",
+      }),
     )
     expect(siteSearched).toHaveBeenCalledWith({
       query: "climate",
