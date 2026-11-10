@@ -1438,13 +1438,14 @@ def _pdf_to_markdown(pdf_path, figure_folder: str | None = None):
     from learning_resources.converters.opendataloader_llm_converter import (
         OpenDataLoaderLLMConverter,
     )
+    from learning_resources.converters.utils import FigureOutput
 
     if not figure_folder:
         return OpenDataLoaderLLMConverter(pdf_path).convert_to_structured_markdown()
     with TemporaryDirectory() as figures_dir:
         # figures are linked by file name until they are saved
         converter = OpenDataLoaderLLMConverter(
-            pdf_path, figures_dir=Path(figures_dir), figure_link_prefix=""
+            pdf_path, figure_output=FigureOutput(Path(figures_dir), link_prefix="")
         )
         return _store_figures(
             converter.convert_to_structured_markdown(), converter.figures, figure_folder

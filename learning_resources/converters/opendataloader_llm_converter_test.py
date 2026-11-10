@@ -7,6 +7,15 @@ import pytest
 from PIL import Image
 
 from learning_resources.converters.opendataloader_llm_converter import (
+    OpenDataLoaderLLMConverter,
+)
+from learning_resources.converters.structure import (
+    assemble_structure,
+    export_structure_markdown,
+    prepare_structure,
+    structure_elements,
+)
+from learning_resources.converters.utils import (
     GRAPHIC,
     OCR_FAILED_PLACEHOLDER,
     PAGE_CACHE_SIZE,
@@ -14,27 +23,26 @@ from learning_resources.converters.opendataloader_llm_converter import (
     BlockType,
     ContentBlock,
     Figure,
+    FigureOutput,
     ImageForOCR,
     MarkdownAssembler,
     OCRProcessor,
-    OpenDataLoaderLLMConverter,
     PDFPageRenderer,
     _optimize_image,
     _unwrap_header_footer,
-    assemble_structure,
     display_box,
     document_math,
-    export_structure_markdown,
     flatten_lists,
     page_math,
+    page_math_score,
     parse_content_block,
     parse_figure_mark,
-    prepare_structure,
     strip_running_lines,
-    structure_elements,
 )
 
 MODULE = "learning_resources.converters.opendataloader_llm_converter"
+UTILS = "learning_resources.converters.utils"
+STRUCTURE = "learning_resources.converters.structure"
 execute_batch_ocr = OCRProcessor._execute_batch_ocr  # noqa: SLF001
 
 
@@ -63,7 +71,7 @@ def no_pdf(mocker):
 @pytest.fixture(autouse=True)
 def mock_litellm(mocker):
     mocker.patch(
-        "learning_resources.converters.opendataloader_llm_converter.litellm.completion",
+        f"{STRUCTURE}.litellm.completion",
         return_value={"choices": [{"message": {"content": "OCR TEXT"}}]},
     )
     mocker.patch(
@@ -230,7 +238,6 @@ def test_children_only_list_items_keep_markers():
 
 def test_list_markers_not_scored_as_math():
     """Generated list markers shouldn't count towards the math score"""
-    converter = OpenDataLoaderLLMConverter(Path("test.pdf"))
     bullets = parse_content_block(
         _list_block(
             [{"type": "list item", "content": f"Plain item {i}"} for i in range(6)],
@@ -239,7 +246,7 @@ def test_list_markers_not_scored_as_math():
     )
     blocks = flatten_lists([bullets])
     assert all(block.list_marker == "-" for block in blocks)
-    assert converter._calculate_page_math_score(blocks) == 0  # noqa: SLF001
+    assert page_math_score(blocks) == 0
 
 
 def test_nested_list_images_keep_their_page(mocker, settings, fake_renderer, no_pdf):
@@ -284,7 +291,6 @@ def test_nested_list_images_keep_their_page(mocker, settings, fake_renderer, no_
 
 def test_math_score_includes_nested_text():
     """Text nested in lists and tables should count towards the math score"""
-    converter = OpenDataLoaderLLMConverter(Path("test.pdf"))
     table = parse_content_block(
         {
             "type": "table",
@@ -310,7 +316,7 @@ def test_math_score_includes_nested_text():
         )
     )
     # table: 1 + 3, list: 1 + (3 + 1 for the math font)
-    assert converter._calculate_page_math_score([table, lst]) == 9  # noqa: SLF001
+    assert page_math_score([table, lst]) == 9
 
 
 @pytest.mark.parametrize(
@@ -356,10 +362,10 @@ def test_failed_ocr_request_returns_none(mocker, settings):
     settings.OCR_REQUEST_NUM_RETRIES = 4
     mocker.patch.object(OCRProcessor, "_execute_batch_ocr", execute_batch_ocr)
     batch = mocker.patch(
-        f"{MODULE}.batch_completion",
+        f"{UTILS}.batch_completion",
         return_value=[_response("one"), Exception("timeout")],
     )
-    completion = mocker.patch(f"{MODULE}.litellm.completion")
+    completion = mocker.patch(f"{STRUCTURE}.litellm.completion")
     images = [
         ImageForOCR(1, "data:image/jpeg;base64,", is_full_page=False),
         ImageForOCR(2, "data:image/jpeg;base64,", is_full_page=False),
@@ -429,7 +435,7 @@ def test_page_cache_is_bounded(mocker):
         pages[first_page] = mocker.MagicMock(name=f"page{first_page}")
         return [pages[first_page]]
 
-    mocker.patch(f"{MODULE}.pdf2image.convert_from_path", side_effect=render)
+    mocker.patch(f"{UTILS}.pdf2image.convert_from_path", side_effect=render)
     renderer = PDFPageRenderer(Path("test.pdf"))
     for page_number in range(1, PAGE_CACHE_SIZE + 3):
         renderer.get_page_image(page_number)
@@ -592,7 +598,7 @@ def test_figure_ocr_failure_keeps_a_graphic(figure_page):
 def test_rejected_crop_falls_back_to_placeholder(figure_page, mocker, tmp_path):
     """A graphic whose crop extract_region rejects is a placeholder, not a link"""
     converter, figure, image = figure_page
-    converter.figures_dir = tmp_path
+    converter.figure_output = FigureOutput(tmp_path, link_prefix="")
     converter._page_renderer = mocker.Mock(  # noqa: SLF001
         **{"extract_region.return_value": None}
     )
@@ -1125,7 +1131,7 @@ def test_structure_is_repaired_once(mocker, settings):
     plan, _ = prepare_structure(text)
     good = _answer([_segment(plan, "##", "problem", through="Calculate", problem="1")])
     completion = mocker.patch(
-        f"{MODULE}.litellm.completion",
+        f"{STRUCTURE}.litellm.completion",
         side_effect=[
             SimpleNamespace(
                 choices=[
