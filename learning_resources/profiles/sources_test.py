@@ -93,7 +93,7 @@ def test_unit_sources_fit_budget(budget):
             position=position,
         )
 
-    short, long = unit_sources(unit, max_file_tokens=25000, budget=budget)
+    short, long = unit_sources(unit, max_file_tokens=25000, input_token_budget=budget)
 
     assert short.text == "Short file."
     assert long.truncated is (budget is not None)

@@ -27,7 +27,7 @@ from learning_resources.models import (
 from learning_resources.profiles import prompts
 from learning_resources.profiles.claims import (
     ClaimExtractor,
-    delete_parts,
+    delete_stale_parts,
     extract_parts,
     get_or_create_extraction,
     load_extractor,
@@ -135,11 +135,13 @@ def _part_header(unit_header: str, index: int, sources: list[Source]) -> str:
 
 
 # --------------------------------------------------------------------------- merge
-def _part_claims(parts: list[ClaimExtraction]) -> dict[str, tuple[str, dict]]:
+def _part_claims_by_id(
+    part_extractions: list[ClaimExtraction],
+) -> dict[str, tuple[str, dict]]:
     """Return each part claim, as part claim id (P2:c4): (claim list, claim)"""
     return {
         f"P{index}:{claim['id']}": (field, claim)
-        for index, part in enumerate(parts, 1)
+        for index, part in enumerate(part_extractions, 1)
         for field in CLAIM_PREFIXES
         for claim in part.output.get(field, [])
     }
@@ -160,7 +162,7 @@ def _part_claim_line(claim_id: str, field: str, claim: dict) -> str:
     return line
 
 
-_HEADINGS = {
+_CLAIM_LIST_HEADINGS = {
     "concepts": "Concepts",
     "skills": "Skills",
     "assumed_knowledge": "Assumed knowledge",
@@ -168,39 +170,48 @@ _HEADINGS = {
 }
 
 
-def _parts_block(parts: list[ClaimExtraction], part_sources: list[list[Source]]) -> str:
+def _parts_block(
+    part_extractions: list[ClaimExtraction], sources_by_part: list[list[Source]]
+) -> str:
     """
     Render the parts' records for the merge prompt.
 
     Truncation notes are left out: code adds them to the merged output from
     the unit's sources, so the model needn't carry them over.
     """
-    claims = _part_claims(parts)
+    part_claims = _part_claims_by_id(part_extractions)
     lines = []
-    for index, (part, sources) in enumerate(zip(parts, part_sources, strict=True), 1):
+    for index, (part, sources) in enumerate(
+        zip(part_extractions, sources_by_part, strict=True), 1
+    ):
         lines.append(
-            f"## Part {index} of {len(parts)} (sources {sources[0].source_id}-"
-            f"{sources[-1].source_id})\nSummary: {part.output['summary']}"
+            f"## Part {index} of {len(part_extractions)} (sources"
+            f" {sources[0].source_id}-{sources[-1].source_id})\n"
+            f"Summary: {part.output['summary']}"
         )
-        for field, heading in _HEADINGS.items():
+        for field, heading in _CLAIM_LIST_HEADINGS.items():
             items = [
                 _part_claim_line(claim_id, claim_field, claim)
-                for claim_id, (claim_field, claim) in claims.items()
+                for claim_id, (claim_field, claim) in part_claims.items()
                 if claim_id.startswith(f"P{index}:") and claim_field == field
             ]
             if items:
                 lines.append(f"{heading}:")
                 lines.extend(items)
-        skip = set(truncation_notes(sources))
+        truncation = set(truncation_notes(sources))
         notes = [
-            note for note in part.output.get("extraction_notes", []) if note not in skip
+            note
+            for note in part.output.get("extraction_notes", [])
+            if note not in truncation
         ]
         if notes:
             lines.append("Notes: " + " | ".join(notes))
     return "\n".join(lines)
 
 
-def resolve_merged_claims(output: dict, parts: list[ClaimExtraction]) -> dict:
+def resolve_merged_claims(
+    output: dict, part_extractions: list[ClaimExtraction]
+) -> dict:
     """
     Turn a merge output's part claim citations into evidence, and check it.
 
@@ -213,29 +224,30 @@ def resolve_merged_claims(output: dict, parts: list[ClaimExtraction]) -> dict:
 
     Args:
         output (dict): the verified merge output, changed in place
-        parts (list of ClaimExtraction): the unit's parts, in unit order
+        part_extractions (list of ClaimExtraction): the unit's parts, in unit
+            order
 
     Returns:
         dict: the output, with each claim's evidence in place
     """
-    claims = _part_claims(parts)
+    part_claims = _part_claims_by_id(part_extractions)
     notes = []
     for field in CLAIM_PREFIXES:
         kept = []
         for merged in output[field]:
-            ids = [
+            cited_ids = [
                 claim_id
                 for claim_id in dict.fromkeys(merged["part_claim_ids"])
-                if claims.get(claim_id, (None,))[0] == field
+                if part_claims.get(claim_id, (None,))[0] == field
             ]
-            if not ids:
+            if not cited_ids:
                 notes.append(
                     f"Dropped merged {field} item {merged['label'][:80]!r}: it cites"
                     " no part claim of its kind"
                 )
                 continue
-            cited = [claims[claim_id][1] for claim_id in ids]
-            merged["part_claim_ids"] = ids
+            cited = [part_claims[claim_id][1] for claim_id in cited_ids]
+            merged["part_claim_ids"] = cited_ids
             merged["evidence"] = merge_evidence(cited)
             # status and prior flag come from the cited claims only, so the
             # merge can't make a claim stronger than any part found it
@@ -254,14 +266,14 @@ def resolve_merged_claims(output: dict, parts: list[ClaimExtraction]) -> dict:
                 )
             kept.append(merged)
         output[field] = kept
-    taught = {
+    taught_labels = {
         normalize(concept["label"])
         for concept in output["concepts"]
         if concept["teaching_status"] in TEACHING_STATUSES
     }
     assumed = []
     for item in output["assumed_knowledge"]:
-        if normalize(item["label"]) in taught:
+        if normalize(item["label"]) in taught_labels:
             notes.append(
                 f"Dropped assumed knowledge {item['label'][:80]!r}: the unit"
                 " teaches or reviews it"
@@ -280,7 +292,7 @@ def _unit_key_inputs(unit: Unit) -> list:
 
 def _generate_split_unit_claims(
     unit: Unit,
-    part_sources: list[list[Source]],
+    sources_by_part: list[list[Source]],
     outline: str,
     header: str,
     *,
@@ -291,17 +303,17 @@ def _generate_split_unit_claims(
 
     The merge is keyed by its parts' keys and outputs.
     """
-    sources = [source for files in part_sources for source in files]
+    all_sources = [source for sources in sources_by_part for source in sources]
     merge_extractor = load_unit_merge_extractor()
-    parts = extract_parts(
+    part_extractions = extract_parts(
         load_unit_part_extractor(),
         unit,
-        part_sources,
+        sources_by_part,
         _unit_key_inputs(unit),
-        lambda index, files: prompts.unit_combined_prompt(
+        lambda index, sources: prompts.unit_combined_prompt(
             outline,
-            _part_header(header, index, files),
-            "\n".join(source.block for source in files),
+            _part_header(header, index, sources),
+            "\n".join(source.block for source in sources),
         ),
         finish=_number_claims,
         overwrite=overwrite,
@@ -312,14 +324,14 @@ def _generate_split_unit_claims(
             "merge",
             *_unit_key_inputs(unit),
             # a part regenerated with overwrite keeps its key but not its output
-            [[part.key, part.output] for part in parts],
+            [[part.key, part.output] for part in part_extractions],
         ),
         lambda: prompts.unit_merge_combined_prompt(
-            outline, header, _parts_block(parts, part_sources)
+            outline, header, _parts_block(part_extractions, sources_by_part)
         ),
-        sources,
+        all_sources,
         unit=unit,
-        finish=lambda output: resolve_merged_claims(output, parts),
+        finish=lambda output: resolve_merged_claims(output, part_extractions),
         overwrite=overwrite,
     )
 
@@ -363,13 +375,13 @@ def generate_unit_claims(
         return None
     outline, unit_ids = _course_outline(unit.run)
     header = _unit_header(unit, unit_ids)
-    part_sources = pack_parts(sources, config.input_token_budget)
-    if len(part_sources) > 1:
+    sources_by_part = pack_parts(sources, config.input_token_budget)
+    if len(sources_by_part) > 1:
         return _generate_split_unit_claims(
-            unit, part_sources, outline, header, overwrite=overwrite
+            unit, sources_by_part, outline, header, overwrite=overwrite
         )
     # the unit fits in one call now; parts from an earlier split aren't current
-    delete_parts(unit)
+    delete_stale_parts(unit)
     return get_or_create_extraction(
         extractor,
         extractor.key(

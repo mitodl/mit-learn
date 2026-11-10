@@ -25,10 +25,10 @@ from learning_resources.models import (
 from learning_resources.profiles import prompts
 from learning_resources.profiles.claims import (
     ClaimExtractor,
-    delete_parts,
+    delete_stale_parts,
     extract_parts,
+    get_or_create_computed_extraction,
     get_or_create_extraction,
-    get_or_create_merged_extraction,
     load_extractor,
     merge_evidence,
 )
@@ -64,7 +64,7 @@ def _context_key_inputs(run: LearningResourceRun) -> list:
     return [run.learning_resource_id, run.learning_resource.title]
 
 
-def _part_note(index: int, sources: list[Source]) -> str:
+def _part_header(index: int, sources: list[Source]) -> str:
     return (
         f"PART {index} of the course context: sources {sources[0].source_id}-"
         f"{sources[-1].source_id}. The context files are too long to read at once,"
@@ -75,18 +75,19 @@ def _part_note(index: int, sources: list[Source]) -> str:
 
 
 # --------------------------------------------------------------------------- merge
-def _merge_items(items: list[dict], marker) -> list[dict]:
+def _dedupe_by(items: list[dict], key) -> list[dict]:
     """
-    Return items in order, with an item whose marker repeats an earlier one's
-    dropped and its evidence, if items have evidence, added to the earlier one's
+    Return items in order, with an item whose key(item) repeats an earlier
+    one's dropped and its evidence, if items have evidence, added to the
+    earlier one's
     """
     merged: dict = {}
     for item in items:
-        key = marker(item)
-        if key not in merged:
-            merged[key] = dict(item)
+        item_key = key(item)
+        if item_key not in merged:
+            merged[item_key] = dict(item)
         elif "evidence" in item:
-            merged[key]["evidence"] = merge_evidence([merged[key], item])
+            merged[item_key]["evidence"] = merge_evidence([merged[item_key], item])
     return list(merged.values())
 
 
@@ -107,7 +108,7 @@ def merge_context_outputs(outputs: list[dict], sources: list[Source]) -> dict:
         dict: the context unit's output, in the form of an unsplit one's
     """
 
-    def every(field):
+    def all_items(field):
         return [item for output in outputs for item in output[field]]
 
     def by_text(statement):
@@ -115,27 +116,27 @@ def merge_context_outputs(outputs: list[dict], sources: list[Source]) -> dict:
 
     return {
         "title": next((o["title"] for o in outputs if o["title"]), ""),
-        "stated_audience": _merge_items(every("stated_audience"), by_text),
+        "stated_audience": _dedupe_by(all_items("stated_audience"), by_text),
         "description": next(
             (o["description"] for o in outputs if o.get("description")), None
         ),
-        "objectives": _merge_items(every("objectives"), by_text),
+        "objectives": _dedupe_by(all_items("objectives"), by_text),
         "prerequisites_status": min(
             (output["prerequisites_status"] for output in outputs),
             key=PREREQUISITES_STATUS_ORDER.index,
         ),
-        "prerequisites": _merge_items(
-            every("prerequisites"),
+        "prerequisites": _dedupe_by(
+            all_items("prerequisites"),
             lambda prereq: (normalize(prereq["label"]), prereq["kind"]),
         ),
-        "required_materials": _merge_items(every("required_materials"), by_text),
-        "instructional_outline": _merge_items(
-            every("instructional_outline"),
+        "required_materials": _dedupe_by(all_items("required_materials"), by_text),
+        "instructional_outline": _dedupe_by(
+            all_items("instructional_outline"),
             lambda entry: (normalize(entry["unit_label"]), normalize(entry["title"])),
         ),
-        "conflicts": every("conflicts"),
+        "conflicts": all_items("conflicts"),
         # the parts' notes include their sources' truncation notes
-        "extraction_notes": list(dict.fromkeys(every("extraction_notes"))),
+        "extraction_notes": list(dict.fromkeys(all_items("extraction_notes"))),
         "sources": [source.summary() for source in sources],
     }
 
@@ -145,34 +146,36 @@ def _generate_split_context_claims(
     run: LearningResourceRun,
     unit: Unit,
     extractor: ClaimExtractor,
-    part_sources: list[list[Source]],
+    sources_by_part: list[list[Source]],
     *,
     overwrite: bool,
 ) -> ClaimExtraction:
     """Extract each part of a split context unit, then combine them"""
     title = run.learning_resource.title
-    parts = extract_parts(
+    part_extractions = extract_parts(
         replace(extractor, level=ClaimExtraction.Level.UNIT_PART),
         unit,
-        part_sources,
+        sources_by_part,
         _context_key_inputs(run),
-        lambda index, files: prompts.context_unit_combined_prompt(
+        lambda index, sources: prompts.context_unit_combined_prompt(
             title,
-            "\n".join(source.block for source in files),
-            _part_note(index, files),
+            "\n".join(source.block for source in sources),
+            _part_header(index, sources),
         ),
         overwrite=overwrite,
     )
-    sources = [source for files in part_sources for source in files]
-    return get_or_create_merged_extraction(
+    all_sources = [source for sources in sources_by_part for source in sources]
+    return get_or_create_computed_extraction(
         extractor,
         extractor.key(
             "merge",
             *_context_key_inputs(run),
             # a part regenerated with overwrite keeps its key but not its output
-            [[part.key, part.output] for part in parts],
+            [[part.key, part.output] for part in part_extractions],
         ),
-        lambda: merge_context_outputs([part.output for part in parts], sources),
+        lambda: merge_context_outputs(
+            [part.output for part in part_extractions], all_sources
+        ),
         unit=unit,
         overwrite=overwrite,
     )
@@ -210,14 +213,14 @@ def generate_context_claims(
     unit, sources = _context_sources(run, extractor)
     if not sources:
         return None
-    part_sources = pack_parts(sources, extractor.config.input_token_budget)
-    if len(part_sources) > 1:
+    sources_by_part = pack_parts(sources, extractor.config.input_token_budget)
+    if len(sources_by_part) > 1:
         return _generate_split_context_claims(
-            run, unit, extractor, part_sources, overwrite=overwrite
+            run, unit, extractor, sources_by_part, overwrite=overwrite
         )
     # the context unit fits in one call now; parts from an earlier split
     # aren't current
-    delete_parts(unit)
+    delete_stale_parts(unit)
     return get_or_create_extraction(
         extractor,
         extractor.key(

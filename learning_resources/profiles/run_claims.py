@@ -32,7 +32,10 @@ from learning_resources.profiles.claims import (
     load_extractor,
 )
 from learning_resources.profiles.schemas import RunExtraction
-from learning_resources.profiles.unit_claims import CLAIM_PREFIXES
+from learning_resources.profiles.unit_claims import (
+    CLAIM_PREFIXES,
+    TEACHING_STATUSES,
+)
 
 log = logging.getLogger(__name__)
 
@@ -48,7 +51,6 @@ _KINDS_BY_PREFIX = {
 CLAIM_KINDS = {
     field: _KINDS_BY_PREFIX[prefix] for field, prefix in CLAIM_PREFIXES.items()
 }
-TEACHING_STATUSES = {"taught", "reviewed"}
 # a coverage limitation may cite this when no claim fits
 CONTEXT_NOTES_ID = "ctx:notes"
 
