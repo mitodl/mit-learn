@@ -356,6 +356,14 @@ describe("useProgramEnrollment — actions", () => {
         }),
       ),
     )
+    const basketCreates = jest
+      .mocked(makeRequest)
+      .mock.calls.filter(
+        ([req]) =>
+          req.method === "post" &&
+          req.url === mitxUrls.baskets.createFromProduct(product.id),
+      )
+    expect(basketCreates).toHaveLength(1)
     expect(replaceState).toHaveBeenCalledTimes(1)
     expect(new URL(String(replaceState.mock.calls[0][2])).search).toBe("")
     replaceState.mockRestore()
