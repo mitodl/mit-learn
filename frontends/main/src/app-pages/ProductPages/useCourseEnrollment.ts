@@ -50,6 +50,8 @@ type UseCourseEnrollmentOptions = {
    * so the enrollment runs once.
    */
   resume?: boolean
+  /** Select the run a resumed enrollment is for, so retries and errors refer to it. */
+  onResumeRun?: (runId: number) => void
 }
 
 export const useCourseEnrollment = (
@@ -63,8 +65,11 @@ export const useCourseEnrollment = (
   })
   const isAuthenticated = !!me.data?.is_authenticated
 
-  const { runIds: enrolledRunIds, isLoading: enrollmentsIsLoading } =
-    useCourseEnrolledRunIds(course)
+  const {
+    runIds: enrolledRunIds,
+    isLoading: enrollmentsIsLoading,
+    isError: enrollmentsIsError,
+  } = useCourseEnrolledRunIds(course)
 
   // This area renders its own inline enrollment-failure alert (see
   // EnrollOfferingBoxes `error`), so suppress the global error toast.
@@ -148,7 +153,9 @@ export const useCourseEnrollment = (
 
   useResumeEnrollment({
     enabled: !!opts?.resume,
-    ready: !isStatusLoading,
+    // Only once both checks have succeeded: a failed enrollments lookup can't
+    // rule out that the learner is already enrolled.
+    ready: me.isSuccess && !enrollmentsIsLoading && !enrollmentsIsError,
     onResume: (kind, runId) => {
       // The run the learner chose before signing up, while it still makes the
       // same offer and they are not already enrolled in it.
@@ -158,6 +165,7 @@ export const useCourseEnrollment = (
           : getEnrollableRuns(course).find((r) => r.id === runId)
       if (!isAuthenticated || !run || enrolledRunIds.includes(run.id)) return
       if (offers(getCourseScenario(run).offering, kind)) {
+        if (run.id !== selectedRun?.id) opts?.onResumeRun?.(run.id)
         startEnrollment(kind, run)
       }
     },

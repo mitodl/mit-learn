@@ -613,12 +613,14 @@ describe("useCourseEnrollment — actions", () => {
       )
       setLocation(`/courses/c?enroll=paid&run=${marked.id}&utm_source=email`)
       rememberClick("paid", marked.id, "/courses/c")
+      const onResumeRun = jest.fn()
 
       renderHook(
         () =>
           useCourseEnrollment(course, selected, {
             tracking: { placement: "infobox" },
             resume: true,
+            onResumeRun,
           }),
         { wrapper },
       )
@@ -638,6 +640,88 @@ describe("useCourseEnrollment — actions", () => {
         PostHogEvents.EnrollCtaClicked,
         expect.anything(),
       )
+      expect(onResumeRun).toHaveBeenCalledWith(marked.id)
+    })
+
+    test("a failed enrollments lookup waits, then resumes once it succeeds", async () => {
+      const run = makePaidRun()
+      const product = run.products![0]
+      const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+      setMockResponse.get(
+        urls.userMe.get(),
+        makeUser({ is_authenticated: true }),
+      )
+      setMockResponse.get(mitxUrls.enrollment.enrollmentsListV3(), null, {
+        code: 500,
+      })
+      setMockResponse.delete(mitxUrls.baskets.clear(), undefined)
+      setMockResponse.post(mitxUrls.baskets.createFromProduct(product.id), {
+        id: 1,
+        items: [],
+      })
+      setLocation(`/courses/c?enroll=paid&run=${run.id}`)
+      rememberClick("paid", run.id, "/courses/c")
+      const queryClient = makeBrowserQueryClient({ maxRetries: 0 })
+
+      const { result } = renderHook(
+        () =>
+          useCourseEnrollment(course, run, {
+            tracking: { placement: "infobox" },
+            resume: true,
+          }),
+        {
+          wrapper: ({ children }) => (
+            <QueryClientProvider client={queryClient}>
+              {children}
+            </QueryClientProvider>
+          ),
+        },
+      )
+
+      await waitFor(() => expect(result.current.isStatusLoading).toBe(false))
+      expect(replaceState).not.toHaveBeenCalled()
+      expect(
+        window.localStorage.getItem("mitlearn.pendingEnrollment"),
+      ).not.toBe(null)
+
+      setMockResponse.get(mitxUrls.enrollment.enrollmentsListV3(), [])
+      await queryClient.refetchQueries()
+
+      await waitFor(() => expect(replaceState).toHaveBeenCalledTimes(1))
+      await waitFor(() =>
+        expect(
+          jest
+            .mocked(makeRequest)
+            .mock.calls.filter(
+              ([req]) =>
+                req.method === "post" &&
+                req.url === mitxUrls.baskets.createFromProduct(product.id),
+            ),
+        ).toHaveLength(1),
+      )
+    })
+
+    test("a failed user lookup leaves the click remembered", async () => {
+      const run = makePaidRun()
+      const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+      setMockResponse.get(urls.userMe.get(), null, { code: 500 })
+      setLocation(`/courses/c?enroll=paid&run=${run.id}`)
+      rememberClick("paid", run.id, "/courses/c")
+
+      const { result } = renderHook(
+        () =>
+          useCourseEnrollment(course, run, {
+            tracking: { placement: "infobox" },
+            resume: true,
+          }),
+        { wrapper },
+      )
+
+      await waitFor(() => expect(result.current.isStatusLoading).toBe(false))
+      expect(replaceState).not.toHaveBeenCalled()
+      expect(
+        window.localStorage.getItem("mitlearn.pendingEnrollment"),
+      ).not.toBe(null)
     })
 
     test("marker for a run already enrolled in -> removed, nothing started", async () => {

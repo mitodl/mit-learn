@@ -57,8 +57,11 @@ export const useProgramEnrollment = (
   })
   const isAuthenticated = !!me.data?.is_authenticated
 
-  const { isEnrolled, isLoading: enrollmentsIsLoading } =
-    useProgramIsEnrolled(program)
+  const {
+    isEnrolled,
+    isLoading: enrollmentsIsLoading,
+    isError: enrollmentsIsError,
+  } = useProgramIsEnrolled(program)
 
   // This area renders its own inline enrollment-failure alert (see
   // EnrollOfferingBoxes `error`), so suppress the global error toast.
@@ -129,7 +132,9 @@ export const useProgramEnrollment = (
 
   useResumeEnrollment({
     enabled: !!opts?.resume,
-    ready: !isStatusLoading,
+    // Only once both checks have succeeded: a failed enrollments lookup can't
+    // rule out that the learner is already enrolled.
+    ready: me.isSuccess && !enrollmentsIsLoading && !enrollmentsIsError,
     onResume: (kind) => {
       // Only an offer the program still makes.
       if (!isAuthenticated || isEnrolled) return

@@ -368,6 +368,60 @@ describe("useProgramEnrollment — actions", () => {
     expect(new URL(String(replaceState.mock.calls[0][2])).search).toBe("")
     replaceState.mockRestore()
   })
+  test("resuming waits for a failed enrollments lookup to succeed", async () => {
+    const replaceState = jest
+      .spyOn(window.history, "replaceState")
+      .mockImplementation(() => {})
+    setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
+    setMockResponse.get(mitxUrls.programEnrollments.enrollmentsListV3(), null, {
+      code: 500,
+    })
+    const product = makeProduct()
+    const program = makeProgram({
+      enrollment_modes: [makeMode({ requires_payment: true })],
+      products: [product],
+    })
+    setMockResponse.delete(mitxUrls.baskets.clear(), undefined)
+    setMockResponse.post(mitxUrls.baskets.createFromProduct(product.id), {
+      id: 1,
+      items: [],
+    })
+    setLocation("/programs/some-program?enroll=paid")
+    rememberClick("paid", null, "/programs/some-program")
+    const queryClient = makeBrowserQueryClient({ maxRetries: 0 })
+
+    const { result } = renderHook(
+      () =>
+        useProgramEnrollment(program, {
+          tracking: { placement: "infobox" },
+          resume: true,
+        }),
+      {
+        wrapper: ({ children }) => (
+          <QueryClientProvider client={queryClient}>
+            {children}
+          </QueryClientProvider>
+        ),
+      },
+    )
+
+    await waitFor(() => expect(result.current.isStatusLoading).toBe(false))
+    expect(replaceState).not.toHaveBeenCalled()
+
+    setMockResponse.get(mitxUrls.programEnrollments.enrollmentsListV3(), [])
+    await queryClient.refetchQueries()
+
+    await waitFor(() =>
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "post",
+          url: mitxUrls.baskets.createFromProduct(product.id),
+        }),
+      ),
+    )
+    expect(replaceState).toHaveBeenCalledTimes(1)
+    replaceState.mockRestore()
+  })
   test("free action -> creates program enrollment and redirects to success URL", async () => {
     setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
     setMockResponse.get(mitxUrls.programEnrollments.enrollmentsListV3(), [])

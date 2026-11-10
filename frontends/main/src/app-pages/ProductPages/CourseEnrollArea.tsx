@@ -11,16 +11,19 @@ import EnrollOfferingBoxes from "./EnrollOfferingBoxes"
 type CourseEnrollAreaProps = {
   course: CourseWithCourseRunsSerializerV2
   selectedRun: CourseRunV2 | undefined
+  onSelectRun?: (runId: number) => void
 }
 
 const CourseEnrollArea: React.FC<CourseEnrollAreaProps> = ({
   course,
   selectedRun,
+  onSelectRun,
 }) => {
   const { state, scenario, isStatusLoading, isPending, error } =
     useCourseEnrollment(course, selectedRun, {
       tracking: { placement: "infobox" },
       resume: true,
+      onResumeRun: onSelectRun,
     })
 
   const { price, showsRange, financialAid, breakdown } = useCertificatePricing(
