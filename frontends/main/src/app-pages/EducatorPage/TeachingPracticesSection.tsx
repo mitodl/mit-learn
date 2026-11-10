@@ -14,6 +14,7 @@ import {
   videoQueries,
 } from "api/hooks/learningResources"
 import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
+import { stripAnchorTags } from "@/common/utils"
 import { Section, SectionInner } from "./SectionLayout"
 import { SEARCH_INSTRUCTOR_INSIGHTS, SEARCH_VIDEOS_AND_PODCASTS } from "./links"
 import {
@@ -69,13 +70,31 @@ const Cards = styled.div(({ theme }) => ({
   },
 }))
 
+/**
+ * Each card is clickable as a whole: its main link stretches over the card
+ * (`stretchedLink`), so there is no link nested inside another. Any other link
+ * in a card is lifted above that overlay with `position: relative`.
+ */
 const Card = styled.article(({ theme }) => ({
+  position: "relative",
   display: "flex",
   overflow: "hidden",
   backgroundColor: theme.custom.colors.white,
   border: `1px solid ${theme.custom.colors.lightGray2}`,
   borderRadius: "8px",
+  "&:hover, &:has(:focus-visible)": {
+    borderColor: theme.custom.colors.darkGray2,
+    h3: { color: theme.custom.colors.red },
+  },
 }))
+
+const stretchedLink = {
+  "&::after": {
+    content: '""',
+    position: "absolute" as const,
+    inset: 0,
+  },
+}
 
 const FeaturedCard = styled(Card)(({ theme }) => ({
   flex: "680 1 0",
@@ -97,9 +116,8 @@ const SideColumn = styled.div(({ theme }) => ({
   },
 }))
 
-const FeaturedImageLink = styled(Link)({
+const FeaturedImage = styled.div({
   position: "relative",
-  display: "block",
   height: "290px",
 })
 
@@ -136,6 +154,12 @@ const FeaturedTitle = styled.h3(({ theme }) => ({
   margin: 0,
 }))
 
+const TitleLink = styled(Link)({
+  ...stretchedLink,
+  color: "inherit",
+  textDecoration: "none",
+})
+
 const clamp = (lines: number) => ({
   display: "-webkit-box",
   WebkitLineClamp: lines,
@@ -146,7 +170,7 @@ const clamp = (lines: number) => ({
 /**
  * Video and podcast descriptions come from the API as HTML, so this is a div
  * (paragraphs can't nest in a <p>) and child margins are reset so the clamp
- * counts only text lines.
+ * counts only text lines. Anchors are stripped: the card itself is the link.
  */
 const DescriptionRoot = styled.div<{ lines: number }>(({ theme, lines }) => ({
   ...theme.typography.body1Loose,
@@ -154,7 +178,6 @@ const DescriptionRoot = styled.div<{ lines: number }>(({ theme, lines }) => ({
   color: theme.custom.colors.darkGray2,
   margin: 0,
   "& > *": { margin: 0 },
-  a: { color: "inherit" },
 }))
 
 const Description: React.FC<{ html: string; lines: number }> = ({
@@ -163,25 +186,30 @@ const Description: React.FC<{ html: string; lines: number }> = ({
 }) => (
   <DescriptionRoot
     lines={lines}
-    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }}
+    dangerouslySetInnerHTML={{
+      __html: stripAnchorTags(DOMPurify.sanitize(html)),
+    }}
   />
 )
 
 const ArrowLink = styled(Link, {
-  shouldForwardProp: (prop) => prop !== "underline",
-})<{ underline?: boolean }>(({ theme, underline }) => ({
-  ...theme.typography.body1Loose,
-  display: "inline-flex",
-  alignItems: "center",
-  gap: "10px",
-  alignSelf: "flex-start",
-  color: theme.custom.colors.darkGray2,
-  textDecoration: underline ? "underline" : "none",
-  svg: { width: "20px", height: "20px", flexShrink: 0 },
-  "&:hover": {
-    textDecoration: "underline",
-  },
-}))
+  shouldForwardProp: (prop) => prop !== "underline" && prop !== "stretched",
+})<{ underline?: boolean; stretched?: boolean }>(
+  ({ theme, underline, stretched }) => ({
+    ...theme.typography.body1Loose,
+    ...(stretched ? stretchedLink : { position: "relative" as const }),
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "10px",
+    alignSelf: "flex-start",
+    color: theme.custom.colors.darkGray2,
+    textDecoration: underline ? "underline" : "none",
+    svg: { width: "20px", height: "20px", flexShrink: 0 },
+    "&:hover": {
+      textDecoration: "underline",
+    },
+  }),
+)
 
 const SideCardRoot = styled(Card)({
   height: "198px",
@@ -235,21 +263,20 @@ const FeaturedVideoCard: React.FC<{ video: LearningResource }> = ({
   video,
 }) => (
   <FeaturedCard>
-    <FeaturedImageLink
-      href={video.learn_url}
-      aria-label={`Play ${video.title}`}
-    >
+    <FeaturedImage>
       <CoverImage
         {...resourceImage(video)}
         fill
         sizes="(max-width: 900px) 100vw, 680px"
       />
-      <PlayIcon>
-        <RiPlayFill aria-hidden />
+      <PlayIcon aria-hidden>
+        <RiPlayFill />
       </PlayIcon>
-    </FeaturedImageLink>
+    </FeaturedImage>
     <FeaturedText>
-      <FeaturedTitle>{video.title}</FeaturedTitle>
+      <FeaturedTitle>
+        <TitleLink href={video.learn_url}>{video.title}</TitleLink>
+      </FeaturedTitle>
       {video.description ? (
         <Description lines={3} html={video.description} />
       ) : null}
@@ -276,7 +303,7 @@ const SideCard: React.FC<{ resource: LearningResource; linkLabel: string }> = ({
           <Description lines={2} html={resource.description} />
         ) : null}
       </SideCopy>
-      <ArrowLink href={resource.learn_url}>
+      <ArrowLink href={resource.learn_url} stretched>
         {linkLabel}
         <RiArrowRightLine aria-hidden />
       </ArrowLink>

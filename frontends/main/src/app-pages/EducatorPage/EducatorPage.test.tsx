@@ -185,9 +185,10 @@ describe("EducatorPage teaching practices", () => {
     // The section heading shows while the cards load; wait for the cards.
     await screen.findByRole("heading", { name: featured.title })
     screen.getByRole("heading", { name: "Learn from MIT teaching practices" })
-    expect(
-      screen.getByRole("link", { name: `Play ${featured.title}` }),
-    ).toHaveAttribute("href", featured.learn_url)
+    expect(screen.getByRole("link", { name: featured.title })).toHaveAttribute(
+      "href",
+      featured.learn_url,
+    )
     screen.getByRole("heading", { name: side.title })
     expect(
       screen.getByRole("link", { name: "Watch on MIT Learn" }),
@@ -211,7 +212,7 @@ describe("EducatorPage teaching practices", () => {
   test("renders descriptions as sanitized HTML", async () => {
     const featured = factories.video({
       description:
-        '<p>Taught with <strong>active learning</strong>.</p><script>window.pwned = true</script><img src="x" onerror="window.pwned = true">',
+        '<p>Taught with <strong>active learning</strong>.</p><script>window.pwned = true</script><img src="x" onerror="window.pwned = true"> See <a href="https://example.com/syllabus">the syllabus</a>.',
     })
     setupApis({
       videos: {
@@ -230,6 +231,8 @@ describe("EducatorPage teaching practices", () => {
     )
     expect(view.container.querySelector("script")).toBeNull()
     expect(view.container.querySelector("[onerror]")).toBeNull()
+    // The whole card is a link, so links in the description are unwrapped.
+    expect(screen.getByText(/the syllabus/).closest("a")).toBeNull()
   })
 
   test("is hidden when there are no videos or podcast episodes", async () => {
