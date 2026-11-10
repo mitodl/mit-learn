@@ -246,10 +246,11 @@ def resolve_merged_claims(output: dict, parts: list[ClaimExtraction]) -> dict:
             cited = [claims[claim_id][1] for claim_id in ids]
             merged["part_claim_ids"] = ids
             merged["evidence"] = _merged_evidence(cited)
+            # status and prior flag come from the cited claims only, so the
+            # merge can't make a claim stronger than any part found it
             if field == "concepts":
                 merged["teaching_status"] = min(
-                    [claim["teaching_status"] for claim in cited]
-                    + [merged["teaching_status"]],
+                    (claim["teaching_status"] for claim in cited),
                     key=TEACHING_STATUS_ORDER.index,
                 )
                 merged["content_file_ref"] = next(
@@ -257,7 +258,7 @@ def resolve_merged_claims(output: dict, parts: list[ClaimExtraction]) -> dict:
                     None,
                 )
             if field == "assumed_knowledge":
-                merged["flagged_as_prior"] = merged["flagged_as_prior"] or any(
+                merged["flagged_as_prior"] = any(
                     claim["flagged_as_prior"] for claim in cited
                 )
             kept.append(merged)
@@ -303,15 +304,6 @@ def _generate_split_unit_claims(
     prompt depends on; the merge is keyed by its parts' keys and outputs.
     """
     sources = [source for files in part_sources for source in files]
-    log.info(
-        "Splitting %s %s of run %s into %d parts: %d files, about %d tokens",
-        unit.kind,
-        unit.external_id,
-        unit.run.run_id,
-        len(part_sources),
-        len(sources),
-        sum(source.tokens for source in sources),
-    )
     part_extractor = load_unit_part_extractor()
     merge_extractor = load_unit_merge_extractor()
     parts = []

@@ -511,6 +511,33 @@ def test_split_unit_claims_resolved(fake_llm):
     )
 
 
+def test_merge_cannot_strengthen_part_claims(fake_llm):
+    """The merge's own status and prior flag are replaced by the cited claims'"""
+
+    def answer(extractor, prompt):
+        parsed, raw = _answer(extractor, prompt)
+        output = parsed.model_dump()
+        if extractor.schema is UnitMergeExtraction:
+            output["concepts"][0]["teaching_status"] = "taught"
+            output["assumed_knowledge"][0]["flagged_as_prior"] = True
+        else:
+            for concept in output["concepts"]:
+                concept["teaching_status"] = "mentioned"
+        return extractor.schema.model_validate(output), raw
+
+    fake_llm.side_effect = answer
+    _split_budget()
+
+    output = _generate(_build_unit()).output
+
+    [concept] = output["concepts"]
+    assert concept["teaching_status"] == "mentioned"
+    # no part teaches it, so the assumed item is kept, unflagged like its parts
+    assumed = {item["label"]: item for item in output["assumed_knowledge"]}
+    assert assumed["Newton's Second Law"]["flagged_as_prior"] is False
+    assert assumed["Algebra"]["flagged_as_prior"] is True
+
+
 def test_split_unit_cached(fake_llm):
     """A split unit whose files haven't changed makes no call"""
     _split_budget()
