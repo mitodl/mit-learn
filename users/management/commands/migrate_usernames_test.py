@@ -76,6 +76,23 @@ def test_migrate_usernames_follows_a_chain():
     ]
 
 
+def test_migrate_usernames_renames_across_batches(monkeypatch):
+    """Every renameable user is renamed when it takes more than one batch"""
+    monkeypatch.setattr(
+        "users.management.commands.migrate_usernames.UPDATE_BATCH_SIZE", 1
+    )
+    users = [
+        UserFactory.create(username=f"user{index}", email=f"user{index}@example.com")
+        for index in range(3)
+    ]
+
+    assert _apply_and_get_usernames(*users) == [
+        "user0@example.com",
+        "user1@example.com",
+        "user2@example.com",
+    ]
+
+
 def test_migrate_usernames_updates_people_widgets():
     """People widgets list the renamed users by their new usernames"""
     first = UserFactory.create(username="jdoe", email="next@example.com")
