@@ -209,8 +209,6 @@ def transform_items(articles_data: list[dict]) -> list[dict]:
         author_name = ""
         if user:
             author_name = f"{user.first_name} {user.last_name}".strip()
-            if not author_name:
-                author_name = user.username
 
         # Build the article URL using slug
         slug = article.get("slug")
