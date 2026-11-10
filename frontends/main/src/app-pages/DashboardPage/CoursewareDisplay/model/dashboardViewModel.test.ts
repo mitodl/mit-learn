@@ -2147,6 +2147,203 @@ describe("dashboardViewModel", () => {
   })
 
   describe("resolveDisplayedRunAndEnrollment", () => {
+    describe("offering a course again after its runs have ended", () => {
+      const endedRun = (id: number, startDays: number) =>
+        factories.courses.courseRun({
+          id,
+          start_date: daysFromNow(startDays),
+          end_date: daysFromNow(startDays + 30),
+          certificate_available_date: daysFromNow(startDays + 30),
+          is_self_paced: false,
+          is_enrollable: false,
+        })
+      const openRun = factories.courses.courseRun({
+        id: 30,
+        start_date: daysFromNow(60),
+        end_date: daysFromNow(150),
+        certificate_available_date: daysFromNow(150),
+        is_self_paced: false,
+        is_enrollable: true,
+      })
+      const enrollmentIn = (
+        course: { id: number; title: string },
+        run: ReturnType<typeof factories.courses.courseRun>,
+        overrides: Parameters<
+          typeof factories.enrollment.courseEnrollment
+        >[0] = {},
+      ) =>
+        factories.enrollment.courseEnrollment({
+          certificate: null,
+          b2b_contract_id: null,
+          b2b_organization_id: null,
+          ...overrides,
+          run: {
+            id: run.id,
+            start_date: run.start_date,
+            end_date: run.end_date,
+            certificate_available_date: run.certificate_available_date,
+            is_self_paced: run.is_self_paced,
+            course: { id: course.id, title: course.title },
+          },
+        })
+
+      test("shows the open run unenrolled, with the ended enrollments as past runs", () => {
+        const older = endedRun(10, -500)
+        const newer = endedRun(20, -200)
+        const course = factories.courses.course({
+          id: 1,
+          courseruns: [older, newer, openRun],
+          next_run_id: openRun.id,
+        })
+        const olderEnrollment = enrollmentIn(course, older)
+        const newerEnrollment = enrollmentIn(course, newer)
+
+        expect(
+          resolveDisplayedRunAndEnrollment(course, [
+            olderEnrollment,
+            newerEnrollment,
+          ]),
+        ).toEqual({
+          displayedEnrollment: null,
+          displayedRun: openRun,
+          pastEnrollments: [newerEnrollment, olderEnrollment],
+        })
+      })
+
+      test("keeps showing the enrollment when any run has a certificate", () => {
+        const ended = endedRun(10, -200)
+        const course = factories.courses.course({
+          id: 1,
+          courseruns: [ended, openRun],
+          next_run_id: openRun.id,
+        })
+        const enrollment = enrollmentIn(course, ended, {
+          certificate: { uuid: "abc", link: "/certificate/abc/" },
+        })
+
+        const resolved = resolveDisplayedRunAndEnrollment(course, [enrollment])
+        expect(resolved.displayedEnrollment).toEqual(enrollment)
+        expect(resolved.pastEnrollments).toEqual([])
+      })
+
+      test("keeps showing the enrollment while its certificates are still to come", () => {
+        const ended = {
+          ...endedRun(10, -60),
+          certificate_available_date: daysFromNow(14),
+        }
+        const course = factories.courses.course({
+          id: 1,
+          courseruns: [ended, openRun],
+          next_run_id: openRun.id,
+        })
+        const enrollment = enrollmentIn(course, ended)
+
+        const resolved = resolveDisplayedRunAndEnrollment(course, [enrollment])
+        expect(resolved.displayedEnrollment).toEqual(enrollment)
+        expect(resolved.pastEnrollments).toEqual([])
+      })
+
+      test("offers the next run when a self-paced run's certificate date is still ahead", () => {
+        const ended = {
+          ...endedRun(10, -60),
+          certificate_available_date: daysFromNow(14),
+          is_self_paced: true,
+        }
+        const course = factories.courses.course({
+          id: 1,
+          courseruns: [ended, openRun],
+          next_run_id: openRun.id,
+        })
+        const enrollment = enrollmentIn(course, ended)
+
+        const resolved = resolveDisplayedRunAndEnrollment(course, [enrollment])
+        expect(resolved.displayedRun).toEqual(openRun)
+        expect(resolved.pastEnrollments).toEqual([enrollment])
+      })
+
+      test("keeps showing the enrollment when a run hasn't ended", () => {
+        const ended = endedRun(10, -200)
+        const course = factories.courses.course({
+          id: 1,
+          courseruns: [ended, openRun],
+          next_run_id: openRun.id,
+        })
+        const upcomingEnrollment = enrollmentIn(course, openRun)
+
+        const resolved = resolveDisplayedRunAndEnrollment(course, [
+          enrollmentIn(course, ended),
+          upcomingEnrollment,
+        ])
+        expect(resolved.displayedEnrollment).toEqual(upcomingEnrollment)
+        expect(resolved.pastEnrollments).toEqual([])
+      })
+
+      test("keeps showing the enrollment when the course has no next run", () => {
+        const ended = endedRun(10, -200)
+        const course = factories.courses.course({
+          id: 1,
+          courseruns: [ended],
+          next_run_id: null,
+        })
+        const enrollment = enrollmentIn(course, ended)
+
+        const resolved = resolveDisplayedRunAndEnrollment(course, [enrollment])
+        expect(resolved.displayedEnrollment).toEqual(enrollment)
+        expect(resolved.pastEnrollments).toEqual([])
+      })
+
+      test("does not offer the archived run the learner is already in", () => {
+        // Ended but still open for enrollment, as mitxonline's archived runs are.
+        const archived = { ...endedRun(10, -200), is_enrollable: true }
+        const course = factories.courses.course({
+          id: 1,
+          courseruns: [archived],
+          next_run_id: archived.id,
+        })
+        const enrollment = enrollmentIn(course, archived)
+
+        const resolved = resolveDisplayedRunAndEnrollment(course, [enrollment])
+        expect(resolved.displayedEnrollment).toEqual(enrollment)
+        expect(resolved.pastEnrollments).toEqual([])
+      })
+
+      test("offers the next run even when it is archived", () => {
+        const taken = endedRun(10, -400)
+        const archived = { ...endedRun(20, -200), is_enrollable: true }
+        const course = factories.courses.course({
+          id: 1,
+          courseruns: [taken, archived],
+          next_run_id: archived.id,
+        })
+        const enrollment = enrollmentIn(course, taken)
+
+        const resolved = resolveDisplayedRunAndEnrollment(course, [enrollment])
+        expect(resolved.displayedEnrollment).toBeNull()
+        expect(resolved.displayedRun).toEqual(archived)
+        expect(resolved.pastEnrollments).toEqual([enrollment])
+      })
+
+      test("does not apply on a contract dashboard", () => {
+        const ended = endedRun(10, -200)
+        const course = factories.courses.course({
+          id: 1,
+          courseruns: [ended, openRun],
+          next_run_id: openRun.id,
+        })
+        const enrollment = enrollmentIn(course, ended, { b2b_contract_id: 7 })
+
+        const resolved = resolveDisplayedRunAndEnrollment(
+          course,
+          [enrollment],
+          {
+            contractId: 7,
+          },
+        )
+        expect(resolved.displayedEnrollment).toEqual(enrollment)
+        expect(resolved.pastEnrollments).toEqual([])
+      })
+    })
+
     test("variant path: prefers an enrolled run matching the variant over candidate runs", () => {
       // User is enrolled in an older run matching the variant. A newer
       // enrollable candidate also matches. The enrolled run must win.
