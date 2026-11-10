@@ -122,7 +122,11 @@ describe("EducatorPage hero", () => {
     },
     {
       name: /lecture videos/,
-      search: { offered_by: "ocw", resource_type: "video" },
+      search: {
+        offered_by: "ocw",
+        resource_type: "video",
+        resource_category: "Lecture Video",
+      },
     },
     { name: /open textbooks/, search: { course_feature: "Open Textbooks" } },
   ])("shortcut $name links to a search", ({ name, search }) => {
@@ -232,7 +236,8 @@ describe("EducatorPage teaching practices", () => {
     expect(view.container.querySelector("script")).toBeNull()
     expect(view.container.querySelector("[onerror]")).toBeNull()
     // The whole card is a link, so links in the description are unwrapped.
-    expect(screen.queryByText(/the syllabus/).closest("a")).toBeNull()
+    const linkText = screen.getByText(/the syllabus/)
+    expect(linkText.closest("a")).toBeNull()
   })
 
   test("is hidden when there are no videos or podcast episodes", async () => {
@@ -315,7 +320,7 @@ describe("EducatorPage static sections", () => {
     expect(form).toHaveAttribute("action", OCW_NEWSLETTER_URL)
     expect(
       within(form).getByRole("textbox", { name: "Email address" }),
-    ).toHaveAttribute("name", "email")
+    ).toHaveAttribute("name", "EMAIL")
     within(form).getByRole("button", { name: "Sign Me Up" })
   })
 })

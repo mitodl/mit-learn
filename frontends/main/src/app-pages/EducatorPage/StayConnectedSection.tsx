@@ -153,7 +153,8 @@ const StayConnectedSection: React.FC = () => (
         >
           <EmailInput
             type="email"
-            name="email"
+            // OCW's newsletter page prefills its signup form from ?EMAIL=.
+            name="EMAIL"
             required
             autoComplete="email"
             placeholder="Enter your email address"

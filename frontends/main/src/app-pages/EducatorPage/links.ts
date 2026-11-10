@@ -11,6 +11,8 @@ export const SEARCH_OCW_COURSES = querifiedSearchUrl({
 export const SEARCH_LECTURE_VIDEOS = querifiedSearchUrl({
   offered_by: "ocw",
   resource_type: "video",
+  // Excludes OCW's other videos, e.g. Instructor Insights.
+  resource_category: "Lecture Video",
 })
 export const SEARCH_OPEN_TEXTBOOKS = querifiedSearchUrl({
   course_feature: "Open Textbooks",
@@ -25,6 +27,7 @@ export const SEARCH_VIDEOS_AND_PODCASTS = querifiedSearchUrl([
 ])
 
 export const OCW_GIVE_URL = "https://giving.mit.edu/give/to/ocw/"
+/** OCW's signup page; it prefills its Mailchimp form from the EMAIL param. */
 export const OCW_NEWSLETTER_URL = "https://ocw.mit.edu/newsletter/"
 
 export const OCW_SOCIAL = {
