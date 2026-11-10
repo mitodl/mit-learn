@@ -89,8 +89,9 @@ def rename_users():
     """
     Set username to the lowercased email for every user where that can't collide.
 
-    Renaming one user can clear the way for another (their email was the first
-    user's old username), so this repeats until a pass changes nothing. Each
+    Each batch is queried fresh, and renamed users drop out of the query, so
+    this repeats until none are left. That also picks up a user whose rename
+    was blocked by another user's old username once that user is renamed. Each
     batch commits on its own, along with the People widgets that list its users,
     so a run holds no row locks between batches, and an interrupted run can be
     repeated.
@@ -99,16 +100,16 @@ def rename_users():
     :rtype: int
     """
     renamed = 0
-    while users := list(
-        _renameable_users().values_list("pk", "username", "lower_email")
+    while batch := list(
+        _renameable_users().values_list("pk", "username", "lower_email")[
+            :UPDATE_BATCH_SIZE
+        ]
     ):
-        for start in range(0, len(users), UPDATE_BATCH_SIZE):
-            batch = users[start : start + UPDATE_BATCH_SIZE]
-            with transaction.atomic():
-                renamed += User.objects.filter(
-                    pk__in=[pk for pk, _, _ in batch]
-                ).update(username=Lower("email"), scim_username=Lower("email"))
-                _rename_widget_people({old: new for _, old, new in batch})
+        with transaction.atomic():
+            renamed += User.objects.filter(pk__in=[pk for pk, _, _ in batch]).update(
+                username=Lower("email"), scim_username=Lower("email")
+            )
+            _rename_widget_people({old: new for _, old, new in batch})
     return renamed
 
 
