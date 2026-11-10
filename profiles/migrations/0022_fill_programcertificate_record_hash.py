@@ -2,7 +2,6 @@
 
 import uuid
 
-from django.conf import settings
 from django.db import migrations, models, transaction
 
 
@@ -10,12 +9,9 @@ def generate_program_certificate_uuid(apps, schema_editor):
     ProgramCertificate = apps.get_model("profiles", "ProgramCertificate")
     while ProgramCertificate.objects.filter(record_hash__isnull=True).exists():
         with transaction.atomic():
-            external = list(settings.EXTERNAL_MODELS)
-            settings.EXTERNAL_MODELS = []
             for row in ProgramCertificate.objects.filter(record_hash__isnull=True):
                 row.record_hash = str(uuid.uuid4())
                 row.save()
-        settings.EXTERNAL_MODELS = external
 
 
 class Migration(migrations.Migration):

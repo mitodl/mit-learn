@@ -70,13 +70,11 @@ def test_has_program_letter(micromasters_program_id, is_revoked, expected):
 
 
 @pytest.mark.django_db
-def test_program_letter_model_strings(user, settings):
+def test_program_letter_model_strings(user):
     """
     Test that ProgramCertificate and ProgramLetter string methods
     return what we expect
     """
-    settings.DATABASE_ROUTERS = []
-    settings.EXTERNAL_MODELS = []
     cert = ProgramCertificateFactory.create(
         user_full_name="test user",
         program_title="test program",

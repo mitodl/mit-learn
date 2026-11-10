@@ -230,11 +230,9 @@ CELERY_BEAT_SCHEDULE = (
 )
 
 # MicroMasters/MITx Online program certificate sync (StarRocks-backed — see
-# learning_resources.lib.warehouse.BaseWarehouseETLTask), replacing the
-# Hightouch sync into external.programcertificate (mitodl/hq#12954).
-# Doesn't participate in the cutover-switch mechanism below: Hightouch runs
-# externally, not as an MIT Learn Celery task, so there's no legacy beat
-# entry here to retire once validated.
+# learning_resources.lib.warehouse.BaseWarehouseETLTask, mitodl/hq#12954).
+# Doesn't participate in the cutover-switch mechanism below: certificates are
+# not catalog resources, so there is no legacy ETL beat entry to retire.
 if (
     not CELERY_BEAT_DISABLED
     and get_string("STARROCKS_HOST", None)

@@ -204,7 +204,7 @@ class ProgramCertificate(models.Model):
     NON-NULLABLE FIELDS
     """
 
-    # external hash that hightouch uses for the sync
+    # For synced rows, the certificate id the data platform's view assigns
     record_hash = models.CharField(
         unique=True,
         primary_key=True,
@@ -262,11 +262,9 @@ class ProgramCertificate(models.Model):
     program_completion_timestamp = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        # Managed as of the warehouse-pull cutover (mitodl/hq#12954): Django
-        # is now the writer of this table, not Hightouch, so schema changes
-        # belong in migrations rather than in an external tool's config. The
-        # table stays in the `external` schema — other consumers still read it
-        # by that name.
+        # Django writes this table (profiles.tasks.SyncProgramCertificatesTask,
+        # mitodl/hq#12954), so schema changes belong in migrations. It keeps
+        # the `external` schema name it was created under.
         managed = True
         db_table = '"external"."programcertificate"'
 
