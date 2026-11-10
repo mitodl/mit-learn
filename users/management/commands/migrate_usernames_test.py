@@ -25,9 +25,12 @@ def _apply_and_get_usernames(*users):
 )
 def test_migrate_usernames_sets_lowercased_email(username):
     """A handle, or the email in another case, becomes the lowercased email"""
-    user = UserFactory.create(username=username, email="John.Doe@example.com")
+    user = UserFactory.create(
+        username=username, email="John.Doe@example.com", scim_username=username
+    )
 
     assert _apply_and_get_usernames(user) == ["john.doe@example.com"]
+    assert user.scim_username == "john.doe@example.com"
 
 
 def test_migrate_usernames_skips_blank_email():

@@ -107,7 +107,7 @@ def rename_users():
             with transaction.atomic():
                 renamed += User.objects.filter(
                     pk__in=[pk for pk, _, _ in batch]
-                ).update(username=Lower("email"))
+                ).update(username=Lower("email"), scim_username=Lower("email"))
                 _rename_widget_people({old: new for _, old, new in batch})
     return renamed
 
