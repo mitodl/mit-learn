@@ -105,7 +105,7 @@ describe("ResourceCardView", () => {
     })
   })
 
-  test("The actions are dialog-opening buttons, in order, after the price panel", async () => {
+  test("The actions are dialog-opening buttons, in order, after the title link and outside the metadata and price panel", async () => {
     const props = makeProps()
     const [first, second] = props.actions!
     renderWithTheme(<ResourceCardView {...props} />)
@@ -119,17 +119,27 @@ describe("ResourceCardView", () => {
     const panel = document.getElementById(panelId)!
     expect(panel).toHaveTextContent(props.price.primary!)
     expect(within(panel).queryAllByRole("button")).toEqual([])
+    const metadata = screen.getAllByRole("term")[0].closest("dl")!
+    expect(within(metadata).queryAllByRole("button")).toEqual([])
     buttons.forEach((button) => {
       expect(button).toHaveAttribute("aria-haspopup", "dialog")
       expect(
-        panel.compareDocumentPosition(button) &
-          Node.DOCUMENT_POSITION_FOLLOWING,
+        link.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING,
       ).toBeTruthy()
     })
     await user.click(buttons[1])
     expect(second.onClick).toHaveBeenCalledTimes(1)
     expect(first.onClick).not.toHaveBeenCalled()
     expect(props.onLinkClick).not.toHaveBeenCalled()
+  })
+
+  test("A card without metadata still has its actions", () => {
+    const props = { ...makeProps(), metadata: [] }
+    renderWithTheme(<ResourceCardView {...props} />)
+    expect(screen.queryByRole("term")).toBeNull()
+    expect(
+      screen.getAllByRole("button").map((b) => b.getAttribute("aria-label")),
+    ).toEqual(props.actions!.map(({ label }) => label))
   })
 
   test.each([

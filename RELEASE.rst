@@ -1,6 +1,41 @@
 Release Notes
 =============
 
+Version 0.87.0
+--------------
+
+- Show "Free", not "Free to audit", on redesigned cards (#4275)
+- Fix ProgramAsCoursePage enroll-button test timeouts (#4286)
+- Backport PDF processing fixes and a structuring pass to the converter (#4235)
+- Delete mit_edx resources and remove ETLSource.mit_edx (#4254)
+- Treat program enrollment mode "upgrade" as paid alongside "verified" (#4195)
+- Prefer an upcoming run over an ended one on dashboard cards (#4256)
+
+Version 0.86.5
+--------------
+
+- Fix render loop on news and article pages with resource cards (#4269)
+- Keep the department title and Follow pill clear of the hero photo (#4243)
+- Show run-specific actions only in run rows on multi-run dashboard cards (#4240)
+- Don't record a decline when a learner cancels the data consent dialog (#4265)
+- feat(b2b-learner-analytics): learner summary panel with activity counts (#4226)
+- Upgrade posthog-js to 1.442 and use env vars as flag fallbacks instead of bootstrapping (#4236)
+- Say analytics are on their way for an org or contract not loaded yet (#4247)
+- Update dependency syncpack to v14.3.1 (#3851)
+- Update dependency pypdf to v6.21.4 [SECURITY] (#4249)
+- Anchor the login and logout URL patterns (#4181)
+- Expire cached views by TTL instead of an hourly clear (#4253)
+- Speed up CI: drop coverage, split out Python checks, unchain the container build (#4259)
+- context and unit claim extraction tasks (#4178)
+- Add an Openly Licensed Content section to the Terms of Service (#4207)
+- Resource card redesign: two-line titles, inline actions, wider search spacing (#4238)
+- Stop the program certificates 500 and give certificates without a MicroMasters id no letter (#4198)
+
+Version 0.86.4
+--------------
+
+- Fix render loop on news and article pages with resource cards (#4269)
+
 Version 0.86.3
 --------------
 

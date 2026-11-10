@@ -10,7 +10,7 @@ import {
   waitFor,
 } from "@/test-utils"
 import { factories, setMockResponse, makeRequest, urls } from "api/test-utils"
-import { LearningResourceCard } from "ol-components"
+import { ResourceCardView } from "@/page-components/ResourceCardView/ResourceCardView"
 import { ControlledPromise, allowConsoleErrors } from "ol-test-utilities"
 import invariant from "tiny-invariant"
 import { PostHogEvents } from "@/common/constants"
@@ -22,15 +22,15 @@ jest.mock("@/common/analytics/posthog", () => ({
 }))
 const mockCapturePostHog = jest.mocked(capturePostHog)
 
-jest.mock("ol-components", () => {
-  const actual = jest.requireActual("ol-components")
+jest.mock("@/page-components/ResourceCardView/ResourceCardView", () => {
+  const actual = jest.requireActual(
+    "@/page-components/ResourceCardView/ResourceCardView",
+  )
   return {
     ...actual,
-    LearningResourceCard: jest.fn(actual.LearningResourceCard),
+    ResourceCardView: jest.fn(actual.ResourceCardView),
   }
 })
-
-const spyLearningResourceCard = jest.mocked(LearningResourceCard)
 
 describe("ResourceCarousel", () => {
   const setupApis = ({
@@ -104,13 +104,13 @@ describe("ResourceCarousel", () => {
     await screen.findByText(resources.list.results[0].title)
     await screen.findByText(resources.list.results[1].title)
     await screen.findByText(resources.list.results[2].title)
-    expectLastProps(spyLearningResourceCard, { size: "small" })
+    expectLastProps(jest.mocked(ResourceCardView), { size: "small" })
 
     await user.click(tabs[1])
     await screen.findByText(resources.search.results[0].title)
     await screen.findByText(resources.search.results[1].title)
     await screen.findByText(resources.search.results[2].title)
-    expectLastProps(spyLearningResourceCard, { size: "small" })
+    expectLastProps(jest.mocked(ResourceCardView), { size: "small" })
   })
 
   it.each([{ isLoading: true }, { isLoading: false }])(
@@ -343,12 +343,10 @@ describe("ResourceCarousel", () => {
         />,
       )
 
-      const titleHeading = await screen.findByRole("heading", {
+      await screen.findByRole("heading", {
         name: resources.list.results[0].title,
+        level: expectedLevel,
       })
-      expect(titleHeading.getAttribute("aria-level")).toBe(
-        String(expectedLevel),
-      )
     },
   )
 
@@ -377,10 +375,11 @@ describe("ResourceCarousel", () => {
     )
 
     const firstResource = resources.list.results[0]
-    const card = await screen.findByRole("heading", {
-      name: firstResource.title,
-    })
-    await user.click(card)
+    await user.click(
+      await screen.findByRole("link", {
+        name: new RegExp(firstResource.title),
+      }),
+    )
 
     expect(mockCapturePostHog).toHaveBeenCalledWith(
       PostHogEvents.CourseCardClicked,

@@ -137,8 +137,7 @@ def test_content_file_delete_webhook_view_edx_success(  # noqa: PLR0913
 @pytest.mark.django_db
 @pytest.mark.parametrize(
     "etl_source",
-    # mit_edx is retired, but its webhooks must still get a 200 (see ETLSource)
-    [ETLSource.mitxonline.name, ETLSource.xpro.name, ETLSource.mit_edx.name],
+    [ETLSource.mitxonline.name, ETLSource.xpro.name],
 )
 def test_content_file_delete_webhook_view_edx_resource_not_found(
     settings, client, mocker, etl_source

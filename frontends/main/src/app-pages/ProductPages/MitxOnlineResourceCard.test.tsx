@@ -1,6 +1,5 @@
 import React from "react"
 import { screen, fireEvent } from "@testing-library/react"
-import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { capturePostHog } from "@/common/analytics/posthog"
 import MitxOnlineResourceCard, {
   mitxOnlineCardContent,
@@ -13,7 +12,6 @@ import {
   renderWithProviders,
   user,
 } from "@/test-utils"
-import { FeatureFlags } from "@/common/feature_flags"
 import { PostHogEvents } from "@/common/constants"
 import {
   ResourceCardSkeleton,
@@ -22,8 +20,6 @@ import {
 import { DEFAULT_RESOURCE_IMG, LocalDate } from "ol-utilities"
 import { getByImageSrc, queryByImageSrc } from "ol-test-utilities"
 import type { MitxOnlineResourceCardProps } from "./MitxOnlineResourceCard"
-
-jest.mock("@/common/useFeatureFlag")
 
 jest.mock("@/common/analytics/posthog", () => ({
   capturePostHog: jest.fn(),
@@ -49,36 +45,12 @@ const renderCard = (props: MitxOnlineResourceCardProps) =>
 const freeMode = factories.courses.enrollmentMode({ requires_payment: false })
 const paidMode = factories.courses.enrollmentMode({ requires_payment: true })
 
-const setRedesignFlag = (enabled: boolean) => {
-  jest
-    .mocked(useFeatureFlag)
-    .mockImplementation(
-      (flag) => enabled && flag === FeatureFlags.ResourceCardRedesign,
-    )
-}
-
 beforeEach(() => {
   jest.clearAllMocks()
 })
 
-describe.each([
-  { card: "legacy", flag: false },
-  { card: "redesigned", flag: true },
-])("MitxOnlineResourceCard ($card)", ({ flag }) => {
-  beforeEach(() => {
-    setRedesignFlag(flag)
-  })
-
+describe("MitxOnlineResourceCard", () => {
   describe("loading and empty states", () => {
-    test("renders loading state when isLoading", () => {
-      renderCard({
-        href: "/test",
-        isLoading: true,
-        resourceType: "course",
-      })
-      expect(screen.queryByRole("link")).not.toBeInTheDocument()
-    })
-
     test("returns null when no resource and not loading (course)", () => {
       renderCard({ href: "/test", resourceType: "course" })
       expect(screen.queryByRole("link")).not.toBeInTheDocument()
@@ -181,233 +153,6 @@ describe.each([
         },
       )
     })
-  })
-})
-
-describe("MitxOnlineResourceCard (legacy only)", () => {
-  beforeEach(() => {
-    setRedesignFlag(false)
-  })
-
-  describe("course cards", () => {
-    test("shows 'Course' resource type", () => {
-      const course = factories.courses.course()
-      renderCard({ resource: course, resourceType: "course", href: "/test" })
-      expect(screen.getByText("Course")).toBeInTheDocument()
-    })
-  })
-
-  describe("program cards", () => {
-    test("shows 'Course' resource type for display_mode=course", () => {
-      const program = factories.programs.program({
-        display_mode: DisplayModeEnum.Course,
-      })
-      renderCard({ resource: program, resourceType: "program", href: "/test" })
-      expect(screen.getByText("Course")).toBeInTheDocument()
-    })
-
-    test("shows 'Program' resource type for default display_mode", () => {
-      const program = factories.programs.program()
-      renderCard({ resource: program, resourceType: "program", href: "/test" })
-      expect(screen.getByText("Program")).toBeInTheDocument()
-    })
-
-    test("shows 'Anytime' for anytime availability", () => {
-      const program = factories.programs.program({ availability: "anytime" })
-      const {
-        view: { container },
-      } = renderCard({
-        resource: program,
-        resourceType: "program",
-        href: "/test",
-      })
-      expect(container.textContent).toContain("Anytime")
-    })
-
-    test("shows 'Starts:' label on medium cards but not small cards", () => {
-      const program = factories.programs.program({
-        availability: "dated",
-        start_date: "2025-09-01T00:00:00Z",
-      })
-      const {
-        view: { container: mediumContainer },
-      } = renderCard({
-        resource: program,
-        resourceType: "program",
-        href: "/test",
-        size: "medium",
-      })
-      expect(mediumContainer.textContent).toContain("Starts:")
-      expect(mediumContainer.textContent).toContain("Sep 01, 2025")
-
-      const {
-        view: { container: smallContainer },
-      } = renderCard({
-        resource: program,
-        resourceType: "program",
-        href: "/test",
-        size: "small",
-      })
-      expect(smallContainer.textContent).not.toContain("Starts:")
-    })
-  })
-
-  describe("certificate display", () => {
-    test.each<{
-      resourceType: "course" | "program"
-      certAvailable: boolean
-    }>([
-      { resourceType: "course", certAvailable: true },
-      { resourceType: "course", certAvailable: false },
-      { resourceType: "program", certAvailable: true },
-      { resourceType: "program", certAvailable: false },
-    ])(
-      "$resourceType with certificate_available=$certAvailable",
-      ({ resourceType, certAvailable }) => {
-        const resource =
-          resourceType === "course"
-            ? factories.courses.course({
-                certificate_available: certAvailable,
-              })
-            : factories.programs.program({
-                certificate_available: certAvailable,
-              })
-        renderCard({
-          resource,
-          resourceType,
-          href: "/test",
-          size: "medium",
-          list: true,
-        } as MitxOnlineResourceCardProps)
-        const cert = screen.queryByText(/^Certificate/)
-        if (certAvailable) {
-          expect(cert).toBeInTheDocument()
-        } else {
-          expect(cert).not.toBeInTheDocument()
-        }
-      },
-    )
-  })
-
-  describe("enrollment-based pricing", () => {
-    test("shows product price when paid-only (course)", () => {
-      const course = factories.courses.course({
-        min_price: 200,
-        max_price: 200,
-        courseruns: [
-          factories.courses.courseRun({
-            enrollment_modes: [paidMode],
-            products: [factories.courses.product({ price: "200.00" })],
-          }),
-        ],
-      })
-      const {
-        view: { container },
-      } = renderCard({
-        resource: course,
-        resourceType: "course",
-        href: "/test",
-        list: true,
-      })
-      expect(container.textContent).toContain("$200")
-      expect(container.textContent).not.toContain("$200.00")
-    })
-
-    test("shows 'Free' when enrollment is free-only", () => {
-      const program = factories.programs.program({
-        enrollment_modes: [freeMode],
-      })
-      const {
-        view: { container },
-      } = renderCard({
-        resource: program,
-        resourceType: "program",
-        href: "/test",
-        list: true,
-      })
-      expect(container.textContent).toContain("Free")
-      expect(container.textContent).not.toContain("$")
-    })
-
-    test("shows product price when paid-only (program)", () => {
-      const program = factories.programs.program({
-        enrollment_modes: [paidMode],
-        min_price: 500,
-        max_price: 500,
-        products: [factories.courses.product({ price: "500.00" })],
-      })
-      const {
-        view: { container },
-      } = renderCard({
-        resource: program,
-        resourceType: "program",
-        href: "/test",
-        list: true,
-      })
-      expect(container.textContent).toContain("$500")
-      expect(container.textContent).not.toContain("$500.00")
-    })
-
-    test("shows price range when min and max differ", () => {
-      const program = factories.programs.program({
-        enrollment_modes: [paidMode],
-        min_price: 100,
-        max_price: 500,
-      })
-      const {
-        view: { container },
-      } = renderCard({
-        resource: program,
-        resourceType: "program",
-        href: "/test",
-        list: true,
-      })
-      expect(container.textContent).toContain("$100 – $500")
-    })
-
-    test("shows 'Free' and certificate price when both free and paid", () => {
-      const program = factories.programs.program({
-        enrollment_modes: [freeMode, paidMode],
-        min_price: 500,
-        max_price: 500,
-        certificate_available: true,
-        products: [factories.courses.product({ price: "500.00" })],
-      })
-      const {
-        view: { container },
-      } = renderCard({
-        resource: program,
-        resourceType: "program",
-        href: "/test",
-        list: true,
-      })
-      expect(container.textContent).toContain("Free")
-      expect(container.textContent).toContain("$500")
-    })
-
-    test("shows no price when no enrollment modes", () => {
-      const program = factories.programs.program({
-        enrollment_modes: [],
-        min_price: 500,
-        max_price: 500,
-      })
-      const {
-        view: { container },
-      } = renderCard({
-        resource: program,
-        resourceType: "program",
-        href: "/test",
-        list: true,
-      })
-      expect(container.textContent).not.toContain("$")
-      expect(container.textContent).not.toContain("Free")
-    })
-  })
-})
-
-describe("MitxOnlineResourceCard (redesigned only)", () => {
-  beforeEach(() => {
-    setRedesignFlag(true)
   })
 
   test("Renders the responsive layout", () => {
@@ -547,7 +292,7 @@ describe("mitxOnlineCardContent", () => {
       ).toMatchObject({ tone: "dark", primary: "Paid" })
     })
 
-    test("Free and paid enrollment is free to audit, with the certificate type and price", () => {
+    test("Free and paid enrollment reads 'Free' over the certificate type and price", () => {
       const resource = program({
         enrollment_modes: [freeMode, paidMode],
         min_price: 100,
@@ -558,13 +303,13 @@ describe("mitxOnlineCardContent", () => {
         mitxOnlineCardContent({ resource, resourceType: "program" })?.price,
       ).toEqual({
         tone: "light",
-        primary: "Free to audit",
+        primary: "Free",
         certificate: resource.certificate_type,
         certificatePrice: "$100 – $500",
       })
     })
 
-    test("Free to audit with no known price shows just the certificate type", () => {
+    test("Free and paid enrollment with no known price shows just the certificate type", () => {
       const resource = program({
         enrollment_modes: [freeMode, paidMode],
         min_price: null,
@@ -573,9 +318,12 @@ describe("mitxOnlineCardContent", () => {
       })
 
       expect(
-        mitxOnlineCardContent({ resource, resourceType: "program" })?.price
-          .certificate,
-      ).toBe(resource.certificate_type)
+        mitxOnlineCardContent({ resource, resourceType: "program" })?.price,
+      ).toEqual({
+        tone: "light",
+        primary: "Free",
+        certificate: resource.certificate_type,
+      })
     })
 
     test("No enrollment modes give a neutral panel with no price", () => {

@@ -6,6 +6,7 @@ import type {
   CourseRunGrade,
   V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v3"
+import { ProgramEnrollmentModeEnum } from "@mitodl/mitxonline-api-axios/v3"
 import { UniqueEnforcer } from "enforce-unique"
 import * as courses from "../factories/courses"
 import * as programs from "../factories/programs"
@@ -46,6 +47,7 @@ const courseEnrollment: PartialFactory<CourseRunEnrollmentV3> = (
     grades: [],
     enrollment_mode: faker.helpers.arrayElement(["audit", "verified"]),
     edx_emails_subscription: faker.datatype.boolean(),
+    has_course_staff_role: false,
     run: {
       enrollment_modes: [courses.enrollmentMode()],
       id: uniqueRunId.enforce(() => faker.number.int()),
@@ -92,11 +94,9 @@ const programEnrollmentV3: PartialFactory<V3UserProgramEnrollment> = (
           link: `/certificate/${faker.string.uuid()}/`,
         }
       : null,
-    enrollment_mode: faker.helpers.arrayElement([
-      "audit",
-      "verified",
-      undefined,
-    ]),
+    enrollment_mode: faker.helpers.arrayElement(
+      Object.values(ProgramEnrollmentModeEnum),
+    ),
     program: program,
     track: null,
   }
