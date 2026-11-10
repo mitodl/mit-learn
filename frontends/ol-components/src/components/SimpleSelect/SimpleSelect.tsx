@@ -90,6 +90,7 @@ type SimpleSelectFieldProps<V = unknown> = Pick<
   | "renderValue"
   | "multiple"
   | "disabled"
+  | "MenuProps"
 > & {
   /**
    * The options for the dropdown
