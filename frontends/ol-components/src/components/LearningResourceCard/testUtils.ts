@@ -1,4 +1,4 @@
-import { DeliveryEnum, DeliveryEnumDescriptions, ResourceTypeEnum } from "api"
+import { DeliveryEnum, ResourceTypeEnum } from "api"
 import { factories } from "api/test-utils"
 
 const _makeResource = factories.learningResources.resource
@@ -45,7 +45,7 @@ const sameDataRun = factories.learningResources.run({
   delivery: [
     {
       code: DeliveryEnum.Online,
-      name: DeliveryEnumDescriptions.online,
+      name: "Online",
     },
   ],
   resource_prices: [
@@ -224,7 +224,7 @@ const courses = {
           delivery: [
             {
               code: DeliveryEnum.Online,
-              name: DeliveryEnumDescriptions.online,
+              name: "Online",
             },
           ],
           resource_prices: [
@@ -236,7 +236,7 @@ const courses = {
           delivery: [
             {
               code: DeliveryEnum.Online,
-              name: DeliveryEnumDescriptions.online,
+              name: "Online",
             },
           ],
           resource_prices: [
@@ -248,7 +248,7 @@ const courses = {
           delivery: [
             {
               code: DeliveryEnum.InPerson,
-              name: DeliveryEnumDescriptions.in_person,
+              name: "In person",
             },
           ],
           resource_prices: [{ amount: "150", currency: "USD" }],
@@ -258,7 +258,7 @@ const courses = {
           delivery: [
             {
               code: DeliveryEnum.InPerson,
-              name: DeliveryEnumDescriptions.in_person,
+              name: "In person",
             },
           ],
           resource_prices: [{ amount: "150", currency: "USD" }],
@@ -273,11 +273,11 @@ const courses = {
     delivery: [
       {
         code: DeliveryEnum.Online,
-        name: DeliveryEnumDescriptions.online,
+        name: "Online",
       },
       {
         code: DeliveryEnum.InPerson,
-        name: DeliveryEnumDescriptions.in_person,
+        name: "In person",
       },
     ],
     runs: [
@@ -293,7 +293,7 @@ const courses = {
     delivery: [
       {
         code: DeliveryEnum.Online,
-        name: DeliveryEnumDescriptions.online,
+        name: "Online",
       },
     ],
     runs: [
