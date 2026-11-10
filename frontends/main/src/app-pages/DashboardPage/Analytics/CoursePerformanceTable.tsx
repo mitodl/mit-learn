@@ -173,7 +173,7 @@ const CoursePerformanceTable: React.FC<{
                   </TableCell>
                   <TableCell role="cell" $flex={COLUMN_FLEX.active} $numeric>
                     <MobileLabel>Active</MobileLabel>
-                    <SuppressibleValue value={row.active_learners} />
+                    <SuppressibleValue value={row.actively_enrolled_learners} />
                   </TableCell>
                   <TableCell role="cell" $flex={COLUMN_FLEX.certified} $numeric>
                     <MobileLabel>Certified</MobileLabel>
@@ -186,7 +186,7 @@ const CoursePerformanceTable: React.FC<{
                   >
                     <MobileLabel>Active rate</MobileLabel>
                     <SuppressibleValue
-                      value={row.active_rate_pct}
+                      value={row.actively_enrolled_rate_pct}
                       format={formatPercent}
                     />
                   </TableCell>
