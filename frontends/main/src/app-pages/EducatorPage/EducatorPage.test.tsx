@@ -232,7 +232,7 @@ describe("EducatorPage teaching practices", () => {
     expect(view.container.querySelector("script")).toBeNull()
     expect(view.container.querySelector("[onerror]")).toBeNull()
     // The whole card is a link, so links in the description are unwrapped.
-    expect(screen.getByText(/the syllabus/).closest("a")).toBeNull()
+    expect(screen.queryByText(/the syllabus/).closest("a")).toBeNull()
   })
 
   test("is hidden when there are no videos or podcast episodes", async () => {
