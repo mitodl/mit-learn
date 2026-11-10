@@ -1,11 +1,8 @@
 import React, { useCallback, useMemo, useState } from "react"
-import { LearningResourceCard } from "ol-components"
 import NiceModal from "@ebay/nice-modal-react"
 import type { LearningResourceCardProps } from "ol-components"
 import { RiBookmarkFill, RiBookmarkLine, RiMenuAddLine } from "@remixicon/react"
 import { MenuCheckIcon } from "./MenuCheckIcon"
-import { FeatureFlags } from "@/common/feature_flags"
-import { useFeatureFlag } from "@/common/useFeatureFlag"
 import {
   ResourceCardSkeleton,
   ResourceCardView,
@@ -93,7 +90,7 @@ type ResourceIdCallback = NonNullable<
   LearningResourceCardProps["onAddToUserListClick"]
 >
 
-type ResourceCardV2Props = {
+type CardWithActionsProps = {
   resource?: LearningResource | null
   isLoading?: boolean
   list?: boolean
@@ -107,7 +104,7 @@ type ResourceCardV2Props = {
   inUserList?: boolean
 }
 
-const ResourceCardV2: React.FC<ResourceCardV2Props> = ({
+const CardWithActions: React.FC<CardWithActionsProps> = ({
   resource,
   isLoading,
   list,
@@ -165,6 +162,12 @@ const ResourceCardV2: React.FC<ResourceCardV2Props> = ({
     <ResourceCardView
       {...learningResourceCardContent(resource)}
       {...layout}
+      /**
+       * The resource's own page where it has one, else its drawer. Crawlers
+       * follow this, so pointing it at the dedicated page is what stops the
+       * drawer competing with that page for the same content. `pushUrl` below
+       * is unaffected: a click still opens the drawer in place.
+       */
       href={resource.learn_url}
       pushUrl={() => resourceDrawerPushUrl(resource)}
       onLinkClick={onLinkClick}
@@ -175,35 +178,35 @@ const ResourceCardV2: React.FC<ResourceCardV2Props> = ({
   )
 }
 
-type ResourceCardProps = Omit<
-  LearningResourceCardProps,
-  | "href"
-  | "pushUrl"
-  | "onAddToLearningPathClick"
-  | "onAddToUserListClick"
-  | "inUserList"
-  | "inLearningPath"
-  | "onClick"
-> & {
+type ResourceCardProps = {
+  resource?: LearningResource | null
+  isLoading?: boolean
+  /** A row in a list of results: horizontal when there is room. */
+  list?: boolean
+  size?: ResourceCardSize
+  className?: string
   headingLevel?: HeadingLevel
   parentHeadingEl?: HeadingElement
   onCardClick?: () => void
 }
 
 /**
- * Just like `ol-components/LearningResourceCard`, or the redesigned
- * `ResourceCardView` when the `resource-card-redesign` flag is on, but with
- * builtin actions:
+ * `ResourceCardView` for a learning resource, with builtin actions:
  *  - click opens the Resource Drawer
- *  - onAddToListClick opens the Add to List modal
+ *  - the bookmark opens the Add to List modal
  *    - for unauthenticated users, a popover prompts signup instead.
- *  - onAddToLearningPathClick opens the Add to Learning Path modal
+ *  - for learning path editors, a second action opens the Add to Learning
+ *    Path modal
  */
 const ResourceCard: React.FC<ResourceCardProps> = ({
   resource,
+  isLoading,
+  list,
+  size,
+  className,
+  headingLevel,
   parentHeadingEl,
   onCardClick,
-  ...others
 }) => {
   const {
     anchorEl,
@@ -214,7 +217,6 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
     inLearningPath,
     onClick,
   } = useResourceCard(resource)
-  const redesign = useFeatureFlag(FeatureFlags.ResourceCardRedesign)
 
   const composedOnClick = onCardClick
     ? () => {
@@ -223,48 +225,22 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
       }
     : onClick
 
-  const headingLevel = parentHeadingEl ? subheadingMap[parentHeadingEl] : 6
-
-  if (redesign) {
-    return (
-      <>
-        <ResourceCardV2
-          resource={resource}
-          isLoading={others.isLoading}
-          list={others.list}
-          size={others.size}
-          className={others.className}
-          headingLevel={others.headingLevel ?? headingLevel}
-          onLinkClick={composedOnClick}
-          onAddToLearningPathClick={handleAddToLearningPathClick}
-          onAddToUserListClick={handleAddToUserListClick}
-          inLearningPath={inLearningPath}
-          inUserList={inUserList}
-        />
-        <SignupPopover anchorEl={anchorEl} onClose={handleClosePopover} />
-      </>
-    )
-  }
-
   return (
     <>
-      <LearningResourceCard
-        onClick={composedOnClick}
+      <CardWithActions
         resource={resource}
-        /**
-         * The resource's own page where it has one, else its drawer. Crawlers
-         * follow this, so pointing it at the dedicated page is what stops the
-         * drawer competing with that page for the same content. `pushUrl` below
-         * is unaffected: a click still opens the drawer in place.
-         */
-        href={resource?.learn_url}
-        pushUrl={resource ? () => resourceDrawerPushUrl(resource) : undefined}
+        isLoading={isLoading}
+        list={list}
+        size={size}
+        className={className}
+        headingLevel={
+          headingLevel ?? (parentHeadingEl ? subheadingMap[parentHeadingEl] : 6)
+        }
+        onLinkClick={composedOnClick}
         onAddToLearningPathClick={handleAddToLearningPathClick}
         onAddToUserListClick={handleAddToUserListClick}
-        inUserList={inUserList}
         inLearningPath={inLearningPath}
-        headingLevel={headingLevel}
-        {...others}
+        inUserList={inUserList}
       />
       <SignupPopover anchorEl={anchorEl} onClose={handleClosePopover} />
     </>

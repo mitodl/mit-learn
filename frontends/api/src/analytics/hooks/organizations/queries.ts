@@ -5,12 +5,7 @@ import type {
   OrganizationsApiOrganizationsContractUtilizationRetrieveRequest,
   OrgAnalyticsResponseContractUtilization,
 } from "@mitodl/ol-analytics-dashboard-api-axios"
-import {
-  contractsApi,
-  learnersApi,
-  needsAttentionApi,
-  organizationsApi,
-} from "../../clients"
+import { contractsApi, learnersApi, needsAttentionApi } from "../../clients"
 
 /**
  * LIMIT/OFFSET paging, shared by every multi-row endpoint. The API caps `limit`
@@ -67,8 +62,6 @@ const analyticsOrganizationKeys = {
   root: ["analytics", "organizations"] as const,
   organization: (orgId: string) =>
     [...analyticsOrganizationKeys.root, orgId] as const,
-  resource: (orgId: string, resource: string, page?: AnalyticsPageParams) =>
-    [...analyticsOrganizationKeys.organization(orgId), resource, page] as const,
 }
 
 /**
@@ -81,76 +74,6 @@ const ANALYTICS_STALE_TIME = 5 * 60 * 1000
 
 /** See `analyticsContractQueries.learnerProgress`. */
 const LEARNER_PROGRESS_STALE_TIME = 60 * 1000
-
-const analyticsOrganizationQueries = {
-  contractUtilization: (orgId: string, page?: AnalyticsPageParams) =>
-    queryOptions({
-      queryKey: analyticsOrganizationKeys.resource(
-        orgId,
-        "contract-utilization",
-        page,
-      ),
-      staleTime: ANALYTICS_STALE_TIME,
-      queryFn: async ({ signal }) =>
-        organizationsApi
-          .organizationsContractUtilizationRetrieve(
-            { organization_id: orgId, ...page },
-            { signal },
-          )
-          .then((res) => res.data),
-    }),
-
-  enrollmentFunnel: (orgId: string, page?: AnalyticsPageParams) =>
-    queryOptions({
-      queryKey: analyticsOrganizationKeys.resource(
-        orgId,
-        "enrollment-funnel",
-        page,
-      ),
-      staleTime: ANALYTICS_STALE_TIME,
-      queryFn: async ({ signal }) =>
-        organizationsApi
-          .organizationsEnrollmentFunnelRetrieve(
-            { organization_id: orgId, ...page },
-            { signal },
-          )
-          .then((res) => res.data),
-    }),
-
-  engagementTrend: (orgId: string, page?: AnalyticsPageParams) =>
-    queryOptions({
-      queryKey: analyticsOrganizationKeys.resource(
-        orgId,
-        "engagement-trend",
-        page,
-      ),
-      staleTime: ANALYTICS_STALE_TIME,
-      queryFn: async ({ signal }) =>
-        organizationsApi
-          .organizationsEngagementTrendRetrieve(
-            { organization_id: orgId, ...page },
-            { signal },
-          )
-          .then((res) => res.data),
-    }),
-
-  contentEngagement: (orgId: string, page?: AnalyticsPageParams) =>
-    queryOptions({
-      queryKey: analyticsOrganizationKeys.resource(
-        orgId,
-        "content-engagement",
-        page,
-      ),
-      staleTime: ANALYTICS_STALE_TIME,
-      queryFn: async ({ signal }) =>
-        organizationsApi
-          .organizationsContentEngagementRetrieve(
-            { organization_id: orgId, ...page },
-            { signal },
-          )
-          .then((res) => res.data),
-    }),
-}
 
 /**
  * Contract-scoped keys nest under the org's, so invalidating an organization
@@ -390,7 +313,6 @@ export type {
   OrgAnalyticsResponse,
 }
 export {
-  analyticsOrganizationQueries,
   analyticsOrganizationKeys,
   analyticsContractQueries,
   analyticsContractKeys,

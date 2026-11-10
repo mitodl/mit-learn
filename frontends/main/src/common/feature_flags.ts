@@ -20,10 +20,8 @@ export enum FeatureFlags {
   AccountManagement = "account-management",
   SelfServiceRefunds = "self-service-refunds",
   DisableHybridSearch = "disable-hybrid-search",
-  MultipleRunContextMenus = "multiple-run-context-menus",
   ProgramLetters = "program-letters",
   B2BDataConsent = "b2b-data-consent",
   DepartmentPageRedesign = "department-page-redesign",
   ContactUs = "contact-us",
-  ResourceCardRedesign = "resource-card-redesign",
 }

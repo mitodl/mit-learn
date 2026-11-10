@@ -10,10 +10,7 @@ import {
   resourceContentFilesImageSrc,
   showStartAnytime,
 } from "ol-utilities"
-import {
-  freeToAuditPanel,
-  startsMetadata,
-} from "../ResourceCardView/ResourceCardView"
+import { freePanel, startsMetadata } from "../ResourceCardView/ResourceCardView"
 import type {
   MetadataItem,
   PricePanel,
@@ -63,13 +60,13 @@ const getPrice = (resource: LearningResource): PricePanel => {
   }
   const license = resource.license_cc ? "Open license" : undefined
   if (resource.certification) {
-    return freeToAuditPanel(
-      certificateType(resource),
-      prices.certificate.display,
+    return freePanel({
+      certificate: certificateType(resource),
+      certificatePrice: prices.certificate.display ?? undefined,
       license,
-    )
+    })
   }
-  return { tone: "light", primary: "Free", license }
+  return freePanel({ license })
 }
 
 const learningResourceCardContent = (

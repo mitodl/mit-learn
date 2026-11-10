@@ -9939,7 +9939,6 @@ paths:
         name: source
         schema:
           enum:
-          - mit_edx
           - mitpe
           - mitxonline
           - oll
@@ -9954,7 +9953,6 @@ paths:
           type: string
           minLength: 1
         description: |-
-          * `mit_edx` - mit_edx
           * `mitpe` - mitpe
           * `mitxonline` - mitxonline
           * `oll` - oll
@@ -16848,7 +16846,6 @@ components:
       - Next start date ascending
     SourceEnum:
       enum:
-      - mit_edx
       - mitpe
       - mitxonline
       - oll
@@ -16862,7 +16859,6 @@ components:
       - ovs
       type: string
       description: |-
-        * `mit_edx` - mit_edx
         * `mitpe` - mitpe
         * `mitxonline` - mitxonline
         * `oll` - oll
@@ -16875,7 +16871,6 @@ components:
         * `canvas` - canvas
         * `ovs` - ovs
       x-enum-descriptions:
-      - mit_edx
       - mitpe
       - mitxonline
       - oll

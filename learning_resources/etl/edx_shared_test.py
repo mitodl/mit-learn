@@ -2456,5 +2456,37 @@ def test_sync_edx_course_files_passes_overwrite_units(mocker):
     )
 
     mock_process.assert_called_once_with(
-        mocker.ANY, key, run, overwrite=False, overwrite_units=True
+        mocker.ANY, key, run, overwrite=False, overwrite_units=True, ocr_pdfs=False
     )
+
+
+def test_process_course_archive_ocr_pdfs_bypasses_key_gate(mocker, mock_archive):
+    """ocr_pdfs reloads an unchanged archive, passing the flag to the transform"""
+    key = "mitxonline/openedx/raw_data/course_xml/course-v1:Test+Course+R1/abc123.xml.tar.gz"
+    run = LearningResourceRunFactory.create(
+        published=True, archive_key=key, checksum="samechecksum"
+    )
+    ContentFileFactory.create(run=run)
+    bucket = mocker.MagicMock()
+    mocker.patch(
+        "learning_resources.etl.edx_shared.calc_checksum", return_value="samechecksum"
+    )
+    mock_transform = mocker.patch(
+        "learning_resources.etl.edx_shared.transform_content_files",
+        return_value=iter([{"key": "content.txt"}]),
+    )
+
+    def fake_load(run_arg, data, **kwargs):
+        list(data)
+        return [1]
+
+    mock_load = mocker.patch(
+        "learning_resources.etl.edx_shared.load_content_files", side_effect=fake_load
+    )
+
+    process_course_archive(bucket, key, run, ocr_pdfs=True)
+
+    bucket.download_file.assert_called_once()
+    mock_load.assert_called_once()
+    assert mock_transform.call_args.kwargs["ocr_pdfs"] is True
+    assert mock_transform.call_args.kwargs["overwrite"] is False

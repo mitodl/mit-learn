@@ -2,9 +2,9 @@
 Shared parts of resource profile claim generation.
 
 An extractor is one stage's prompt, output schema and configuration. Its
-validated output is stored in the unit's ClaimExtraction under a key its
-caller builds from the call's inputs, and a call whose key is already stored,
-for this unit or another, is skipped.
+validated output is stored in the ClaimExtraction of the unit or run it is
+for, under a key its caller builds from the call's inputs, and a call whose
+key is already stored, for this unit or run or another, is skipped.
 """
 
 import hashlib
@@ -24,6 +24,7 @@ from pydantic import BaseModel, ValidationError
 
 from learning_resources.models import (
     ClaimExtraction,
+    LearningResourceRun,
     ResourceProfileConfiguration,
     Unit,
 )
@@ -39,8 +40,13 @@ class ClaimExtractionError(Exception):
 
 
 def cache_key(*inputs) -> str:
-    """Return the sha256 of a call's inputs"""
-    blob = json.dumps(inputs, ensure_ascii=False, separators=(",", ":"))
+    """
+    Return the sha256 of a call's inputs.
+
+    Keys are sorted because a stored output comes back from Postgres jsonb
+    with its keys in a different order than the model gave them.
+    """
+    blob = json.dumps(inputs, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
     return hashlib.sha256(blob.encode()).hexdigest()
 
 
@@ -67,13 +73,18 @@ class ClaimExtractor:
         return cache_key(self.level, *inputs)
 
 
-def load_extractor(stage: str, schema: type[BaseModel]) -> ClaimExtractor:
+def load_extractor(
+    stage: str,
+    schema: type[BaseModel],
+    level: str = ClaimExtraction.Level.UNIT,
+) -> ClaimExtractor:
     """
     Build a stage's extractor from its ResourceProfileConfiguration.
 
     Args:
         stage (str): a ResourceProfileConfiguration.Stage
         schema (type of BaseModel): the extractor's output schema
+        level (str): the ClaimExtraction.Level its rows are stored at
 
     Raises:
         ClaimExtractionError: when the stage has no configuration
@@ -82,9 +93,7 @@ def load_extractor(stage: str, schema: type[BaseModel]) -> ClaimExtractor:
     if not config:
         msg = f"No ResourceProfileConfiguration for stage {stage}"
         raise ClaimExtractionError(msg)
-    return ClaimExtractor(
-        stage, ClaimExtraction.Level.UNIT, config.prompt, schema, config
-    )
+    return ClaimExtractor(stage, level, config.prompt, schema, config)
 
 
 # --------------------------------------------------------------------------- llm
@@ -303,7 +312,8 @@ def get_or_create_extraction(  # noqa: PLR0913
     combined_prompt: Callable[[], str],
     sources: list[Source],
     *,
-    unit: Unit,
+    unit: Unit | None = None,
+    run: LearningResourceRun | None = None,
     finish: Callable[[dict], dict] | None = None,
     overwrite: bool = False,
 ) -> ClaimExtraction:
@@ -321,7 +331,9 @@ def get_or_create_extraction(  # noqa: PLR0913
             called only when the model is
         sources (list of Source): the sources in the prompt, to verify the
             output's evidence against
-        unit (Unit): the unit the call is for
+        unit (Unit): the unit the call is for, for a unit-level extraction
+        run (LearningResourceRun): the run the call is for, for a run-level
+            extraction; exactly one of unit and run is given
         finish (callable): what else to do to the verified output, as plain
             data, before it is stored
         overwrite (bool): call the model even when the key is stored, and
@@ -330,17 +342,21 @@ def get_or_create_extraction(  # noqa: PLR0913
     Raises:
         ClaimExtractionError: when the model gives no valid response
     """
+    if (unit is None) == (run is None):
+        msg = "Pass exactly one of unit and run"
+        raise ValueError(msg)
     if not overwrite:
         extraction = ClaimExtraction.objects.filter(key=key).first()
         if extraction:
-            return _store_extraction(unit, extraction)
+            return _store_extraction(extraction, unit=unit, run=run)
     parsed, raw = call_llm(extractor, combined_prompt())
     output = _stored_output(parsed.model_dump(), sources)
     if finish:
         output = finish(output)
     return _store_extraction(
-        unit,
         ClaimExtraction.objects.filter(key=key).first(),
+        unit=unit,
+        run=run,
         key=key,
         level=extractor.level,
         extractor_version=extractor.version,
@@ -354,28 +370,37 @@ def get_or_create_extraction(  # noqa: PLR0913
 
 
 def _store_extraction(
-    unit: Unit, extraction: ClaimExtraction | None, **fields
+    extraction: ClaimExtraction | None,
+    *,
+    unit: Unit | None,
+    run: LearningResourceRun | None,
+    **fields,
 ) -> ClaimExtraction:
     """
-    Make an extraction the unit's, and delete the unit's other extractions.
+    Point an extraction at its unit or run, and delete that unit's or run's
+    other extractions.
 
     Args:
-        unit (Unit): the unit
         extraction (ClaimExtraction | None): the row for the key, if there is
-            one; otherwise the unit's latest row is reused for the key, or a
-            row is created
+            one; otherwise the unit's or run's latest row is reused for the
+            key, or a row is created
+        unit (Unit | None): the unit the row is for, for a unit-level extraction
+        run (LearningResourceRun | None): the run the row is for, for a
+            run-level extraction; exactly one of unit and run is given
         fields: what else to set on the row
     """
+    owner_field, owner = ("unit", unit) if unit is not None else ("run", run)
+    owner_filter = {owner_field: owner}
     with transaction.atomic():
-        rows = ClaimExtraction.objects.select_for_update().filter(unit=unit)
+        rows = ClaimExtraction.objects.select_for_update().filter(**owner_filter)
         if extraction is None:
             extraction = rows.order_by("-updated_on", "-id").first()
         if extraction is None:
-            extraction = ClaimExtraction.objects.create(unit=unit, **fields)
+            extraction = ClaimExtraction.objects.create(**owner_filter, **fields)
         else:
             rows.exclude(id=extraction.id).delete()
-            if fields or extraction.unit_id != unit.id:
-                extraction.unit = unit
+            if fields or getattr(extraction, f"{owner_field}_id") != owner.id:
+                setattr(extraction, owner_field, owner)
                 for name, value in fields.items():
                     setattr(extraction, name, value)
                 extraction.save()

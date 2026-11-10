@@ -598,10 +598,7 @@ const ContractContent: React.FC<ContractContentProps> = ({
         open={consentRequired}
         contract={b2bContract}
         onAccepted={() => announce("Consent recorded.")}
-        onDeclined={() => {
-          announce("Response recorded.")
-          router.push(DASHBOARD_HOME)
-        }}
+        onCancelled={() => router.push(DASHBOARD_HOME)}
       />
     </>
   )

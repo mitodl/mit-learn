@@ -25,8 +25,6 @@ import NextLink from "next/link"
 import { CourseRunEnrollmentV3 } from "@mitodl/mitxonline-api-axios/v3"
 import { useOrderIdForRun } from "@/common/mitxonline/useOrderIdForResource"
 import { getRunMenuItems } from "./runMenuItems"
-import { FeatureFlags } from "@/common/feature_flags"
-import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { useQuery } from "@tanstack/react-query"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 
@@ -215,9 +213,6 @@ const RunListRow: React.FC<RunListRowProps> = ({
    * single request and the per-row work is a client-side lookup.
    */
   const receiptResolution = useOrderIdForRun(enrollment.run.id)
-  const perRunMenusEnabled = useFeatureFlag(
-    FeatureFlags.MultipleRunContextMenus,
-  )
   const menuItems = getRunMenuItems({
     enrollment,
     title: enrollment.run.course.title,
@@ -266,42 +261,87 @@ const RunListRow: React.FC<RunListRowProps> = ({
             <ViewContentArrow aria-hidden="true" />
           </>
         )}
-        {perRunMenusEnabled &&
-          (disabled ? (
-            <ActionButton
-              size="small"
-              variant="text"
-              aria-label={`More options for ${runLabel}`}
-              disabled
-            >
-              <RiMore2Line aria-hidden="true" />
-            </ActionButton>
-          ) : (
-            <SimpleMenu
-              items={menuItems}
-              // Every row's menu is otherwise just "menu" to a screen reader.
-              menuOverrideProps={{
-                MenuListProps: { "aria-label": `Options for ${runLabel}` },
-              }}
-              trigger={
-                <ActionButton
-                  size="small"
-                  variant="text"
-                  aria-label={`More options for ${runLabel}`}
-                >
-                  <RiMore2Line aria-hidden="true" />
-                </ActionButton>
-              }
-            />
-          ))}
+        {disabled ? (
+          <ActionButton
+            size="small"
+            variant="text"
+            aria-label={`More options for ${runLabel}`}
+            disabled
+          >
+            <RiMore2Line aria-hidden="true" />
+          </ActionButton>
+        ) : (
+          <SimpleMenu
+            items={menuItems}
+            // Every row's menu is otherwise just "menu" to a screen reader.
+            menuOverrideProps={{
+              MenuListProps: { "aria-label": `Options for ${runLabel}` },
+            }}
+            trigger={
+              <ActionButton
+                size="small"
+                variant="text"
+                aria-label={`More options for ${runLabel}`}
+              >
+                <RiMore2Line aria-hidden="true" />
+              </ActionButton>
+            }
+          />
+        )}
       </Stack>
     </RunRow>
   )
 }
 
-type SiblingRunsPanelProps = {
-  /** The currently displayed enrollment (shown above the sibling list). */
+const CurrentRunRow: React.FC<{
   enrollment: CourseRunEnrollmentV3
+  disabled: boolean
+}> = ({ enrollment, disabled }) => {
+  const currentRun = enrollment.run
+  const currentStatus = getDashboardEnrollmentStatus({
+    type: DashboardType.CourseRunEnrollment,
+    data: enrollment,
+  })
+  const currentTimeState = getRunTimeState(
+    currentRun?.start_date,
+    currentRun?.end_date,
+  )
+  const currentStatusLabel = getRunStatusLabel(currentStatus, currentTimeState)
+  const currentRunIdentifier = formatRunIdentifier(currentRun)
+  const currentLabelValue = currentStatusLabel
+    ? `${currentRunIdentifier} (${currentStatusLabel})`
+    : currentRunIdentifier
+  const currentRunLabel = `Current run: ${currentLabelValue}`
+
+  return (
+    <RunListRow
+      isFirst
+      icon={
+        currentStatus === EnrollmentStatus.Completed ? (
+          <EnrollmentStatusIcon status={currentStatus} />
+        ) : currentTimeState === "upcoming" ? (
+          <UpcomingRunIcon aria-hidden="true" />
+        ) : currentTimeState === "ended" ? (
+          <ExpiredRunIcon aria-hidden="true" />
+        ) : (
+          <EnrollmentStatusIcon status={currentStatus} />
+        )
+      }
+      labelPrefix="Current run:"
+      labelValue={currentLabelValue}
+      runLabel={currentRunLabel}
+      enrollment={enrollment}
+      disabled={disabled}
+    />
+  )
+}
+
+type SiblingRunsPanelProps = {
+  /**
+   * The currently displayed enrollment, shown above the sibling list. Absent
+   * when the card shows a run the learner hasn't enrolled in yet.
+   */
+  enrollment?: CourseRunEnrollmentV3
   /**
    * Other enrollments for the same course variant, pre-filtered to exclude
    * the current enrollment. Each entry becomes a row in the list.
@@ -323,22 +363,6 @@ const SiblingRunsPanel: React.FC<SiblingRunsPanelProps> = ({
   labelledBy,
   disabled = false,
 }) => {
-  const currentRun = enrollment.run
-  const currentStatus = getDashboardEnrollmentStatus({
-    type: DashboardType.CourseRunEnrollment,
-    data: enrollment,
-  })
-  const currentTimeState = getRunTimeState(
-    currentRun?.start_date,
-    currentRun?.end_date,
-  )
-  const currentStatusLabel = getRunStatusLabel(currentStatus, currentTimeState)
-  const currentRunIdentifier = formatRunIdentifier(currentRun)
-  const currentLabelValue = currentStatusLabel
-    ? `${currentRunIdentifier} (${currentStatusLabel})`
-    : currentRunIdentifier
-  const currentRunLabel = `Current run: ${currentLabelValue}`
-
   return (
     <Collapse
       in={expanded}
@@ -350,26 +374,10 @@ const SiblingRunsPanel: React.FC<SiblingRunsPanelProps> = ({
     >
       <RunsListWrapper>
         <RunsListBox>
-          <RunListRow
-            isFirst
-            icon={
-              currentStatus === EnrollmentStatus.Completed ? (
-                <EnrollmentStatusIcon status={currentStatus} />
-              ) : currentTimeState === "upcoming" ? (
-                <UpcomingRunIcon aria-hidden="true" />
-              ) : currentTimeState === "ended" ? (
-                <ExpiredRunIcon aria-hidden="true" />
-              ) : (
-                <EnrollmentStatusIcon status={currentStatus} />
-              )
-            }
-            labelPrefix="Current run:"
-            labelValue={currentLabelValue}
-            runLabel={currentRunLabel}
-            enrollment={enrollment}
-            disabled={disabled}
-          />
-          {siblingEnrollments.map((e) => {
+          {enrollment && (
+            <CurrentRunRow enrollment={enrollment} disabled={disabled} />
+          )}
+          {siblingEnrollments.map((e, index) => {
             const startDate = e.run?.start_date
             const endDate = e.run?.end_date
             const runEnrollmentStatus = getDashboardEnrollmentStatus({
@@ -398,7 +406,7 @@ const SiblingRunsPanel: React.FC<SiblingRunsPanelProps> = ({
             return (
               <RunListRow
                 key={e.id}
-                isFirst={false}
+                isFirst={!enrollment && index === 0}
                 icon={
                   isUpcoming ? (
                     // The visible "Upcoming:" prefix already says this.

@@ -165,14 +165,6 @@ describe("DashboardLayout", () => {
         }),
       ],
     })
-    setMockResponse.post(
-      mitxOnlineUrls.b2b.dataConsent(contract.id),
-      undefined,
-      {
-        code: 204,
-      },
-    )
-
     const desktopNav = await screen.findByTestId("desktop-nav")
     const tab = await within(desktopNav).findByRole("tab", {
       name: /Consent Contract/,
@@ -187,6 +179,5 @@ describe("DashboardLayout", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Cancel" }))
 
     await waitFor(() => expect(mockRouter.asPath).toBe(DASHBOARD_HOME))
-    expect(screen.getByText("Response recorded.")).toBeInTheDocument()
   })
 })

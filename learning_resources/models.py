@@ -1476,6 +1476,8 @@ class ResourceProfileConfiguration(TimestampedModel):
         CONTEXT = "context", "Context"
         # claims about one unit or bin
         UNIT = "unit", "Unit"
+        # claims about the course as a whole, from its units' and context's claims
+        RUN = "run", "Run"
 
     stage = models.CharField(max_length=16, choices=Stage.choices, unique=True)
     llm_model = models.CharField(
@@ -1529,6 +1531,8 @@ class ClaimExtraction(TimestampedModel):
     class Level(models.TextChoices):
         # a unit, bin or context unit
         UNIT = "unit", "Unit"
+        # a run, from its units' and context unit's extractions
+        RUN = "run", "Run"
 
     # sha256 of the stage's inputs
     key = models.CharField(max_length=64, unique=True)
@@ -1541,6 +1545,14 @@ class ClaimExtraction(TimestampedModel):
     raw_response = models.TextField(blank=True)
     unit = models.ForeignKey(
         Unit,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="claim_extractions",
+    )
+    # what a run-level extraction was produced for; unit-level ones use `unit`
+    run = models.ForeignKey(
+        LearningResourceRun,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,

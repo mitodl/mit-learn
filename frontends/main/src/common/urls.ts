@@ -105,15 +105,6 @@ export const CONTRACT_ADMIN_VIEW =
   "/organization/[orgSlug]/contract/[contractSlug]/admin"
 export const contractAdminView = (orgSlug: string, contractSlug: string) =>
   generatePath(CONTRACT_ADMIN_VIEW, { orgSlug, contractSlug })
-/**
- * B2B analytics comes at two scopes. The org view aggregates every contract;
- * the contract view narrows to one, mirroring how MITx Online's manager
- * dashboard is addressed. Both are backed by their own materialized views.
- */
-export const ORGANIZATION_ANALYTICS_VIEW =
-  "/dashboard/organization/[orgSlug]/analytics"
-export const organizationAnalyticsView = (orgSlug: string) =>
-  generatePath(ORGANIZATION_ANALYTICS_VIEW, { orgSlug })
 export const CONTRACT_ANALYTICS_VIEW =
   "/dashboard/organization/[orgSlug]/contract/[contractSlug]/analytics"
 export const contractAnalyticsView = (orgSlug: string, contractSlug: string) =>
