@@ -164,7 +164,7 @@ constraint-dependencies = ["certifi>=2026.10.19"]  # eMudhra CA compromise: neve
 package = false
 default-groups = "all"
 exclude-newer = "7d"
-required-version = ">=0.9.17"
+required-version = ">=0.12.22,<0.14"
 # opik (through ol-llm) hard-requires these, but nothing litellm, ol_llm, or a
 # traced embedding imports needs them. See ol-llm's README, "Installing without
 # the Opik SDK's heavy dependencies"; mit-learn keeps the rest of that list
