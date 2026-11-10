@@ -23,6 +23,7 @@ from django.core.management import BaseCommand
 from django.db import transaction
 from django.db.models import Exists, F, OuterRef
 from django.db.models.functions import Length, Lower
+from django.template.defaultfilters import pluralize
 
 from widgets.models import WidgetInstance
 from widgets.serializers.people import PeopleWidgetSerializer
@@ -138,7 +139,10 @@ class Command(BaseCommand):
             )
             return
 
-        self.stdout.write(self.style.SUCCESS(f"Renamed {rename_users()} users"))
+        renamed = rename_users()
+        self.stdout.write(
+            self.style.SUCCESS(f"Renamed {renamed} user{pluralize(renamed)}")
+        )
         skipped_ids = list(
             _mismatched_users().order_by("pk").values_list("pk", flat=True)
         )

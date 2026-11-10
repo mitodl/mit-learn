@@ -161,7 +161,7 @@ def test_migrate_usernames_lists_users_left_for_review():
 
     call_command("migrate_usernames", "--apply", stdout=out)
 
-    assert "Renamed 1 users" in out.getvalue()
+    assert "Renamed 1 user\n" in out.getvalue()
     assert "2 users need manual review, because their email is shared" in (
         out.getvalue()
     )
