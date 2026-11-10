@@ -191,17 +191,6 @@ type CatalogFilterParams = {
 
 /**
  * Fired when a user applies a filter to the course catalog.
- * Maps to "Filter Course Catalog" in the marketing event plan.
- */
-const trackCatalogFilter = (params: CatalogFilterParams) => {
-  pushGtmEvent("catalog-filter", {
-    "filter-name": params.filterName,
-    "filter-value": params.filterValue,
-  })
-}
-
-/**
- * Fired when a user applies a filter to the course catalog.
  * Maps to the "filter-course-catalog" GTM trigger.
  */
 const trackFilterCourseCatalog = (params: CatalogFilterParams) => {
@@ -322,7 +311,6 @@ export {
   trackVideoStart,
   trackVideo50Percent,
   trackSiteSearch,
-  trackCatalogFilter,
   trackFilterCourseCatalog,
   trackReturnVisit,
   trackBeginCheckout,
