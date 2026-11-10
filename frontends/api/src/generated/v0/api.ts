@@ -2633,13 +2633,12 @@ export interface WidgetListRequest {
   widgets?: Array<WidgetInstance> | null
 }
 /**
- * * `Markdown` - Markdown * `URL` - URL * `People` - People
+ * * `Markdown` - Markdown * `URL` - URL
  */
 
 export const WidgetTypeEnumDescriptions = {
   Markdown: "Markdown",
   URL: "URL",
-  People: "People",
 } as const
 
 export const WidgetTypeEnum = {
@@ -2651,10 +2650,6 @@ export const WidgetTypeEnum = {
    * URL
    */
   Url: "URL",
-  /**
-   * People
-   */
-  People: "People",
 } as const
 
 export type WidgetTypeEnum =
