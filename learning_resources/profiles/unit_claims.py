@@ -387,7 +387,8 @@ def generate_unit_claims(
         raise ValueError(msg)
     extractor = load_unit_extractor()
     config = extractor.config
-    sources = unit_sources(unit, config.max_file_tokens)
+    # a file is cut to fit the budget, so a split unit's every part fits it
+    sources = unit_sources(unit, config.max_file_tokens, config.input_token_budget)
     if not sources:
         return None
     outline, unit_ids = _course_outline(unit.run)

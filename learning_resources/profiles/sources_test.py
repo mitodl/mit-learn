@@ -10,6 +10,7 @@ from learning_resources.factories import (
 from learning_resources.models import UnitContentFile
 from learning_resources.profiles.sources import (
     CHARS_PER_TOKEN,
+    FILE_BUDGET_SHARE,
     Source,
     pack_parts,
     truncate,
@@ -78,6 +79,28 @@ def test_unit_sources():
     )
     assert sources[1].block == f"{sources[1].header}\ntext 2\n=== END S02 ===\n"
     assert not sources[1].truncated
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("budget", [None, 500])
+def test_unit_sources_fit_budget(budget):
+    """A file over a share of the input budget is truncated to fit it"""
+    unit = UnitFactory.create()
+    for position, text in enumerate(["Short file.", "A long transcript. " * 500]):
+        UnitContentFileFactory.create(
+            unit=unit,
+            content_file=ContentFileFactory.create(run=unit.run, content=text),
+            position=position,
+        )
+
+    short, long = unit_sources(unit, max_file_tokens=25000, budget=budget)
+
+    assert short.text == "Short file."
+    assert long.truncated is (budget is not None)
+    if budget is not None:
+        assert long.tokens <= budget * FILE_BUDGET_SHARE
+        assert long.tokens > budget * FILE_BUDGET_SHARE / 2
+        assert long.text.endswith("characters of this file are included ...]")
 
 
 def _source(index, tokens):
