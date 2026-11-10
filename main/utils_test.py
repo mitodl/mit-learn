@@ -18,6 +18,7 @@ from rest_framework.test import APIRequestFactory, force_authenticate
 from rest_framework.views import APIView
 
 from main import utils as main_utils
+from main.cache_policy import CachePolicy, get_cache_policy
 from main.constants import (
     ALLOWED_HTML_ATTRIBUTES_WITH_LINKS,
     ALLOWED_HTML_TAGS_WITH_LINKS,
@@ -377,6 +378,19 @@ def _get(view, path="/test/", user=None):
         force_authenticate(request, user=user)
     response = view(request)
     return response.render() if hasattr(response, "render") else response
+
+
+def _get_html(view, path="/test/", user=None):
+    """
+    Issue a GET that content-negotiates to the browsable API.
+
+    Left unrendered: the stamp is applied by the decorator, and rendering the
+    browsable API template is beside the point.
+    """
+    request = APIRequestFactory().get(path, HTTP_ACCEPT="text/html")
+    if user is not None:
+        force_authenticate(request, user=user)
+    return view(request)
 
 
 def test_view_cache_end_to_end(view_cache):
@@ -802,3 +816,97 @@ def test_run_on_worker_loop_does_not_reuse_an_inherited_loop(
     # The inherited loop is dropped, never closed: its fd belongs to the
     # parent too, and closing it in a child would break the parent's.
     assert not parent_loop.is_closed()
+
+
+# -- Cache policy stamping -------------------------------------------------
+#
+# The view cache stores rendered bytes only, never headers, so
+# CachePolicyMiddleware re-derives the policy on every request. These assert
+# the stamp it reads is present on both the hit and the miss path, and absent
+# wherever the response was computed for one user.
+
+
+def test_all_users_decorator_stamps_shared_on_miss(view_cache):
+    """A cache_page_for_all_users miss is still a response others will get."""
+    response = _get(_decorated_api_view())
+
+    assert get_cache_policy(response) == CachePolicy.SHARED
+
+
+def test_all_users_decorator_stamps_shared_on_hit(view_cache):
+    """
+    The hit path builds a brand-new response from cached bytes
+    (_cached_response), so it needs its own stamp -- the one from the miss is
+    not what the next user receives.
+    """
+    view = _decorated_api_view()
+    _get(view)
+    response = _get(view)
+
+    assert view.calls["count"] == 1
+    assert get_cache_policy(response) == CachePolicy.SHARED
+
+
+def test_anonymous_users_decorator_does_not_stamp_authenticated(view_cache):
+    """
+    cache_page_for_anonymous_users BYPASSES its cache for authenticated users,
+    so that response was computed for one user and may carry their data. It
+    must stay unstamped and fall through to the middleware's private default.
+    """
+    view = _decorated_api_view(cache_page_for_anonymous_users())
+    response = _get(view, user=UserFactory.build())
+
+    assert get_cache_policy(response) is None
+
+
+def test_bypassed_request_is_not_stamped_shared(view_cache):
+    """
+    A request taken by the `bypass` predicate runs uncached -- the escape
+    hatch for privileged users who must see live data. Stamping it SHARED
+    would mark exactly those responses cacheable.
+    """
+    view = _decorated_api_view(cache_page_for_all_users(bypass=lambda *_, **__: True))
+    response = _get(view, user=UserFactory.build())
+
+    assert get_cache_policy(response) is None
+
+
+def test_zero_timeout_is_not_stamped_shared(view_cache):
+    """Caching off means no shared response, so nothing to stamp."""
+    response = _get(_decorated_api_view(cache_page_for_all_users(0)))
+
+    assert get_cache_policy(response) is None
+
+
+def test_non_200_response_is_not_stamped_shared(view_cache):
+    """Only 200s are cached, so only 200s are shared."""
+    response = _get(_decorated_api_view(status=404))
+
+    assert get_cache_policy(response) is None
+
+
+def test_browsable_api_html_is_not_stamped_shared(view_cache):
+    """
+    The cached data is user-independent; the browsable API's rendering of it is
+    not. DRF's default renderer classes include BrowsableAPIRenderer and
+    nothing here overrides them, so an authenticated Accept: text/html request
+    turns a shared payload into HTML carrying that user's identity. Stamping it
+    SHARED would hand the middleware a reason not to mark it private.
+    """
+    response = _get_html(_decorated_api_view(), user=UserFactory.build())
+
+    assert get_cache_policy(response) is None
+
+
+def test_browsable_api_html_is_not_stamped_shared_on_hit(view_cache):
+    """
+    The cache key ignores Accept, so HTML is served from an entry a JSON
+    request stored. The hit path builds its own response and must reach the
+    same conclusion as the miss path.
+    """
+    view = _decorated_api_view()
+    _get(view)
+    response = _get_html(view, user=UserFactory.build())
+
+    assert view.calls["count"] == 1
+    assert get_cache_policy(response) is None

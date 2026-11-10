@@ -5,8 +5,11 @@ import pytest
 from django.core.exceptions import ImproperlyConfigured
 
 from main.middleware.cookie_tombstones import (
+    CACHE_POLICY_MIDDLEWARE,
+    TOMBSTONE_MIDDLEWARE,
     CookieTombstone,
     CookieTombstoneMiddleware,
+    insert_tombstone_middleware,
     parse_cookie_tombstones,
 )
 
@@ -150,3 +153,27 @@ def test_domain_host_lookup_is_lazy_and_single_call(middleware, mocker, settings
         domain=".learn.mit.edu",
     )
     request.get_host.assert_called_once_with()
+
+
+def test_insert_tombstone_middleware_places_it_after_the_cache_policy():
+    """
+    Response phases run bottom-up, so the deletion cookies this adds are only
+    visible to CachePolicyMiddleware when this entry is listed AFTER it.
+    """
+    middleware = insert_tombstone_middleware(("first", CACHE_POLICY_MIDDLEWARE, "last"))
+
+    assert middleware == (
+        "first",
+        CACHE_POLICY_MIDDLEWARE,
+        TOMBSTONE_MIDDLEWARE,
+        "last",
+    )
+
+
+def test_insert_tombstone_middleware_requires_the_cache_policy():
+    """
+    A guessed position produces no failure anywhere, so an unregistered
+    CachePolicyMiddleware has to raise rather than fall back to the front.
+    """
+    with pytest.raises(ValueError, match="not in tuple"):
+        insert_tombstone_middleware(("first", "last"))

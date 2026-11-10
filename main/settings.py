@@ -29,7 +29,10 @@ from main.envs import (
     get_list_of_str,
     get_string,
 )
-from main.middleware.cookie_tombstones import parse_cookie_tombstones
+from main.middleware.cookie_tombstones import (
+    insert_tombstone_middleware,
+    parse_cookie_tombstones,
+)
 from main.sentry import init_sentry
 from main.settings_celery import *  # noqa: F403
 from main.settings_course_etl import *  # noqa: F403
@@ -167,8 +170,21 @@ SCIM_SERVICE_PROVIDER["USER_ADAPTER"] = "users.adapters.LearnUserAdapter"  # noq
 # in order to insert request.user into the request.
 # OAuth2ExtraTokenMiddleware exposes request.access_token, which
 # SCIMScopeCheckMiddleware uses to require the "scim" scope.
+
+# Sets Cache-Control on responses, defaulting user-specific ones to no-store
+# (mitodl/hq#14080, RFC 0007 D5). Toggle without a deploy if it regresses
+# caching for a consumer; the header is simply not set when disabled.
+CACHE_POLICY_ENABLED = get_bool("CACHE_POLICY_ENABLED", True)  # noqa: FBT003
+
 MIDDLEWARE = (
     "django.middleware.security.SecurityMiddleware",
+    # Must precede SessionMiddleware and CsrfViewMiddleware. Response phases
+    # run bottom-up, so an entry listed earlier runs LATER on the way out --
+    # and this one has to run after those two have set their cookies, since a
+    # cookie-bearing response is never safe for a shared cache. Listed last it
+    # would run first, see no cookies, and silently under-protect
+    # /api/v0/users/me/. Guarded by main/middleware/cache_policy_test.py.
+    "main.middleware.cache_policy.CachePolicyMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -242,8 +258,7 @@ SESSION_COOKIE_NAME = get_string("SESSION_COOKIE_NAME", "sessionid")
 SESSION_COOKIE_SECURE = get_bool("SESSION_COOKIE_SECURE", True)  # noqa: FBT003
 
 if COOKIE_TOMBSTONES:
-    tombstone_middleware = "main.middleware.cookie_tombstones.CookieTombstoneMiddleware"
-    MIDDLEWARE = (tombstone_middleware, *MIDDLEWARE)
+    MIDDLEWARE = insert_tombstone_middleware(MIDDLEWARE)
 
 # enable the nplusone profiler only in debug mode
 if DEBUG:

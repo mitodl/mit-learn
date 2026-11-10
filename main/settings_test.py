@@ -283,7 +283,18 @@ class TestSettings(TestCase):
             )
 
     def test_cookie_tombstone_middleware_ordering(self):
-        """Cookie tombstone middleware should be first in the middleware stack."""
+        """
+        Cookie tombstone middleware should follow CachePolicyMiddleware.
+
+        Response phases run bottom-up, so the deletion cookies it adds are only
+        on the response in time for the cache policy if it is listed after the
+        middleware deciding that policy. First in the stack -- the obvious
+        placement -- it runs last instead, and an anonymous public response
+        leaves carrying a Set-Cookie with no no-store.
+
+        It still has the last word over SessionMiddleware and
+        CsrfViewMiddleware, which are listed after it either way.
+        """
         with mock.patch.dict(
             "os.environ",
             {
@@ -295,11 +306,20 @@ class TestSettings(TestCase):
             clear=True,
         ):
             settings_vars = self.reload_settings()
-            middleware = settings_vars["MIDDLEWARE"]
-            assert (
-                middleware[0]
-                == "main.middleware.cookie_tombstones.CookieTombstoneMiddleware"
+            middleware = list(settings_vars["MIDDLEWARE"])
+
+            tombstone = middleware.index(
+                "main.middleware.cookie_tombstones.CookieTombstoneMiddleware"
             )
+            assert (
+                middleware.index("main.middleware.cache_policy.CachePolicyMiddleware")
+                < tombstone
+            )
+            for cookie_setter in (
+                "django.contrib.sessions.middleware.SessionMiddleware",
+                "django.middleware.csrf.CsrfViewMiddleware",
+            ):
+                assert tombstone < middleware.index(cookie_setter)
 
     def test_celery_beat_disabled(self):
         """Test that we can disable celery beat with an env var"""
