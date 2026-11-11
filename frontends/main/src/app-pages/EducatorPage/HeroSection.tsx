@@ -74,14 +74,15 @@ const LinesImage = styled(Image)({
   transform: "rotate(90deg)",
 })
 
+/** Breadcrumbs adds 16px of bottom padding, so the gaps are 16px short. */
 const Inner = styled(SectionInner)(({ theme }) => ({
   position: "relative",
   display: "flex",
   flexDirection: "column",
-  gap: "40px",
+  gap: "24px",
   padding: "80px 0",
   [theme.breakpoints.down("md")]: {
-    gap: "24px",
+    gap: "8px",
     padding: "32px 0",
   },
 }))
@@ -129,6 +130,8 @@ const StyledSearchField = styled(SearchField)({
 const SearchButton = styled(Button)({
   flexShrink: 0,
   height: "auto",
+  paddingLeft: "32px",
+  paddingRight: "32px",
   borderTopLeftRadius: 0,
   borderBottomLeftRadius: 0,
 })
@@ -210,7 +213,6 @@ const HeroSection: React.FC = () => {
           alt=""
           width={1526}
           height={3164}
-          priority
         />
       </Lines>
       <Inner>

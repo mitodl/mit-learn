@@ -6,6 +6,7 @@ import Link from "next/link"
 import { useQuery } from "@tanstack/react-query"
 import DOMPurify from "isomorphic-dompurify"
 import { Skeleton, styled } from "ol-components"
+import type { Theme } from "ol-components"
 import { ButtonLink } from "@mitodl/smoot-design"
 import { RiArrowRightLine, RiPlayFill } from "@remixicon/react"
 import type { LearningResource } from "api"
@@ -192,24 +193,24 @@ const Description: React.FC<{ html: string; lines: number }> = ({
   />
 )
 
-const ArrowLink = styled(Link, {
-  shouldForwardProp: (prop) => prop !== "underline" && prop !== "stretched",
-})<{ underline?: boolean; stretched?: boolean }>(
-  ({ theme, underline, stretched }) => ({
-    ...theme.typography.body1Loose,
-    ...(stretched ? stretchedLink : { position: "relative" as const }),
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "10px",
-    alignSelf: "flex-start",
-    color: theme.custom.colors.darkGray2,
-    textDecoration: underline ? "underline" : "none",
-    svg: { width: "20px", height: "20px", flexShrink: 0 },
-    "&:hover": {
-      textDecoration: "underline",
-    },
-  }),
-)
+const arrowStyles = ({ theme }: { theme: Theme }) => ({
+  ...theme.typography.body1Loose,
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "10px",
+  alignSelf: "flex-start",
+  color: theme.custom.colors.darkGray2,
+  svg: { width: "20px", height: "20px", flexShrink: 0 },
+})
+
+const ArrowText = styled.span(arrowStyles)
+
+/** Sits above the card's stretched title link, so it stays clickable. */
+const ArrowLink = styled(Link)((props) => ({
+  ...arrowStyles(props),
+  position: "relative",
+  textDecoration: "underline",
+}))
 
 const SideCardRoot = styled(Card)({
   height: "198px",
@@ -280,7 +281,7 @@ const FeaturedVideoCard: React.FC<{ video: LearningResource }> = ({
       {video.description ? (
         <Description lines={3} html={video.description} />
       ) : null}
-      <ArrowLink href={SEARCH_INSTRUCTOR_INSIGHTS} underline>
+      <ArrowLink href={SEARCH_INSTRUCTOR_INSIGHTS}>
         Explore more courses with Instructor insights
         <RiArrowRightLine aria-hidden />
       </ArrowLink>
@@ -298,15 +299,18 @@ const SideCard: React.FC<{ resource: LearningResource; linkLabel: string }> = ({
     </SideImage>
     <SideText>
       <SideCopy>
-        <SideTitle>{resource.title}</SideTitle>
+        <SideTitle>
+          <TitleLink href={resource.learn_url}>{resource.title}</TitleLink>
+        </SideTitle>
         {resource.description ? (
           <Description lines={2} html={resource.description} />
         ) : null}
       </SideCopy>
-      <ArrowLink href={resource.learn_url} stretched>
+      {/* Visual only: the title link above covers the card. */}
+      <ArrowText aria-hidden>
         {linkLabel}
-        <RiArrowRightLine aria-hidden />
-      </ArrowLink>
+        <RiArrowRightLine />
+      </ArrowText>
     </SideText>
   </SideCardRoot>
 )

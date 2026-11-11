@@ -189,18 +189,19 @@ describe("EducatorPage teaching practices", () => {
     // The section heading shows while the cards load; wait for the cards.
     await screen.findByRole("heading", { name: featured.title })
     screen.getByRole("heading", { name: "Learn from MIT teaching practices" })
-    expect(screen.getByRole("link", { name: featured.title })).toHaveAttribute(
-      "href",
-      featured.learn_url,
-    )
-    screen.getByRole("heading", { name: side.title })
+    // Each card's link is named after its resource, not a generic label.
+    for (const resource of [featured, side, episode]) {
+      screen.getByRole("heading", { name: resource.title })
+      expect(
+        screen.getByRole("link", { name: resource.title }),
+      ).toHaveAttribute("href", resource.learn_url)
+    }
     expect(
-      screen.getByRole("link", { name: "Watch on MIT Learn" }),
-    ).toHaveAttribute("href", side.learn_url)
-    screen.getByRole("heading", { name: episode.title })
+      screen.queryByRole("link", { name: /Watch on MIT Learn/ }),
+    ).not.toBeInTheDocument()
     expect(
-      screen.getByRole("link", { name: "Listen on MIT Learn" }),
-    ).toHaveAttribute("href", episode.learn_url)
+      screen.queryByRole("link", { name: /Listen on MIT Learn/ }),
+    ).not.toBeInTheDocument()
     assertLinksTo(
       screen.getByRole("link", { name: "Explore More Videos and Podcasts" }),
       {
