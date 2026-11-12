@@ -421,15 +421,20 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   )
   /** Kept while loading or on error, so its error text can show. */
   const showModuleFilter = !courseRunsQuery.data || courseRunOptions.length > 1
-  const activeGridModules = useMemo(
-    () =>
-      showModuleFilter
-        ? courseRunOptions
-            .filter((option) => gridModules.includes(option.value))
-            .map((option) => option.value)
-        : [],
-    [showModuleFilter, gridModules, courseRunOptions],
-  )
+  /**
+   * Every module asks for the same learners as no module filter, so only a
+   * partial selection is held to the API's cap; that keeps a dashboard link on
+   * a contract with more modules than the API accepts from being cut short.
+   */
+  const activeGridModules = useMemo(() => {
+    if (!showModuleFilter) return []
+    const selected = courseRunOptions
+      .filter((option) => gridModules.includes(option.value))
+      .map((option) => option.value)
+    return selected.length < courseRunOptions.length
+      ? selected.slice(0, MAX_GRID_MODULES)
+      : selected
+  }, [showModuleFilter, gridModules, courseRunOptions])
 
   /** Status is per module, so it needs one selected, unless the contract has only one. */
   const statusAvailable = !showModuleFilter || activeGridModules.length > 0
@@ -462,15 +467,10 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   const filtersResolved =
     (gridModules.length === 0 && statusFilter === ALL) || courseRunsSettled
 
-  /**
-   * Every module asks for the same learners as no module filter, so it's left
-   * off; that keeps a dashboard link on a contract with more modules than the
-   * API accepts from being cut short.
-   */
   const requestModules = useMemo(
     () =>
       activeGridModules.length < courseRunOptions.length
-        ? activeGridModules.slice(0, MAX_GRID_MODULES)
+        ? activeGridModules
         : [],
     [activeGridModules, courseRunOptions],
   )

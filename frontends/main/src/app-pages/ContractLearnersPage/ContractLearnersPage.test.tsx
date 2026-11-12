@@ -1287,6 +1287,33 @@ describe("ContractLearnersPage", () => {
       expect(statusField()).toHaveTextContent("Completed")
     })
 
+    test("shows and requests the same 50 modules when a link selects more than 50 but not all", async () => {
+      const runs = Array.from({ length: 52 }, (_, index) =>
+        analyticsFactories.courseRun({
+          courserun_id: `course-v1:MITx+M${index}+2026`,
+          courserun_title: `Module ${String(index).padStart(2, "0")}`,
+        }),
+      )
+      const ids = runs.map(({ courserun_id: id }) => id)
+      const modules = ids
+        .slice(0, 51)
+        .map((id) => `modules=${encodeURIComponent(id)}`)
+        .join("&")
+      const { contractId } = renderGrid(`/?${modules}`, runs)
+      mockGridPage(
+        contractId,
+        0,
+        [learnerNamed("Capped Learner")],
+        {},
+        { courserun_readable_id: ids.slice(0, 50) },
+      )
+
+      await screen.findByText("Capped Learner")
+      expect(
+        screen.getByRole("combobox", { name: /modules\s*, 50 selected/i }),
+      ).toBeInTheDocument()
+    })
+
     test("ignores filter values it does not recognize", async () => {
       const { contractId } = renderGrid(
         "/?status=bogus&modules=course-v1:Gone&needs_attention=yes&page=-3",
