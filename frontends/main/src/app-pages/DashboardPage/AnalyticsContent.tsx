@@ -307,7 +307,10 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
     placeholderData: keepPreviousData,
   })
 
-  /** The tiles' learner counts, from the same requests their links open. */
+  /**
+   * The tiles' learner counts. A learner counts under each status they have in
+   * any module, which is what a tile's link shows by selecting every module.
+   */
   const learnerCounts = useQueries({
     queries: LEARNER_TILES.map((tile) => ({
       ...analyticsContractQueries.learners(orgUuid ?? "", contractId ?? 0, {
@@ -330,6 +333,14 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
       isPending: results.some((result) => result.isPending),
       isError: results.some((result) => result.isError),
     }),
+  })
+
+  /** The same request the Learners page makes, so following a tile reuses it. */
+  const courseRuns = useQuery({
+    ...analyticsContractQueries.courseRuns(orgUuid ?? "", contractId ?? 0, {
+      limit: 1000,
+    }),
+    enabled: analyticsAvailable && !!learnerAnalyticsFlag,
   })
 
   /**
@@ -536,10 +547,20 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
             learnerCounts={learnerCounts.counts}
             totalCount={learnerProgress.data?.total_count}
             statusCounts={learnerProgress.data?.completion_status_counts}
-            isLoading={learnerProgress.isPending || learnerCounts.isPending}
+            isLoading={
+              learnerProgress.isPending ||
+              learnerCounts.isPending ||
+              courseRuns.isPending
+            }
             isError={learnerProgress.isError || learnerCounts.isError}
             learnersHref={(status) =>
-              contractLearnersView(orgSlug, contract.slug, { status })
+              contractLearnersView(orgSlug, contract.slug, {
+                status,
+                /** shortcut: the Learners page keeps only the first `MAX_GRID_MODULES` (useLearnerFilters.ts), so a bigger contract's list can undercount its tile; revisit if one appears. */
+                modules: status
+                  ? courseRuns.data?.data.map((run) => run.courserun_id)
+                  : undefined,
+              })
             }
             aside={
               <NeedsAttentionCard

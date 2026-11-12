@@ -118,6 +118,8 @@ const setAnalyticsResponses = ({
   )
 }
 
+const COURSE_RUN_IDS = ["course-v1:MITx+M5+2026", "course-v1:MITx+M6+2026"]
+
 /**
  * Mocks the four section endpoints and the learner progress and
  * needs-attention endpoints, for tests that render with the learner analytics
@@ -198,6 +200,14 @@ const setContractAnalyticsResponses = (
       analyticsFactories.learnersEnvelope([], { total_count: total }),
     )
   }
+  setMockResponse.get(
+    analyticsUrls.contracts.courseRuns(ORG_UUID, contractId, { limit: 1000 }),
+    analyticsFactories.envelope(
+      COURSE_RUN_IDS.map((id) =>
+        analyticsFactories.courseRun({ courserun_id: id }),
+      ),
+    ),
+  )
 }
 
 describe("AnalyticsContent", () => {
@@ -1195,8 +1205,16 @@ describe("AnalyticsContent, contract-scoped", () => {
       )
       expect(link).toHaveAttribute(
         "href",
-        contractLearnersView(orgSlug, contract.slug, { status }),
+        contractLearnersView(orgSlug, contract.slug, {
+          status,
+          modules: status ? COURSE_RUN_IDS : undefined,
+        }),
       )
+      expect(
+        new URL(link.getAttribute("href")!, "http://test").searchParams.getAll(
+          "modules",
+        ),
+      ).toEqual(status ? COURSE_RUN_IDS : [])
     }
 
     const list = screen.getByRole("list", {

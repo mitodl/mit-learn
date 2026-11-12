@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useAppSearchParams } from "@/common/useAppSearchParams"
 import {
-  completionStatusFilter,
   CONTRACT_LEARNERS_STATUSES,
   type ContractLearnersStatus,
 } from "@/common/urls"
 
-const ALL = "all"
+const ALL = "all" as const
 const SEARCH_DEBOUNCE_MS = 300
 /** Past this, a page number is a typo or a hand-edited link, and its offset would overflow what the API accepts. */
 const MAX_PAGE = 10_000
@@ -79,12 +78,6 @@ const useLearnerFilters = () => {
     return () => clearTimeout(id)
   }, [searchQuery, debouncedSearch, update])
 
-  const completionStatus = useMemo(
-    () =>
-      completionStatusFilter(statusFilter === ALL ? undefined : statusFilter),
-    [statusFilter],
-  )
-
   return {
     page,
     setPage: (next: number) => update({ page: next > 1 ? String(next) : null }),
@@ -99,13 +92,17 @@ const useLearnerFilters = () => {
     statusFilter,
     setStatusFilter: (value: string) =>
       update({ status: value === ALL ? null : value, page: null }),
-    completionStatus,
     needsAttentionOnly,
     setNeedsAttentionOnly: (value: boolean) =>
       update({ needs_attention: value ? "true" : null, page: null }),
     gridModules,
+    /** Status is per selected module, so it can't outlive the last one. */
     setGridModules: (values: string[]) =>
-      update({ modules: values.slice(0, MAX_GRID_MODULES), page: null }),
+      update({
+        modules: values.slice(0, MAX_GRID_MODULES),
+        ...(values.length ? {} : { status: null }),
+        page: null,
+      }),
     clearAll: () => {
       setSearchQuery("")
       setDebouncedSearch("")

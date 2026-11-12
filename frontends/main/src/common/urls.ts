@@ -165,6 +165,8 @@ export const completionStatusFilter = (status?: ContractLearnersStatus) =>
   status ? STATUS_FILTER_COMPLETION_STATUS[status] : SHARED_COMPLETION_STATUSES
 
 export type ContractLearnersFilters = {
+  /** Course run ids. The page ignores `status` unless at least one is selected. */
+  modules?: string[]
   status?: ContractLearnersStatus
   needsAttention?: boolean
   page?: number
@@ -176,6 +178,7 @@ export const contractLearnersView = (
 ) => {
   const path = generatePath(CONTRACT_LEARNERS_VIEW, { orgSlug, contractSlug })
   const params = new URLSearchParams()
+  for (const id of filters.modules ?? []) params.append("modules", id)
   if (filters.status) params.set("status", filters.status)
   if (filters.needsAttention) params.set("needs_attention", "true")
   if (filters.page && filters.page > 1) params.set("page", String(filters.page))
