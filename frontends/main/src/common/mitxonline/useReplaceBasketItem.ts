@@ -1,7 +1,7 @@
 import { useAddToBasket, useClearBasket } from "api/mitxonline-hooks/baskets"
 import type { MutationHookOptions } from "api/mutation-meta"
 import type { EnrollmentTarget } from "api/mitxonline-hooks/enrollment"
-import type { BasketWithProduct } from "@mitodl/mitxonline-api-axios/v2"
+import type { BasketWithProduct } from "@mitodl/mitxonline-api-axios/v0"
 import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 import { useComplianceGate } from "./useComplianceGate"
 
