@@ -1229,6 +1229,35 @@ describe("AnalyticsContent, contract-scoped", () => {
     expect(within(list).getByText("20")).toBeInTheDocument()
   })
 
+  /** The Learners page then drops `status` and lists everyone. */
+  test("links status tiles without modules when the contract's modules fail to load", async () => {
+    const contract = factories.contracts.contract()
+    const org = orgWithUuid({ contracts: [contract] })
+    setManagerOrgs([org])
+    setContractAnalyticsResponses(contract.id)
+    setMockResponse.get(
+      analyticsUrls.contracts.courseRuns(ORG_UUID, contract.id, {
+        limit: 1000,
+      }),
+      "Internal Server Error",
+      { code: 500 },
+    )
+    const orgSlug = org.slug.replace(/^org-/, "")
+    renderWithProviders(
+      <AnalyticsContent orgSlug={orgSlug} contractSlug={contract.slug} />,
+    )
+
+    const completed = await screen.findByRole("group", { name: "Completed" })
+    expect(
+      within(completed).getByRole("link", {
+        name: "View learners (Completed)",
+      }),
+    ).toHaveAttribute(
+      "href",
+      contractLearnersView(orgSlug, contract.slug, { status: "passed" }),
+    )
+  })
+
   test("counts only learners who consented, by asking for the four shared statuses", async () => {
     const contract = factories.contracts.contract()
     const org = orgWithUuid({ contracts: [contract] })
