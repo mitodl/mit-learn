@@ -35,10 +35,7 @@ const TOTAL_FIELDS = ACTIVITY_FIELDS.filter(
   ({ field }) => field !== "days_active",
 )
 
-/**
- * Null when any enrollment's count is null: a sum that skips a withheld run
- * would read as the learner's whole total when it is not.
- */
+/** Null when any enrollment's count is null: a sum that skips a run would read as the learner's whole total when it is not. */
 const sumActivity = (
   enrollments: LearnerEnrollment[],
   field: ActivityField,
@@ -171,15 +168,16 @@ const Muted = styled.span(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
 }))
 
-const Withheld: React.FC = () => (
-  <Muted>
-    <span aria-hidden="true">{STUB}</span>
-    <VisuallyHidden>Withheld</VisuallyHidden>
-  </Muted>
-)
-
+/** The API sends null only for outcomes it withholds, which these requests already leave out. */
 const Count: React.FC<{ value: number | null }> = ({ value }) =>
-  typeof value !== "number" ? <Withheld /> : <>{value.toLocaleString()}</>
+  typeof value !== "number" ? (
+    <Muted>
+      <span aria-hidden="true">{STUB}</span>
+      <VisuallyHidden>Not available</VisuallyHidden>
+    </Muted>
+  ) : (
+    <>{value.toLocaleString()}</>
+  )
 
 const moduleStatusText = (enrollment: LearnerEnrollment) => {
   const status = getDisplayStatus(enrollment)
@@ -210,8 +208,6 @@ const LearnerSummaryPanel: React.FC<LearnerSummaryPanelProps> = ({
 }) => {
   const enrollments = learner?.enrollments ?? []
   const byRun = new Map(enrollments.map((e) => [e.courserun_readable_id, e]))
-  const anyWithheld = enrollments.some((e) => !e.outcomes_shared)
-  const allWithheld = enrollments.every((e) => !e.outcomes_shared)
   const completed = enrollments.filter((e) => {
     const status = getDisplayStatus(e)
     return status === "completed" || status === "certificate"
@@ -242,13 +238,6 @@ const LearnerSummaryPanel: React.FC<LearnerSummaryPanelProps> = ({
               {learner.full_name && learner.email ? (
                 <Email component="p">{learner.email}</Email>
               ) : null}
-              {anyWithheld ? (
-                <Footnote component="p">
-                  {allWithheld
-                    ? "This learner hasn’t agreed to share their progress, so their totals are hidden."
-                    : "This learner hasn’t agreed to share their progress in some modules, so their totals are hidden."}
-                </Footnote>
-              ) : null}
             </div>
             <ActionButton
               variant="text"
@@ -267,13 +256,7 @@ const LearnerSummaryPanel: React.FC<LearnerSummaryPanelProps> = ({
             <StatList>
               <div>
                 <dt>Completed</dt>
-                <dd>
-                  {anyWithheld ? (
-                    <Withheld />
-                  ) : (
-                    `${completed} of ${courseRuns.length}`
-                  )}
-                </dd>
+                <dd>{`${completed} of ${courseRuns.length}`}</dd>
               </div>
               <div>
                 <dt>Not enrolled</dt>
@@ -282,9 +265,7 @@ const LearnerSummaryPanel: React.FC<LearnerSummaryPanelProps> = ({
               <div>
                 <dt>Last activity</dt>
                 <dd>
-                  {anyWithheld ? (
-                    <Withheld />
-                  ) : lastActive ? (
+                  {lastActive ? (
                     formatDate(lastActive)
                   ) : (
                     <Muted>No activity</Muted>
@@ -327,7 +308,7 @@ const LearnerSummaryPanel: React.FC<LearnerSummaryPanelProps> = ({
                         <Muted>Not enrolled</Muted>
                       )}
                     </ModuleStatus>
-                    {enrollment?.outcomes_shared ? (
+                    {enrollment ? (
                       <ModuleCounts>
                         {ACTIVITY_FIELDS.map(({ field, label }) => (
                           <div key={field}>
@@ -345,13 +326,11 @@ const LearnerSummaryPanel: React.FC<LearnerSummaryPanelProps> = ({
             </ModuleList>
           </section>
 
-          {allWithheld ? null : (
-            <Footnote component="p">
-              Activity is counted once per day: a video played on two days
-              counts twice. Chatbot interactions count each conversation with
-              the course chatbot once per day, in each part of the course.
-            </Footnote>
-          )}
+          <Footnote component="p">
+            Activity is counted once per day: a video played on two days counts
+            twice. Chatbot interactions count each conversation with the course
+            chatbot once per day, in each part of the course.
+          </Footnote>
         </Panel>
       ) : null}
     </Drawer>

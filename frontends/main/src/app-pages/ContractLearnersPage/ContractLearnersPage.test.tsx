@@ -323,6 +323,31 @@ describe("ContractLearnersPage", () => {
       expect(screen.queryByText("No learners found.")).not.toBeInTheDocument()
     })
 
+    test("says no one is enrolled yet in place of the grid when the contract has no learners to show", async () => {
+      const { contractId, contract } = renderGrid()
+      setMockResponse.get(
+        learnerTotalUrl(contractId),
+        analyticsFactories.learnersEnvelope([], { total_count: 0 }),
+      )
+      mockGridPage(contractId, 0, [])
+
+      const message = await screen.findByText(
+        `No learners are enrolled in ${contract.name} yet. They'll appear here once they enroll.`,
+      )
+      expect(
+        screen.queryByRole("table", { name: "Learner progress by module" }),
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole("combobox", { name: /status/i }),
+      ).not.toBeInTheDocument()
+      expect(screen.queryByText(/enrolled learners/)).not.toBeInTheDocument()
+      const exportButton = screen.getByRole("button", {
+        name: "Export learners",
+      })
+      expect(exportButton).toHaveAttribute("aria-disabled", "true")
+      expect(exportButton).toHaveAttribute("aria-describedby", message.id)
+    })
+
     test("says the data is on its way when the warehouse has not loaded the contract", async () => {
       const { contractId, contract } = renderGrid()
       const notLoaded = [
@@ -692,47 +717,8 @@ describe("ContractLearnersPage", () => {
       expect(statValue(modules[1], "Days active")).toHaveTextContent("5")
       expect(statValue(modules[1], "Videos watched")).toHaveTextContent("7")
       expect(
-        within(dialog).queryByText(/hasn’t agreed to share/),
-      ).not.toBeInTheDocument()
-      expect(
         within(dialog).getByText(/Activity is counted once per day/),
       ).toBeInTheDocument()
-    })
-
-    test("withholds every total for a learner who declined, rather than showing 0", async () => {
-      const { contractId } = renderGrid()
-      mockGridPage(contractId, 0, [
-        analyticsFactories.withheldLearnerProgress({
-          learner_id: "a",
-          email: "ada@example.com",
-          full_name: "Ada Lovelace",
-          courserun_readable_id: M5,
-        }),
-      ])
-
-      const dialog = await openSummary()
-
-      const activity = within(dialog).getByRole("region", {
-        name: "Activity across modules",
-      })
-      expect(
-        within(dialog).getByText(
-          "This learner hasn’t agreed to share their progress, so their totals are hidden.",
-        ),
-      ).toBeInTheDocument()
-      for (const label of [
-        "Videos watched",
-        "Problems attempted",
-        "Chatbot interactions",
-      ]) {
-        expect(statValue(activity, label)).toHaveTextContent("Withheld")
-      }
-      const progress = within(dialog).getByRole("region", { name: "Progress" })
-      expect(statValue(progress, "Completed")).toHaveTextContent("Withheld")
-      expect(statValue(progress, "Not enrolled")).toHaveTextContent("1")
-      expect(
-        within(dialog).queryByText(/Activity is counted once per day/),
-      ).not.toBeInTheDocument()
     })
 
     test("shows refetched counts while the panel stays open", async () => {
@@ -758,41 +744,6 @@ describe("ContractLearnersPage", () => {
         expect(statValue(activity, "Videos watched")).toHaveTextContent("9")
       })
       expect(screen.getByRole("dialog", { name: "Ada Lovelace" })).toBe(dialog)
-    })
-
-    test("withholds a total when any run is withheld, but keeps the consented run's own counts", async () => {
-      const { contractId } = renderGrid()
-      mockGridPage(contractId, 0, [
-        ada({ courserun_readable_id: M5, videos_watched: 9 }),
-        analyticsFactories.withheldLearnerProgress({
-          learner_id: "a",
-          email: "ada@example.com",
-          full_name: "Ada Lovelace",
-          courserun_readable_id: M6,
-        }),
-      ])
-
-      const dialog = await openSummary()
-
-      const activity = within(dialog).getByRole("region", {
-        name: "Activity across modules",
-      })
-      expect(statValue(activity, "Videos watched")).toHaveTextContent(
-        "Withheld",
-      )
-      expect(
-        within(dialog).getByText(
-          "This learner hasn’t agreed to share their progress in some modules, so their totals are hidden.",
-        ),
-      ).toBeInTheDocument()
-      const [consented, withheld] = within(
-        within(dialog).getByRole("region", { name: "Modules" }),
-      ).getAllByRole("listitem")
-      expect(statValue(consented, "Videos watched")).toHaveTextContent("9")
-      expect(withheld).toHaveTextContent("Unknown")
-      expect(
-        within(withheld).queryByText("Videos watched", { selector: "dt" }),
-      ).not.toBeInTheDocument()
     })
 
     test("closes on Escape and returns focus to the learner", async () => {

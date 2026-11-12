@@ -475,7 +475,11 @@ describe("AnalyticsContent", () => {
 
       await screen.findByRole("heading", { name: "Acme Site License" })
       expect(screen.getByText("62%")).toBeInTheDocument()
-      expect(screen.getByText("48")).toBeInTheDocument()
+      expect(
+        within(
+          screen.getByRole("group", { name: "Enrolled learners" }),
+        ).getByText("48"),
+      ).toBeInTheDocument()
       expect(screen.getByText("32.3%")).toBeInTheDocument()
       expect(screen.getByText("62 of 100 seats")).toBeInTheDocument()
       expect(screen.getByText("17 certified")).toBeInTheDocument()
@@ -1176,11 +1180,7 @@ describe("AnalyticsContent, contract-scoped", () => {
 
     const completed = screen.getByRole("group", { name: "Completed" })
     expect(within(completed).getByText("18")).toBeInTheDocument()
-    expect(
-      screen.getByText(
-        "Counts only learners who agreed to share their progress.",
-      ),
-    ).toBeInTheDocument()
+    expect(screen.queryByText(/share their progress/)).not.toBeInTheDocument()
 
     const orgSlug = org.slug.replace(/^org-/, "")
     for (const [label, linkName, status] of [

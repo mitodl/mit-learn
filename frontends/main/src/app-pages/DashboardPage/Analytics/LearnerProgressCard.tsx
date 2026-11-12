@@ -218,11 +218,6 @@ const RowPercent = styled(Typography)(({ theme }) => ({
   fontVariantNumeric: "tabular-nums",
 })) as typeof Typography
 
-const TileNote = styled(Typography)(({ theme }) => ({
-  ...theme.typography.body3,
-  color: theme.custom.colors.silverGrayDark,
-})) as typeof Typography
-
 const DistributionTitle = styled(Typography)(({ theme }) => ({
   ...theme.typography.subtitle2,
   color: theme.custom.colors.darkGray2,
@@ -346,9 +341,6 @@ const LearnerProgressCard: React.FC<{
           />
         ))}
       </TileRow>
-      <TileNote component="p">
-        Counts only learners who agreed to share their progress.
-      </TileNote>
 
       {aside ? (
         <DetailRow>

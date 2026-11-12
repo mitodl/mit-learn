@@ -283,6 +283,7 @@ const ErrorRow = styled.div({
 const CSV_EXPORT_CONCURRENCY = 5
 const UNAVAILABLE_MESSAGE_ID = "learner-analytics-unavailable-message"
 const NOT_LOADED_MESSAGE_ID = "learner-analytics-not-loaded-message"
+const NO_LEARNERS_MESSAGE_ID = "learner-analytics-no-learners-message"
 const MODULES_FAILED_MESSAGE_ID = "learner-export-modules-failed-message"
 
 const STATUS_OPTIONS: { value: string; label: string }[] = [
@@ -402,6 +403,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     enabled: canQuery,
   })
   const totalLearners = learnerTotalQuery.data?.total_count ?? null
+  const noLearners = totalLearners === 0
 
   /**
    * Only 400/401/403 responses throw to an error boundary (see
@@ -421,7 +423,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   const courseRuns = courseRunsQuery.data?.data
   const courseRunsFailed = courseRunsQuery.isError && !courseRuns
   const exportUnavailable =
-    !canQuery || notLoaded || !gridModulesResolved || !courseRuns
+    !canQuery || notLoaded || noLearners || !gridModulesResolved || !courseRuns
 
   const handleExport = useCallback(async () => {
     if (isExporting || exportUnavailable || !orgUuid || !contractId) return
@@ -566,9 +568,11 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                   ? UNAVAILABLE_MESSAGE_ID
                   : notLoaded
                     ? NOT_LOADED_MESSAGE_ID
-                    : courseRunsFailed
-                      ? MODULES_FAILED_MESSAGE_ID
-                      : undefined
+                    : noLearners
+                      ? NO_LEARNERS_MESSAGE_ID
+                      : courseRunsFailed
+                        ? MODULES_FAILED_MESSAGE_ID
+                        : undefined
               }
               aria-busy={
                 isExporting ||
@@ -617,6 +621,11 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
               </Button>
             </ErrorRow>
           </Alert>
+        ) : noLearners ? (
+          <Typography id={NO_LEARNERS_MESSAGE_ID} variant="body1">
+            No learners are enrolled in {contract.name} yet. They&apos;ll appear
+            here once they enroll.
+          </Typography>
         ) : (
           <ResultsSection>
             <AsOfRow>
