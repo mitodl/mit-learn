@@ -62,7 +62,7 @@ class UnitRecord:
     # U01, U02, ... in course order
     display_id: str
     unit: Unit
-    # None when the unit was skipped: it has no text
+    # None when the unit was skipped: no text, or too many parts
     extraction: ClaimExtraction | None
     # 1, 2, ... in course order
     order: int
@@ -182,7 +182,7 @@ def _units_block(records: list[UnitRecord]) -> str:
     for record in records:
         header = f"## {record.display_id} {record.unit.title} (unit {record.order})"
         if record.extraction is None:
-            lines.append(f"{header}: NOT PROCESSED (no text)")
+            lines.append(f"{header}: NOT PROCESSED (no text, or too long)")
             continue
         lines.append(f"{header}\nSummary: {record.extraction.output['summary']}")
         claims = record.claims

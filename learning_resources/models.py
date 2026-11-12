@@ -1523,6 +1523,13 @@ class ResourceProfileConfiguration(TimestampedModel):
         " unit merge, the most part records it may read; parts over it are"
         " merged in code.",
     )
+    max_parts = models.PositiveIntegerField(
+        default=10,
+        help_text="Most parts a unit over the input budget may be split into;"
+        " each part is a call of its own. A unit that would need more is"
+        " skipped. 1 turns splitting off. Only the unit and context stages use"
+        " it.",
+    )
 
     def __str__(self):
         return f"ResourceProfileConfiguration for {self.stage}"

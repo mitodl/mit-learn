@@ -18,6 +18,7 @@ class ResourceProfileConfigurationAdmin(admin.ModelAdmin):
         "temperature",
         "max_file_tokens",
         "input_token_budget",
+        "max_parts",
         "updated_on",
     )
 

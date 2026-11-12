@@ -317,6 +317,47 @@ def delete_stale_parts(unit: Unit, keep: list[ClaimExtraction] = ()) -> None:
     ).exclude(id__in=[part.id for part in keep]).delete()
 
 
+def too_many_parts(
+    unit: Unit, sources_by_part: list[list[Source]], max_parts: int
+) -> bool:
+    """
+    Log a unit that is split, and return whether it needs too many parts.
+
+    Each part is a call of its own, so a unit that would need more than
+    max_parts is skipped, which caps what one unit can cost.
+
+    Args:
+        unit (Unit): the unit
+        sources_by_part (list of list of Source): its parts' sources, from
+            pack_parts
+        max_parts (int): the most parts the unit may be split into
+    """
+    if len(sources_by_part) <= 1:
+        return False
+    sources = [source for part in sources_by_part for source in part]
+    details = (
+        unit.kind,
+        unit.external_id,
+        unit.run.run_id,
+        len(sources),
+        sum(source.tokens for source in sources),
+        len(sources_by_part),
+    )
+    if len(sources_by_part) > max_parts:
+        logger.warning(
+            "Skipping %s %s of run %s: %d files, about %d tokens, need %d"
+            " parts, over the limit of %d",
+            *details,
+            max_parts,
+        )
+        return True
+    logger.info(
+        "Splitting %s %s of run %s: %d files, about %d tokens, into %d parts",
+        *details,
+    )
+    return False
+
+
 def part_header(index: int, sources: list[Source], subject: str, rest: str) -> str:
     """
     Return the line that tells the model which part of a split unit it reads

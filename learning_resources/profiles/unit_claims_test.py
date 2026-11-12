@@ -479,6 +479,52 @@ def test_unit_over_budget_split(fake_llm):
     assert [source["source_id"] for source in output["sources"]] == ["S01", "S02"]
 
 
+def test_split_unit_logged(fake_llm, mocker):
+    """A unit that is split is logged with its number of parts"""
+    logger = mocker.patch.object(claims, "logger")
+    _split_budget()
+
+    _generate(_build_unit())
+
+    [split] = [
+        call.args
+        for call in logger.info.call_args_list
+        if call.args[0].startswith("Splitting")
+    ]
+    assert split[-1] == 2
+    assert not any(
+        call.args[0].startswith("Skipping") for call in logger.warning.call_args_list
+    )
+
+
+@pytest.mark.parametrize("max_parts", [1, 0])
+def test_unit_over_max_parts_skipped(fake_llm, mocker, max_parts):
+    """A unit that would need more parts than max_parts is skipped"""
+    logger = mocker.patch.object(claims, "logger")
+    _split_budget()
+    ResourceProfileConfiguration.objects.filter(
+        stage=ResourceProfileConfiguration.Stage.UNIT
+    ).update(max_parts=max_parts)
+    unit = _build_unit()
+
+    assert _generate(unit) is None
+    fake_llm.assert_not_called()
+    assert not ClaimExtraction.objects.filter(unit=unit).exists()
+    message, *args = logger.warning.call_args.args
+    assert message.startswith("Skipping")
+    assert args[-2:] == [2, max_parts]
+
+
+def test_unsplit_unit_ignores_max_parts(fake_llm):
+    """A unit that fits in one call is extracted whatever max_parts is"""
+    ResourceProfileConfiguration.objects.filter(
+        stage=ResourceProfileConfiguration.Stage.UNIT
+    ).update(max_parts=0)
+
+    assert _generate(_build_unit()) is not None
+    assert fake_llm.call_count == 1
+
+
 def test_split_unit_claims_resolved(fake_llm):
     """Merged claims carry their part claims' evidence, checked in code"""
     _split_budget()

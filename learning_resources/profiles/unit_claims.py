@@ -16,7 +16,9 @@ from, and their evidence is carried over from those claims, so the unit's
 stored output has the same form whether it was split or not. A part's
 concept, skill or assessment expectation that the merge leaves out is added
 back. When the parts' records are too long for the merge call, or it gives no
-valid response, the parts are merged in code instead, by label.
+valid response, the parts are merged in code instead, by label. A unit that
+would need more parts than the configuration's max_parts is skipped, which
+caps the calls one unit can cost.
 """
 
 import logging
@@ -38,6 +40,7 @@ from learning_resources.profiles.claims import (
     load_extractor,
     merge_evidence,
     part_header,
+    too_many_parts,
     truncation_notes,
 )
 from learning_resources.profiles.schemas import UnitExtraction, UnitMergeExtraction
@@ -569,7 +572,8 @@ def generate_unit_claims(
 
     The prompt is given the course title and the run's units in order, along
     with the unit's own files. A unit whose files are over the input budget
-    is extracted in parts that are then merged.
+    is extracted in parts that are then merged, unless it would need more
+    than the configuration's max_parts, when it is skipped.
 
     Args:
         unit (Unit): the unit or bin
@@ -581,7 +585,7 @@ def generate_unit_claims(
 
     Returns:
         ClaimExtraction | None: the unit's extraction, or None when the unit
-            has no files with text
+            has no files with text or would need more than max_parts parts
 
     Raises:
         ClaimExtractionError: when the model gives no valid response
@@ -596,9 +600,11 @@ def generate_unit_claims(
     sources = unit_sources(unit, config.max_file_tokens, config.input_token_budget)
     if not sources:
         return None
+    sources_by_part = pack_parts(sources, config.input_token_budget)
+    if too_many_parts(unit, sources_by_part, config.max_parts):
+        return None
     outline, unit_ids = _course_outline(unit.run)
     header = _unit_header(unit, unit_ids)
-    sources_by_part = pack_parts(sources, config.input_token_budget)
     if len(sources_by_part) > 1:
         return _generate_split_unit_claims(
             unit, extractor, sources_by_part, outline, header, overwrite=overwrite

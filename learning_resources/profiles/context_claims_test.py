@@ -282,6 +282,25 @@ def _parts(run):
     )
 
 
+def test_context_over_max_parts_skipped(fake_llm, mocker):
+    """A context unit that would need more parts than max_parts is skipped"""
+    logger = mocker.patch.object(claims, "logger")
+    _split_budget()
+    ResourceProfileConfiguration.objects.filter(
+        stage=ResourceProfileConfiguration.Stage.CONTEXT
+    ).update(max_parts=1)
+    run = _build_split_run()
+
+    assert generate_context_claims(run) is None
+    assert fake_llm.calls == []
+    assert not ClaimExtraction.objects.filter(
+        unit=run.units.get(kind=Unit.Kind.CONTEXT)
+    ).exists()
+    message, *args = logger.warning.call_args.args
+    assert message.startswith("Skipping")
+    assert args[-2:] == [2, 1]
+
+
 def test_context_over_budget_split(fake_llm):
     """A context unit over the input budget is extracted in parts, then combined"""
     _split_budget()

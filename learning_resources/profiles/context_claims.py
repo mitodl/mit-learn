@@ -11,7 +11,8 @@ is: its files are packed into parts that each fit, and each part is extracted
 on its own and stored at the unit_part level. The parts' outputs are then
 combined in code rather than by a merge call: context claims are statements
 with their own evidence, which the run stage reads by position, so they are
-concatenated, with repeats dropped.
+concatenated, with repeats dropped. Like a unit, a context unit that would
+need more parts than the configuration's max_parts is skipped.
 """
 
 from learning_resources.models import (
@@ -29,6 +30,7 @@ from learning_resources.profiles.claims import (
     load_extractor,
     merge_evidence,
     part_header,
+    too_many_parts,
 )
 from learning_resources.profiles.schemas import CourseContextOut
 from learning_resources.profiles.sources import Source, pack_parts, unit_sources
@@ -219,7 +221,8 @@ def generate_context_claims(
     Extract a run's context unit, or return the stored extraction.
 
     A context unit whose files are over the input budget is extracted in
-    parts that are then combined.
+    parts that are then combined, unless it would need more than the
+    configuration's max_parts, when it is skipped.
 
     Args:
         run (LearningResourceRun): the run
@@ -232,7 +235,8 @@ def generate_context_claims(
 
     Returns:
         ClaimExtraction | None: the context unit's extraction, or None when the
-            run has no context unit or its files have no text
+            run has no context unit, its files have no text, or it would need
+            more than max_parts parts
 
     Raises:
         ClaimExtractionError: when the model gives no valid response
@@ -242,6 +246,8 @@ def generate_context_claims(
     if not sources:
         return None
     sources_by_part = pack_parts(sources, extractor.config.input_token_budget)
+    if too_many_parts(unit, sources_by_part, extractor.config.max_parts):
+        return None
     if len(sources_by_part) > 1:
         return _generate_split_context_claims(
             run, unit, extractor, sources_by_part, overwrite=overwrite
