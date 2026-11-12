@@ -57,6 +57,8 @@ const contractUtilization = (
   seat_limit: 100,
   b2b_contract_membership_type: "fixed",
   seats_consumed: 62,
+  actively_enrolled_learners: 48,
+  // Deprecated alias the API still sends, always equal to actively_enrolled_learners.
   active_learners: 48,
   certified_learners: 20,
   // Deprecated alias the API still sends, always equal to certified_learners.
@@ -86,9 +88,12 @@ const enrollmentCompletionFunnel = (
   courserun_readable_id: `course-v1:MITx+${faker.string.alphanumeric(5)}+2026`,
   courserun_title: faker.commerce.productName(),
   enrolled_learners: 40,
+  actively_enrolled_learners: 31,
+  // Deprecated aliases the API still sends, always equal to the actively_enrolled_* fields.
   active_learners: 31,
   passing_learners: 18,
   certified_learners: 16,
+  actively_enrolled_rate_pct: 77.5,
   active_rate_pct: 77.5,
   completion_rate_pct: 40,
   ...overrides,
@@ -124,8 +129,10 @@ const contentEngagementDepth = (
   courserun_readable_id: `course-v1:MITx+${faker.string.alphanumeric(5)}+2026`,
   courserun_title: faker.commerce.productName(),
   // Internally consistent with the view's arithmetic: the rates divide by
-  // total_enrolled_learners, the averages by engaged_learners (800/28, 1000/28),
+  // actively_enrolled_learners, the averages by engaged_learners (800/28, 1000/28),
   // and every activity cohort is a subset of engaged_learners.
+  actively_enrolled_learners: 40,
+  // Deprecated alias the API still sends, always equal to actively_enrolled_learners.
   total_enrolled_learners: 40,
   engaged_learners: 28,
   engagement_rate_pct: 70,
@@ -329,6 +336,9 @@ const learnersEnvelope = (
   organization_id: organizationId(),
   as_of: "2026-07-01T04:00:00Z",
   total_count: data.length,
+  outcomes_withheld_count: data.filter((learner) =>
+    learner.enrollments.some((enrollment) => !enrollment.outcomes_shared),
+  ).length,
   data,
   ...overrides,
 })

@@ -4,7 +4,13 @@ import {
   factories as mitxFactories,
   mockEnrollmentEligible,
 } from "api/mitxonline-test-utils"
-import { makeCourse } from "./test-utils/userPricing"
+import { makeCourse, setupRunPricing } from "./test-utils/userPricing"
+import { DiscountTypeEnum } from "@mitodl/mitxonline-api-axios/v0"
+import {
+  lastAuthRedirect,
+  rememberClick,
+  setLocation,
+} from "./test-utils/enrollResume"
 import type {
   CoursePageItem,
   CourseWithCourseRunsSerializerV2,
@@ -442,6 +448,70 @@ describe("CoursePage", () => {
       }
     })
 
+    test("paid header button names the InfoBox price", async () => {
+      const run = mitxFactories.courses.courseRun({
+        is_enrollable: true,
+        is_upgradable: true,
+        is_archived: false,
+        enrollment_modes: [paidMode],
+        products: [mitxFactories.courses.product({ price: "899.00" })],
+      })
+      const course = makeCourse({
+        next_run_id: run.id,
+        courseruns: [run],
+        min_price: 899,
+        max_price: 899,
+      })
+      const page = makePage({ course_details: course })
+      setupApis({ course, page })
+      renderWithProviders(<CoursePage readableId={course.readable_id} />)
+      await waitForCoursePageToSettle(page.title)
+
+      // The suffix is mobile-only by media query, which jsdom does not apply.
+      expect(
+        await screen.findByRole("button", { name: "Enroll – $899" }),
+      ).toBeInTheDocument()
+    })
+
+    test("discounted learner: header button names today's price", async () => {
+      const product = mitxFactories.courses.product({ price: "899.00" })
+      const run = mitxFactories.courses.courseRun({
+        is_enrollable: true,
+        is_upgradable: true,
+        is_archived: false,
+        enrollment_modes: [paidMode],
+        products: [product],
+      })
+      const course = makeCourse({
+        next_run_id: run.id,
+        courseruns: [run],
+        min_price: 899,
+        max_price: 899,
+      })
+      const page = makePage({ course_details: course })
+      setupApis({ course, page })
+      setMockResponse.get(
+        learnUrls.userMe.get(),
+        learnFactories.user.user({ is_authenticated: true }),
+      )
+      setMockResponse.get(mitxUrls.enrollment.enrollmentsListV3(), [])
+      setupRunPricing(run, {
+        user_price: "599",
+        discount: mitxFactories.products.userPricingDiscount({
+          amount_off: "300",
+          discount_type: DiscountTypeEnum.DollarsOff,
+        }),
+      })
+
+      renderWithProviders(<CoursePage readableId={course.readable_id} />)
+      await waitForCoursePageToSettle(page.title)
+
+      const banner = await screen.findByTestId("banner-container")
+      expect(
+        await within(banner).findByRole("button", { name: "Enroll – $599" }),
+      ).toBeInTheDocument()
+    })
+
     test("enrolled scenario: header shows Enrolled link", async () => {
       const run = mitxFactories.courses.courseRun({
         is_enrollable: true,
@@ -552,11 +622,14 @@ describe("CoursePage", () => {
 
         renderWithProviders(<CoursePage readableId={course.readable_id} />)
 
-        const enrollBtns = await screen.findAllByRole("button", {
-          name: "Enroll",
+        // The header's paid button carries the price, so this cannot be the
+        // InfoBox's plain "Enroll".
+        const banner = await screen.findByTestId("banner-container")
+        const headerBtn = await within(banner).findByRole("button", {
+          name: /^Enroll – /,
         })
         await act(async () => {
-          enrollBtns[0].click()
+          headerBtn.click()
         })
 
         await waitFor(() => {
@@ -566,7 +639,7 @@ describe("CoursePage", () => {
         })
       })
 
-      test("unauthenticated header click shows signup popover", async () => {
+      test("unauthenticated header click goes to login instead of a popover", async () => {
         const run = mitxFactories.courses.courseRun({
           is_enrollable: true,
           is_upgradable: false,
@@ -587,7 +660,57 @@ describe("CoursePage", () => {
           startBtns[0].click()
         })
 
-        expect(screen.getByTestId("signup-popover")).toBeInTheDocument()
+        expect(screen.queryByTestId("signup-popover")).toBeNull()
+        const { next } = lastAuthRedirect()
+        expect(next.searchParams.get("enroll")).toBe("free")
+        expect(next.searchParams.get("run")).toBe(String(run.id))
+      })
+
+      test("returning from sign-up with a paid marker starts checkout once", async () => {
+        const replaceState = jest
+          .spyOn(window.history, "replaceState")
+          .mockImplementation(() => {})
+        const product = mitxFactories.courses.product()
+        const run = mitxFactories.courses.courseRun({
+          is_enrollable: true,
+          is_upgradable: true,
+          is_archived: false,
+          enrollment_modes: [paidMode],
+          products: [product],
+        })
+        const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+        const page = makePage({ course_details: course })
+        setupApis({ course, page })
+        setMockResponse.get(
+          learnUrls.userMe.get(),
+          learnFactories.user.user({ is_authenticated: true }),
+        )
+        setMockResponse.get(mitxUrls.enrollment.enrollmentsListV3(), [])
+        setMockResponse.delete(mitxUrls.baskets.clear(), undefined)
+        setMockResponse.post(mitxUrls.baskets.createFromProduct(product.id), {
+          id: 1,
+          items: [],
+        })
+        mockEnrollmentEligible()
+        setLocation(`/courses/${course.readable_id}?enroll=paid&run=${run.id}`)
+        rememberClick("paid", run.id, `/courses/${course.readable_id}`)
+
+        renderWithProviders(<CoursePage readableId={course.readable_id} />)
+
+        await waitFor(() => {
+          expect(window.location.assign).toHaveBeenCalledWith(
+            mitxonlineLegacyUrl("/cart/"),
+          )
+        })
+        const basketCreates = jest
+          .mocked(makeRequest)
+          .mock.calls.filter(
+            ([req]) =>
+              req.method === "post" &&
+              req.url === mitxUrls.baskets.createFromProduct(product.id),
+          )
+        expect(basketCreates).toHaveLength(1)
+        replaceState.mockRestore()
       })
 
       test("header enrollment failure shows an error alert below the header button", async () => {

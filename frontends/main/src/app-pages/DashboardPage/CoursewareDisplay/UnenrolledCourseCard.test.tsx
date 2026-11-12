@@ -11,7 +11,11 @@ import {
 } from "@/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { makeRequest } from "api/test-utils"
-import { PAID_PROGRAM_ENROLLMENT_MODES, setupCoursePricing } from "./test-utils"
+import {
+  PAID_PROGRAM_ENROLLMENT_MODES,
+  setupCoursePricing,
+  setupOrderHistory,
+} from "./test-utils"
 import { faker } from "@faker-js/faker/locale/en"
 import moment from "moment"
 import { cartesianProduct } from "ol-test-utilities"
@@ -63,6 +67,69 @@ describe.each([
   const getCard = () => screen.getByTestId(testId)
 
   setupLocationMock()
+
+  test("lists past enrollments under a Course runs toggle next to Start", async () => {
+    setupUserApis()
+    setupOrderHistory()
+    const openRun = mitxonline.factories.courses.courseRun({
+      b2b_contract: null,
+      is_enrollable: true,
+      start_date: moment().add(30, "days").toISOString(),
+      end_date: moment().add(120, "days").toISOString(),
+    })
+    const course = mitxOnlineCourse({
+      courseruns: [openRun],
+      next_run_id: openRun.id,
+    })
+    const pastCoursewareUrl = faker.internet.url()
+    const pastEnrollment = mitxonline.factories.enrollment.courseEnrollment({
+      certificate: null,
+      grades: [],
+      run: {
+        start_date: moment().subtract(200, "days").toISOString(),
+        end_date: moment().subtract(100, "days").toISOString(),
+        courseware_url: pastCoursewareUrl,
+        course: { id: course.id, title: course.title },
+      },
+    })
+
+    renderWithProviders(
+      <UnenrolledCourseCard
+        course={course}
+        displayedRun={openRun}
+        pastEnrollments={[pastEnrollment]}
+      />,
+    )
+    const card = getCard()
+    expect(within(card).getByTestId("courseware-button")).toHaveTextContent(
+      "Start",
+    )
+    await user.click(
+      within(card).getByRole("button", { name: "Course runs (1)" }),
+    )
+
+    // The run behind Start isn't listed until the learner enrolls in it.
+    expect(within(card).queryByText("Current run:")).toBeNull()
+    const viewLinks = within(card).getAllByRole("link", {
+      name: /View content for/,
+    })
+    expect(viewLinks).toHaveLength(1)
+    expect(viewLinks[0]).toHaveAttribute("href", pastCoursewareUrl)
+  })
+
+  test("has no Course runs toggle without past enrollments", () => {
+    setupUserApis()
+    const run = mitxonline.factories.courses.courseRun({
+      b2b_contract: null,
+      is_enrollable: true,
+    })
+    const course = mitxOnlineCourse({ courseruns: [run], next_run_id: run.id })
+
+    renderWithProviders(<UnenrolledCourseCard course={course} />)
+    expect(
+      within(getCard()).queryByRole("button", { name: /Course runs/ }),
+    ).toBeNull()
+  })
 
   test("shows course title as a focusable button (not link) when not enrolled", () => {
     setupUserApis()

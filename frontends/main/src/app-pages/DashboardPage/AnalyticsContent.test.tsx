@@ -421,7 +421,7 @@ describe("AnalyticsContent", () => {
             b2b_contract_name: "Acme Site License",
             seats_consumed: 62,
             seat_limit: 100,
-            active_learners: 48,
+            actively_enrolled_learners: 48,
             certified_learners: 17,
             seat_utilization_pct: 62,
             completion_rate_pct: 32.3,
@@ -491,7 +491,7 @@ describe("AnalyticsContent", () => {
         content: [
           analyticsFactories.contentEngagementDepth({
             courserun_title: "Deep Widgets",
-            total_enrolled_learners: 40,
+            actively_enrolled_learners: 40,
             engaged_learners: 28,
             engagement_rate_pct: 70,
             total_videos_watched: 800,
@@ -582,7 +582,7 @@ describe("AnalyticsContent", () => {
         content: [
           analyticsFactories.contentEngagementDepth({
             courserun_title: "Sparse Widgets",
-            total_enrolled_learners: 12,
+            actively_enrolled_learners: 12,
             engaged_learners: 8,
             engagement_rate_pct: 66.7,
             // Too few watchers to report, so the total and the average

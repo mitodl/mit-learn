@@ -2524,7 +2524,35 @@ describe("ContractLearnersPage progress grid", () => {
     ).not.toBeInTheDocument()
     expect(
       screen.getByRole("combobox", { name: /modules/i }),
+    ).toHaveAccessibleName(/^Modules\s*, 1 selected$/)
+    expect(
+      screen.getByRole("combobox", { name: /modules/i }),
     ).toHaveTextContent("Module 6")
+
+    mockGridPage(
+      contractId,
+      0,
+      [
+        analyticsFactories.learnerProgress({
+          learner_id: "a",
+          full_name: "Ada Lovelace",
+          courserun_readable_id: M5,
+        }),
+      ],
+      {},
+      { courserun_readable_id: [M5, M6] },
+    )
+    await user.click(screen.getByRole("combobox", { name: /modules/i }))
+    await user.click(
+      within(await screen.findByRole("listbox")).getByRole("option", {
+        name: "Module 5",
+      }),
+    )
+    await user.keyboard("{Escape}")
+
+    const combobox = screen.getByRole("combobox", { name: /modules/i })
+    expect(combobox).toHaveAccessibleName(/^Modules\s*, 2 selected$/)
+    expect(combobox).toHaveTextContent("Selected2")
   })
 
   test("drops module ids in the URL that aren't on the contract", async () => {

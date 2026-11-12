@@ -3,6 +3,7 @@ import type { V2ProgramDetail } from "@mitodl/mitxonline-api-axios/v2"
 import { useProgramEnrollment } from "./useProgramEnrollment"
 import { useProgramCertificatePrice } from "./useProgramCertificatePrice"
 import ProgramSavingsBlock from "./ProgramSavingsBlock"
+import { programAppliedSavings } from "./appliedSavings"
 import EnrollOfferingBoxes from "./EnrollOfferingBoxes"
 
 /**
@@ -28,17 +29,10 @@ const ProgramEnrollArea: React.FC<ProgramEnrollAreaProps> = ({
   program,
   displayAsCourse,
 }) => {
-  const [anchor, setAnchor] = React.useState<null | HTMLButtonElement>(null)
-
   const { price, showsRange, savings, financialAid, breakdown } =
     useProgramCertificatePrice(program)
 
-  // A credit is earned by buying one of the program's own courses and is worded
-  // throughout as an upgrade to the full program, which a page presenting that
-  // program as a single course cannot say. Every other discount — financial aid
-  // above all — applies just as much here as on the program page, and shows.
-  const appliedSavings =
-    displayAsCourse && breakdown?.kind === "credit" ? null : breakdown
+  const appliedSavings = programAppliedSavings(breakdown, displayAsCourse)
 
   // The credit is the one discount that changes the offering's own words: it
   // relabels the action, heads the paid box, and explains itself beneath the
@@ -51,7 +45,7 @@ const ProgramEnrollArea: React.FC<ProgramEnrollAreaProps> = ({
       tracking: { placement: "infobox" },
       displayAsCourse,
       upgradeLabel: credit,
-      onRequireSignup: setAnchor,
+      resume: true,
     })
 
   // Savings framing is full-program-page presentation only; program-as-course
@@ -74,8 +68,6 @@ const ProgramEnrollArea: React.FC<ProgramEnrollAreaProps> = ({
       paidHeading={credit ? "Continue with full program" : undefined}
       paidNote={credit ? CREDIT_NOTE : undefined}
       productNoun={displayAsCourse ? "course" : "program"}
-      anchor={anchor}
-      onAnchorClose={() => setAnchor(null)}
     />
   )
 }

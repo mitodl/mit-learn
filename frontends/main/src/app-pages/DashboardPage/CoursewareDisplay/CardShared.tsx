@@ -352,7 +352,51 @@ const CourseDateSummary: React.FC<{
   )
 }
 
+/**
+ * Card frame used when a card has a "Course runs" toggle: the header row on top
+ * and the expandable runs list underneath. Desktop only; the mobile card keeps
+ * its CardRoot and appends the toggle in a MobileAccordionWrapper.
+ */
+const RunsCardShell = styled.div(({ theme }) => ({
+  border: `1px solid ${theme.custom.colors.lightGray2}`,
+  borderRadius: "8px",
+  overflow: "hidden",
+  backgroundColor: theme.custom.colors.white,
+  [theme.breakpoints.down("sm")]: {
+    display: "none",
+  },
+  '&[data-layout="compact"]': {
+    border: "none",
+    borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
+    borderRadius: "0px !important",
+    boxShadow: "none",
+    "&:first-of-type": {
+      borderTopLeftRadius: "8px !important",
+      borderTopRightRadius: "8px !important",
+    },
+    "&:last-of-type": {
+      borderBottomLeftRadius: "8px !important",
+      borderBottomRightRadius: "8px !important",
+      borderBottom: "none",
+    },
+  },
+}))
+
+const CardHeaderContent = styled.div({
+  padding: "16px",
+  display: "flex",
+  gap: "8px",
+  alignItems: "center",
+})
+
+const MobileAccordionWrapper = styled.div({
+  width: "100%",
+})
+
 export {
+  RunsCardShell,
+  CardHeaderContent,
+  MobileAccordionWrapper,
   CardRoot,
   CardTypeText,
   TitleHeading,
