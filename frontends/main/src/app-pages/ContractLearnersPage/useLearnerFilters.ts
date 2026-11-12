@@ -54,10 +54,7 @@ const useLearnerFilters = () => {
   const needsAttentionOnly = params.get("needs_attention") === "true"
   const gridModulesKey = [...new Set(params.getAll("modules"))].join("\n")
   const gridModules = useMemo(
-    () =>
-      gridModulesKey
-        ? gridModulesKey.split("\n").slice(0, MAX_GRID_MODULES)
-        : [],
+    () => (gridModulesKey ? gridModulesKey.split("\n") : []),
     [gridModulesKey],
   )
   const parsedPage = parseInt(params.get("page") ?? "", 10)
@@ -116,4 +113,4 @@ const useLearnerFilters = () => {
   }
 }
 
-export { ALL, SEARCH_MAX_LENGTH, useLearnerFilters }
+export { ALL, MAX_GRID_MODULES, SEARCH_MAX_LENGTH, useLearnerFilters }

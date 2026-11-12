@@ -556,7 +556,6 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
             learnersHref={(status) =>
               contractLearnersView(orgSlug, contract.slug, {
                 status,
-                /** shortcut: the Learners page keeps only the first `MAX_GRID_MODULES` (useLearnerFilters.ts), so a bigger contract's list can undercount its tile; revisit if one appears. */
                 modules: status
                   ? courseRuns.data?.data.map((run) => run.courserun_id)
                   : undefined,

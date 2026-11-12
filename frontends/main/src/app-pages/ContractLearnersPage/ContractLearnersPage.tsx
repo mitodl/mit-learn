@@ -53,7 +53,12 @@ import {
   ProgressGrid,
 } from "./ProgressGrid"
 import { completionStatusFilter } from "@/common/urls"
-import { ALL, SEARCH_MAX_LENGTH, useLearnerFilters } from "./useLearnerFilters"
+import {
+  ALL,
+  MAX_GRID_MODULES,
+  SEARCH_MAX_LENGTH,
+  useLearnerFilters,
+} from "./useLearnerFilters"
 
 /**
  * The B2B learner directory: one row per learner, one column per course run
@@ -457,17 +462,30 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   const filtersResolved =
     (gridModules.length === 0 && statusFilter === ALL) || courseRunsSettled
 
+  /**
+   * Every module asks for the same learners as no module filter, so it's left
+   * off; that keeps a dashboard link on a contract with more modules than the
+   * API accepts from being cut short.
+   */
+  const requestModules = useMemo(
+    () =>
+      activeGridModules.length < courseRunOptions.length
+        ? activeGridModules.slice(0, MAX_GRID_MODULES)
+        : [],
+    [activeGridModules, courseRunOptions],
+  )
+
   const gridFilters = useMemo(
     () => ({
       ...(debouncedSearch ? { search: debouncedSearch } : {}),
       completion_status: completionStatus,
       /** Only ever sent as `true`: no control here asks for the learners who are fine. */
       ...(needsAttentionOnly ? { needs_attention: true } : {}),
-      ...(activeGridModules.length
-        ? { courserun_readable_id: activeGridModules }
+      ...(requestModules.length
+        ? { courserun_readable_id: requestModules }
         : {}),
     }),
-    [debouncedSearch, completionStatus, needsAttentionOnly, activeGridModules],
+    [debouncedSearch, completionStatus, needsAttentionOnly, requestModules],
   )
   const gridQuery = useQuery({
     ...gridLearnersQuery(orgUuid ?? "", contractId ?? 0, gridFilters, page),

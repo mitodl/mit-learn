@@ -829,19 +829,6 @@ describe("ContractLearnersPage", () => {
         screen.getByRole("combobox", { name: /modules/i }),
       ).toHaveTextContent("Module 6")
 
-      mockGridPage(
-        contractId,
-        0,
-        [
-          analyticsFactories.learnerProgress({
-            learner_id: "a",
-            full_name: "Ada Lovelace",
-            courserun_readable_id: M5,
-          }),
-        ],
-        {},
-        { courserun_readable_id: [M5, M6] },
-      )
       await user.click(screen.getByRole("combobox", { name: /modules/i }))
       await user.click(
         within(await screen.findByRole("listbox")).getByRole("option", {
@@ -1264,11 +1251,7 @@ describe("ContractLearnersPage", () => {
         0,
         [learnerNamed("Ada Stale")],
         {},
-        {
-          completion_status: ["in_progress"],
-          needs_attention: true,
-          courserun_readable_id: [M5, M6],
-        },
+        { completion_status: ["in_progress"], needs_attention: true },
       )
 
       await screen.findByText("Ada Stale")
@@ -1278,6 +1261,30 @@ describe("ContractLearnersPage", () => {
       expect(
         screen.getByRole("checkbox", { name: NEEDS_ATTENTION }),
       ).toBeChecked()
+    })
+
+    /** The API accepts at most 50 modules; every module is sent as no module filter instead. */
+    test("keeps every module a link selects, past the API's 50-module cap", async () => {
+      const runs = Array.from({ length: 51 }, (_, index) =>
+        analyticsFactories.courseRun({
+          courserun_id: `course-v1:MITx+M${index}+2026`,
+          courserun_title: `Module ${index}`,
+        }),
+      )
+      const modules = runs
+        .map(({ courserun_id: id }) => `modules=${encodeURIComponent(id)}`)
+        .join("&")
+      const { contractId } = renderGrid(`/?${modules}&status=passed`, runs)
+      mockGridPage(
+        contractId,
+        0,
+        [learnerNamed("Every Module Learner")],
+        {},
+        { completion_status: ["passed", "certified"] },
+      )
+
+      await screen.findByText("Every Module Learner")
+      expect(statusField()).toHaveTextContent("Completed")
     })
 
     test("ignores filter values it does not recognize", async () => {
