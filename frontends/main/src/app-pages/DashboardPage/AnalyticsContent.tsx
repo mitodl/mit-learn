@@ -3,7 +3,7 @@
 import React from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { keepPreviousData, useQuery } from "@tanstack/react-query"
+import { keepPreviousData, useQueries, useQuery } from "@tanstack/react-query"
 import type { AxiosError } from "axios"
 import { Skeleton, Stack, styled, Typography } from "ol-components"
 import { managerOrganizationQueries } from "api/mitxonline-hooks/organizations"
@@ -13,7 +13,12 @@ import { matchOrganizationBySlug } from "@/common/utils"
 import { ForbiddenError, isAnalyticsNotLoaded } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
-import { contractAnalyticsView, contractLearnersView } from "@/common/urls"
+import {
+  completionStatusFilter,
+  CONTRACT_LEARNERS_STATUSES,
+  contractAnalyticsView,
+  contractLearnersView,
+} from "@/common/urls"
 import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
 import ContractManagerNav from "@/components/ContractManagerNav/ContractManagerNav"
@@ -154,6 +159,8 @@ const PAGE_SIZE = 200
  */
 const MAX_PAGE_SIZE = 1000
 
+const LEARNER_TILES = ["all", ...CONTRACT_LEARNERS_STATUSES] as const
+
 type SectionKey = "utilization" | "trend" | "courses" | "content"
 
 /**
@@ -282,9 +289,9 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
    * Gated on `B2BLearnerAnalytics` for the same reason the contract nav's
    * Learners link is: every tile links to the Learners page, which throws
    * `ForbiddenError` without the flag.
-   * One row is enough: only `total_count`, `outcomes_withheld_count` and
-   * `completion_status_counts` are read, the same trick
-   * `ContractLearnersPage.tsx`'s own `totalQuery` uses.
+   * One row is enough: only `total_count` and `completion_status_counts` are
+   * read. `completion_status` leaves out learners who haven't consented to
+   * share their progress, as everywhere else they would be counted.
    * `include_inactive` is deliberately left unset (server default: active
    * enrollments only) — a deactivated or refunded seat isn't "enrolled" to a
    * manager, and counting it here would disagree with every other seat/
@@ -294,10 +301,35 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
     ...analyticsContractQueries.learnerProgress(
       orgUuid ?? "",
       contractId ?? 0,
-      { limit: 1 },
+      { limit: 1, completion_status: completionStatusFilter() },
     ),
     enabled: analyticsAvailable && learnerAnalyticsFlag,
     placeholderData: keepPreviousData,
+  })
+
+  /** The tiles' learner counts, from the same requests their links open. */
+  const learnerCounts = useQueries({
+    queries: LEARNER_TILES.map((tile) => ({
+      ...analyticsContractQueries.learners(orgUuid ?? "", contractId ?? 0, {
+        limit: 1,
+        offset: 0,
+        completion_status: completionStatusFilter(
+          tile === "all" ? undefined : tile,
+        ),
+      }),
+      enabled: analyticsAvailable && !!contractId && !!learnerAnalyticsFlag,
+      placeholderData: keepPreviousData,
+    })),
+    combine: (results) => ({
+      counts: Object.fromEntries(
+        LEARNER_TILES.map((tile, index) => [
+          tile,
+          results[index].data?.total_count ?? 0,
+        ]),
+      ) as Record<(typeof LEARNER_TILES)[number], number>,
+      isPending: results.some((result) => result.isPending),
+      isError: results.some((result) => result.isError),
+    }),
   })
 
   /**
@@ -501,11 +533,11 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
             isError={learnerProgress.isError}
           />
           <LearnerProgressCard
+            learnerCounts={learnerCounts.counts}
             totalCount={learnerProgress.data?.total_count}
-            withheldCount={learnerProgress.data?.outcomes_withheld_count}
             statusCounts={learnerProgress.data?.completion_status_counts}
-            isLoading={learnerProgress.isPending}
-            isError={learnerProgress.isError}
+            isLoading={learnerProgress.isPending || learnerCounts.isPending}
+            isError={learnerProgress.isError || learnerCounts.isError}
             learnersHref={(status) =>
               contractLearnersView(orgSlug, contract.slug, { status })
             }
