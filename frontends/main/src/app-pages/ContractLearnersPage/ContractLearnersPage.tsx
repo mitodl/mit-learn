@@ -193,6 +193,8 @@ const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: "passed", label: "Completed" },
 ]
 const STATUS_HINT_ID = "learner-status-hint"
+/** The keys MUI's select opens on. */
+const OPEN_KEYS = [" ", "ArrowUp", "ArrowDown", "Enter"]
 /** The value stands in for help text, which would sit below the field and shift the grid when it went away. */
 const STATUS_UNAVAILABLE = {
   noModule: {
@@ -209,7 +211,8 @@ const STATUS_UNAVAILABLE = {
  * Unavailable is `readOnly` plus `aria-disabled` rather than `disabled`, which
  * would drop the field from the tab order and leave a keyboard or screen
  * reader user no way to reach the reason. MUI skips `preventDefault` while
- * `readOnly`, so Space is stopped here to keep it from scrolling the page.
+ * `readOnly`, so the keys that would open it are stopped here to keep them
+ * from scrolling the page.
  */
 const StatusSelect: React.FC<{
   value: string
@@ -229,7 +232,7 @@ const StatusSelect: React.FC<{
               "aria-disabled": "true",
               "aria-describedby": STATUS_HINT_ID,
               onKeyDown: (event) => {
-                if (event.key === " ") event.preventDefault()
+                if (OPEN_KEYS.includes(event.key)) event.preventDefault()
               },
             }
           : undefined

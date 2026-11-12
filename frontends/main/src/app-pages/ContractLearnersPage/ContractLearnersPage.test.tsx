@@ -989,8 +989,10 @@ describe("ContractLearnersPage", () => {
         await user.keyboard(key)
         expect(screen.queryByRole("listbox")).not.toBeInTheDocument()
       }
-      /** `false` means the default was prevented, so Space doesn't scroll the page. */
-      expect(fireEvent.keyDown(status, { key: " " })).toBe(false)
+      /** `false` means the default was prevented, so the key doesn't scroll the page. */
+      for (const key of [" ", "ArrowUp", "ArrowDown", "Enter"]) {
+        expect(fireEvent.keyDown(status, { key })).toBe(false)
+      }
 
       await toggleModule("Module 6")
       await screen.findByText("In Module 6")
