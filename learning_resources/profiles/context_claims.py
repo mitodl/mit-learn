@@ -188,7 +188,6 @@ def _generate_split_context_claims(
     all_sources = [source for sources in sources_by_part for source in sources]
     return extract_split_unit(
         extractor,
-        extractor,
         unit,
         sources_by_part=sources_by_part,
         key_inputs=_context_key_inputs(run),
@@ -197,11 +196,15 @@ def _generate_split_context_claims(
             "\n".join(source.block for source in sources),
             _part_header(index, sources),
         ),
-        merge=lambda parts: {
-            "compute": lambda: merge_context_outputs(
+        merge=lambda parts, key: get_or_create_extraction(
+            extractor,
+            key,
+            compute=lambda: merge_context_outputs(
                 [part.output for part in parts], all_sources
-            )
-        },
+            ),
+            unit=unit,
+            overwrite=overwrite,
+        ),
         overwrite=overwrite,
     )
 

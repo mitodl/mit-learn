@@ -1519,7 +1519,9 @@ class ResourceProfileConfiguration(TimestampedModel):
     input_token_budget = models.PositiveIntegerField(
         default=100000,
         help_text="Most file text one call may read. A unit over it is split"
-        " into parts that are extracted separately and then merged.",
+        " into parts that are extracted separately and then merged. For the"
+        " unit merge, the most part records it may read; parts over it are"
+        " merged in code.",
     )
 
     def __str__(self):

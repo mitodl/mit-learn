@@ -262,9 +262,9 @@ def _split_budget(budget=SPLIT_BUDGET):
     ).update(input_token_budget=budget)
 
 
-def _build_split_run():
+def _build_split_run(run=None):
     """Return a run whose context unit has two files"""
-    run = _build_run()
+    run = _build_run(run)
     _add_file(
         run.units.get(kind=Unit.Kind.CONTEXT),
         "Grading: half of the grade is the exams, half the problem sets.",
@@ -301,7 +301,7 @@ def test_context_over_budget_split(fake_llm):
     assert {part.raw_response for part in parts} == {"context raw"}
     assert extraction.level == ClaimExtraction.Level.UNIT
     assert extraction.part is None
-    assert extraction.extractor_version.endswith("-merge")
+    assert extraction.extractor_version.endswith("-code")
     assert extraction.raw_response == ""
 
     output = extraction.output
@@ -363,6 +363,23 @@ def test_split_context_cached(fake_llm):
     assert generate_context_claims(run) == first
     assert len(fake_llm.calls) == 2
     assert len(_parts(run)) == 2
+
+
+def test_split_context_reused_by_other_run(fake_llm):
+    """Another run of the course with the same files takes over the parts"""
+    _split_budget()
+    run = _build_split_run()
+    first = generate_context_claims(run)
+    other_run = _build_split_run(
+        LearningResourceRunFactory.create(learning_resource=run.learning_resource)
+    )
+
+    reused = generate_context_claims(other_run)
+
+    assert reused.pk == first.pk
+    assert reused.unit == other_run.units.get(kind=Unit.Kind.CONTEXT)
+    assert [part.part for part in _parts(other_run)] == [1, 2]
+    assert len(fake_llm.calls) == 2
 
 
 def test_split_context_overwrite(fake_llm):

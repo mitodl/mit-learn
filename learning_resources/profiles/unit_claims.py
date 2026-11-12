@@ -13,10 +13,14 @@ in unit order, into parts that each fit, each part is extracted on its own
 and stored at the unit_part level, and a merge call combines the parts'
 claims into the unit's claims. Merged claims cite the part claims they come
 from, and their evidence is carried over from those claims, so the unit's
-stored output has the same form whether it was split or not.
+stored output has the same form whether it was split or not. A part's
+concept, skill or assessment expectation that the merge leaves out is added
+back. When the parts' records are too long for the merge call, or it gives no
+valid response, the parts are merged in code instead, by label.
 """
 
 import logging
+import re
 
 from learning_resources.models import (
     ClaimExtraction,
@@ -26,6 +30,7 @@ from learning_resources.models import (
 )
 from learning_resources.profiles import prompts
 from learning_resources.profiles.claims import (
+    ClaimExtractionError,
     ClaimExtractor,
     delete_stale_parts,
     extract_split_unit,
@@ -36,7 +41,12 @@ from learning_resources.profiles.claims import (
     truncation_notes,
 )
 from learning_resources.profiles.schemas import UnitExtraction, UnitMergeExtraction
-from learning_resources.profiles.sources import Source, pack_parts, unit_sources
+from learning_resources.profiles.sources import (
+    Source,
+    estimate_tokens,
+    pack_parts,
+    unit_sources,
+)
 from learning_resources.profiles.verification import normalize
 
 log = logging.getLogger(__name__)
@@ -200,45 +210,84 @@ def _parts_block(
     return "\n".join(lines)
 
 
-def resolve_merged_claims(
+_PART_CLAIM_ID = re.compile(r"P(\d+):([a-z])(\d+)", re.IGNORECASE)
+
+
+def _normalize_part_claim_id(claim_id: str) -> str:
+    """
+    Return a part claim id the merge model cites in the form P2:c4, so that
+    variants of it like "p2:c4", "P2: c4" or "[P2:c4]" are found
+    """
+    compact = re.sub(r"[^A-Za-z0-9:]", "", claim_id)
+    match = _PART_CLAIM_ID.fullmatch(compact)
+    if not match:
+        return compact
+    part, prefix, number = match.groups()
+    return f"P{int(part)}:{prefix.lower()}{int(number)}"
+
+
+def _add_part_claims(
+    merged_claims: list[dict], field: str, part_claims: list[tuple[str, dict]]
+) -> None:
+    """
+    Add part claims of one claim list to its merged claims, in place.
+
+    A part claim is cited by the merged claim with its label, compared
+    normalized, or else becomes a merged claim of its own, made from its own
+    fields. An assessment expectation's tested concepts are combined.
+
+    Args:
+        merged_claims (list of dict): the merged claims of the list
+        field (str): the claim list, like "concepts"
+        part_claims (list of tuple): (part claim id, part claim) pairs
+    """
+    by_label = {normalize(merged["label"]): merged for merged in merged_claims}
+    for claim_id, claim in part_claims:
+        label = normalize(claim["label"])
+        merged = by_label.get(label)
+        if merged is None:
+            merged = {name: value for name, value in claim.items() if name != "id"}
+            merged["part_claim_ids"] = []
+            merged_claims.append(merged)
+            by_label[label] = merged
+        merged["part_claim_ids"].append(claim_id)
+        if field == "assessment_expectations":
+            merged["tests_concept_labels"] = list(
+                dict.fromkeys(
+                    merged.get("tests_concept_labels", [])
+                    + claim.get("tests_concept_labels", [])
+                )
+            )
+
+
+def _complete_merged_claims(
     output: dict, part_extractions: list[ClaimExtraction]
 ) -> dict:
     """
-    Turn a merge output's part claim citations into evidence, and check it.
+    Give each merged claim the evidence of the part claims it cites, then
+    drop assumed knowledge the unit teaches and number the claims.
 
-    Each merged claim keeps only the part claims of its own list that exist,
-    and is dropped when none are left. Its evidence is the cited claims'
-    evidence, already verified in the part calls. A concept takes the
-    strongest status any cited concept has, and an assumed item is flagged as
-    prior if any cited one is. An assumed item whose label is a concept the
-    unit teaches or reviews is dropped, since another part teaches it.
+    The evidence was verified in the part calls. A concept takes the strongest
+    status any cited concept has, and an assumed item is flagged as prior if
+    any cited one is. An assumed item whose label is a concept the unit
+    teaches or reviews is dropped, since another part teaches it.
+
+    The output's part_keys are the keys of the parts its claims cite, in unit
+    order: P2:c4 is claim c4 of the extraction with the second key. A unit
+    can briefly have two rows for a part, the cited one and a newer one,
+    when a new merge of it has failed.
 
     Args:
-        output (dict): the verified merge output, changed in place
+        output (dict): a merged output whose claims cite only part claims of
+            their own list, changed in place
         part_extractions (list of ClaimExtraction): the unit's parts, in unit
             order
-
-    Returns:
-        dict: the output, with each claim's evidence in place
     """
     part_claims = _part_claims_by_id(part_extractions)
-    notes = []
+    output["part_keys"] = [part.key for part in part_extractions]
     for field in CLAIM_PREFIXES:
-        kept = []
         for merged in output[field]:
-            cited_ids = [
-                claim_id
-                for claim_id in dict.fromkeys(merged["part_claim_ids"])
-                if part_claims.get(claim_id, (None,))[0] == field
-            ]
-            if not cited_ids:
-                notes.append(
-                    f"Dropped merged {field} item {merged['label'][:80]!r}: it cites"
-                    " no part claim of its kind"
-                )
-                continue
-            cited = [part_claims[claim_id][1] for claim_id in cited_ids]
-            merged["part_claim_ids"] = cited_ids
+            cited = [part_claims[claim_id][1] for claim_id in merged["part_claim_ids"]]
             merged["evidence"] = merge_evidence(cited)
             # status and prior flag come from the cited claims only, so the
             # merge can't make a claim stronger than any part found it
@@ -255,8 +304,6 @@ def resolve_merged_claims(
                 merged["flagged_as_prior"] = any(
                     claim["flagged_as_prior"] for claim in cited
                 )
-            kept.append(merged)
-        output[field] = kept
     taught_labels = {
         normalize(concept["label"])
         for concept in output["concepts"]
@@ -265,15 +312,206 @@ def resolve_merged_claims(
     assumed = []
     for item in output["assumed_knowledge"]:
         if normalize(item["label"]) in taught_labels:
-            notes.append(
+            output["extraction_notes"].append(
                 f"Dropped assumed knowledge {item['label'][:80]!r}: the unit"
                 " teaches or reviews it"
             )
         else:
             assumed.append(item)
     output["assumed_knowledge"] = assumed
-    output["extraction_notes"] += notes
     return _number_claims(output)
+
+
+def resolve_merged_claims(
+    output: dict, part_extractions: list[ClaimExtraction]
+) -> dict:
+    """
+    Turn a merge output's part claim citations into evidence, and check it.
+
+    Each merged claim keeps only the part claims of its own list that exist,
+    and is dropped when none are left. A part's concept, skill or assessment
+    expectation that no merged claim cites is added back, to the merged claim
+    with its label or as a claim of its own, so the merge can't lose what a
+    part found. An assumed item no merged claim cites is only noted: the merge
+    is told to leave out the ones another part teaches. Each claim is then
+    completed with _complete_merged_claims.
+
+    Args:
+        output (dict): the verified merge output, changed in place
+        part_extractions (list of ClaimExtraction): the unit's parts, in unit
+            order
+
+    Returns:
+        dict: the output, with each claim's evidence in place
+    """
+    part_claims = _part_claims_by_id(part_extractions)
+    notes = []
+    for field, heading in _CLAIM_LIST_HEADINGS.items():
+        kept = []
+        for merged in output[field]:
+            cited_ids = [
+                claim_id
+                for claim_id in dict.fromkeys(
+                    _normalize_part_claim_id(claim_id)
+                    for claim_id in merged["part_claim_ids"]
+                )
+                if part_claims.get(claim_id, (None,))[0] == field
+            ]
+            if not cited_ids:
+                notes.append(
+                    f"Dropped merged {field} item {merged['label'][:80]!r}: it cites"
+                    " no part claim of its kind"
+                )
+                continue
+            merged["part_claim_ids"] = cited_ids
+            kept.append(merged)
+        output[field] = kept
+        cited = {claim_id for merged in kept for claim_id in merged["part_claim_ids"]}
+        uncited = [
+            (claim_id, claim)
+            for claim_id, (claim_field, claim) in part_claims.items()
+            if claim_field == field and claim_id not in cited
+        ]
+        if not uncited:
+            continue
+        uncited_ids = ", ".join(claim_id for claim_id, _ in uncited)
+        if field == "assumed_knowledge":
+            notes.append(f"The merge left out {heading.lower()} {uncited_ids}")
+        else:
+            _add_part_claims(kept, field, uncited)
+            notes.append(
+                f"Added back {heading.lower()} the merge left out: {uncited_ids}"
+            )
+    output["extraction_notes"] += notes
+    return _complete_merged_claims(output, part_extractions)
+
+
+def merge_parts_in_code(
+    part_extractions: list[ClaimExtraction], sources: list[Source], reason: str
+) -> dict:
+    """
+    Merge a split unit's parts without the model.
+
+    Part claims of one list with the same label, compared normalized, become
+    one claim, and the summary is the parts' summaries in order. It is used
+    when the merge model can't be, so it doesn't combine claims the model
+    would, like a concept named two ways.
+
+    Args:
+        part_extractions (list of ClaimExtraction): the unit's parts, in unit
+            order
+        sources (list of Source): the unit's sources
+        reason (str): why the merge is made in code, the output's first note
+
+    Returns:
+        dict: the unit's output, in the form of a merge call's resolved one
+    """
+    part_claims = _part_claims_by_id(part_extractions)
+    part_notes = [
+        note for part in part_extractions for note in part.output["extraction_notes"]
+    ]
+    output = {
+        "summary": " ".join(part.output["summary"] for part in part_extractions),
+        "extraction_notes": list(
+            dict.fromkeys([reason, *part_notes, *truncation_notes(sources)])
+        ),
+        "sources": [source.summary() for source in sources],
+    }
+    for field in CLAIM_PREFIXES:
+        output[field] = []
+        _add_part_claims(
+            output[field],
+            field,
+            [
+                (claim_id, claim)
+                for claim_id, (claim_field, claim) in part_claims.items()
+                if claim_field == field
+            ],
+        )
+    return _complete_merged_claims(output, part_extractions)
+
+
+def _merge_token_limit(config: ResourceProfileConfiguration) -> int:
+    """
+    Return the most tokens of part records the merge model is given: its
+    input budget, or its output limit when that is lower, since the merge
+    writes the parts' claims out again
+    """
+    limits = (
+        config.input_token_budget,
+        config.max_completion_tokens,
+        config.max_tokens,
+    )
+    return min(limit for limit in limits if limit is not None)
+
+
+def _merge_parts(  # noqa: PLR0913
+    unit: Unit,
+    part_extractions: list[ClaimExtraction],
+    key: str,
+    *,
+    sources_by_part: list[list[Source]],
+    outline: str,
+    header: str,
+    overwrite: bool,
+) -> ClaimExtraction:
+    """
+    Merge a split unit's parts with the merge model, or in code when their
+    records are over its limit or it gives no valid response.
+
+    A merge made in code is stored under the merge's key, like the model's,
+    so it is reused until the parts change or it is overwritten, rather than
+    failing the unit, and so the course's run claims, on every sweep.
+
+    Args:
+        unit (Unit): the split unit
+        part_extractions (list of ClaimExtraction): the unit's parts, in unit
+            order
+        key (str): the merge's cache key
+        sources_by_part (list of list of Source): each part's sources
+        outline (str): the course outline, for the prompt
+        header (str): the unit header, for the prompt
+        overwrite (bool): merge even when the key is stored
+    """
+    extractor = load_unit_merge_extractor()
+    sources = [source for part_sources in sources_by_part for source in part_sources]
+    parts_block = _parts_block(part_extractions, sources_by_part)
+
+    def merge_in_code(reason: str) -> ClaimExtraction:
+        def compute():
+            log.warning(
+                "Merging the %d parts of unit %s in code: %s",
+                len(part_extractions),
+                unit.id,
+                reason,
+            )
+            return merge_parts_in_code(part_extractions, sources, reason)
+
+        return get_or_create_extraction(
+            extractor, key, compute=compute, unit=unit, overwrite=overwrite
+        )
+
+    tokens, limit = estimate_tokens(parts_block), _merge_token_limit(extractor.config)
+    if tokens > limit:
+        return merge_in_code(
+            f"The parts were merged in code: their records, about {tokens:,}"
+            f" tokens, are over the merge's limit of {limit:,}"
+        )
+    try:
+        return get_or_create_extraction(
+            extractor,
+            key,
+            lambda: prompts.unit_merge_combined_prompt(outline, header, parts_block),
+            sources,
+            unit=unit,
+            finish=lambda output: resolve_merged_claims(output, part_extractions),
+            overwrite=overwrite,
+        )
+    except ClaimExtractionError:
+        log.warning("The merge of unit %s failed", unit.id, exc_info=True)
+        return merge_in_code(
+            "The parts were merged in code: the merge model gave no valid response"
+        )
 
 
 # --------------------------------------------------------------------------- extraction
@@ -297,10 +535,8 @@ def _generate_split_unit_claims(  # noqa: PLR0913
 
     The merge is keyed by its parts' keys and outputs.
     """
-    all_sources = [source for sources in sources_by_part for source in sources]
     return extract_split_unit(
         extractor,
-        load_unit_merge_extractor(),
         unit,
         sources_by_part=sources_by_part,
         key_inputs=_unit_key_inputs(unit),
@@ -309,13 +545,15 @@ def _generate_split_unit_claims(  # noqa: PLR0913
             _part_header(header, index, sources),
             "\n".join(source.block for source in sources),
         ),
-        merge=lambda parts: {
-            "build_prompt": lambda: prompts.unit_merge_combined_prompt(
-                outline, header, _parts_block(parts, sources_by_part)
-            ),
-            "sources": all_sources,
-            "finish": lambda output: resolve_merged_claims(output, parts),
-        },
+        merge=lambda parts, key: _merge_parts(
+            unit,
+            parts,
+            key,
+            sources_by_part=sources_by_part,
+            outline=outline,
+            header=header,
+            overwrite=overwrite,
+        ),
         finish_part=_number_claims,
         overwrite=overwrite,
     )

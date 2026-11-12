@@ -538,6 +538,139 @@ def test_merge_cannot_strengthen_part_claims(fake_llm):
     assert assumed["Algebra"]["flagged_as_prior"] is True
 
 
+def _answer_merge(merge_output):
+    """Answer like _answer, but with this merge output"""
+
+    def answer(extractor, prompt):
+        if extractor.schema is UnitMergeExtraction:
+            return UnitMergeExtraction.model_validate(merge_output), "merge raw"
+        return _answer(extractor, prompt)
+
+    return answer
+
+
+def test_merge_finds_variants_of_part_claim_ids(fake_llm):
+    """Part claim ids the model writes another way are still found"""
+    output = _merge_out("").model_dump()
+    # a label of its own, so a part claim added back wouldn't pass for it
+    output["concepts"] = [
+        _merged(
+            "Newton's 2nd law",
+            ["p1:c1", "[P2: c1]", "P02:C01"],
+            kind="concept",
+            teaching_status="taught",
+        )
+    ]
+    fake_llm.side_effect = _answer_merge(output)
+    _split_budget()
+
+    output = _generate(_build_unit()).output
+
+    [concept] = output["concepts"]
+    assert concept["label"] == "Newton's 2nd law"
+    assert concept["part_claim_ids"] == ["P1:c1", "P2:c1"]
+    assert len(concept["evidence"]) == 2
+    assert not any(note.startswith("Added back") for note in output["extraction_notes"])
+
+
+def test_merge_left_out_claims_added_back(fake_llm):
+    """Part claims the merge leaves out are added back, but not assumed items"""
+    output = _merge_out("").model_dump()
+    output["concepts"] = []
+    output["skills"] = [_merged("Free-body diagrams", ["P1:s1"])]
+    output["assumed_knowledge"] = [
+        _merged(
+            "Algebra",
+            ["P1:a2"],
+            how_used="Used without explanation",
+            flagged_as_prior=False,
+        )
+    ]
+    fake_llm.side_effect = _answer_merge(output)
+    _split_budget()
+
+    output = _generate(_build_unit()).output
+
+    [concept] = output["concepts"]
+    assert concept["label"] == "Newton's second law"
+    assert concept["part_claim_ids"] == ["P1:c1", "P2:c1"]
+    assert concept["teaching_status"] == "taught"
+    assert len(concept["evidence"]) == 2
+    # the skill the merge renamed keeps the part claim it cites, and the other
+    # part's skill is added back on its own
+    assert [
+        (skill["label"], skill["part_claim_ids"]) for skill in output["skills"]
+    ] == [
+        ("Free-body diagrams", ["P1:s1"]),
+        ("Draw a free-body diagram", ["P2:s1"]),
+    ]
+    assert [item["part_claim_ids"] for item in output["assumed_knowledge"]] == [
+        ["P1:a2"]
+    ]
+    notes = output["extraction_notes"]
+    assert "Added back concepts the merge left out: P1:c1, P2:c1" in notes
+    assert "Added back skills the merge left out: P2:s1" in notes
+    assert "The merge left out assumed knowledge P1:a1, P2:a1, P2:a2" in notes
+
+
+def _assert_merged_in_code(extraction, reason):
+    """Check that a split _build_unit was merged in code, by label"""
+    assert extraction.extractor_version.startswith("unit_merge-")
+    assert extraction.extractor_version.endswith("-code")
+    assert extraction.raw_response == ""
+    output = extraction.output
+    assert output["summary"] == "The unit teaches forces. The unit teaches forces."
+    assert output["extraction_notes"][0].startswith(
+        f"The parts were merged in code: {reason}"
+    )
+    [concept] = output["concepts"]
+    assert concept["id"] == "c1"
+    assert concept["part_claim_ids"] == ["P1:c1", "P2:c1"]
+    assert concept["teaching_status"] == "taught"
+    assert [item["source_id"] for item in concept["evidence"]] == ["S01", "S02"]
+    [skill] = output["skills"]
+    assert skill["part_claim_ids"] == ["P1:s1", "P2:s1"]
+    # the assumed item the unit teaches is dropped
+    [assumed] = output["assumed_knowledge"]
+    assert assumed["label"] == "Algebra"
+    assert assumed["part_claim_ids"] == ["P1:a2", "P2:a2"]
+    assert assumed["flagged_as_prior"] is True
+    assert [source["source_id"] for source in output["sources"]] == ["S01", "S02"]
+
+
+@pytest.mark.parametrize(
+    "limit", ["input_token_budget", "max_completion_tokens", "max_tokens"]
+)
+def test_merge_over_limit_merged_in_code(fake_llm, limit):
+    """Parts whose records are over the merge's limit are merged in code"""
+    _split_budget()
+    ResourceProfileConfiguration.objects.filter(
+        stage=ResourceProfileConfiguration.Stage.UNIT_MERGE
+    ).update(**{limit: 10})
+    unit = _build_unit()
+
+    extraction = _generate(unit)
+
+    assert fake_llm.call_count == 2
+    _assert_merged_in_code(extraction, "their records, about")
+    assert _generate(unit) == extraction
+    assert fake_llm.call_count == 2
+
+
+def test_failed_merge_merged_in_code(fake_llm):
+    """A merge with no valid response is merged in code, and not called again"""
+    _split_budget()
+    unit = _build_unit()
+    fake_llm.side_effect = _fail_on(UnitMergeExtraction)
+
+    extraction = _generate(unit)
+
+    assert fake_llm.call_count == 3
+    _assert_merged_in_code(extraction, "the merge model gave no valid response")
+    assert _generate(unit) == extraction
+    assert fake_llm.call_count == 3
+
+
 def test_split_unit_cached(fake_llm):
     """A split unit whose files haven't changed makes no call"""
     _split_budget()
@@ -569,8 +702,26 @@ def test_split_unit_changed_part_reruns(fake_llm):
     assert extraction.key != first.key
 
 
-def test_split_units_with_same_part_keep_their_own_parts(fake_llm):
-    """Units whose first part is the same each keep a row for it"""
+def test_identical_split_unit_in_other_run_reuses_extraction(fake_llm):
+    """Another run's unit with the same files takes over the parts and merge"""
+    _split_budget()
+    unit = _build_unit()
+    extraction = _generate(unit)
+    other_run = LearningResourceRunFactory.create(
+        learning_resource=unit.run.learning_resource
+    )
+    other_unit = _build_unit(other_run)
+
+    reused = _generate(other_unit)
+
+    assert reused.pk == extraction.pk
+    assert reused.unit == other_unit
+    assert [part.part for part in _parts(other_unit)] == [1, 2]
+    assert fake_llm.call_count == 3
+
+
+def test_split_units_with_same_part_share_it(fake_llm):
+    """Units of a course with the same title and parts share the parts' rows"""
     _split_budget()
     unit = _build_unit(kind=Unit.Kind.BIN)
     other_unit = UnitFactory.create(
@@ -586,13 +737,14 @@ def test_split_units_with_same_part_keep_their_own_parts(fake_llm):
 
     _generate(unit)
     _generate(other_unit)
-    calls = fake_llm.call_count
+    # only the other unit's third part and its merge are new
+    assert fake_llm.call_count == 5
     _generate(unit)
 
-    assert fake_llm.call_count == calls
+    assert fake_llm.call_count == 5
+    # the shared rows are pointed at the unit that used them last
     assert [part.part for part in _parts(unit)] == [1, 2]
-    assert [part.part for part in _parts(other_unit)] == [1, 2, 3]
-    assert _parts(unit)[0].key != _parts(other_unit)[0].key
+    assert [part.part for part in _parts(other_unit)] == [3]
 
 
 def test_split_unit_fewer_parts(fake_llm):
@@ -622,34 +774,65 @@ def test_unit_no_longer_split(fake_llm):
     assert extraction.raw_response == "unit raw"
 
 
-def _fail_on(schema=None, *, whole_unit=False):
+def _fail_on(schema=None, *, whole_unit=False, error=ClaimExtractionError):
     """Answer like _answer, but fail the merge call or the whole-unit call"""
 
     def answer(extractor, prompt):
         if extractor.schema is schema or (whole_unit and "PART " not in prompt):
             msg = "bad response"
-            raise ClaimExtractionError(msg)
+            raise error(msg)
         return _answer(extractor, prompt)
 
     return answer
 
 
-def test_failed_merge_keeps_parts_of_longer_split(fake_llm):
-    """Parts of a longer split are kept while the merge citing them is current"""
+def _part_rows(unit):
+    return {part.id: (part.part, part.key, part.output) for part in _parts(unit)}
+
+
+@pytest.mark.parametrize("failing", ["part", "merge"])
+def test_failed_split_keeps_parts_its_merge_cites(fake_llm, failing):
+    """
+    The parts the unit's merge cites are kept as they were until a new merge
+    is stored, even when a removed file gives the parts after it new keys
+    """
     _split_budget()
     unit = _build_unit()
     _add_file(unit, "Recitation: two blocks joined by a string.", position=2)
     first = _generate(unit)
-    unit.unitcontentfile_set.get(position=2).delete()
-    fake_llm.side_effect = _fail_on(UnitMergeExtraction)
+    cited = _part_rows(unit)
+    assert first.output["part_keys"] == [key for _, key, _ in cited.values()]
+    # the recitation moves up to part 2, under a new key
+    unit.unitcontentfile_set.get(position=1).delete()
 
-    with pytest.raises(ClaimExtractionError):
+    def answer(extractor, prompt):
+        # an error other than an invalid response, which is merged in code
+        if (
+            extractor.schema is UnitMergeExtraction
+            if failing == "merge"
+            else "PART 2 " in prompt
+        ):
+            raise TimeoutError
+        return _answer(extractor, prompt)
+
+    fake_llm.side_effect = answer
+
+    with pytest.raises(TimeoutError):
         _generate(unit)
 
-    assert [part.part for part in _parts(unit)] == [1, 2, 3]
-    assert ClaimExtraction.objects.get(unit=unit, level=ClaimExtraction.Level.UNIT) == (
-        first
-    )
+    rows = _part_rows(unit)
+    assert {part_id: rows[part_id] for part_id in cited} == cited
+    merge = ClaimExtraction.objects.get(unit=unit, level=ClaimExtraction.Level.UNIT)
+    assert (merge.pk, merge.output) == (first.pk, first.output)
+
+    fake_llm.side_effect = _answer
+    extraction = _generate(unit)
+
+    parts = _parts(unit)
+    assert [part.part for part in parts] == [1, 2]
+    assert extraction.output["part_keys"] == [part.key for part in parts]
+    assert parts[0].pk in cited
+    assert parts[1].pk not in cited
 
 
 def test_failed_unsplit_call_keeps_parts(fake_llm):
