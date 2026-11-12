@@ -45,6 +45,12 @@ import type { AppRoutes } from "../../.next/types/routes"
  * renders nothing during SSR (RoutedDrawer mounts closed and opens in an
  * effect, with no `keepMounted`). If drawers ever SSR their content, these
  * params must be added to the Fastly whitelist and this registry.
+ *
+ * Known exception: `enroll` and `run`, the marker a product page's sign-up
+ * redirect returns with (app-pages/ProductPages/enrollResume.ts). They are read
+ * from window.location inside an effect, not through useAppSearchParams, so a
+ * refactor moving the read into render would fail on the server rather than
+ * silently vary cached output.
  */
 
 const SERVER_KEYED_PARAMS = [

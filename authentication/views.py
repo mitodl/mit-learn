@@ -124,7 +124,11 @@ class CustomLoginView(View):
 
             if not profile.has_logged_in:
                 if should_skip_onboarding:
-                    redirect_url = signup_redirect_url
+                    # Onboarding normally reports the new account; tell the
+                    # destination page instead.
+                    redirect_url = with_query_params(
+                        signup_redirect_url, {"is_new_user": "1"}
+                    )
                 else:
                     params = urlencode(
                         {"next": signup_redirect_url, "is_new_user": "1"}
