@@ -154,7 +154,6 @@ dev = [
     "freezegun>=1.4.0,<2",
     "pytest-xdist[psutil]>=3.6.1,<4",
     "anys>=0.3.0,<0.4",
-    "locust>=2.31.2,<3",
     "traceback-with-variables>=2.1.1,<3",
     "mitol-drf-lint==2026.4.2",
 ]
@@ -178,7 +177,6 @@ override-dependencies = [
 ]
 
 [tool.uv.exclude-newer-package]
-brotli = "0d"  # CVE-2026-111497 fix (1.2.1), remove after 2026-10-29
 mitol-django-common = "0d"
 mitol-django-observability = "0d"
 mitol-django-scim = "0d"
