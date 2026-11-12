@@ -165,7 +165,7 @@ export const completionStatusFilter = (status?: ContractLearnersStatus) =>
   status ? STATUS_FILTER_COMPLETION_STATUS[status] : SHARED_COMPLETION_STATUSES
 
 export type ContractLearnersFilters = {
-  /** Course run ids. The page ignores `status` unless at least one is selected. */
+  /** Course run ids. On a contract with more than one, the page ignores `status` unless one is selected. */
   modules?: string[]
   status?: ContractLearnersStatus
   needsAttention?: boolean
