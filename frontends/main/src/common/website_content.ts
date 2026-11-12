@@ -7,10 +7,9 @@ import { WebsiteContentContentTypeEnum, type WebsiteContent } from "api/v1"
  * Keyed on the generated enum rather than `Record<string, string>` so that
  * adding a content type is a type error here until a label is supplied.
  *
- * Deliberately not the generated `WebsiteContentContentTypeEnumDescriptions`:
- * those values come from the `WebsiteContentType` labels in
- * `website_content/constants.py`, so a backend rename would quietly change UI
- * copy. Take the type from generated code, keep the strings here.
+ * Not the `WebsiteContentType` labels in `website_content/constants.py`: a
+ * backend rename would quietly change UI copy. Take the type from generated
+ * code, keep the strings here.
  */
 export const CONTENT_TYPE_LABELS: Record<
   WebsiteContentContentTypeEnum,

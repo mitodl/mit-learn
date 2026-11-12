@@ -150,7 +150,6 @@ dev = [
     "pytest-repeat>=0.9.4",
     "responses>=0.25.0,<0.26",
     "ruff==0.16.8",
-    "safety>=3.0.0,<4",
     "semantic-version>=2.10.0,<3",
     "freezegun>=1.4.0,<2",
     "pytest-xdist[psutil]>=3.6.1,<4",
