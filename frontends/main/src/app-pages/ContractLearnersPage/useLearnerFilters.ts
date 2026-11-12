@@ -93,13 +93,8 @@ const useLearnerFilters = () => {
     setNeedsAttentionOnly: (value: boolean) =>
       update({ needs_attention: value ? "true" : null, page: null }),
     gridModules,
-    /** Status is per selected module, so it can't outlive the last one. */
     setGridModules: (values: string[]) =>
-      update({
-        modules: values.slice(0, MAX_GRID_MODULES),
-        ...(values.length ? {} : { status: null }),
-        page: null,
-      }),
+      update({ modules: values.slice(0, MAX_GRID_MODULES), page: null }),
     clearAll: () => {
       setSearchQuery("")
       setDebouncedSearch("")

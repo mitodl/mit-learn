@@ -52,7 +52,7 @@ import {
   GRID_PAGE_SIZE,
   ProgressGrid,
 } from "./ProgressGrid"
-import { completionStatusFilter } from "@/common/urls"
+import { ALL_MODULES, completionStatusFilter } from "@/common/urls"
 import {
   ALL,
   MAX_GRID_MODULES,
@@ -202,6 +202,10 @@ const STATUS_HINT_ID = "learner-status-hint"
 const OPEN_KEYS = [" ", "ArrowUp", "ArrowDown", "Enter"]
 /** The value stands in for help text, which would sit below the field and shift the grid when it went away. */
 const STATUS_UNAVAILABLE = {
+  loading: {
+    value: "Loading…",
+    hint: "Status needs this contract's modules, which are loading.",
+  },
   noModule: {
     value: "Select a module first",
     hint: "Select a module to filter by status.",
@@ -235,6 +239,7 @@ const StatusSelect: React.FC<{
         unavailable
           ? {
               "aria-disabled": "true",
+              "aria-busy": unavailable === "loading" ? "true" : undefined,
               "aria-describedby": STATUS_HINT_ID,
               onKeyDown: (event) => {
                 if (OPEN_KEYS.includes(event.key)) event.preventDefault()
@@ -428,8 +433,9 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
    */
   const activeGridModules = useMemo(() => {
     if (!showModuleFilter) return []
+    const everyModule = gridModules.includes(ALL_MODULES)
     const selected = courseRunOptions
-      .filter((option) => gridModules.includes(option.value))
+      .filter((option) => everyModule || gridModules.includes(option.value))
       .map((option) => option.value)
     return selected.length < courseRunOptions.length
       ? selected.slice(0, MAX_GRID_MODULES)
@@ -775,9 +781,11 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                   unavailable={
                     statusAvailable
                       ? undefined
-                      : courseRunsFailed
-                        ? "modulesFailed"
-                        : "noModule"
+                      : courseRunsQuery.isPending
+                        ? "loading"
+                        : courseRunsFailed
+                          ? "modulesFailed"
+                          : "noModule"
                   }
                 />
                 <VisuallyHidden role="status" aria-atomic="true">

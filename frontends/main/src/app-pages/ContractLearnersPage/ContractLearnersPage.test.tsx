@@ -16,7 +16,7 @@ import { allowConsoleErrors } from "ol-test-utilities"
 import { ForbiddenError } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
-import { contractAnalyticsView } from "@/common/urls"
+import { ALL_MODULES, contractAnalyticsView } from "@/common/urls"
 import ContractLearnersPage from "./ContractLearnersPage"
 
 jest.mock("@/common/useFeatureFlag")
@@ -1006,9 +1006,13 @@ describe("ContractLearnersPage", () => {
       )
       mockGridPage(contractId, 0, [learnerNamed("Everyone")])
 
-      expect(
-        await screen.findByRole("combobox", { name: /status/i }),
-      ).toHaveAttribute("aria-disabled", "true")
+      const status = await screen.findByRole("combobox", { name: /status/i })
+      expect(status).toHaveAttribute("aria-disabled", "true")
+      expect(status).toHaveAttribute("aria-busy", "true")
+      expect(status).toHaveTextContent("Loading…")
+      expect(status).toHaveAccessibleDescription(
+        "Status needs this contract's modules, which are loading.",
+      )
 
       await act(async () => {
         runs.resolve(analyticsFactories.envelope(oneModule()))
@@ -1016,6 +1020,7 @@ describe("ContractLearnersPage", () => {
       await waitFor(() =>
         expect(statusField()).not.toHaveAttribute("aria-disabled"),
       )
+      expect(statusField()).not.toHaveAttribute("aria-busy")
     })
 
     test("says why it's unavailable when the modules fail to load", async () => {
@@ -1264,17 +1269,17 @@ describe("ContractLearnersPage", () => {
     })
 
     /** The API accepts at most 50 modules; every module is sent as no module filter instead. */
-    test("keeps every module a link selects, past the API's 50-module cap", async () => {
+    test("selects every module for a dashboard link, past the API's 50-module cap", async () => {
       const runs = Array.from({ length: 51 }, (_, index) =>
         analyticsFactories.courseRun({
           courserun_id: `course-v1:MITx+M${index}+2026`,
           courserun_title: `Module ${index}`,
         }),
       )
-      const modules = runs
-        .map(({ courserun_id: id }) => `modules=${encodeURIComponent(id)}`)
-        .join("&")
-      const { contractId } = renderGrid(`/?${modules}&status=passed`, runs)
+      const { contractId } = renderGrid(
+        `/?modules=${ALL_MODULES}&status=passed`,
+        runs,
+      )
       mockGridPage(
         contractId,
         0,
@@ -1285,6 +1290,9 @@ describe("ContractLearnersPage", () => {
 
       await screen.findByText("Every Module Learner")
       expect(statusField()).toHaveTextContent("Completed")
+      expect(
+        screen.getByRole("combobox", { name: /modules\s*, 51 selected/i }),
+      ).toBeInTheDocument()
     })
 
     test("shows and requests the same 50 modules when a link selects more than 50 but not all", async () => {

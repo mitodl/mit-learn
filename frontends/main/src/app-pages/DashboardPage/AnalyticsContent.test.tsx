@@ -19,6 +19,7 @@ import { allowConsoleErrors } from "ol-test-utilities"
 import { ForbiddenError } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
 import {
+  ALL_MODULES,
   contractAdminView,
   contractAnalyticsView,
   contractLearnersView,
@@ -118,8 +119,6 @@ const setAnalyticsResponses = ({
   )
 }
 
-const COURSE_RUN_IDS = ["course-v1:MITx+M5+2026", "course-v1:MITx+M6+2026"]
-
 /**
  * Mocks the four section endpoints and the learner progress and
  * needs-attention endpoints, for tests that render with the learner analytics
@@ -200,14 +199,6 @@ const setContractAnalyticsResponses = (
       analyticsFactories.learnersEnvelope([], { total_count: total }),
     )
   }
-  setMockResponse.get(
-    analyticsUrls.contracts.courseRuns(ORG_UUID, contractId, { limit: 1000 }),
-    analyticsFactories.envelope(
-      COURSE_RUN_IDS.map((id) =>
-        analyticsFactories.courseRun({ courserun_id: id }),
-      ),
-    ),
-  )
 }
 
 describe("AnalyticsContent", () => {
@@ -1205,16 +1196,13 @@ describe("AnalyticsContent, contract-scoped", () => {
       )
       expect(link).toHaveAttribute(
         "href",
-        contractLearnersView(orgSlug, contract.slug, {
-          status,
-          modules: status ? COURSE_RUN_IDS : undefined,
-        }),
+        contractLearnersView(orgSlug, contract.slug, { status }),
       )
       expect(
         new URL(link.getAttribute("href")!, "http://test").searchParams.getAll(
           "modules",
         ),
-      ).toEqual(status ? COURSE_RUN_IDS : [])
+      ).toEqual(status ? [ALL_MODULES] : [])
     }
 
     const list = screen.getByRole("list", {
@@ -1227,35 +1215,6 @@ describe("AnalyticsContent, contract-scoped", () => {
     expect(within(list).getByText("15")).toBeInTheDocument()
     expect(within(list).getByText("Completed")).toBeInTheDocument()
     expect(within(list).getByText("20")).toBeInTheDocument()
-  })
-
-  /** The Learners page then drops `status` and lists everyone. */
-  test("links status tiles without modules when the contract's modules fail to load", async () => {
-    const contract = factories.contracts.contract()
-    const org = orgWithUuid({ contracts: [contract] })
-    setManagerOrgs([org])
-    setContractAnalyticsResponses(contract.id)
-    setMockResponse.get(
-      analyticsUrls.contracts.courseRuns(ORG_UUID, contract.id, {
-        limit: 1000,
-      }),
-      "Internal Server Error",
-      { code: 500 },
-    )
-    const orgSlug = org.slug.replace(/^org-/, "")
-    renderWithProviders(
-      <AnalyticsContent orgSlug={orgSlug} contractSlug={contract.slug} />,
-    )
-
-    const completed = await screen.findByRole("group", { name: "Completed" })
-    expect(
-      within(completed).getByRole("link", {
-        name: "View learners (Completed)",
-      }),
-    ).toHaveAttribute(
-      "href",
-      contractLearnersView(orgSlug, contract.slug, { status: "passed" }),
-    )
   })
 
   test("counts only learners who consented, by asking for the four shared statuses", async () => {

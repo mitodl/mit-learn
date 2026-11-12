@@ -335,14 +335,6 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
     }),
   })
 
-  /** The same request the Learners page makes, so following a tile reuses it. */
-  const courseRuns = useQuery({
-    ...analyticsContractQueries.courseRuns(orgUuid ?? "", contractId ?? 0, {
-      limit: 1000,
-    }),
-    enabled: analyticsAvailable && !!learnerAnalyticsFlag,
-  })
-
   /**
    * The card renders only beside a populated distribution (see
    * `LearnerProgressCard`'s empty and error states), so it waits for one.
@@ -547,19 +539,10 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
             learnerCounts={learnerCounts.counts}
             totalCount={learnerProgress.data?.total_count}
             statusCounts={learnerProgress.data?.completion_status_counts}
-            isLoading={
-              learnerProgress.isPending ||
-              learnerCounts.isPending ||
-              courseRuns.isPending
-            }
+            isLoading={learnerProgress.isPending || learnerCounts.isPending}
             isError={learnerProgress.isError || learnerCounts.isError}
             learnersHref={(status) =>
-              contractLearnersView(orgSlug, contract.slug, {
-                status,
-                modules: status
-                  ? courseRuns.data?.data.map((run) => run.courserun_id)
-                  : undefined,
-              })
+              contractLearnersView(orgSlug, contract.slug, { status })
             }
             aside={
               <NeedsAttentionCard
