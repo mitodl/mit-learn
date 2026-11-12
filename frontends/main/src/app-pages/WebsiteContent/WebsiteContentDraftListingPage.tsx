@@ -16,6 +16,7 @@ import { Permission } from "api/hooks/user"
 import { useWebsiteContentList } from "api/hooks/website_content"
 import {
   WebsiteContentContentTypeEnum,
+  WebsiteContentListStatusEnum,
   type WebsiteContent,
   type WebsiteContentApiWebsiteContentListRequest as WebsiteContentListRequest,
 } from "api/v1"
@@ -164,7 +165,7 @@ const WebsiteContentDraftListingPage: React.FC<
   const listParams: WebsiteContentListRequest = {
     limit: PAGE_SIZE,
     offset: (page - 1) * PAGE_SIZE,
-    draft: true,
+    status: WebsiteContentListStatusEnum.Draft,
     content_type: type,
   }
 

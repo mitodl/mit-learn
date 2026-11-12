@@ -10,6 +10,29 @@ const setupEditor = () => {
   )
 }
 
+test("lists drafts only", async () => {
+  setupEditor()
+  const draft = factories.websiteContent.websiteContent({
+    title: "My Draft",
+    content_type: "news",
+    is_published: false,
+  })
+  // The API lists published content unless asked for drafts.
+  setMockResponse.get(
+    urls.websiteContent.list({
+      limit: 20,
+      offset: 0,
+      status: "draft",
+      content_type: "news",
+    }),
+    { count: 1, next: null, previous: null, results: [draft] },
+  )
+
+  renderWithProviders(<WebsiteContentDraftListingPage contentType="news" />)
+
+  await screen.findByText(draft.title)
+})
+
 describe("WebsiteContentDraftListingPage delete", () => {
   test("editor can delete a draft after confirming", async () => {
     setupEditor()

@@ -12,3 +12,13 @@ class WebsiteContentType(ExtendedEnum):
 
     news = "News"
     article = "Article"
+
+
+class WebsiteContentStatus(ExtendedEnum):
+    """
+    Enum for the listing's `status` filter: which publish states to include.
+    """
+
+    published = "Published"
+    draft = "Draft"
+    both = "Both"
