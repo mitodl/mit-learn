@@ -28,10 +28,11 @@ from learning_resources.profiles import prompts
 from learning_resources.profiles.claims import (
     ClaimExtractor,
     delete_stale_parts,
-    extract_parts,
+    extract_split_unit,
     get_or_create_extraction,
     load_extractor,
     merge_evidence,
+    part_header,
     truncation_notes,
 )
 from learning_resources.profiles.schemas import UnitExtraction, UnitMergeExtraction
@@ -55,15 +56,6 @@ TEACHING_STATUSES = {"taught", "reviewed"}
 def load_unit_extractor() -> ClaimExtractor:
     """Build the unit extractor from its ResourceProfileConfiguration"""
     return load_extractor(ResourceProfileConfiguration.Stage.UNIT, UnitExtraction)
-
-
-def load_unit_part_extractor() -> ClaimExtractor:
-    """Build the extractor for a part of a split unit: the unit's, at its own level"""
-    return load_extractor(
-        ResourceProfileConfiguration.Stage.UNIT,
-        UnitExtraction,
-        ClaimExtraction.Level.UNIT_PART,
-    )
 
 
 def load_unit_merge_extractor() -> ClaimExtractor:
@@ -124,13 +116,14 @@ def _unit_header(unit: Unit, unit_ids: list[int]) -> str:
 
 def _part_header(unit_header: str, index: int, sources: list[Source]) -> str:
     """Return the unit header for one part of a split unit"""
-    return (
-        f"{unit_header}\n"
-        f"PART {index} of the unit: sources {sources[0].source_id}-"
-        f"{sources[-1].source_id}. The unit is too long to read at once, so its"
-        " other parts are extracted separately and merged afterwards. Extract only"
-        " from these sources, and report assumed knowledge without deciding"
-        " whether another part of the unit teaches it."
+    return f"{unit_header}\n" + part_header(
+        index,
+        sources,
+        "the unit",
+        "The unit is too long to read at once, so its other parts are extracted"
+        " separately and merged afterwards. Extract only from these sources, and"
+        " report assumed knowledge without deciding whether another part of the"
+        " unit teaches it.",
     )
 
 
@@ -179,7 +172,6 @@ def _parts_block(
     Truncation notes are left out: code adds them to the merged output from
     the unit's sources, so the model needn't carry them over.
     """
-    part_claims = _part_claims_by_id(part_extractions)
     lines = []
     for index, (part, sources) in enumerate(
         zip(part_extractions, sources_by_part, strict=True), 1
@@ -191,9 +183,8 @@ def _parts_block(
         )
         for field, heading in _CLAIM_LIST_HEADINGS.items():
             items = [
-                _part_claim_line(claim_id, claim_field, claim)
-                for claim_id, (claim_field, claim) in part_claims.items()
-                if claim_id.startswith(f"P{index}:") and claim_field == field
+                _part_claim_line(f"P{index}:{claim['id']}", field, claim)
+                for claim in part.output.get(field, [])
             ]
             if items:
                 lines.append(f"{heading}:")
@@ -290,8 +281,9 @@ def _unit_key_inputs(unit: Unit) -> list:
     return [unit.run.learning_resource_id, unit.title, unit.kind]
 
 
-def _generate_split_unit_claims(
+def _generate_split_unit_claims(  # noqa: PLR0913
     unit: Unit,
+    extractor: ClaimExtractor,
     sources_by_part: list[list[Source]],
     outline: str,
     header: str,
@@ -301,37 +293,30 @@ def _generate_split_unit_claims(
     """
     Extract each part of a split unit, then merge them into the unit's claims.
 
+    The parts are extracted with the unit's extractor, at the unit_part level.
+
     The merge is keyed by its parts' keys and outputs.
     """
     all_sources = [source for sources in sources_by_part for source in sources]
-    merge_extractor = load_unit_merge_extractor()
-    part_extractions = extract_parts(
-        load_unit_part_extractor(),
+    return extract_split_unit(
+        extractor,
+        load_unit_merge_extractor(),
         unit,
-        sources_by_part,
-        _unit_key_inputs(unit),
-        lambda index, sources: prompts.unit_combined_prompt(
+        sources_by_part=sources_by_part,
+        key_inputs=_unit_key_inputs(unit),
+        build_part_prompt=lambda index, sources: prompts.unit_combined_prompt(
             outline,
             _part_header(header, index, sources),
             "\n".join(source.block for source in sources),
         ),
-        finish=_number_claims,
-        overwrite=overwrite,
-    )
-    return get_or_create_extraction(
-        merge_extractor,
-        merge_extractor.key(
-            "merge",
-            *_unit_key_inputs(unit),
-            # a part regenerated with overwrite keeps its key but not its output
-            [[part.key, part.output] for part in part_extractions],
-        ),
-        lambda: prompts.unit_merge_combined_prompt(
-            outline, header, _parts_block(part_extractions, sources_by_part)
-        ),
-        all_sources,
-        unit=unit,
-        finish=lambda output: resolve_merged_claims(output, part_extractions),
+        merge=lambda parts: {
+            "build_prompt": lambda: prompts.unit_merge_combined_prompt(
+                outline, header, _parts_block(parts, sources_by_part)
+            ),
+            "sources": all_sources,
+            "finish": lambda output: resolve_merged_claims(output, parts),
+        },
+        finish_part=_number_claims,
         overwrite=overwrite,
     )
 
@@ -378,11 +363,9 @@ def generate_unit_claims(
     sources_by_part = pack_parts(sources, config.input_token_budget)
     if len(sources_by_part) > 1:
         return _generate_split_unit_claims(
-            unit, sources_by_part, outline, header, overwrite=overwrite
+            unit, extractor, sources_by_part, outline, header, overwrite=overwrite
         )
-    # the unit fits in one call now; parts from an earlier split aren't current
-    delete_stale_parts(unit)
-    return get_or_create_extraction(
+    extraction = get_or_create_extraction(
         extractor,
         extractor.key(
             *_unit_key_inputs(unit),
@@ -398,3 +381,8 @@ def generate_unit_claims(
         finish=_number_claims,
         overwrite=overwrite,
     )
+    # the unit fits in one call now, so parts from an earlier split aren't
+    # current. They're kept until the extraction is stored, since a failed
+    # call leaves the unit's earlier merge, which cites them.
+    delete_stale_parts(unit)
+    return extraction

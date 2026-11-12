@@ -569,6 +569,32 @@ def test_split_unit_changed_part_reruns(fake_llm):
     assert extraction.key != first.key
 
 
+def test_split_units_with_same_part_keep_their_own_parts(fake_llm):
+    """Units whose first part is the same each keep a row for it"""
+    _split_budget()
+    unit = _build_unit(kind=Unit.Kind.BIN)
+    other_unit = UnitFactory.create(
+        run=unit.run, external_id="bin:other", title=unit.title, kind=unit.kind
+    )
+    for unit_file in unit.unitcontentfile_set.all():
+        UnitContentFileFactory.create(
+            unit=other_unit,
+            content_file=unit_file.content_file,
+            position=unit_file.position,
+        )
+    _add_file(other_unit, "Recitation: two blocks joined by a string.", position=2)
+
+    _generate(unit)
+    _generate(other_unit)
+    calls = fake_llm.call_count
+    _generate(unit)
+
+    assert fake_llm.call_count == calls
+    assert [part.part for part in _parts(unit)] == [1, 2]
+    assert [part.part for part in _parts(other_unit)] == [1, 2, 3]
+    assert _parts(unit)[0].key != _parts(other_unit)[0].key
+
+
 def test_split_unit_fewer_parts(fake_llm):
     """Parts left from a longer split are deleted"""
     _split_budget()
@@ -594,6 +620,53 @@ def test_unit_no_longer_split(fake_llm):
 
     assert list(ClaimExtraction.objects.filter(unit=unit)) == [extraction]
     assert extraction.raw_response == "unit raw"
+
+
+def _fail_on(schema=None, *, whole_unit=False):
+    """Answer like _answer, but fail the merge call or the whole-unit call"""
+
+    def answer(extractor, prompt):
+        if extractor.schema is schema or (whole_unit and "PART " not in prompt):
+            msg = "bad response"
+            raise ClaimExtractionError(msg)
+        return _answer(extractor, prompt)
+
+    return answer
+
+
+def test_failed_merge_keeps_parts_of_longer_split(fake_llm):
+    """Parts of a longer split are kept while the merge citing them is current"""
+    _split_budget()
+    unit = _build_unit()
+    _add_file(unit, "Recitation: two blocks joined by a string.", position=2)
+    first = _generate(unit)
+    unit.unitcontentfile_set.get(position=2).delete()
+    fake_llm.side_effect = _fail_on(UnitMergeExtraction)
+
+    with pytest.raises(ClaimExtractionError):
+        _generate(unit)
+
+    assert [part.part for part in _parts(unit)] == [1, 2, 3]
+    assert ClaimExtraction.objects.get(unit=unit, level=ClaimExtraction.Level.UNIT) == (
+        first
+    )
+
+
+def test_failed_unsplit_call_keeps_parts(fake_llm):
+    """A unit no longer split keeps its parts until its own call succeeds"""
+    _split_budget()
+    unit = _build_unit()
+    first = _generate(unit)
+    _split_budget(100000)
+    fake_llm.side_effect = _fail_on(whole_unit=True)
+
+    with pytest.raises(ClaimExtractionError):
+        _generate(unit)
+
+    assert [part.part for part in _parts(unit)] == [1, 2]
+    assert ClaimExtraction.objects.get(unit=unit, level=ClaimExtraction.Level.UNIT) == (
+        first
+    )
 
 
 def test_split_unit_overwrite(fake_llm):

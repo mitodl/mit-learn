@@ -426,7 +426,7 @@ def _check_and_complete_output(
         output["coverage_limitations"].append(
             {
                 "text": (
-                    f"Files over the per-file limit, read only in part: {truncated}."
+                    f"Files too long to read in full, read only in part: {truncated}."
                 ),
                 "claim_ids": [],
                 "from_code": True,

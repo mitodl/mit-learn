@@ -12,7 +12,7 @@ import json
 import logging
 import types
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import cached_property
 from typing import Union, get_args, get_origin
 
@@ -303,14 +303,33 @@ def merge_evidence(claims: list[dict]) -> list[dict]:
 def delete_stale_parts(unit: Unit, keep_first: int = 0) -> None:
     """
     Delete a unit's part extractions after the first `keep_first`: the rest are
-    left from an earlier, longer split
+    left from an earlier, longer split.
+
+    Call it only once the unit's own extraction has been stored, since until
+    then the unit's earlier merged extraction cites these parts.
     """
     ClaimExtraction.objects.filter(
         unit=unit, level=ClaimExtraction.Level.UNIT_PART, part__gt=keep_first
     ).delete()
 
 
-def extract_parts(  # noqa: PLR0913
+def part_header(index: int, sources: list[Source], subject: str, rest: str) -> str:
+    """
+    Return the line that tells the model which part of a split unit it reads
+
+    Args:
+        index (int): the part's index, from 1
+        sources (list of Source): the part's sources
+        subject (str): what is split, like "the unit"
+        rest (str): what the model is told about reading only a part
+    """
+    return (
+        f"PART {index} of {subject}: sources {sources[0].source_id}-"
+        f"{sources[-1].source_id}. {rest}"
+    )
+
+
+def _extract_parts(  # noqa: PLR0913
     extractor: ClaimExtractor,
     unit: Unit,
     sources_by_part: list[list[Source]],
@@ -321,12 +340,15 @@ def extract_parts(  # noqa: PLR0913
     overwrite: bool = False,
 ) -> list[ClaimExtraction]:
     """
-    Extract each part of a split unit, and delete parts left from a longer split.
+    Extract each part of a split unit.
 
     Source ids run through the whole unit, so a part's evidence cites the same
-    ids as the unit's sources. A part is keyed by its position and its
-    sources' ids and text, and not by the number of parts, so a part is
-    reused when parts are added after it.
+    ids as the unit's sources. A part is keyed by its unit, its position and
+    its sources' ids and text, and not by the number of parts, so a part is
+    reused when parts are added after it. The unit is in the key so that a
+    part row belongs to one unit: units that share a part's sources, like
+    two bins whose first files are the same, each get their own row rather
+    than taking one row back from each other.
 
     Args:
         extractor (ClaimExtractor): the part extractor, at the unit_part level
@@ -352,6 +374,7 @@ def extract_parts(  # noqa: PLR0913
             get_or_create_extraction(
                 extractor,
                 extractor.key(
+                    unit.id,
                     *key_inputs,
                     index,
                     [[source.source_id, source.cache_input()] for source in sources],
@@ -364,56 +387,81 @@ def extract_parts(  # noqa: PLR0913
                 overwrite=overwrite,
             )
         )
-    delete_stale_parts(unit, keep_first=len(part_extractions))
     return part_extractions
 
 
-def get_or_create_computed_extraction(
+def extract_split_unit(  # noqa: PLR0913
     extractor: ClaimExtractor,
-    key: str,
-    compute: Callable[[], dict],
-    *,
+    merge_extractor: ClaimExtractor,
     unit: Unit,
+    *,
+    sources_by_part: list[list[Source]],
+    key_inputs: list,
+    build_part_prompt: Callable[[int, list[Source]], str],
+    merge: Callable[[list[ClaimExtraction]], dict],
+    finish_part: Callable[[dict], dict] | None = None,
     overwrite: bool = False,
 ) -> ClaimExtraction:
     """
-    Return a split unit's extraction computed in code from its parts, storing
-    it if there is none for the key.
+    Extract each part of a split unit, then merge them into the unit's row.
 
-    The key is built from the parts' keys and outputs, so a stored row is
-    what compute() would return.
+    Parts left from a longer split are deleted only once the merge is
+    stored: until then the unit's earlier merge comes from them.
 
     Args:
-        extractor (ClaimExtractor): the unit's extractor, whose level, version
-            and model the row is stored with
-        key (str): the merge's cache key
-        compute (callable): returns the output
+        extractor (ClaimExtractor): the unit's extractor; parts are extracted
+            with it at the unit_part level
+        merge_extractor (ClaimExtractor): the extractor the merged row is
+            stored with
         unit (Unit): the split unit
-        overwrite (bool): compute again even when the key is stored
+        sources_by_part (list of list of Source): each part's sources, from
+            pack_parts
+        key_inputs (list): what else the keys are built from, like the course
+            and the unit's title
+        build_part_prompt (callable): returns a part's prompt, given its index
+            from 1 and its sources
+        merge (callable): given the parts, returns how the merge is made, as
+            keyword arguments for get_or_create_extraction: build_prompt,
+            sources and finish for a model call, or compute
+        finish_part (callable): passed to get_or_create_extraction for each part
+        overwrite (bool): call the model for every part and the merge, even
+            when stored
+
+    Raises:
+        ClaimExtractionError: when the model gives no valid response
     """
-    extraction = ClaimExtraction.objects.filter(key=key).first()
-    if extraction and not overwrite:
-        return _store_extraction(extraction, unit=unit, run=None, level=extractor.level)
-    return _store_extraction(
-        extraction,
-        unit=unit,
-        run=None,
-        level=extractor.level,
-        key=key,
-        extractor_version=f"{extractor.version}-merge",
-        model=extractor.config.llm_model,
-        output=_sanitize(compute()),
-        raw_response="",
-        published=False,
+    part_extractions = _extract_parts(
+        replace(extractor, level=ClaimExtraction.Level.UNIT_PART),
+        unit,
+        sources_by_part,
+        key_inputs,
+        build_part_prompt,
+        finish=finish_part,
+        overwrite=overwrite,
     )
+    extraction = get_or_create_extraction(
+        merge_extractor,
+        merge_extractor.key(
+            "merge",
+            *key_inputs,
+            # a part regenerated with overwrite keeps its key but not its output
+            [[part.key, part.output] for part in part_extractions],
+        ),
+        unit=unit,
+        overwrite=overwrite,
+        **merge(part_extractions),
+    )
+    delete_stale_parts(unit, keep_first=len(part_extractions))
+    return extraction
 
 
 def get_or_create_extraction(  # noqa: PLR0913
     extractor: ClaimExtractor,
     key: str,
-    build_prompt: Callable[[], str],
-    sources: list[Source],
+    build_prompt: Callable[[], str] | None = None,
+    sources: list[Source] = (),
     *,
+    compute: Callable[[], dict] | None = None,
     unit: Unit | None = None,
     run: LearningResourceRun | None = None,
     part: int | None = None,
@@ -422,6 +470,10 @@ def get_or_create_extraction(  # noqa: PLR0913
 ) -> ClaimExtraction:
     """
     Return the extraction for a key, calling the model if there is none.
+
+    An output that is computed in code rather than by the model, like a split
+    context unit's combined parts, is given as `compute` instead of
+    `build_prompt`; it is stored the same way, with no raw response.
 
     Units with the same inputs share the key's row, which is pointed at the
     unit asking for it, so `unit` is the unit that used the row last. The
@@ -435,6 +487,10 @@ def get_or_create_extraction(  # noqa: PLR0913
             called only when the model is
         sources (list of Source): the sources in the prompt, to verify the
             output's evidence against
+        compute (callable): returns the output, in place of a model call;
+            exactly one of build_prompt and compute is given. The key must be
+            built from what compute() reads, so a stored row is what it
+            would return.
         unit (Unit): the unit the call is for, for a unit-level extraction
         run (LearningResourceRun): the run the call is for, for a run-level
             extraction; exactly one of unit and run is given
@@ -451,14 +507,21 @@ def get_or_create_extraction(  # noqa: PLR0913
     if (unit is None) == (run is None):
         msg = "Pass exactly one of unit and run"
         raise ValueError(msg)
+    if (build_prompt is None) == (compute is None):
+        msg = "Pass exactly one of build_prompt and compute"
+        raise ValueError(msg)
     if not overwrite:
         extraction = ClaimExtraction.objects.filter(key=key).first()
         if extraction:
             return _store_extraction(
                 extraction, unit=unit, run=run, level=extractor.level, part=part
             )
-    parsed, raw = call_llm(extractor, build_prompt())
-    output = _stored_output(parsed.model_dump(), sources)
+    if compute is not None:
+        output, raw, version = compute(), "", f"{extractor.version}-merge"
+    else:
+        parsed, raw = call_llm(extractor, build_prompt())
+        output = _stored_output(parsed.model_dump(), sources)
+        version = extractor.version
     if finish:
         output = finish(output)
     return _store_extraction(
@@ -468,7 +531,7 @@ def get_or_create_extraction(  # noqa: PLR0913
         level=extractor.level,
         part=part,
         key=key,
-        extractor_version=extractor.version,
+        extractor_version=version,
         model=extractor.config.llm_model,
         output=_sanitize(output),
         raw_response=sanitize_llm_text(raw),

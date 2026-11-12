@@ -392,6 +392,23 @@ def test_context_no_longer_split(fake_llm):
     assert ClaimExtraction.objects.count() == 1
 
 
+def test_failed_unsplit_context_keeps_parts(fake_llm):
+    """A context unit no longer split keeps its parts until its call succeeds"""
+    _split_budget()
+    run = _build_split_run()
+    first = generate_context_claims(run)
+    _split_budget(100000)
+    fake_llm.fail = True
+
+    with pytest.raises(ClaimExtractionError):
+        generate_context_claims(run)
+
+    assert [part.part for part in _parts(run)] == [1, 2]
+    assert ClaimExtraction.objects.get(
+        unit=first.unit, level=ClaimExtraction.Level.UNIT
+    ) == (first)
+
+
 def test_failed_context(mocker):
     """A context unit with no valid response raises, and nothing is stored"""
     mocker.patch.object(claims, "call_llm", FakeLLM(fail=True))
@@ -456,3 +473,82 @@ def test_call_llm_drops_invalid_description(mocker):
     assert parsed.extraction_notes[0].startswith(
         "Dropped description, which did not validate: evidence:"
     )
+
+
+def _parts_outputs():
+    return [
+        _context_out(
+            f"=== SOURCE {source_id} | x ===\nsome source text here"
+        ).model_dump()
+        for source_id in ("S01", "S02")
+    ]
+
+
+def test_merge_combines_paraphrased_prerequisites():
+    """A prerequisite the parts state in other words is kept once"""
+    first, second = _parts_outputs()
+    first["prerequisites"] = [_prerequisite("18.01 is required", "18.01", "S01")]
+    second["prerequisites"] = [
+        _prerequisite("Students must have taken 18.01", "18.01", "S02")
+    ]
+
+    [prerequisite] = merge_context_outputs([first, second], [])["prerequisites"]
+
+    assert prerequisite["statement"] == "18.01 is required"
+    assert [item["source_id"] for item in prerequisite["evidence"]] == ["S01", "S02"]
+
+
+def _statement(text, source_id):
+    return {
+        "text": text,
+        "evidence": [{"source_id": source_id, "passage": text, "locator": None}],
+    }
+
+
+def _conflict(topic, statements, assessment):
+    return {"topic": topic, "statements": statements, "assessment": assessment}
+
+
+def test_merge_combines_conflicts_on_one_topic():
+    """Conflicts on the same topic are combined, and others are kept apart"""
+    first, second = _parts_outputs()
+    first["conflicts"] = [
+        _conflict(
+            "Grading",
+            [
+                _statement("Exams are 50%", "S01"),
+                _statement("Exams are 40%", "S01"),
+            ],
+            "The syllabus is likely authoritative",
+        )
+    ]
+    second["conflicts"] = [
+        _conflict(
+            "grading.",
+            [
+                _statement("Exams are 40%", "S02"),
+                _statement("Exams are 60%", "S02"),
+            ],
+            "Unclear",
+        ),
+        _conflict(
+            "Textbook",
+            [_statement("Use Kleppner", "S02"), _statement("Use Halliday", "S02")],
+            "Either",
+        ),
+    ]
+
+    conflicts = merge_context_outputs([first, second], [])["conflicts"]
+
+    assert [conflict["topic"] for conflict in conflicts] == ["Grading", "Textbook"]
+    grading = conflicts[0]
+    assert grading["assessment"] == "The syllabus is likely authoritative"
+    assert [statement["text"] for statement in grading["statements"]] == [
+        "Exams are 50%",
+        "Exams are 40%",
+        "Exams are 60%",
+    ]
+    assert [item["source_id"] for item in grading["statements"][1]["evidence"]] == [
+        "S01",
+        "S02",
+    ]

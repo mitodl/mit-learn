@@ -42,7 +42,7 @@ class Source:
 
     @property
     def truncated(self) -> bool:
-        """Whether the file was cut to fit the per-file limit"""
+        """Whether the file was cut to fit the per-file limit or the input budget"""
         return self.included_chars < self.total_chars
 
     @property

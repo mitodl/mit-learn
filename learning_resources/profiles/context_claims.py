@@ -14,8 +14,6 @@ with their own evidence, which the run stage reads by position, so they are
 concatenated, with repeats dropped.
 """
 
-from dataclasses import replace
-
 from learning_resources.models import (
     ClaimExtraction,
     LearningResourceRun,
@@ -26,11 +24,11 @@ from learning_resources.profiles import prompts
 from learning_resources.profiles.claims import (
     ClaimExtractor,
     delete_stale_parts,
-    extract_parts,
-    get_or_create_computed_extraction,
+    extract_split_unit,
     get_or_create_extraction,
     load_extractor,
     merge_evidence,
+    part_header,
 )
 from learning_resources.profiles.schemas import CourseContextOut
 from learning_resources.profiles.sources import Source, pack_parts, unit_sources
@@ -65,12 +63,13 @@ def _context_key_inputs(run: LearningResourceRun) -> list:
 
 
 def _part_header(index: int, sources: list[Source]) -> str:
-    return (
-        f"PART {index} of the course context: sources {sources[0].source_id}-"
-        f"{sources[-1].source_id}. The context files are too long to read at once,"
-        " so the other parts are extracted separately and combined afterwards."
-        " Extract only from these sources, and set prerequisites_status from"
-        " them alone."
+    return part_header(
+        index,
+        sources,
+        "the course context",
+        "The context files are too long to read at once, so the other parts are"
+        " extracted separately and combined afterwards. Extract only from these"
+        " sources, and set prerequisites_status from them alone.",
     )
 
 
@@ -93,24 +92,48 @@ def _dedupe_by(items: list[dict], key) -> list[dict]:
 
 def _prerequisite_key(prerequisite: dict) -> tuple:
     """
-    Return what makes a prerequisite the same requirement as another: two
-    "Calculus" prerequisites that cite 18.01 and 18.02 are both kept
+    Return what makes a prerequisite the same requirement as another.
+
+    The statement is left out: parts paraphrase the same requirement in their
+    own words, so "Calculus" stated twice is one prerequisite, with the first
+    part's statement. Two "Calculus" prerequisites that cite 18.01 and 18.02
+    are both kept.
     """
     return (
         normalize(prerequisite["label"]),
         prerequisite["kind"],
-        normalize(prerequisite["statement"]),
         normalize(prerequisite.get("course_ref") or ""),
     )
+
+
+def _merge_conflicts(conflicts: list[dict]) -> list[dict]:
+    """
+    Return conflicts in order, with a conflict on the same topic as an earlier
+    one combined with it: its statements are added to the earlier one's,
+    without repeats, and the earlier one's assessment is kept
+    """
+    merged: dict = {}
+    for conflict in conflicts:
+        topic = normalize(conflict["topic"])
+        if topic not in merged:
+            merged[topic] = dict(conflict)
+        else:
+            merged[topic]["statements"] = _dedupe_by(
+                merged[topic]["statements"] + conflict["statements"],
+                lambda statement: normalize(statement["text"]),
+            )
+    return list(merged.values())
 
 
 def merge_context_outputs(outputs: list[dict], sources: list[Source]) -> dict:
     """
     Combine the outputs of a split context unit's parts into its output.
 
-    Statements, prerequisites and outline entries are concatenated in part
-    order, and one that repeats an earlier one is dropped, its evidence kept
-    with the earlier one. The title and description are the first part's
+    Statements, prerequisites, outline entries and conflicts are concatenated
+    in part order, and one that repeats an earlier one is dropped, its
+    evidence kept with the earlier one. A conflict repeats an earlier one when
+    it is on the same topic, and its statements are added to the earlier
+    one's. The title and description are the first part's
     that has one, and prerequisites are stated when any part states them.
 
     Args:
@@ -144,7 +167,7 @@ def merge_context_outputs(outputs: list[dict], sources: list[Source]) -> dict:
             all_items("instructional_outline"),
             lambda entry: (normalize(entry["unit_label"]), normalize(entry["title"])),
         ),
-        "conflicts": all_items("conflicts"),
+        "conflicts": _merge_conflicts(all_items("conflicts")),
         # the parts' notes include their sources' truncation notes
         "extraction_notes": list(dict.fromkeys(all_items("extraction_notes"))),
         "sources": [source.summary() for source in sources],
@@ -162,31 +185,23 @@ def _generate_split_context_claims(
 ) -> ClaimExtraction:
     """Extract each part of a split context unit, then combine them"""
     title = run.learning_resource.title
-    part_extractions = extract_parts(
-        replace(extractor, level=ClaimExtraction.Level.UNIT_PART),
+    all_sources = [source for sources in sources_by_part for source in sources]
+    return extract_split_unit(
+        extractor,
+        extractor,
         unit,
-        sources_by_part,
-        _context_key_inputs(run),
-        lambda index, sources: prompts.context_unit_combined_prompt(
+        sources_by_part=sources_by_part,
+        key_inputs=_context_key_inputs(run),
+        build_part_prompt=lambda index, sources: prompts.context_unit_combined_prompt(
             title,
             "\n".join(source.block for source in sources),
             _part_header(index, sources),
         ),
-        overwrite=overwrite,
-    )
-    all_sources = [source for sources in sources_by_part for source in sources]
-    return get_or_create_computed_extraction(
-        extractor,
-        extractor.key(
-            "merge",
-            *_context_key_inputs(run),
-            # a part regenerated with overwrite keeps its key but not its output
-            [[part.key, part.output] for part in part_extractions],
-        ),
-        lambda: merge_context_outputs(
-            [part.output for part in part_extractions], all_sources
-        ),
-        unit=unit,
+        merge=lambda parts: {
+            "compute": lambda: merge_context_outputs(
+                [part.output for part in parts], all_sources
+            )
+        },
         overwrite=overwrite,
     )
 
@@ -228,10 +243,7 @@ def generate_context_claims(
         return _generate_split_context_claims(
             run, unit, extractor, sources_by_part, overwrite=overwrite
         )
-    # the context unit fits in one call now; parts from an earlier split
-    # aren't current
-    delete_stale_parts(unit)
-    return get_or_create_extraction(
+    extraction = get_or_create_extraction(
         extractor,
         extractor.key(
             *_context_key_inputs(run),
@@ -245,3 +257,8 @@ def generate_context_claims(
         unit=unit,
         overwrite=overwrite,
     )
+    # the context unit fits in one call now, so parts from an earlier split
+    # aren't current. They're kept until the extraction is stored, since a
+    # failed call leaves the unit's earlier combined extraction.
+    delete_stale_parts(unit)
+    return extraction
