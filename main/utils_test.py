@@ -27,7 +27,7 @@ from main.utils import (
     _sorted_query_string,
     cache_page_for_all_users,
     cache_page_for_anonymous_users,
-    call_fastly_purge_api,
+    call_fastly_purge_surrogate_keys,
     chunks,
     clean_data,
     clear_views_cache,
@@ -41,6 +41,7 @@ from main.utils import (
     merge_strings,
     normalize_to_start_of_day,
     now_in_utc,
+    path_surrogate_key,
     prefetched_iterator,
     run_on_worker_loop,
     write_to_file,
@@ -683,17 +684,43 @@ def test_clear_views_cache_uses_large_itersize(mock_caches):
     assert result == 3
 
 
-@pytest.mark.parametrize("soft", [True, False])
-def test_call_fastly_purge_api_soft_header(mocker, settings, soft):
-    """soft=True sends the Fastly-Soft-Purge: 1 header; default sends none"""
+def test_path_surrogate_key_decodes_path_and_drops_query():
+    """The key matches the Next.js proxy's: decoded path, no query string"""
+    assert (
+        path_surrogate_key("https://learn.mit.edu/c/unit/mit%3Axpro?page=2")
+        == "path:/c/unit/mit:xpro"
+    )
+
+
+def test_call_fastly_purge_surrogate_keys(mocker, settings):
+    """Bulk-purges the keys against the configured service"""
     settings.FASTLY_API_KEY = "fake-key"
-    mock_request = mocker.patch("main.utils.requests.request")
-    mock_request.return_value.json.return_value = {"status": "ok"}
+    settings.FASTLY_SERVICE_ID = "svc123"
+    mock_post = mocker.patch("main.utils.requests.post")
 
-    call_fastly_purge_api("/c/unit/mitx", soft=soft)
+    call_fastly_purge_surrogate_keys(["path:/c/unit/mitx", "path:/c/topic/math"])
 
-    headers = mock_request.call_args.kwargs["headers"]
-    assert headers.get("Fastly-Soft-Purge") == ("1" if soft else None)
+    mock_post.assert_called_once_with(
+        "https://api.fastly.com/service/svc123/purge",
+        headers={
+            "fastly-key": "fake-key",
+            "Surrogate-Key": "path:/c/unit/mitx path:/c/topic/math",
+        },
+        timeout=30,
+    )
+
+
+def test_call_fastly_purge_surrogate_keys_without_service_id(mocker, settings):
+    """A missing service ID skips the purge and logs an error, not a request"""
+    settings.FASTLY_API_KEY = "fake-key"
+    settings.FASTLY_SERVICE_ID = ""
+    mock_post = mocker.patch("main.utils.requests.post")
+    mock_log = mocker.patch("main.utils.log")
+
+    call_fastly_purge_surrogate_keys(["path:/c/unit/mitx"])
+
+    mock_post.assert_not_called()
+    mock_log.error.assert_called_once()
 
 
 def test_run_on_worker_loop_returns_the_result():
