@@ -34,3 +34,18 @@ def test_save_related_creates_profile_and_favorites_if_missing(mocker, settings)
     assert user.user_lists.count() == 1
     # Profile should be linked to user and saved
     assert user.profile.user == user
+
+
+@pytest.mark.django_db
+def test_null_username_replace_keeps_the_username():
+    """
+    scim-for-keycloak sends a removed userName as a replace with null; username
+    is NOT NULL, so the stored value stays instead of the save failing
+    """
+    user = UserFactory.create(username="kept")
+    adapter = LearnUserAdapter(user)
+
+    adapter.handle_replace(adapter.split_path("userName"), None, {"op": "replace"})
+
+    user.refresh_from_db()
+    assert user.username == "kept"
