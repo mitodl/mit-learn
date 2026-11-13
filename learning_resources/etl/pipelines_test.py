@@ -576,3 +576,11 @@ def test_ocw_courses_etl_ocr_pdfs(settings, mocker):
         mock_ocr.call_count
         == run.content_files.filter(published=True, file_extension=".pdf").count()
     )
+    # each PDF's figures are saved under its content file's key and S3 ETag
+    pdf_keys = set(
+        run.content_files.filter(published=True, file_extension=".pdf").values_list(
+            "key", flat=True
+        )
+    )
+    assert {call.kwargs["key"] for call in mock_ocr.call_args_list} == pdf_keys
+    assert all(call.kwargs["version"] for call in mock_ocr.call_args_list)
