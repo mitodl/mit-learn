@@ -12,7 +12,7 @@ import {
   RedemptionTypeEnum,
 } from "@mitodl/mitxonline-api-axios/v0"
 import { faker } from "@faker-js/faker/locale/en"
-import { UniqueEnforcer } from "enforce-unique"
+import { UniqueEnforcer } from "../../../test-utils/factories/uniqueEnforcer"
 
 const uniqueDiscountId = new UniqueEnforcer()
 

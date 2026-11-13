@@ -5,7 +5,7 @@ import type {
 import { NodeTypeEnum } from "@mitodl/mitxonline-api-axios/v2"
 
 import { faker } from "@faker-js/faker/locale/en"
-import { UniqueEnforcer } from "enforce-unique"
+import { UniqueEnforcer } from "../../../test-utils/factories/uniqueEnforcer"
 import invariant from "tiny-invariant"
 
 const uniqueNodeId = new UniqueEnforcer()

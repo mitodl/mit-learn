@@ -1,7 +1,7 @@
 import { faker } from "@faker-js/faker/locale/en"
 import { startCase } from "lodash"
 import type { Factory, PartialFactory } from "ol-test-utilities"
-import { UniqueEnforcer } from "enforce-unique"
+import { UniqueEnforcer } from "./uniqueEnforcer"
 import { makePaginatedFactory, mergeOverrides } from "ol-test-utilities"
 import type {
   ContentFile,

@@ -7,7 +7,7 @@ import type {
 } from "@mitodl/mitxonline-api-axios/v2"
 import type { V3SimpleProgram } from "@mitodl/mitxonline-api-axios/v3"
 import { faker } from "@faker-js/faker/locale/en"
-import { UniqueEnforcer } from "enforce-unique"
+import { UniqueEnforcer } from "../../../test-utils/factories/uniqueEnforcer"
 import * as courses from "./courses"
 
 const uniqueProgramId = new UniqueEnforcer()

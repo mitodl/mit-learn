@@ -1,7 +1,7 @@
 import { faker } from "@faker-js/faker/locale/en"
 import type { PartialFactory } from "ol-test-utilities"
 import type { CurrentUser, Profile } from "../../generated/v0"
-import { UniqueEnforcer } from "enforce-unique"
+import { UniqueEnforcer } from "./uniqueEnforcer"
 
 const profile: PartialFactory<Profile> = (overrides = {}): Profile => ({
   name: faker.person.fullName(),

@@ -8,7 +8,7 @@ import {
 } from "api"
 import { resource as learningResource } from "./learningResources"
 import { faker } from "@faker-js/faker/locale/en"
-import { UniqueEnforcer } from "enforce-unique"
+import { UniqueEnforcer } from "./uniqueEnforcer"
 
 const uniqueEnforcerWords = new UniqueEnforcer()
 const uniqueEnforcerId = new UniqueEnforcer()

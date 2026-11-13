@@ -12,7 +12,7 @@ import type {
   FAQItem,
   TestimonialItem,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { UniqueEnforcer } from "enforce-unique"
+import { UniqueEnforcer } from "../../../test-utils/factories/uniqueEnforcer"
 import { program } from "./programs"
 
 const makeHTMLParagraph = (num: number) => {

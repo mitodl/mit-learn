@@ -4,7 +4,7 @@ import {
   mergeOverrides,
   type PartialFactory,
 } from "ol-test-utilities"
-import { UniqueEnforcer } from "enforce-unique"
+import { UniqueEnforcer } from "./uniqueEnforcer"
 import {
   ChannelTypeEnum,
   DepartmentChannel,

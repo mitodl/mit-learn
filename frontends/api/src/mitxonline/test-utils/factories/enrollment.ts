@@ -7,7 +7,7 @@ import type {
   V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v3"
 import { ProgramEnrollmentModeEnum } from "@mitodl/mitxonline-api-axios/v3"
-import { UniqueEnforcer } from "enforce-unique"
+import { UniqueEnforcer } from "../../../test-utils/factories/uniqueEnforcer"
 import * as courses from "../factories/courses"
 import * as programs from "../factories/programs"
 

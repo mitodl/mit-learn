@@ -1,7 +1,7 @@
 import { SourceTypeEnum, type PercolateQuery } from "../../generated/v1"
 import { type Factory, makePaginatedFactory } from "ol-test-utilities"
 import { faker } from "@faker-js/faker/locale/en"
-import { UniqueEnforcer } from "enforce-unique"
+import { UniqueEnforcer } from "./uniqueEnforcer"
 const uniqueEnforcerId = new UniqueEnforcer()
 const percolateQuery: Factory<PercolateQuery> = (overrides = {}) => {
   const percolateQuery: PercolateQuery = {

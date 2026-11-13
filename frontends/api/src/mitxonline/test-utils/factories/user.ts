@@ -6,7 +6,7 @@ import type {
   UserProfile,
 } from "@mitodl/mitxonline-api-axios/v0"
 import { organization } from "./organization"
-import { UniqueEnforcer } from "enforce-unique"
+import { UniqueEnforcer } from "../../../test-utils/factories/uniqueEnforcer"
 
 const enforcerId = new UniqueEnforcer()
 
