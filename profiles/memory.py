@@ -92,6 +92,7 @@ def sync_profile_notes(
     if not token:
         log.warning("No forwarded access token, so profile notes were not written")
         return
+    from ol_llm import close_thread_loop
     from ol_llm.memory import MemoryFenced, MemoryStoreError
 
     try:
@@ -108,3 +109,8 @@ def sync_profile_notes(
         # The exception's message can carry a service response; the class is
         # enough to triage and keeps anything token-shaped out of the logs.
         log.warning("Profile notes were not written: %s", type(exc).__name__)
+    finally:
+        # SyncMemory runs on a per-thread ol-llm loop, and under ASGI each
+        # request's sync code runs on a thread that ends with the request, so
+        # close the loop and its HTTP clients now rather than leaving them to GC.
+        close_thread_loop()
