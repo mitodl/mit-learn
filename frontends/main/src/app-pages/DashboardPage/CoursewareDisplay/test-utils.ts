@@ -125,10 +125,9 @@ const setupOrderHistory = ({
 
 /**
  * Mock the program certificates a program card fetches to decide whether to show
- * a "Program Letter" item. Only requested when the `program-letters` flag is on,
- * so this is required in any suite that renders a program card with feature
- * flags mocked true. Defaults to no certificates (no letter link); pass
- * `mitxonlineProgramIds` to give those programs one.
+ * a "Program Letter" item. Every program card requests it, so this is required
+ * in any suite that renders one. Defaults to no certificates (no letter link);
+ * pass `mitxonlineProgramIds` to give those programs one.
  */
 const setupProgramCertificates = ({
   mitxonlineProgramIds = [],
