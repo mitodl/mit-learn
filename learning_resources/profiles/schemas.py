@@ -171,14 +171,101 @@ class MergedAssessmentOutput(Strict):
     )
 
 
+class TaughtAssumedOutput(Strict):
+    part_claim_id: str = Field(
+        description="A part's assumed knowledge id, e.g. 'P3:a1', left out"
+        " because a part teaches or reviews it"
+    )
+    taught_by: list[str] = Field(
+        min_length=1,
+        description="Ids of the part concepts with status taught or reviewed"
+        " that teach or review it, e.g. ['P1:c2']",
+    )
+
+
 class UnitMergeExtraction(Strict):
     summary: str = Field(
         description="3-5 sentence summary of what the whole unit teaches"
     )
     concepts: list[MergedConceptOutput]
     skills: list[MergedSkillOutput]
-    assumed_knowledge: list[MergedAssumedOutput]
+    assumed_knowledge: list[MergedAssumedOutput] = Field(
+        description="Assumed knowledge that no part teaches or reviews"
+    )
+    taught_assumed_knowledge: list[TaughtAssumedOutput] = Field(
+        description="Each part's assumed knowledge left out because a part"
+        " teaches or reviews it"
+    )
     assessment_expectations: list[MergedAssessmentOutput]
+    extraction_notes: list[str] = Field(description="The parts' notes, combined")
+
+
+# ----------------------------------------------------------------------- context merge
+# A context unit too large for one call is extracted in parts, which are
+# merged the same way: merged items cite the part items they come from.
+CONTEXT_PART_IDS_DESCRIPTION = (
+    "Ids of the part items this item merges, e.g. ['P1:obj2', 'P2:obj1']. Cite"
+    " only items of the same list."
+)
+
+
+class MergedStatement(Strict):
+    text: str
+    part_claim_ids: list[str] = Field(
+        min_length=1, description=CONTEXT_PART_IDS_DESCRIPTION
+    )
+
+
+class MergedPrereqStatement(Strict):
+    label: str
+    statement: str = Field(description="What the sources say, closely paraphrased")
+    kind: Literal["prerequisite", "corequisite", "recommended", "explicitly_none"]
+    course_ref: str | None = Field(
+        None, description="Referenced course number, e.g. 18.01SC"
+    )
+    part_claim_ids: list[str] = Field(
+        min_length=1, description=CONTEXT_PART_IDS_DESCRIPTION
+    )
+
+
+class MergedOutlineEntry(Strict):
+    unit_label: str
+    title: str
+    part_claim_ids: list[str] = Field(
+        min_length=1, description=CONTEXT_PART_IDS_DESCRIPTION
+    )
+
+
+class MergedConflictStatement(Strict):
+    text: str
+    part_claim_ids: list[str] = Field(
+        min_length=1,
+        description="Ids of the part statements this statement comes from,"
+        " of any list, e.g. ['P1:req2'] or ['P2:cs1']",
+    )
+
+
+class MergedConflict(Strict):
+    topic: str
+    statements: list[MergedConflictStatement] = Field(min_length=2)
+    assessment: str = Field(
+        description=(
+            "How the statements disagree and which is likely authoritative, if any"
+        )
+    )
+
+
+class ContextMergeExtraction(Strict):
+    title: str
+    stated_audience: list[MergedStatement]
+    description: MergedStatement | None = None
+    objectives: list[MergedStatement]
+    prerequisites: list[MergedPrereqStatement]
+    required_materials: list[MergedStatement]
+    instructional_outline: list[MergedOutlineEntry]
+    conflicts: list[MergedConflict] = Field(
+        description="Statements that disagree, in one part or between parts"
+    )
     extraction_notes: list[str] = Field(description="The parts' notes, combined")
 
 

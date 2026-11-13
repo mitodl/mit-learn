@@ -1474,6 +1474,9 @@ class ResourceProfileConfiguration(TimestampedModel):
     class Stage(models.TextChoices):
         # claims about the course as a whole, from the context unit
         CONTEXT = "context", "Context"
+        # claims about a context unit that was split into parts, from its
+        # parts' claims
+        CONTEXT_MERGE = "context_merge", "Context merge"
         # claims about one unit or bin
         UNIT = "unit", "Unit"
         # claims about a unit that was split into parts, from its parts' claims
@@ -1520,8 +1523,8 @@ class ResourceProfileConfiguration(TimestampedModel):
         default=100000,
         help_text="Most file text one call may read. A unit over it is split"
         " into parts that are extracted separately and then merged. For the"
-        " unit merge, the most part records it may read; parts over it are"
-        " merged in code.",
+        " merge stages, the most tokens a merge call may take; a unit whose"
+        " merge call is over it is skipped and logged as an error.",
     )
     max_parts = models.PositiveIntegerField(
         default=10,

@@ -15,6 +15,16 @@ Extract the course context from the following sources.
 Call the tool with the complete CourseContextOut."""
 
 
+def context_merge_combined_prompt(course_title: str, parts_block: str) -> str:
+    """Return the combined prompt that merges the parts of a split context unit"""
+    return f"""Course: {course_title}
+
+PART RECORDS (parts of the course context in order; item ids in brackets)
+{parts_block}
+
+Call the tool with the complete ContextMergeExtraction for the whole course context."""
+
+
 def unit_combined_prompt(
     course_outline: str, unit_header: str, sources_block: str
 ) -> str:
