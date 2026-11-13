@@ -997,6 +997,9 @@ EMBEDDING_HEDGE_REQUEST_TIMEOUT_SECONDS = get_float(
 # the SDK would otherwise send to Comet's hosted Opik.
 OL_LLM_ENVIRONMENT = get_string(name="OL_LLM_ENVIRONMENT", default=ENVIRONMENT)
 OPIK_URL_OVERRIDE = get_string(name="OPIK_URL_OVERRIDE", default=None)
+# Profile notes go to the learner's shared memory only where a backend is set
+# (profiles/memory.py). ol-llm reads the rest of OL_LLM_MEMORY_* itself.
+OL_LLM_MEMORY_BACKEND = get_string(name="OL_LLM_MEMORY_BACKEND", default=None)
 
 CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = get_int(
     name="CONTENT_FILE_EMBEDDING_CHUNK_SIZE", default=512
