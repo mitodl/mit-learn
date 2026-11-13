@@ -1470,8 +1470,9 @@ def load_practice_problems(
             load_content_tags(
                 learning_resource, learning_material_tags, is_content_file=False
             )
-            if content_file.image_src:
-                load_image(learning_resource, {"url": content_file.image_src})
+            # the problem's own figure, else none: cards show the problem's
+            # details instead of a generic image
+            load_image(learning_resource, problem.figure)
 
         update_index(learning_resource, created)
         resource_ids.append(learning_resource.id)

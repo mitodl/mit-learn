@@ -23,6 +23,8 @@ NODE_TAG = re.compile(r"^<!-- node: (?P<json>\{.*?\}) -->[ \t]*$", re.MULTILINE)
 PAGE_MARKER = re.compile(r"^[ \t]*<!-- page: \d+ -->[ \t]*$", re.MULTILINE)
 HTML_COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
 EXTRA_BLANK_LINES = re.compile(r"\n{3,}")
+# a figure in display markdown, saved to storage (an absolute url)
+DISPLAY_IMAGE = re.compile(r"!\[(?P<alt>[^\]]*)\]\((?P<url>https?://[^)\s]+)\)")
 
 VALIDATED = "validated"
 PROBLEM_ROLE = "problem"
@@ -54,6 +56,14 @@ class ParsedProblem:
     pages: list[int] = field(default_factory=list)
     topics: list[str] = field(default_factory=list)
     points: str = ""
+
+    @property
+    def figure(self) -> dict | None:
+        """The problem's first saved figure, {"url": ..., "alt": ...}, if any"""
+        for markdown in [self.statement, *(part.body for part in self.parts)]:
+            if match := DISPLAY_IMAGE.search(markdown):
+                return {"url": match["url"], "alt": match["alt"]}
+        return None
 
     @property
     def display_title(self) -> str:

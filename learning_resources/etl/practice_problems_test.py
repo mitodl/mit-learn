@@ -109,12 +109,19 @@ def test_parse_structured_problems():
     assert first.pages == [1, 2]
     assert first.topics == ["Kinematics"]
     assert first.points == "10"
+    # its first saved figure, from part (a)
+    assert first.figure == {
+        "url": "https://example.com/p1_1.png",
+        "alt": "a velocity plot",
+    }
 
     assert second.display_title == "Problem 2"
     assert second.statement == (
         "Compute $\\int_0^1 x\\,dx$.\n\n*[Figure: a shaded area]*"
     )
     assert second.parts == []
+    # an unsaved figure is not an image
+    assert second.figure is None
 
 
 @pytest.mark.parametrize(

@@ -4459,6 +4459,10 @@ def test_load_learning_materials_practice_problems(mocker, settings):
     assert first.document_title == "Problem Set 1"
     # no friendly title: the file's title names the problem
     assert second.learning_resource.title == "Problem Set 1: Problem 2"
+    # a problem's image is its first figure, if it has one
+    assert resource.image.url == "https://example.com/p1_1.png"
+    assert resource.image.alt == "a velocity plot"
+    assert second.learning_resource.image is None
 
     assert set(
         run.learning_resource.children.filter(
