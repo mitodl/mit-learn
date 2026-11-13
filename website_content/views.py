@@ -79,6 +79,14 @@ class WebsiteContentViewSet(viewsets.ModelViewSet):
             .order_by("-publish_date", "-id")
         )
 
+    def filter_queryset(self, queryset):
+        # The filters narrow the listing only. Retrieve, update and destroy
+        # also pass through here, and the `status` filter's published default
+        # would hide a draft from the editor opening or saving it.
+        if self.action != "list":
+            return queryset
+        return super().filter_queryset(queryset)
+
     # Not cached: the response depends on the caller (editors also get drafts).
     # Django's cache_page can't vary this by user -- it stores the entry before
     # SessionMiddleware adds `Vary: Cookie`, so every caller would share it.

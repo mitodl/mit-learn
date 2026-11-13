@@ -22,11 +22,6 @@ paths:
 
           * `news` - News
           * `article` - Article
-      - in: query
-        name: draft
-        schema:
-          type: boolean
-        description: Filter to show only draft (unpublished) items
       - name: limit
         required: false
         in: query
@@ -39,6 +34,20 @@ paths:
         description: The initial index from which to return the results.
         schema:
           type: integer
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - both
+          - draft
+          - published
+        description: |-
+          Filter by publish status. Defaults to published. Drafts are only returned to users who may edit website content; for anyone else, draft is always empty and both is the same as published.
+
+          * `published` - Published
+          * `draft` - Draft
+          * `both` - Both
       tags:
       - articles
       responses:
@@ -10097,11 +10106,6 @@ paths:
 
           * `news` - News
           * `article` - Article
-      - in: query
-        name: draft
-        schema:
-          type: boolean
-        description: Filter to show only draft (unpublished) items
       - name: limit
         required: false
         in: query
@@ -10114,6 +10118,20 @@ paths:
         description: The initial index from which to return the results.
         schema:
           type: integer
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - both
+          - draft
+          - published
+        description: |-
+          Filter by publish status. Defaults to published. Drafts are only returned to users who may edit website content; for anyone else, draft is always empty and both is the same as published.
+
+          * `published` - Published
+          * `draft` - Draft
+          * `both` - Both
       tags:
       - website_content
       responses:
