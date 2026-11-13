@@ -1474,9 +1474,6 @@ class ResourceProfileConfiguration(TimestampedModel):
     class Stage(models.TextChoices):
         # claims about the course as a whole, from the context unit
         CONTEXT = "context", "Context"
-        # claims about a context unit that was split into parts, from its
-        # parts' claims
-        CONTEXT_MERGE = "context_merge", "Context merge"
         # claims about one unit or bin
         UNIT = "unit", "Unit"
         # claims about a unit that was split into parts, from its parts' claims
@@ -1522,16 +1519,16 @@ class ResourceProfileConfiguration(TimestampedModel):
     input_token_budget = models.PositiveIntegerField(
         default=100000,
         help_text="Most file text one call may read. A unit over it is split"
-        " into parts that are extracted separately and then merged. For the"
-        " merge stages, the most tokens a merge call may take; a unit whose"
-        " merge call is over it is skipped and logged as an error.",
+        " into parts that are extracted separately and then merged; a context"
+        " unit over it is skipped. For the unit merge stage, the most tokens a"
+        " merge call may take; a unit whose merge call is over it is skipped"
+        " and logged as an error.",
     )
     max_parts = models.PositiveIntegerField(
         default=10,
         help_text="Most parts a unit over the input budget may be split into;"
         " each part is a call of its own. A unit that would need more is"
-        " skipped. 1 turns splitting off. Only the unit and context stages use"
-        " it.",
+        " skipped. 1 turns splitting off. Only the unit stage uses it.",
     )
 
     def __str__(self):

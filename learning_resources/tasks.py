@@ -1493,9 +1493,9 @@ def generate_claims_for_resource(
 
     Returns:
         dict | None: counts of context, unit and run extractions that were
-            extracted, skipped (no text, too long to split or merge, or for
-            the run, a failed unit) and failed, or None when the best run has
-            no units
+            extracted, skipped (no text, a context unit over the input budget,
+            a unit too long to split or merge, or for the run, a failed unit)
+            and failed, or None when the best run has no units
     """
     # deferred: the claim modules import the AI libraries, kept out of boot
     from learning_resources.profiles.context_claims import generate_context_claims

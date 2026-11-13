@@ -411,6 +411,24 @@ def merge_parts(  # noqa: PLR0913
 
 
 # --------------------------------------------------------------------------- extraction
+def over_budget(unit: Unit, sources: list[Source], budget: int) -> bool:
+    """Log a context unit whose files are over the input budget"""
+    tokens = sum(source.tokens for source in sources)
+    if tokens <= budget:
+        return False
+    logger.warning(
+        "Skipping %s %s of run %s: %d files, about %d tokens, over the"
+        " input budget of %d",
+        unit.kind,
+        unit.external_id,
+        unit.run.run_id,
+        len(sources),
+        tokens,
+        budget,
+    )
+    return True
+
+
 def merge_evidence(claims: list[dict]) -> list[dict]:
     """Return the evidence of several claims, without repeats"""
     evidence, seen = [], set()
