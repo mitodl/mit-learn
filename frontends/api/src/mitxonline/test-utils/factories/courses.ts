@@ -136,6 +136,7 @@ const courseRun: PartialFactory<CourseRunV2> = (overrides = {}) => {
     enrollment_modes: Array.from({
       length: faker.number.int({ min: 1, max: 3 }),
     }).map(() => enrollmentMode()),
+    b2b_contract: null,
   }
 
   return mergeOverrides<CourseRunV2>(defaults, overrides)
