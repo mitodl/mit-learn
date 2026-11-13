@@ -730,11 +730,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
 
 const ContractLearnersPage: React.FC<ContractLearnersPageProps> = (props) => {
   const flagsLoaded = useFeatureFlagsLoaded()
-  const analyticsEnabled = useFeatureFlag(FeatureFlags.B2BAnalyticsDashboard)
-  const learnerAnalyticsEnabled = useFeatureFlag(
-    FeatureFlags.B2BLearnerAnalytics,
-  )
-  const enabled = analyticsEnabled && learnerAnalyticsEnabled
+  const enabled = useFeatureFlag(FeatureFlags.B2BLearnerAnalytics)
 
   if (!flagsLoaded) {
     return (

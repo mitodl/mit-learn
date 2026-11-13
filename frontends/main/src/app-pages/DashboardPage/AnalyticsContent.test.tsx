@@ -16,14 +16,11 @@ import type {
 } from "api/analytics-hooks/organizations"
 import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { allowConsoleErrors } from "ol-test-utilities"
-import { ForbiddenError } from "@/common/errors"
-import { FeatureFlags } from "@/common/feature_flags"
 import {
   contractAdminView,
   contractAnalyticsView,
   contractLearnersView,
 } from "@/common/urls"
-import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { SUPPRESSED_LEGEND } from "./Analytics/format"
 import AnalyticsContent from "./AnalyticsContent"
 
@@ -49,8 +46,6 @@ jest.mock("@mui/x-charts/LineChart", () => ({
 }))
 
 jest.mock("@/common/useFeatureFlag")
-jest.mock("@/common/useFeatureFlagsLoaded")
-const mockedUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
 const mockedUseFeatureFlag = jest.mocked(useFeatureFlag)
 
 const managerOrgsUrl = urls.organization.managerOrganizationsList()
@@ -202,11 +197,8 @@ const setContractAnalyticsResponses = (
 
 describe("AnalyticsContent", () => {
   beforeEach(() => {
-    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
     /** Learner progress is covered below; leaving it off keeps these to four sections. */
-    mockedUseFeatureFlag.mockImplementation(
-      (flag) => flag !== FeatureFlags.B2BLearnerAnalytics,
-    )
+    mockedUseFeatureFlag.mockReturnValue(false)
     setMockResponse.get(
       urls.userMe.get(),
       factories.user.user({ email: "manager@test.com" }),
@@ -214,28 +206,6 @@ describe("AnalyticsContent", () => {
   })
 
   describe("access", () => {
-    test("throws ForbiddenError when the feature flag is off", () => {
-      mockedUseFeatureFlag.mockReturnValue(false)
-      allowConsoleErrors()
-
-      expect(() =>
-        renderWithProviders(
-          <AnalyticsContent orgSlug="any-org" contractSlug="any-contract" />,
-        ),
-      ).toThrow(ForbiddenError)
-    })
-
-    test("waits for PostHog rather than 403-ing on the env default", () => {
-      mockedUseFeatureFlagsLoaded.mockReturnValue(false)
-      mockedUseFeatureFlag.mockReturnValue(false)
-
-      expect(() =>
-        renderWithProviders(
-          <AnalyticsContent orgSlug="any-org" contractSlug="any-contract" />,
-        ),
-      ).not.toThrow()
-    })
-
     test("denies access when the caller does not manage the requested org", async () => {
       setManagerOrgs([orgWithUuid()])
 
@@ -993,7 +963,6 @@ describe("AnalyticsContent", () => {
 
 describe("AnalyticsContent, contract-scoped", () => {
   beforeEach(() => {
-    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
     mockedUseFeatureFlag.mockReturnValue(true)
     setMockResponse.get(
       urls.userMe.get(),
@@ -1128,9 +1097,7 @@ describe("AnalyticsContent, contract-scoped", () => {
   test("hides the Learners link and the Learner progress section when the learner analytics flag is off", async () => {
     // The learner page throws ForbiddenError without its flag, so the button
     // would be a dead end -- and every Learner progress tile links there too.
-    mockedUseFeatureFlag.mockImplementation(
-      (flag) => flag !== FeatureFlags.B2BLearnerAnalytics,
-    )
+    mockedUseFeatureFlag.mockReturnValue(false)
     const contract = factories.contracts.contract()
     const org = orgWithUuid({ contracts: [contract] })
     setManagerOrgs([org])
@@ -1463,29 +1430,5 @@ describe("AnalyticsContent, contract-scoped", () => {
     expect(within(list).queryByRole("button")).not.toBeInTheDocument()
     expect(within(list).queryByRole("link")).not.toBeInTheDocument()
     expect(within(list).queryByRole("textbox")).not.toBeInTheDocument()
-  })
-
-  test("hides the Manage seats button when the manager-dashboard flag is off", async () => {
-    // The button links to ContractAdminPage, which throws ForbiddenError
-    // without this flag — surfacing the button here without it would send a
-    // manager to a dead end.
-    mockedUseFeatureFlag.mockImplementation(
-      (flag) => flag === FeatureFlags.B2BAnalyticsDashboard,
-    )
-    const contract = factories.contracts.contract()
-    const org = orgWithUuid({ contracts: [contract] })
-    setManagerOrgs([org])
-
-    setContractAnalyticsResponses(contract.id)
-
-    const orgSlug = org.slug.replace(/^org-/, "")
-    renderWithProviders(
-      <AnalyticsContent orgSlug={orgSlug} contractSlug={contract.slug} />,
-    )
-
-    await screen.findByText(`Analytics · ${contract.name}`)
-    expect(
-      screen.queryByRole("link", { name: "Manage seats" }),
-    ).not.toBeInTheDocument()
   })
 })

@@ -10,9 +10,8 @@ import { managerOrganizationQueries } from "api/mitxonline-hooks/organizations"
 import { analyticsContractQueries } from "api/analytics-hooks/organizations"
 import { isAnalyticsConfigured } from "api/runtime"
 import { matchOrganizationBySlug } from "@/common/utils"
-import { ForbiddenError, isAnalyticsNotLoaded } from "@/common/errors"
+import { isAnalyticsNotLoaded } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
-import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import {
   completionStatusFilter,
   CONTRACT_LEARNERS_STATUSES,
@@ -179,12 +178,12 @@ const isForbidden = (error: unknown) => {
   return status === 401 || status === 403
 }
 
-type AnalyticsContentInternalProps = {
+type AnalyticsContentProps = {
   orgSlug: string
   contractSlug: string
 }
 
-const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
+const AnalyticsContent: React.FC<AnalyticsContentProps> = ({
   orgSlug,
   contractSlug,
 }) => {
@@ -604,34 +603,6 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
         {truncation(trend, "trend")}
       </Section>
     </Stack>
-  )
-}
-
-type AnalyticsContentProps = {
-  orgSlug: string
-  contractSlug: string
-}
-
-const AnalyticsContent: React.FC<AnalyticsContentProps> = ({
-  orgSlug,
-  contractSlug,
-}) => {
-  const flagEnabled = useFeatureFlag(FeatureFlags.B2BAnalyticsDashboard)
-  const flagsLoaded = useFeatureFlagsLoaded()
-
-  // The whole page is behind the flag, so wait until flags are final rather
-  // than 403-ing on what the flag reads before then: a value PostHog stored on
-  // an earlier visit, or the env default (see useFeatureFlagsLoaded's USE CASE).
-  if (!flagsLoaded) {
-    return <Skeleton width="100%" height="128px" />
-  }
-
-  if (!flagEnabled) {
-    throw new ForbiddenError("Not enabled.")
-  }
-
-  return (
-    <AnalyticsContentInternal orgSlug={orgSlug} contractSlug={contractSlug} />
   )
 }
 

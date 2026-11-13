@@ -14,7 +14,6 @@ import type { CompletionStatusFilter } from "api/analytics-hooks/organizations"
 import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { allowConsoleErrors } from "ol-test-utilities"
 import { ForbiddenError } from "@/common/errors"
-import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { contractAnalyticsView } from "@/common/urls"
 import ContractLearnersPage from "./ContractLearnersPage"
@@ -191,46 +190,7 @@ describe("ContractLearnersPage", () => {
       ).toThrow(ForbiddenError)
     })
 
-    /**
-     * The two dashboards roll out independently: aggregate analytics must not
-     * confer access to per-learner data.
-     */
-    test("the aggregate analytics flag alone does not open this page", () => {
-      mockedUseFeatureFlag.mockImplementation(
-        (flag) => flag === FeatureFlags.B2BAnalyticsDashboard,
-      )
-      allowConsoleErrors()
-
-      expect(() =>
-        renderWithProviders(
-          <ContractLearnersPage orgSlug="acme" contractSlug="c1" />,
-        ),
-      ).toThrow(ForbiddenError)
-    })
-
-    /**
-     * Learner analytics is nested inside the analytics rollout: the contract
-     * nav assumes the aggregate page is reachable.
-     */
-    test("the learner flag alone does not open this page", () => {
-      mockedUseFeatureFlag.mockImplementation(
-        (flag) => flag === FeatureFlags.B2BLearnerAnalytics,
-      )
-      allowConsoleErrors()
-
-      expect(() =>
-        renderWithProviders(
-          <ContractLearnersPage orgSlug="acme" contractSlug="c1" />,
-        ),
-      ).toThrow(ForbiddenError)
-    })
-
-    test("opens with both analytics flags on, with the contract nav marking Learners current", async () => {
-      mockedUseFeatureFlag.mockImplementation(
-        (flag) =>
-          flag === FeatureFlags.B2BAnalyticsDashboard ||
-          flag === FeatureFlags.B2BLearnerAnalytics,
-      )
+    test("opens with the learner analytics flag on, with the contract nav marking Learners current", async () => {
       const { contract, orgSlug } = setupUnqueryable()
 
       renderWithProviders(
