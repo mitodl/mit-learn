@@ -11,13 +11,6 @@ import json
 import re
 from dataclasses import dataclass, field
 
-from learning_resources.converters.structure import _strip_heading
-from learning_resources.converters.utils import (
-    FIGURE_IMAGE,
-    FIGURE_PLACEHOLDER,
-    REGION_BLOCK,
-)
-
 STRUCTURE_HEADER = re.compile(r"\A\s*<!-- structure: (?P<json>\{.*?\}) -->")
 NODE_TAG = re.compile(r"^<!-- node: (?P<json>\{.*?\}) -->[ \t]*$", re.MULTILINE)
 PAGE_MARKER = re.compile(r"^[ \t]*<!-- page: \d+ -->[ \t]*$", re.MULTILINE)
@@ -122,6 +115,13 @@ def clean_display_markdown(markdown: str) -> str:
     other comments go, a region shows its image (or its transcription when its
     image was not saved), and an unsaved figure shows its description.
     """
+    # the converter modules import litellm and OCR libraries, which must not
+    # load when this module does (at boot, via the loaders)
+    from learning_resources.converters.utils import (
+        FIGURE_IMAGE,
+        FIGURE_PLACEHOLDER,
+        REGION_BLOCK,
+    )
 
     def region(match: re.Match) -> str:
         figure = match["figure"].strip()
@@ -165,6 +165,8 @@ def _read_nodes(markdown: str) -> list[_Node]:
 
 def _problem(problem: _Node, nodes: list[_Node]) -> ParsedProblem | None:
     """Assemble a problem from its node and its descendants' nodes"""
+    from learning_resources.converters.structure import _strip_heading
+
     by_id = {n.id: n for n in nodes}
 
     def owner(node: _Node) -> _Node | None:
