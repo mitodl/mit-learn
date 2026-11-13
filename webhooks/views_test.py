@@ -687,8 +687,25 @@ def test_ovs_video_webhook_rejects_hostile_urls(settings, client, mocker, hostil
 
 
 @pytest.mark.django_db
-def test_ovs_video_webhook_ignores_disallowed_cta_link(
-    settings, client, mocker, ovs_platform, webhook_owns_ovs
+@pytest.mark.parametrize(
+    "cta_link",
+    [
+        pytest.param(
+            "https://why-this-matters.captivate.fm/listen", id="off_allowlist"
+        ),
+        pytest.param("javascript:alert(1)", id="javascript"),
+        pytest.param(
+            "https://evil.io\\@du3yhovcx8dht.cloudfront.net/x.jpg", id="backslash"
+        ),
+        pytest.param("https://[", id="unparseable"),
+        pytest.param(5, id="not_a_string"),
+        pytest.param(
+            {"src": "https://du3yhovcx8dht.cloudfront.net/x.jpg"}, id="object"
+        ),
+    ],
+)
+def test_ovs_video_webhook_ignores_disallowed_cta_link(  # noqa: PLR0913
+    settings, client, mocker, ovs_platform, webhook_owns_ovs, cta_link
 ):
     """A cta_link off the allowlist is ignored, not rejected: the OVS url is used."""
     mocker.patch("webhooks.views.clear_views_cache")
@@ -697,7 +714,7 @@ def test_ovs_video_webhook_ignores_disallowed_cta_link(
         "learning_resources.etl.loaders.similar_topics_action", return_value=[]
     )
     payload = _ovs_payload(key="podcast1")
-    payload["cta_link"] = "https://why-this-matters.captivate.fm/listen"
+    payload["cta_link"] = cta_link
 
     url = reverse("webhooks:v1:ovs_video_webhook")
     response = client.post(
