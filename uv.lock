@@ -79,6 +79,18 @@ wheels = [
 ]
 
 [[package]]
+name = "aiohttp-retry"
+version = "2.9.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "aiohttp" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/9d/61/ebda4d8e3d8cfa1fd3db0fb428db2dd7461d5742cea35178277ad180b033/aiohttp_retry-2.9.1.tar.gz", hash = "sha256:8eb75e904ed4ee5c2ec242fefe85bf04240f685391c4879d8f541d6028ff01f1", size = 13608, upload-time = "2024-11-06T10:44:54.574Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1a/99/84ba7273339d0f3dfa57901b846489d2e5c2cd731470167757f1935fffbd/aiohttp_retry-2.9.1-py3-none-any.whl", hash = "sha256:66d2759d1921838256a05a3f80ad7e724936f083e35be5abb5e16eed6be6dc54", size = 9981, upload-time = "2024-11-06T10:44:52.917Z" },
+]
+
+[[package]]
 name = "aiosignal"
 version = "1.4.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1561,6 +1573,24 @@ wheels = [
 ]
 
 [[package]]
+name = "hindsight-client"
+version = "1.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "aiohttp" },
+    { name = "aiohttp-retry" },
+    { name = "pydantic" },
+    { name = "python-dateutil" },
+    { name = "typing-extensions" },
+    { name = "urllib3" },
+    { name = "yarl" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ba/a8/6b4db73bdd040b4aa4f317cc7428e027c65f164f2ae0d65e488251ad8369/hindsight_client-1.2.0.tar.gz", hash = "sha256:1e2dd46ee6e733749173cf6535d435899a89f96cce91dda92eafcf80cfa4a5c5", size = 218403, upload-time = "2026-11-03T11:06:41.982Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6a/d0/848c7734d37215df53353dcea3de326ecc3bab6d908a12621530f5b81562/hindsight_client-1.2.0-py3-none-any.whl", hash = "sha256:690c728a17207a9e4df0b26c32abd1dfee627d1895615881f30ed709ab4126c3", size = 471209, upload-time = "2026-11-03T11:06:40.048Z" },
+]
+
+[[package]]
 name = "hpack"
 version = "4.2.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2532,7 +2562,7 @@ dependencies = [
     { name = "nested-lookup" },
     { name = "nh3" },
     { name = "ocw-data-parser" },
-    { name = "ol-llm" },
+    { name = "ol-llm", extra = ["memory"] },
     { name = "onnxruntime" },
     { name = "openai" },
     { name = "opencv-python" },
@@ -2674,7 +2704,7 @@ requires-dist = [
     { name = "nested-lookup", specifier = ">=0.2.25,<0.3" },
     { name = "nh3", specifier = ">=0.3.0,<0.4" },
     { name = "ocw-data-parser", specifier = ">=0.35.1,<0.36" },
-    { name = "ol-llm", specifier = ">=0.0.5" },
+    { name = "ol-llm", extras = ["memory"], specifier = ">=0.0.14" },
     { name = "onnxruntime", specifier = "==1.24.4" },
     { name = "openai", specifier = ">=2.0.0,<3" },
     { name = "opencv-python", specifier = ">=4.12.0.88,<5" },
@@ -3092,20 +3122,28 @@ wheels = [
 
 [[package]]
 name = "ol-llm"
-version = "0.0.7"
+version = "0.0.14"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "certifi" },
     { name = "httpx" },
+    { name = "httpx2" },
+    { name = "jinja2" },
     { name = "opentelemetry-exporter-otlp-proto-http" },
     { name = "opentelemetry-sdk" },
     { name = "opik" },
     { name = "pydantic" },
+    { name = "pyyaml" },
     { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/33/5e/39967949ef68b50f84bbdb793f0968317b24d065fd254537281fa2005a30/ol_llm-0.0.7.tar.gz", hash = "sha256:e9f4e664a7abd032c9a50223b1fed8c449f7f0ce7e63259845ce7419b1ef9679", size = 255490, upload-time = "2026-10-29T16:58:53.676Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/01/e8/865669292272dd97c5d775ec456eadb086e70110d783859f162db75b9cfc/ol_llm-0.0.14.tar.gz", hash = "sha256:cf47cfefcdbb5c6838e4b18219be9b40a02e51952518a274e9efe4335d71a28e", size = 392689, upload-time = "2026-11-13T18:23:18.783Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3c/68/93cdca9c20b7245ca83d311216ef7221bf1bbf0c52887d6d2c7bcb059257/ol_llm-0.0.7-py3-none-any.whl", hash = "sha256:54e2f42d5c9112a82e0c83c46eb1e23ad898e65fba407b89acc0ea6d5f67230e", size = 115947, upload-time = "2026-10-29T16:58:52.022Z" },
+    { url = "https://files.pythonhosted.org/packages/39/1e/756587e760242c08110ce54884772671d9559bfb49260815e23a80fc5b5c/ol_llm-0.0.14-py3-none-any.whl", hash = "sha256:9c4fd7c0dfed096b8385782b00948ee6d277d318f4a553feacfb7f35969b9055", size = 215589, upload-time = "2026-11-13T18:23:17.165Z" },
+]
+
+[package.optional-dependencies]
+memory = [
+    { name = "hindsight-client" },
 ]
 
 [[package]]
@@ -3481,7 +3519,7 @@ wheels = [
 
 [[package]]
 name = "opik"
-version = "2.2.94"
+version = "2.2.143"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "boto3-stubs", marker = "sys_platform == 'never'" },
@@ -3505,9 +3543,9 @@ dependencies = [
     { name = "uuid6" },
     { name = "watchfiles" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/eb/56/a433a491c46e15bf56bfd439fb18312e92eb2539345d40c869054be1e644/opik-2.2.94.tar.gz", hash = "sha256:5ad6dab275d23cc2820500ba97a65a077dd818bc592bc9bf59e22abcb5389259", size = 1397362, upload-time = "2026-10-07T14:26:53.644Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/27/f2/9d697979c013e7c8f64effcd57192a1e6021f6bb2ae8ad07496a27f6625c/opik-2.2.143.tar.gz", hash = "sha256:5e598742ca350c82e6ed819ccb41fd23ddadcd9997f925b178299fc0e9855683", size = 1433526, upload-time = "2026-11-06T08:43:48.202Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f0/1d/15d3b9fd58e60ae789c3ae33931f679600ea4e107c2c555315ef71f22889/opik-2.2.94-py3-none-any.whl", hash = "sha256:f87cd0e890fbf684915ccd09ca102ebf9861ecb2896e3c605723cea7ffadc262", size = 2134186, upload-time = "2026-10-07T14:26:51.506Z" },
+    { url = "https://files.pythonhosted.org/packages/46/e0/c8d2fa58b3dc6f84f34afec20faf6d4f07eac69d8f0fd453ad55b8bb464c/opik-2.2.143-py3-none-any.whl", hash = "sha256:c6abe799a74706430b4f83b0be53033cc6faa479c9536eaf3bfffab3cf79f5fd", size = 2186292, upload-time = "2026-11-06T08:43:46.227Z" },
 ]
 
 [[package]]
