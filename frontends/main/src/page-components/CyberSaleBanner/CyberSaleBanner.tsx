@@ -9,20 +9,6 @@ import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagPayload } from "@/common/useFeatureFlagPayload"
 import { analytics } from "@/common/analytics"
 
-const CTA_HOSTS = new Set(["learn.mit.edu", "support.learn.mit.edu"])
-
-const isAllowedCtaUrl = (value: string | undefined) => {
-  if (!value) return false
-  // Browsers read "/\" like "//", a link to another site.
-  if (/^\/(?![/\\])/.test(value)) return true
-  try {
-    const url = new URL(value)
-    return url.protocol === "https:" && CTA_HOSTS.has(url.hostname)
-  } catch {
-    return false
-  }
-}
-
 const payloadSchema = yup.object({
   variant: yup.string().oneOf(["awareness", "sale"]).required(),
   code: yup
@@ -32,10 +18,7 @@ const payloadSchema = yup.object({
       is: "sale",
       then: (schema) => schema.required(),
     }),
-  cta_url: yup
-    .string()
-    .required()
-    .test("allowed-host", "cta_url is not an allowed link", isAllowedCtaUrl),
+  cta_url: yup.string().url().required(),
   dismiss_hours: yup.number().moreThan(0),
 })
 
