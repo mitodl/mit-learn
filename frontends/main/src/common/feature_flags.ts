@@ -20,4 +20,5 @@ export enum FeatureFlags {
   DepartmentPageRedesign = "department-page-redesign",
   ContactUs = "contact-us",
   EducatorPage = "educator-page",
+  CyberSaleBanner = "cyber-sale-banner",
 }
