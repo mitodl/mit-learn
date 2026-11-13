@@ -11,11 +11,6 @@ jest.mock("./HacksnackClient", () => ({
   default: (props: unknown) => mockHacksnackClient(props),
 }))
 
-jest.mock("./HacksnackFlagGate", () => ({
-  __esModule: true,
-  default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-}))
-
 describe("hacksnack page.tsx", () => {
   beforeEach(() => {
     // clearAllMocks, not resetAllMocks: the latter strips implementations from
@@ -31,6 +26,9 @@ describe("hacksnack page.tsx", () => {
   test("renders the HacksnackClient", () => {
     renderWithProviders(<Page />)
     expect(screen.getByTestId("hacksnack-client")).toBeInTheDocument()
+    expect(
+      screen.getByRole("heading", { level: 1, name: "HackSnack" }),
+    ).toBeInTheDocument()
   })
 
   test("sets the page title metadata", () => {

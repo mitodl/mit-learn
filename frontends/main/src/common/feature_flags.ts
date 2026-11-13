@@ -15,8 +15,6 @@ export enum FeatureFlags {
   B2BContractManagerDashboard = "b2b-contract-manager-dashboard",
   B2BAnalyticsDashboard = "b2b-analytics-dashboard",
   B2BLearnerAnalytics = "b2b-learner-analytics",
-  Arithmix = "arithmix",
-  Hacksnack = "hacksnack",
   AccountManagement = "account-management",
   SelfServiceRefunds = "self-service-refunds",
   DisableHybridSearch = "disable-hybrid-search",
