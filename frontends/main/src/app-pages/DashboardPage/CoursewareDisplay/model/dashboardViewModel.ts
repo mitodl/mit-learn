@@ -144,9 +144,10 @@ export const getProgramDetailsLink = (
 
 /**
  * v2 program data has no has_live_product_page. This mirrors mitxonline's
- * Program.has_live_product_page, minus its b2b_only check (B2B-only programs
- * never have a published page); remove it once the dashboard reads programs
- * from v3.
+ * Program.has_live_product_page minus its b2b_only check: v2 program lists
+ * leave out b2b_only programs unless filtered by org_id or contract_id, so
+ * don't use this on contract-scoped program data. Remove it once the
+ * dashboard reads programs from v3.
  */
 export const v2ProgramHasLiveProductPage = (
   program: Pick<V2ProgramDetail, "live" | "page">,
