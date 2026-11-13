@@ -200,7 +200,6 @@ def test_fetch_program_letter_template_data_malformed_api_response(
     Tests that a malformed response from micromasters api
     causes fetch_program_letter_template_data to return None
     """
-    settings.DATABASE_ROUTERS = []
     settings.MICROMASTERS_CMS_API_URL = "http://test.com"
     mm_api_response = mocker.Mock()
     mm_api_response.configure_mock(**{"json.return_value": {"some": "json"}})
@@ -216,7 +215,6 @@ def test_fetch_program_letter_template_data_has_results(mocker, user, settings):
     Tests that a response from micromasters api
     with a result returns properly
     """
-    settings.DATABASE_ROUTERS = []
     settings.MICROMASTERS_CMS_API_URL = "http://test.com"
     expected_item = {"test": "test"}
     mm_api_response = mocker.Mock()

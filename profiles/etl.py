@@ -1,11 +1,10 @@
 """Warehouse-pull ETL for profiles.ProgramCertificate.
 
-Replaces Hightouch as the writer of external.programcertificate
-(mitodl/hq#12954). Unlike learning_resources/etl/catalog_sources.py's
-transform_* functions, this doesn't feed learning_resources.etl.loaders —
-ProgramCertificate is a distinct fact model, not a LearningResource, so it
-gets its own transform + upsert here rather than being forced into the
-catalog contract shape.
+Writes external.programcertificate (mitodl/hq#12954). Unlike
+learning_resources/etl/catalog_sources.py's transform_* functions, this
+doesn't feed learning_resources.etl.loaders — ProgramCertificate is a distinct
+fact model, not a LearningResource, so it gets its own transform + upsert here
+rather than being forced into the catalog contract shape.
 """
 
 from profiles.models import ProgramCertificate
