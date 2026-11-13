@@ -41,11 +41,13 @@ describe("ProgramAsCourseCard", () => {
     // Most tests here exercise the program-as-course presentation, which requires
     // display_mode "course" — pinned because the card's labels read it.
     displayMode = "course",
+    hasLiveProductPage = true,
   }: {
     includeProgramEnrollment?: boolean
     startDate?: string | null
     endDate?: string | null
     displayMode?: "course" | null
+    hasLiveProductPage?: boolean
   } = {}) => {
     const moduleOne = mitxonline.factories.courses.course({
       courseruns: [mitxonline.factories.courses.courseRun()],
@@ -69,6 +71,11 @@ describe("ProgramAsCourseCard", () => {
       start_date: startDate ?? null,
       end_date: endDate ?? null,
       display_mode: displayMode,
+      live: true,
+      page: {
+        live: hasLiveProductPage,
+        include_in_learn_catalog: hasLiveProductPage,
+      },
     })
 
     const moduleEnrollment = mitxonline.factories.enrollment.courseEnrollment({
@@ -802,6 +809,37 @@ describe("ProgramAsCourseCard", () => {
     await screen.findAllByText(cardData.courseProgram.title)
     expect(screen.queryByTestId("upgraded-banner")).not.toBeInTheDocument()
   })
+
+  test.each([
+    { includeProgramEnrollment: true },
+    { includeProgramEnrollment: false },
+  ])(
+    "hides the details link when the product page is not live (includeProgramEnrollment=$includeProgramEnrollment)",
+    async ({ includeProgramEnrollment }) => {
+      const cardData = setupCardData({
+        includeProgramEnrollment,
+        hasLiveProductPage: false,
+      })
+
+      renderWithProviders(
+        <ProgramAsCourseCard
+          courseProgram={cardData.courseProgram}
+          moduleCourses={cardData.moduleCourses}
+          moduleEnrollmentsByCourseId={cardData.moduleEnrollmentsByCourseId}
+          courseProgramEnrollment={cardData.courseProgramEnrollment}
+        />,
+      )
+
+      await screen.findAllByText(cardData.courseProgram.title)
+      const programCard = screen.getByTestId("program-as-course-card")
+      await user.click(within(programCard).getAllByLabelText("More options")[0])
+
+      await screen.findByRole("menuitem", { name: "Program Record" })
+      expect(
+        screen.queryByRole("menuitem", { name: "View Course Details" }),
+      ).not.toBeInTheDocument()
+    },
+  )
 
   test("shows product-page details link in context menu", async () => {
     const cardData = setupCardData({ includeProgramEnrollment: true })

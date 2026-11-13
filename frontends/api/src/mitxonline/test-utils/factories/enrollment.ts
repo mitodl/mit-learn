@@ -76,6 +76,7 @@ const courseEnrollment: PartialFactory<CourseRunEnrollmentV3> = (
         readable_id: faker.lorem.slug(),
         type: "course",
         include_in_learn_catalog: faker.datatype.boolean(),
+        has_live_product_page: true,
       },
     },
   }

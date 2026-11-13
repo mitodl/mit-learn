@@ -17,9 +17,11 @@ import {
   enrollmentCourseIsInPrograms,
   filterVariantSiblings,
   getCollectionFirstCoursesInDisplayOrder,
+  getCourseDetailsLink,
   getModuleCourseIdsFromPrograms,
   getNonContractProgramEnrollments,
   getProgramCoursesInContractOrder,
+  getProgramDetailsLink,
   getRenderableContractCollections,
   getSortedStandaloneContractPrograms,
   getTopLevelProgramEnrollments,
@@ -34,6 +36,7 @@ import {
   selectBestEnrollment,
   selectVariantRunForCourse,
   sortVariants,
+  v2ProgramHasLiveProductPage,
 } from "./dashboardViewModel"
 import type {
   RequirementSection,
@@ -3260,5 +3263,100 @@ describe("pickDisplayedHomeEnrollments", () => {
       grades: [],
     })
     expect(pickDisplayedHomeEnrollments([enrollment])).toEqual([enrollment])
+  })
+})
+
+describe("getCourseDetailsLink", () => {
+  const course = (hasLiveProductPage: boolean) =>
+    factories.enrollment.courseEnrollment({
+      run: {
+        course: {
+          readable_id: "course-v1:MITx+1.00x",
+          has_live_product_page: hasLiveProductPage,
+        },
+      },
+    }).run.course
+
+  test("links to the course page when it is live", () => {
+    expect(getCourseDetailsLink(course(true), false)).toBe(
+      "/courses/course-v1:MITx+1.00x",
+    )
+  })
+
+  test.each([
+    { hasLiveProductPage: false, isContractResource: false },
+    { hasLiveProductPage: true, isContractResource: true },
+    { hasLiveProductPage: false, isContractResource: true },
+  ])(
+    "returns null when has_live_product_page=$hasLiveProductPage and isContractResource=$isContractResource",
+    ({ hasLiveProductPage, isContractResource }) => {
+      expect(
+        getCourseDetailsLink(course(hasLiveProductPage), isContractResource),
+      ).toBeNull()
+    },
+  )
+})
+
+describe("getProgramDetailsLink", () => {
+  test.each([
+    { displayMode: null, expected: "/programs/program-v1:MITx+P" },
+    {
+      displayMode: DisplayModeEnum.Course,
+      expected: "/courses/p/program-v1:MITx+P",
+    },
+  ])(
+    "links to the product page for display_mode=$displayMode",
+    ({ displayMode, expected }) => {
+      expect(
+        getProgramDetailsLink(
+          { readable_id: "program-v1:MITx+P", display_mode: displayMode },
+          true,
+        ),
+      ).toBe(expected)
+    },
+  )
+
+  test("returns null when the page is not live", () => {
+    expect(
+      getProgramDetailsLink(
+        { readable_id: "program-v1:MITx+P", display_mode: null },
+        false,
+      ),
+    ).toBeNull()
+  })
+})
+
+describe("v2ProgramHasLiveProductPage", () => {
+  const program = ({
+    live = true,
+    pageLive = true,
+    includeInLearnCatalog = true,
+  }: {
+    live?: boolean
+    pageLive?: boolean
+    includeInLearnCatalog?: boolean | null
+  }) =>
+    factories.programs.program({
+      live,
+      page: { live: pageLive, include_in_learn_catalog: includeInLearnCatalog },
+    })
+
+  test("is true when the program and its page are live and in the catalog", () => {
+    expect(v2ProgramHasLiveProductPage(program({}))).toBe(true)
+  })
+
+  test.each([
+    { live: false },
+    { pageLive: false },
+    { includeInLearnCatalog: false },
+    { includeInLearnCatalog: null },
+  ])("is false for %o", (overrides) => {
+    expect(v2ProgramHasLiveProductPage(program(overrides))).toBe(false)
+  })
+
+  test("is false when the program has no page", () => {
+    expect(v2ProgramHasLiveProductPage({ ...program({}), page: null })).toBe(
+      false,
+    )
   })
 })

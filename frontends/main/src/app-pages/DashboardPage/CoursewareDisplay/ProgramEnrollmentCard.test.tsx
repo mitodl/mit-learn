@@ -169,6 +169,26 @@ describe.each([
     ).toHaveAttribute("href", `/programs/${program.readable_id}`)
   })
 
+  test("context menu hides View Program Details when the program page is not live", async () => {
+    const program = mitxonline.factories.programs.simpleProgram({
+      has_live_product_page: false,
+    })
+    const programEnrollment =
+      mitxonline.factories.enrollment.programEnrollmentV3({ program })
+    renderWithProviders(
+      <ProgramEnrollmentCard programEnrollment={programEnrollment} />,
+    )
+    await user.click(
+      within(getCard()).getByRole("button", { name: "More options" }),
+    )
+    expect(
+      screen.queryByRole("menuitem", { name: "View Program Details" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("menuitem", { name: "Program Record" }),
+    ).toBeInTheDocument()
+  })
+
   test("context menu includes Program Record linking to mitxonline", async () => {
     const program = mitxonline.factories.programs.simpleProgram({ id: 99 })
     const programEnrollment =

@@ -9,6 +9,7 @@ import {
 import {
   CourseWithCourseRunsSerializerV2,
   DisplayModeEnum,
+  V2ProgramDetail,
   V2ProgramDisplayModeEnum,
   V2ProgramRequirement,
 } from "@mitodl/mitxonline-api-axios/v2"
@@ -37,6 +38,8 @@ import {
   buildCourseEntry,
   courseIsCompleted,
   getProgramAsCourseModuleIds,
+  getProgramDetailsLink,
+  v2ProgramHasLiveProductPage,
 } from "./model/dashboardViewModel"
 import {
   isPaidProgramEnrollmentMode,
@@ -46,7 +49,6 @@ import { RiAwardFill, RiMore2Line } from "@remixicon/react"
 import NiceModal from "@ebay/nice-modal-react"
 import { UnenrollProgramDialog } from "./DashboardDialogs"
 import { ProgramCertificateButton } from "./ProgramEnrollmentDisplay"
-import { programPageView } from "@/common/urls"
 
 const ProgramCardRoot = styled.div(({ theme }) => ({
   display: "flex",
@@ -160,10 +162,10 @@ const getContextMenuItems = (
   additionalItems: SimpleMenuItem[] = [],
 ) => {
   const menuItems = []
-  const detailsUrl = programPageView({
-    readable_id: resource.readable_id,
-    display_mode: resource.display_mode,
-  })
+  const detailsUrl = getProgramDetailsLink(
+    { readable_id: resource.readable_id, display_mode: resource.display_mode },
+    v2ProgramHasLiveProductPage(resource),
+  )
 
   const courseMenuItems = []
 
@@ -227,6 +229,8 @@ interface ProgramAsCourse {
   courses?: number[]
   req_tree?: V2ProgramRequirement[]
   display_mode?: V2ProgramDisplayModeEnum | null
+  live?: V2ProgramDetail["live"]
+  page: V2ProgramDetail["page"]
 }
 
 interface ProgramAsCourseCardProps {

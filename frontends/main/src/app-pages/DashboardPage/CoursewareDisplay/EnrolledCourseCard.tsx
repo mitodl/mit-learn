@@ -24,6 +24,7 @@ import {
   EnrollmentStatus,
   DashboardType,
   getCertificateLink,
+  getCourseDetailsLink,
   getDashboardEnrollmentStatus,
   pickCertificateEnrollment,
 } from "./model/dashboardViewModel"
@@ -50,7 +51,6 @@ import { SiblingRunsPanel, SiblingRunsToggle } from "./SiblingRunsAccordion"
 import { EnrollmentStatusIcon } from "./EnrollmentStatus"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
-import { coursePageView } from "@/common/urls"
 import { getRunMenuItems } from "./runMenuItems"
 import { useOrderIdForRun } from "@/common/mitxonline/useOrderIdForResource"
 import type { SimpleMenuItem } from "ol-components"
@@ -480,10 +480,9 @@ export const EnrolledCourseCard = ({
     ctaButton
   )
   const menuItems: SimpleMenuItem[] = []
-  const readableId = run?.course.readable_id
-  const detailsUrl = readableId ? coursePageView(readableId) : undefined
+  const detailsUrl = getCourseDetailsLink(course, isContractPageResource)
 
-  if (detailsUrl && !isContractPageResource) {
+  if (detailsUrl) {
     menuItems.push({
       className: "dashboard-card-menu-item",
       key: "view-course-details",
