@@ -336,20 +336,6 @@ def part_claim_as_merged(claim_id: str, claim: dict) -> dict:
     }
 
 
-def merge_token_limit(config: ResourceProfileConfiguration) -> int:
-    """
-    Return the most tokens a merge call may take: its input budget, or its
-    output limit when that is lower, since the merge writes the parts'
-    claims out again
-    """
-    limits = (
-        config.input_token_budget,
-        config.max_completion_tokens,
-        config.max_tokens,
-    )
-    return min(limit for limit in limits if limit is not None)
-
-
 def merge_parts(  # noqa: PLR0913
     extractor: ClaimExtractor,
     key: str,
@@ -359,14 +345,13 @@ def merge_parts(  # noqa: PLR0913
     unit: Unit,
     finish: Callable[[dict], dict],
     overwrite: bool = False,
-) -> ClaimExtraction | None:
+) -> ClaimExtraction:
     """
-    Merge a split unit's parts with the merge model, or return None when the
-    call would be over the merge's token limit.
+    Merge a split unit's parts with the merge model.
 
-    There is no fallback: a merge call over the limit is logged as an error
-    and the unit is skipped, and one with no valid response raises, so the
-    unit fails and is tried again on the next sweep. The limit is checked
+    There is no fallback: a merge call over the merge's input budget, or one
+    with no valid response, raises, so the unit fails, the run's claims wait
+    for it, and it is tried again on the next sweep. The budget is checked
     only when the merge isn't stored, against the system prompt and the
     prompt together.
 
@@ -381,24 +366,19 @@ def merge_parts(  # noqa: PLR0913
         overwrite (bool): merge even when the key is stored
 
     Raises:
-        ClaimExtractionError: when the model gives no valid response
+        ClaimExtractionError: when the merge call is over the merge's input
+            budget, or the model gives no valid response
     """
     build_prompt = functools.cache(build_prompt)
     if overwrite or not ClaimExtraction.objects.filter(key=key).exists():
         tokens = estimate_tokens(extractor.system) + estimate_tokens(build_prompt())
-        limit = merge_token_limit(extractor.config)
-        if tokens > limit:
-            logger.error(
-                "Not merging the parts of %s %s of run %s: the merge call, about"
-                " %d tokens, is over the %s limit of %d",
-                unit.kind,
-                unit.external_id,
-                unit.run.run_id,
-                tokens,
-                extractor.stage,
-                limit,
+        budget = extractor.config.input_token_budget
+        if tokens > budget:
+            msg = (
+                f"{extractor.stage}: the merge call, about {tokens:,} tokens, is"
+                f" over the input budget of {budget:,}"
             )
-            return None
+            raise ClaimExtractionError(msg)
     return get_or_create_extraction(
         extractor,
         key,
@@ -600,10 +580,10 @@ def extract_split_unit(  # noqa: PLR0913
     sources_by_part: list[list[Source]],
     key_inputs: list,
     build_part_prompt: Callable[[int, list[Source]], str],
-    merge: Callable[[list[ClaimExtraction], str], ClaimExtraction | None],
+    merge: Callable[[list[ClaimExtraction], str], ClaimExtraction],
     finish_part: Callable[[dict], dict] | None = None,
     overwrite: bool = False,
-) -> ClaimExtraction | None:
+) -> ClaimExtraction:
     """
     Extract each part of a split unit, then merge them into the unit's row.
 
@@ -611,9 +591,9 @@ def extract_split_unit(  # noqa: PLR0913
     row for that part, and the unit's parts that aren't current are deleted
     only once the merge is stored, and only when no other unit's merge cites
     them: until then the unit's earlier merge cites them, so a part or merge
-    call that fails, or a merge that is skipped, leaves that merge's parts as
-    they were. A part regenerated with overwrite is the exception: its key is
-    the same, so its row is replaced.
+    call that fails leaves that merge's parts as they were. A part
+    regenerated with overwrite is the exception: its key is the same, so its
+    row is replaced.
 
     Args:
         extractor (ClaimExtractor): the unit's extractor; parts are extracted
@@ -626,18 +606,17 @@ def extract_split_unit(  # noqa: PLR0913
         build_part_prompt (callable): returns a part's prompt, given its index
             from 1 and its sources
         merge (callable): given the parts and the merge's cache key, stores
-            the unit's merged extraction with merge_parts and returns it, or
-            None when the merge is skipped
+            the unit's merged extraction with merge_parts and returns it
         finish_part (callable): passed to get_or_create_extraction for each part
         overwrite (bool): call the model for every part and the merge, even
             when stored
 
     Returns:
-        ClaimExtraction | None: the unit's merged extraction, or None when
-            the merge call would be over its token limit
+        ClaimExtraction: the unit's merged extraction
 
     Raises:
-        ClaimExtractionError: when the model gives no valid response
+        ClaimExtractionError: when the merge call is over the merge's input
+            budget, or the model gives no valid response
     """
     part_extractions = _extract_parts(
         replace(extractor, level=ClaimExtraction.Level.UNIT_PART),
@@ -657,8 +636,7 @@ def extract_split_unit(  # noqa: PLR0913
             [[part.key, part.output] for part in part_extractions],
         ),
     )
-    if extraction is not None:
-        delete_stale_parts(unit, keep=part_extractions)
+    delete_stale_parts(unit, keep=part_extractions)
     return extraction
 
 

@@ -17,10 +17,9 @@ stored output has the same form whether it was split or not. The merge call
 decides which part claims are the same, and which assumed knowledge another
 part teaches; code checks only the part claim ids it cites, and adds back a
 part claim it leaves out without a reason. There is no fallback: a merge
-call over its token limit is logged as an error and the unit is skipped, and
-one with no valid response fails the unit. A unit that would need more parts
-than the configuration's max_parts is skipped too, which caps the calls one
-unit can cost.
+call over the merge stage's input budget, or one with no valid response,
+fails the unit. A unit that would need more parts than the configuration's
+max_parts is skipped, which caps the calls one unit can cost.
 """
 
 from learning_resources.models import (
@@ -358,7 +357,7 @@ def _merge_parts(  # noqa: PLR0913
     outline: str,
     header: str,
     overwrite: bool,
-) -> ClaimExtraction | None:
+) -> ClaimExtraction:
     """
     Merge a split unit's parts with the merge model: see merge_parts
 
@@ -398,7 +397,7 @@ def _generate_split_unit_claims(  # noqa: PLR0913
     header: str,
     *,
     overwrite: bool,
-) -> ClaimExtraction | None:
+) -> ClaimExtraction:
     """
     Extract each part of a split unit, then merge them into the unit's claims.
 
@@ -441,8 +440,7 @@ def generate_unit_claims(
     The prompt is given the course title and the run's units in order, along
     with the unit's own files. A unit whose files are over the input budget
     is extracted in parts that are then merged, unless it would need more
-    than the configuration's max_parts or its merge call would be over the
-    merge's token limit, when it is skipped.
+    than the configuration's max_parts, when it is skipped.
 
     Args:
         unit (Unit): the unit or bin
@@ -454,11 +452,11 @@ def generate_unit_claims(
 
     Returns:
         ClaimExtraction | None: the unit's extraction, or None when the unit
-            has no files with text, would need more than max_parts parts, or
-            its merge call would be over the merge's token limit
+            has no files with text or would need more than max_parts parts
 
     Raises:
-        ClaimExtractionError: when the model gives no valid response
+        ClaimExtractionError: when the model gives no valid response, or a
+            split unit's merge call is over the merge stage's input budget
         ValueError: for the context unit, which generate_context_claims extracts
     """
     if unit.kind == Unit.Kind.CONTEXT:

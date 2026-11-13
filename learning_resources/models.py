@@ -1521,8 +1521,8 @@ class ResourceProfileConfiguration(TimestampedModel):
         help_text="Most file text one call may read. A unit over it is split"
         " into parts that are extracted separately and then merged; a context"
         " unit over it is skipped. For the unit merge stage, the most tokens a"
-        " merge call may take; a unit whose merge call is over it is skipped"
-        " and logged as an error.",
+        " merge call may take; a unit whose merge call is over it fails, and"
+        " its run's claims wait for it.",
     )
     max_parts = models.PositiveIntegerField(
         default=10,

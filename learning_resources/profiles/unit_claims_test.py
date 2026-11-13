@@ -736,32 +736,45 @@ def _unit_rows(unit):
     return ClaimExtraction.objects.filter(unit=unit, level=ClaimExtraction.Level.UNIT)
 
 
-@pytest.mark.parametrize(
-    "limit", ["input_token_budget", "max_completion_tokens", "max_tokens"]
-)
-def test_merge_over_limit_skipped(fake_llm, mocker, limit):
+def test_merge_over_budget_fails_unit(fake_llm):
     """
-    A unit whose merge call is over the merge's limit is skipped and logged
-    as an error, and keeps its parts
+    A unit whose merge call is over the merge's input budget fails, so the
+    run's claims wait for it, and keeps its parts
     """
-    logger = mocker.patch.object(claims, "logger")
+    _split_budget()
+    ResourceProfileConfiguration.objects.filter(
+        stage=ResourceProfileConfiguration.Stage.UNIT_MERGE
+    ).update(input_token_budget=10)
+    unit = _build_unit()
+
+    with pytest.raises(ClaimExtractionError, match="over the input budget of 10"):
+        _generate(unit)
+
+    assert fake_llm.call_count == 2
+    assert [part.part for part in _parts(unit)] == [1, 2]
+    assert not _unit_rows(unit).exists()
+    # the parts are stored, so the next sweep makes no call and fails again
+    with pytest.raises(ClaimExtractionError, match="over the input budget"):
+        _generate(unit)
+    assert fake_llm.call_count == 2
+
+
+@pytest.mark.parametrize("limit", ["max_completion_tokens", "max_tokens"])
+def test_merge_not_limited_by_output_limit(fake_llm, limit):
+    """
+    The merge's output limits don't cap its input: the merge cites part claim
+    ids rather than writing their evidence out again
+    """
     _split_budget()
     ResourceProfileConfiguration.objects.filter(
         stage=ResourceProfileConfiguration.Stage.UNIT_MERGE
     ).update(**{limit: 10})
     unit = _build_unit()
 
-    assert _generate(unit) is None
+    extraction = _generate(unit)
 
-    assert fake_llm.call_count == 2
-    assert [part.part for part in _parts(unit)] == [1, 2]
-    assert not _unit_rows(unit).exists()
-    message, *args = logger.error.call_args.args
-    assert message.startswith("Not merging")
-    assert args[-1] == 10
-    # the parts are stored, so the next sweep makes no call
-    assert _generate(unit) is None
-    assert fake_llm.call_count == 2
+    assert extraction.level == ClaimExtraction.Level.UNIT
+    assert fake_llm.call_count == 3
 
 
 def test_stored_merge_not_checked_against_limit(fake_llm):
