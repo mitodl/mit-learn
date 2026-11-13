@@ -517,6 +517,148 @@ def test_ovs_video_webhook_delete_missing(settings, client, mocker, webhook_owns
     assert not mock_delete.called
 
 
+@pytest.fixture
+def ovs_loader_mocks(mocker):
+    """Mock the search and embedding work the OVS loaders trigger"""
+    mocker.patch("webhooks.views.clear_views_cache")
+    mocker.patch(
+        "learning_resources.etl.loaders.similar_topics_action", return_value=[]
+    )
+    return mocker.Mock(
+        update_index=mocker.patch("learning_resources.etl.loaders.update_index"),
+        unpublished=mocker.patch(
+            "learning_resources.etl.loaders.bulk_resources_unpublished_actions"
+        ),
+    )
+
+
+def _post_ovs_webhook(client, settings, payload):
+    response = client.post(
+        reverse("webhooks:v1:ovs_video_webhook"),
+        data=json.dumps(payload),
+        content_type="application/json",
+        headers={"X-MITLearn-Signature": get_secret(payload, settings)},
+    )
+    assert response.status_code == 200
+
+
+def _ovs_playlist(key):
+    return LearningResource.objects.get(
+        readable_id=key, resource_type=LearningResourceType.video_playlist.name
+    )
+
+
+@pytest.mark.django_db
+def test_ovs_video_webhook_move_unpublishes_emptied_playlist(
+    settings, client, ovs_platform, webhook_owns_ovs, ovs_loader_mocks
+):
+    """A video moved out of its only playlist's last slot unpublishes that playlist."""
+    _post_ovs_webhook(
+        client, settings, _ovs_payload(key="moved", collection_key="col_old")
+    )
+    learning_path_item = LearningResourceRelationship.objects.create(
+        parent=LearningResourceFactory.create(),
+        child=LearningResource.objects.get(readable_id="moved"),
+        relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value,
+    )
+
+    _post_ovs_webhook(
+        client, settings, _ovs_payload(key="moved", collection_key="col_new")
+    )
+
+    old_playlist = _ovs_playlist("col_old")
+    new_playlist = _ovs_playlist("col_new")
+    assert old_playlist.published is False
+    assert new_playlist.published is True
+    assert list(
+        LearningResourceRelationship.objects.filter(
+            child__readable_id="moved",
+            relation_type=LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
+        ).values_list("parent_id", flat=True)
+    ) == [new_playlist.id]
+    assert LearningResourceRelationship.objects.filter(
+        id=learning_path_item.id
+    ).exists()
+    ovs_loader_mocks.unpublished.assert_called_once_with(
+        [old_playlist.id], LearningResourceType.video_playlist.name
+    )
+
+
+@pytest.mark.django_db
+def test_ovs_video_webhook_move_keeps_playlist_with_other_videos(
+    settings, client, ovs_platform, webhook_owns_ovs, ovs_loader_mocks
+):
+    """A playlist that still has a video stays published and is reindexed."""
+    for key in ("stays", "moved"):
+        _post_ovs_webhook(
+            client, settings, _ovs_payload(key=key, collection_key="col_old")
+        )
+    ovs_loader_mocks.update_index.reset_mock()
+
+    _post_ovs_webhook(
+        client, settings, _ovs_payload(key="moved", collection_key="col_new")
+    )
+
+    old_playlist = _ovs_playlist("col_old")
+    assert old_playlist.published is True
+    assert list(old_playlist.resources.values_list("readable_id", flat=True)) == [
+        "stays"
+    ]
+    ovs_loader_mocks.unpublished.assert_not_called()
+    ovs_loader_mocks.update_index.assert_any_call(old_playlist, newly_created=False)
+
+
+@pytest.mark.django_db
+def test_ovs_video_webhook_push_republishes_emptied_playlist(
+    settings, client, ovs_platform, webhook_owns_ovs, ovs_loader_mocks
+):
+    """A new video in an emptied collection publishes its playlist again."""
+    for collection_key in ("col_old", "col_new"):
+        _post_ovs_webhook(
+            client, settings, _ovs_payload(key="moved", collection_key=collection_key)
+        )
+    assert _ovs_playlist("col_old").published is False
+
+    _post_ovs_webhook(
+        client, settings, _ovs_payload(key="another", collection_key="col_old")
+    )
+
+    assert _ovs_playlist("col_old").published is True
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("other_video_published", "expected_published"),
+    [(None, False), (False, False), (True, True)],
+)
+def test_ovs_video_webhook_delete_unpublishes_emptied_playlist(  # noqa: PLR0913
+    settings,
+    client,
+    mocker,
+    ovs_platform,
+    webhook_owns_ovs,
+    ovs_loader_mocks,
+    other_video_published,
+    expected_published,
+):
+    """Deleting a playlist's last published video unpublishes the playlist."""
+    mocker.patch(
+        "webhooks.views.resource_delete_actions",
+        side_effect=lambda resource: resource.delete(),
+    )
+    _post_ovs_webhook(client, settings, _ovs_payload(key="gone"))
+    if other_video_published is not None:
+        _post_ovs_webhook(client, settings, _ovs_payload(key="other"))
+        LearningResource.objects.filter(readable_id="other").update(
+            published=other_video_published
+        )
+
+    _post_ovs_webhook(client, settings, {"video_id": "gone", "delete": True})
+
+    assert _ovs_playlist("col_abc").published is expected_published
+    assert not LearningResource.objects.filter(readable_id="gone").exists()
+
+
 @pytest.mark.django_db
 @pytest.mark.parametrize(
     "owner",
