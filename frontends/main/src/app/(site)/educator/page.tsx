@@ -10,6 +10,7 @@ import type { AppPageProps } from "@/common/searchParams"
 import { getMetadataAsync, safeGenerateMetadata } from "@/common/metadata"
 import { getQueryClient } from "@/app/getQueryClient"
 import EducatorPage from "@/app-pages/EducatorPage/EducatorPage"
+import EducatorFlagGate from "./EducatorFlagGate"
 import {
   SELECTED_COURSES_PARAMS,
   TEACHING_PODCAST_EPISODES_PARAMS,
@@ -46,9 +47,11 @@ const Page: React.FC<AppPageProps<"/educator">> = async () => {
   ])
 
   return (
-    <HydrationBoundary state={dehydrate(queryClient)}>
-      <EducatorPage />
-    </HydrationBoundary>
+    <EducatorFlagGate>
+      <HydrationBoundary state={dehydrate(queryClient)}>
+        <EducatorPage />
+      </HydrationBoundary>
+    </EducatorFlagGate>
   )
 }
 
