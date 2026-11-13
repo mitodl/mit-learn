@@ -19,20 +19,12 @@ import {
 } from "ol-components"
 import Link from "next/link"
 import { RiArrowLeftLine, RiArrowRightLine } from "@remixicon/react"
-import {
-  WebsiteContentContentTypeEnum,
-  WebsiteContentListStatusEnum,
-  type WebsiteContent,
-} from "api/v1"
+import type { WebsiteContent } from "api/v1"
 import { LocalDate } from "ol-utilities"
 import { useWebsiteContentList } from "api/hooks/website_content"
 import { extractArticleContent } from "@/common/websiteContentUtils"
 import { CONTENT_TYPE_LABELS } from "@/common/website_content"
-import {
-  articleView,
-  websiteContentCreateView,
-  websiteContentEditView,
-} from "@/common/urls"
+import { articleView, websiteContentCreateView } from "@/common/urls"
 import { Permission, useUserHasPermission } from "api/hooks/user"
 import { ButtonLink } from "@mitodl/smoot-design"
 import { WebsiteContentActionsMenu } from "@/page-components/WebsiteContentActionsMenu/WebsiteContentActionsMenu"
@@ -402,29 +394,17 @@ const BreadcrumContainer = styled(Container)(({ theme }) => ({
 const RegularStory: React.FC<{ item: WebsiteContent }> = ({ item }) => {
   const articleContent = extractArticleContent(item)
   const [imageError, setImageError] = React.useState(false)
-  /**
-   * An unpublished article has no public page to land on, so the card points
-   * at the editor instead. Only an editor ever sees one here: the listing
-   * endpoint filters unpublished items out for everyone else.
-   *
-   * By id rather than slug, which a draft may not have yet.
-   */
-  const href = item.is_published
-    ? articleView(item.slug ?? String(item.id))
-    : websiteContentEditView(WebsiteContentContentTypeEnum.Article, item.id)
+  const href = articleView(item.slug ?? String(item.id))
   return (
     <StoryCard>
-      {/* A draft has nothing to unpublish; the menu hides itself from
-          users who cannot edit articles. */}
-      {item.is_published ? (
-        <StoryActions>
-          <WebsiteContentActionsMenu
-            contentId={item.id}
-            contentLabel={CONTENT_TYPE_LABELS.article}
-            title={item.title}
-          />
-        </StoryActions>
-      ) : null}
+      {/* The menu hides itself from users who cannot edit articles. */}
+      <StoryActions>
+        <WebsiteContentActionsMenu
+          contentId={item.id}
+          contentLabel={CONTENT_TYPE_LABELS.article}
+          title={item.title}
+        />
+      </StoryActions>
       <StoryContent>
         <RegularStoryTitleWrapper>
           <StoryTitle>
@@ -470,10 +450,9 @@ const ArticleListingPage: React.FC = () => {
   const { data: articles, isLoading } = useWebsiteContentList({
     limit: PAGE_SIZE,
     offset: (page - 1) * PAGE_SIZE,
+    // Published only, the API's default, for editors too: their drafts are
+    // listed at /articles/draft.
     content_type: "article",
-    // The API lists published content unless asked otherwise; editors still
-    // see their drafts here.
-    ...(isArticleEditor ? { status: WebsiteContentListStatusEnum.Both } : {}),
   })
 
   const gridStories = articles?.results ?? []
