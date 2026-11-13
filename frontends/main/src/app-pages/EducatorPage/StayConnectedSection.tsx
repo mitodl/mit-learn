@@ -79,7 +79,8 @@ const SocialLink = styled.a(({ theme }) => ({
   color: theme.custom.colors.black,
   svg: { width: "24px", height: "24px" },
   "&:hover": {
-    backgroundColor: theme.custom.colors.lightGray1,
+    backgroundColor: theme.custom.colors.darkGray2,
+    color: theme.custom.colors.white,
   },
 }))
 
