@@ -18,7 +18,7 @@ from learning_resources.models import (
     ResourceProfileConfiguration,
     Unit,
 )
-from learning_resources.profiles import claims
+from learning_resources.profiles import claims, unit_claims
 from learning_resources.profiles.claims import (
     ClaimExtractionError,
     call_llm,
@@ -483,7 +483,7 @@ def test_unit_over_budget_split(fake_llm):
 
 def test_split_unit_logged(fake_llm, mocker):
     """A unit that is split is logged with its number of parts"""
-    logger = mocker.patch.object(claims, "logger")
+    logger = mocker.patch.object(unit_claims, "logger")
     _split_budget()
 
     _generate(_build_unit())
@@ -502,7 +502,7 @@ def test_split_unit_logged(fake_llm, mocker):
 @pytest.mark.parametrize("max_parts", [1, 0])
 def test_unit_over_max_parts_skipped(fake_llm, mocker, max_parts):
     """A unit that would need more parts than max_parts is skipped"""
-    logger = mocker.patch.object(claims, "logger")
+    logger = mocker.patch.object(unit_claims, "logger")
     _split_budget()
     ResourceProfileConfiguration.objects.filter(
         stage=ResourceProfileConfiguration.Stage.UNIT

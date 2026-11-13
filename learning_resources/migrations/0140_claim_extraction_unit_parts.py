@@ -14,7 +14,9 @@ Produce one record for the whole unit, in the same format as a single-part unit:
 - skills and assessment_expectations: merge duplicates the same way.
 - assumed_knowledge: keep an item only if no part teaches or reviews it. Keep flagged_as_prior=true if any part set it.
 - taught_assumed_knowledge: list each part's assumed item that you leave out because a part teaches or reviews it,
-  with the ids of the concepts, with status taught or reviewed, that teach or review it.
+  with the ids of the concepts, with status taught or reviewed, that teach or review it. A concept must teach or
+  review the same knowledge, even when it is worded differently. A narrower, broader or merely related topic is not
+  the same knowledge.
 - extraction_notes: combine the parts' notes.
 Account for every part claim: cite it in a merged claim or, for assumed knowledge, list it in
 taught_assumed_knowledge. Every merged claim must list, in part_claim_ids, the part claim ids it comes from, and only

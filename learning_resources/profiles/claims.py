@@ -7,14 +7,12 @@ run it is for, under a key its caller builds from the call's inputs, and a call 
 key is already stored, for this unit or run or another, is skipped.
 """
 
-import functools
 import hashlib
 import json
 import logging
-import re
 import types
 from collections.abc import Callable
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from functools import cached_property
 from typing import Union, get_args, get_origin
 
@@ -30,7 +28,7 @@ from learning_resources.models import (
     ResourceProfileConfiguration,
     Unit,
 )
-from learning_resources.profiles.sources import Source, estimate_tokens
+from learning_resources.profiles.sources import Source
 from learning_resources.profiles.verification import verify_all_evidence
 from learning_resources.utils import sanitize_llm_text
 
@@ -289,107 +287,6 @@ def _stored_output(parsed: dict, sources: list[Source]) -> dict:
     return output
 
 
-# --------------------------------------------------------------------------- merge
-# A split unit's parts are merged by a merge call, which decides which part
-# claims are the same claim; code checks only the part claim ids it cites.
-_PART_CLAIM_ID = re.compile(r"P(\d+):([a-z]+)(\d+)", re.IGNORECASE)
-
-
-def normalize_part_claim_id(claim_id: str) -> str:
-    """
-    Return a part claim id the merge model cites in the form P2:c4, so that
-    variants of it like "p2:c4", "P2: c4" or "[P2:c4]" are found
-    """
-    compact = re.sub(r"[^A-Za-z0-9:]", "", claim_id)
-    match = _PART_CLAIM_ID.fullmatch(compact)
-    if not match:
-        return compact
-    part, prefix, number = match.groups()
-    return f"P{int(part)}:{prefix.lower()}{int(number)}"
-
-
-def cited_part_claim_ids(
-    claim_ids: list[str], part_claims: dict[str, tuple[str, dict]], kinds: set[str]
-) -> list[str]:
-    """
-    Return the part claim ids a merged claim cites that exist and are of one
-    of `kinds`, normalized and without repeats
-
-    Args:
-        claim_ids (list of str): the ids as the merge model wrote them
-        part_claims (dict): each part claim, as id: (kind, claim)
-        kinds (set of str): the kinds the merged claim may cite, like
-            {"concepts"}
-    """
-    return [
-        claim_id
-        for claim_id in dict.fromkeys(map(normalize_part_claim_id, claim_ids))
-        if part_claims.get(claim_id, (None,))[0] in kinds
-    ]
-
-
-def part_claim_as_merged(claim_id: str, claim: dict) -> dict:
-    """Return a part claim the merge left out as a merged claim of its own"""
-    return {
-        **{name: value for name, value in claim.items() if name != "id"},
-        "part_claim_ids": [claim_id],
-    }
-
-
-def merge_parts(  # noqa: PLR0913
-    extractor: ClaimExtractor,
-    key: str,
-    build_prompt: Callable[[], str],
-    sources: list[Source],
-    *,
-    unit: Unit,
-    finish: Callable[[dict], dict],
-    overwrite: bool = False,
-) -> ClaimExtraction:
-    """
-    Merge a split unit's parts with the merge model.
-
-    There is no fallback: a merge call over the merge's input budget, or one
-    with no valid response, raises, so the unit fails and is tried again on
-    the next sweep, and the course keeps its last published claims until
-    then. The budget is checked only when the merge isn't stored, against
-    the system prompt and the prompt together.
-
-    Args:
-        extractor (ClaimExtractor): the merge extractor
-        key (str): the merge's cache key
-        build_prompt (callable): returns the merge prompt, with the parts'
-            records
-        sources (list of Source): the unit's sources
-        unit (Unit): the split unit
-        finish (callable): resolves the merge output's part claim citations
-        overwrite (bool): merge even when the key is stored
-
-    Raises:
-        ClaimExtractionError: when the merge call is over the merge's input
-            budget, or the model gives no valid response
-    """
-    build_prompt = functools.cache(build_prompt)
-    if overwrite or not ClaimExtraction.objects.filter(key=key).exists():
-        tokens = estimate_tokens(extractor.system) + estimate_tokens(build_prompt())
-        budget = extractor.config.input_token_budget
-        if tokens > budget:
-            msg = (
-                f"{extractor.stage}: the merge call, about {tokens:,} tokens, is"
-                f" over the input budget of {budget:,}"
-            )
-            raise ClaimExtractionError(msg)
-    return get_or_create_extraction(
-        extractor,
-        key,
-        build_prompt,
-        sources,
-        unit=unit,
-        finish=finish,
-        overwrite=overwrite,
-    )
-
-
 # --------------------------------------------------------------------------- extraction
 def over_budget(unit: Unit, sources: list[Source], budget: int) -> bool:
     """Log a context unit whose files are over the input budget"""
@@ -407,237 +304,6 @@ def over_budget(unit: Unit, sources: list[Source], budget: int) -> bool:
         budget,
     )
     return True
-
-
-def merge_evidence(claims: list[dict]) -> list[dict]:
-    """Return the evidence of several claims, without repeats"""
-    evidence, seen = [], set()
-    for claim in claims:
-        for item in claim.get("evidence", []):
-            marker = (item["source_id"], item["passage"])
-            if marker not in seen:
-                seen.add(marker)
-                evidence.append(item)
-    return evidence
-
-
-def delete_stale_parts(unit: Unit, keep: list[ClaimExtraction] = ()) -> None:
-    """
-    Delete a unit's part extractions other than `keep` that no merge cites:
-    the rest are left from an earlier split, or from before the unit fit in
-    one call.
-
-    A part row is shared by the units whose parts have its key, and points at
-    the unit that used it last, so a part that is stale for this unit can
-    still be current for another unit of the course. A part is kept while a
-    unit-level row lists it in its part_keys, which also keeps the parts this
-    unit's earlier merge cites until that merge is replaced. Call it once the
-    unit's own extraction has been stored, or nothing of the earlier merge's
-    is deleted.
-
-    Args:
-        unit (Unit): the unit
-        keep (list of ClaimExtraction): the unit's current parts
-    """
-    stale = ClaimExtraction.objects.filter(
-        unit=unit, level=ClaimExtraction.Level.UNIT_PART
-    ).exclude(id__in=[part.id for part in keep])
-    stale_keys = list(stale.values_list("key", flat=True))
-    if not stale_keys:
-        return
-    # a part's key includes the course, so only the course's merges cite it
-    citing = ClaimExtraction.objects.filter(
-        level=ClaimExtraction.Level.UNIT,
-        unit__run__learning_resource_id=unit.run.learning_resource_id,
-        output__part_keys__has_any_keys=stale_keys,
-    ).values_list("output__part_keys", flat=True)
-    cited = {key for part_keys in citing for key in part_keys}
-    stale.exclude(key__in=cited).delete()
-
-
-def too_many_parts(
-    unit: Unit, sources_by_part: list[list[Source]], max_parts: int
-) -> bool:
-    """
-    Log a unit that is split, and return whether it needs too many parts.
-
-    Each part is a call of its own, so a unit that would need more than
-    max_parts is skipped, which caps what one unit can cost.
-
-    Args:
-        unit (Unit): the unit
-        sources_by_part (list of list of Source): its parts' sources, from
-            pack_parts
-        max_parts (int): the most parts the unit may be split into
-    """
-    if len(sources_by_part) <= 1:
-        return False
-    sources = [source for part in sources_by_part for source in part]
-    details = (
-        unit.kind,
-        unit.external_id,
-        unit.run.run_id,
-        len(sources),
-        sum(source.tokens for source in sources),
-        len(sources_by_part),
-    )
-    if len(sources_by_part) > max_parts:
-        logger.warning(
-            "Skipping %s %s of run %s: %d files, about %d tokens, need %d"
-            " parts, over the limit of %d",
-            *details,
-            max_parts,
-        )
-        return True
-    logger.info(
-        "Splitting %s %s of run %s: %d files, about %d tokens, into %d parts",
-        *details,
-    )
-    return False
-
-
-def part_header(index: int, sources: list[Source], subject: str, rest: str) -> str:
-    """
-    Return the line that tells the model which part of a split unit it reads
-
-    Args:
-        index (int): the part's index, from 1
-        sources (list of Source): the part's sources
-        subject (str): what is split, like "the unit"
-        rest (str): what the model is told about reading only a part
-    """
-    return (
-        f"PART {index} of {subject}: sources {sources[0].source_id}-"
-        f"{sources[-1].source_id}. {rest}"
-    )
-
-
-def _extract_parts(  # noqa: PLR0913
-    extractor: ClaimExtractor,
-    unit: Unit,
-    sources_by_part: list[list[Source]],
-    key_inputs: list,
-    build_prompt: Callable[[int, list[Source]], str],
-    *,
-    finish: Callable[[dict], dict] | None = None,
-    overwrite: bool = False,
-) -> list[ClaimExtraction]:
-    """
-    Extract each part of a split unit.
-
-    Source ids run through the whole unit, so a part's evidence cites the same
-    ids as the unit's sources. A part is keyed by the key inputs, its position
-    and its sources' ids and text, and not by the number of parts, so a part
-    is reused when parts are added after it. The unit's id isn't in the key,
-    so another run's unit with the same files reuses its parts the way it
-    reuses an unsplit unit's row. Like that row, a part row is pointed at the
-    unit that used it last: two units of a course with the same title, kind
-    and part share the part's row.
-
-    Args:
-        extractor (ClaimExtractor): the part extractor, at the unit_part level
-        unit (Unit): the split unit
-        sources_by_part (list of list of Source): each part's sources, from
-            pack_parts
-        key_inputs (list): what else the parts' keys are built from, like the
-            course and the unit's title
-        build_prompt (callable): returns a part's prompt, given its index
-            from 1 and its sources
-        finish (callable): passed to get_or_create_extraction for each part
-        overwrite (bool): call the model for every part, even when stored
-
-    Returns:
-        list of ClaimExtraction: the parts, in unit order
-
-    Raises:
-        ClaimExtractionError: when the model gives no valid response for a part
-    """
-    part_extractions = []
-    for index, sources in enumerate(sources_by_part, 1):
-        part_extractions.append(
-            get_or_create_extraction(
-                extractor,
-                extractor.key(
-                    *key_inputs,
-                    index,
-                    [[source.source_id, source.cache_input()] for source in sources],
-                ),
-                lambda index=index, sources=sources: build_prompt(index, sources),
-                sources,
-                unit=unit,
-                part=index,
-                finish=finish,
-                overwrite=overwrite,
-            )
-        )
-    return part_extractions
-
-
-def extract_split_unit(  # noqa: PLR0913
-    extractor: ClaimExtractor,
-    unit: Unit,
-    *,
-    sources_by_part: list[list[Source]],
-    key_inputs: list,
-    build_part_prompt: Callable[[int, list[Source]], str],
-    merge: Callable[[list[ClaimExtraction], str], ClaimExtraction],
-    finish_part: Callable[[dict], dict] | None = None,
-    overwrite: bool = False,
-) -> ClaimExtraction:
-    """
-    Extract each part of a split unit, then merge them into the unit's row.
-
-    A part whose key changed gets a new row rather than replacing the unit's
-    row for that part, and the unit's parts that aren't current are deleted
-    only once the merge is stored, and only when no other unit's merge cites
-    them: until then the unit's earlier merge cites them, so a part or merge
-    call that fails leaves that merge's parts as they were. A part
-    regenerated with overwrite is the exception: its key is the same, so its
-    row is replaced.
-
-    Args:
-        extractor (ClaimExtractor): the unit's extractor; parts are extracted
-            with it at the unit_part level
-        unit (Unit): the split unit
-        sources_by_part (list of list of Source): each part's sources, from
-            pack_parts
-        key_inputs (list): what else the keys are built from, like the course
-            and the unit's title
-        build_part_prompt (callable): returns a part's prompt, given its index
-            from 1 and its sources
-        merge (callable): given the parts and the merge's cache key, stores
-            the unit's merged extraction with merge_parts and returns it
-        finish_part (callable): passed to get_or_create_extraction for each part
-        overwrite (bool): call the model for every part and the merge, even
-            when stored
-
-    Returns:
-        ClaimExtraction: the unit's merged extraction
-
-    Raises:
-        ClaimExtractionError: when the merge call is over the merge's input
-            budget, or the model gives no valid response
-    """
-    part_extractions = _extract_parts(
-        replace(extractor, level=ClaimExtraction.Level.UNIT_PART),
-        unit,
-        sources_by_part,
-        key_inputs,
-        build_part_prompt,
-        finish=finish_part,
-        overwrite=overwrite,
-    )
-    extraction = merge(
-        part_extractions,
-        extractor.key(
-            "merge",
-            *key_inputs,
-            # a part regenerated with overwrite keeps its key but not its output
-            [[part.key, part.output] for part in part_extractions],
-        ),
-    )
-    delete_stale_parts(unit, keep=part_extractions)
-    return extraction
 
 
 def get_or_create_extraction(  # noqa: PLR0913
@@ -727,8 +393,8 @@ def _store_extraction(
     merges them, so a unit's rows are told apart by level and part. A unit's
     part rows are neither reused for another key nor deleted here: the
     unit's merge cites them until a new merge is stored, and then
-    delete_stale_parts deletes the ones that aren't current and that no other
-    unit's merge cites.
+    unit_claims deletes the ones that aren't current and that no other unit's
+    merge cites.
 
     Args:
         extraction (ClaimExtraction | None): the row for the key, if there is
