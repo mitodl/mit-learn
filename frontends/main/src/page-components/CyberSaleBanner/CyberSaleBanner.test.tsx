@@ -83,6 +83,11 @@ describe("CyberSaleBanner", () => {
       case: "a protocol-relative URL",
       payload: { ...SALE, cta_url: "//example.com/x" },
     },
+    {
+      case: "a backslash path",
+      payload: { ...SALE, cta_url: "/\\example.com/x" },
+    },
+    { case: "dismiss_hours of 0", payload: { ...SALE, dismiss_hours: 0 } },
     { case: "a sale without a code", payload: { ...SALE, code: undefined } },
     { case: "an unknown variant", payload: { ...SALE, variant: "flash" } },
   ])("Renders nothing for $case", ({ payload }) => {
@@ -125,7 +130,6 @@ describe("CyberSaleBanner", () => {
     { dismissHours: undefined, ageHours: 24 * 30, visible: false },
     { dismissHours: 3, ageHours: 2, visible: false },
     { dismissHours: 3, ageHours: 4, visible: true },
-    { dismissHours: 0, ageHours: 0, visible: true },
   ])(
     "dismiss_hours $dismissHours, dismissed $ageHours hours ago: visible $visible",
     ({ dismissHours, ageHours, visible }) => {
