@@ -62,6 +62,9 @@ const schema = yup.object().shape({
   // HubSpot form backing the /organizational-learning lead form. Optional: the
   // form area reports itself unavailable rather than rendering when unset.
   NEXT_PUBLIC_ORG_LEARNING_HUBSPOT_FORM_ID: yup.string(),
+  // Form behind the /educator "Share your story" CTA. Optional: the Share
+  // panel is not rendered when unset.
+  NEXT_PUBLIC_EDUCATOR_SHARE_STORY_URL: yup.string(),
   NEXT_PUBLIC_SENTRY_DSN: yup.string(),
   NEXT_PUBLIC_SENTRY_ENV: yup.string(),
   NEXT_PUBLIC_SENTRY_PROFILES_SAMPLE_RATE: yup.string(),

@@ -5,6 +5,9 @@ export const getRecaptchaSiteKey = (): string | undefined =>
 export const getOrgLearningHubspotFormId = (): string =>
   (env("NEXT_PUBLIC_ORG_LEARNING_HUBSPOT_FORM_ID") ?? "").trim()
 
+export const getEducatorShareStoryUrl = (): string | undefined =>
+  (env("NEXT_PUBLIC_EDUCATOR_SHARE_STORY_URL") ?? "").trim() || undefined
+
 /** CDN TTL used when NEXT_PUBLIC_CACHE_S_MAXAGE_SECONDS is unset: local dev and CI. */
 const DEFAULT_S_MAXAGE_SECONDS = 1800
 
