@@ -79,13 +79,22 @@ def sync_profile_notes(
 
     Only the learner's own request writes: a staff edit of someone else's
     profile carries the staff member's token, which would write to their memory.
-    A memory outage or a forget in progress leaves the notes unwritten rather
-    than failing the profile save.
+    A memory outage, a forget in progress, or a misconfigured memory client
+    leaves the notes unwritten rather than failing the profile save, which has
+    already been committed.
     """
     fields = [field for field in NOTE_FIELDS if field in fields]
     if not fields or profile.user_id != request.user.id:
         return
-    memory = get_memory()
+    try:
+        memory = get_memory()
+    except ValueError:
+        # An incomplete OL_LLM_MEMORY_* deployment. Logged with its stack on
+        # every save so it reaches Sentry; ol-llm's messages carry no secrets.
+        log.exception(
+            "Learner memory is misconfigured, so profile notes were not written"
+        )
+        return
     if memory is None:
         return
     token = request.META.get(ACCESS_TOKEN_HEADER)

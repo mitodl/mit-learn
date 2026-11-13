@@ -257,3 +257,26 @@ def test_memory_built_from_the_environment(settings, monkeypatch, fresh_get_memo
 
     assert isinstance(client, SyncMemory)
     assert client.app == "mit-learn"
+
+
+def test_misconfigured_memory_does_not_fail_the_save(  # noqa: PLR0913
+    client, logged_in_profile, settings, monkeypatch, caplog, fresh_get_memory
+):
+    """An incomplete OL_LLM_MEMORY_* config is logged and the profile still saves"""
+    settings.OL_LLM_MEMORY_BACKEND = "in-memory"
+    monkeypatch.setenv("OL_LLM_MEMORY_BACKEND", "in-memory")
+    monkeypatch.delenv("OL_LLM_MEMORY_APP", raising=False)
+
+    resp = patch_profile(
+        client,
+        logged_in_profile,
+        {"time_commitment": Profile.TimeCommitment.ZERO_TO_FIVE_HOURS},
+        HTTP_X_ACCESS_TOKEN=TOKEN,
+    )
+
+    assert resp.status_code == status.HTTP_200_OK
+    logged_in_profile.refresh_from_db()
+    assert (
+        logged_in_profile.time_commitment == Profile.TimeCommitment.ZERO_TO_FIVE_HOURS
+    )
+    assert "Learner memory is misconfigured" in caplog.text
