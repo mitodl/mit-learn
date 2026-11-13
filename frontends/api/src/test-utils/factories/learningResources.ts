@@ -31,6 +31,7 @@ import type {
   LearningResourceRelationship,
   LearningResourceSummary,
   DocumentResource,
+  PracticeProblem,
 } from "api"
 import {
   AvailabilityEnum,
@@ -630,7 +631,34 @@ const document: LearningResourceFactory<DocumentResource> = (
 
       resource_type_group: ResourceTypeGroupEnum.LearningMaterial,
     },
-    {},
+    { practice_problem: null },
+    overrides,
+  )
+}
+
+const practiceProblem: PartialFactory<PracticeProblem> = (overrides = {}) => {
+  return mergeOverrides<PracticeProblem>(
+    {
+      number: String(faker.number.int({ min: 1, max: 10 })),
+      document_title: `Problem Set ${faker.number.int({ min: 1, max: 10 })}`,
+      statement: `${faker.lorem.sentence()} $x^2 + y^2 = r^2$`,
+      parts: [
+        { label: "a", body: faker.lorem.sentence() },
+        { label: "b", body: faker.lorem.sentence() },
+      ],
+      pages: [1, 2],
+      topics: [faker.lorem.word()],
+      points: "",
+      source: {
+        course_id: faker.number.int(),
+        course_title: faker.lorem.words(3),
+        course_readable_id: `${faker.number.int({ max: 24 })}.${faker.number.int({ max: 999 })}`,
+        semester: "Fall",
+        year: 2016,
+        file_title: faker.lorem.words(2),
+        file_url: faker.internet.url(),
+      },
+    },
     overrides,
   )
 }
@@ -747,6 +775,8 @@ export {
   podcasts,
   podcastEpisode,
   podcastEpisodes,
+  document,
+  practiceProblem,
   video,
   videos,
   videoPlaylist,

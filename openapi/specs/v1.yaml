@@ -11361,6 +11361,11 @@ components:
           type: string
           nullable: true
           readOnly: true
+        practice_problem:
+          allOf:
+          - $ref: '#/components/schemas/PracticeProblem'
+          readOnly: true
+          nullable: true
         readable_id:
           type: string
           readOnly: true
@@ -11471,6 +11476,7 @@ components:
       - pace
       - platform
       - position
+      - practice_problem
       - prices
       - professional
       - readable_id
@@ -16135,6 +16141,102 @@ components:
       type: string
       enum:
       - podcast
+    PracticeProblem:
+      type: object
+      description: Serializer for the PracticeProblem model; its solution is not shown
+      properties:
+        number:
+          type: string
+          readOnly: true
+        document_title:
+          type: string
+          readOnly: true
+          description: The title of the PDF the problem is from
+        statement:
+          type: string
+          readOnly: true
+          description: The problem's stem as markdown
+        parts:
+          type: array
+          items:
+            $ref: '#/components/schemas/PracticeProblemPart'
+          readOnly: true
+        pages:
+          type: array
+          items:
+            type: integer
+            maximum: 2147483647
+            minimum: 0
+          readOnly: true
+        topics:
+          type: array
+          items:
+            type: string
+            maxLength: 256
+          readOnly: true
+        points:
+          type: string
+          readOnly: true
+        source:
+          allOf:
+          - $ref: '#/components/schemas/PracticeProblemSource'
+          readOnly: true
+      required:
+      - document_title
+      - number
+      - pages
+      - parts
+      - points
+      - source
+      - statement
+      - topics
+    PracticeProblemPart:
+      type: object
+      description: A lettered part of a practice problem
+      properties:
+        label:
+          type: string
+          readOnly: true
+        body:
+          type: string
+          readOnly: true
+          description: The part as markdown
+      required:
+      - body
+      - label
+    PracticeProblemSource:
+      type: object
+      description: The course and file a practice problem is from
+      properties:
+        course_id:
+          type: integer
+          nullable: true
+        course_title:
+          type: string
+          nullable: true
+        course_readable_id:
+          type: string
+          nullable: true
+        semester:
+          type: string
+          nullable: true
+        year:
+          type: integer
+          nullable: true
+        file_title:
+          type: string
+          nullable: true
+        file_url:
+          type: string
+          nullable: true
+      required:
+      - course_id
+      - course_readable_id
+      - course_title
+      - file_title
+      - file_url
+      - semester
+      - year
     PrivacyLevelEnum:
       enum:
       - private

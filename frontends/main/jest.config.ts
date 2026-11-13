@@ -22,6 +22,7 @@ const config: Config.InitialOptions = {
     ...baseConfig.moduleNameMapper,
     "^@/(.*)$": path.resolve(__dirname, "src/$1"),
     "^rehype-mathjax/browser$": "ol-test-utilities/filemocks/filemock.js",
+    "^rehype-katex$": "ol-test-utilities/filemocks/filemock.js",
     "^rehype-raw$": "ol-test-utilities/filemocks/filemock.js",
     "^remark-math$": "ol-test-utilities/filemocks/filemock.js",
     "^remark-supersub$": "ol-test-utilities/filemocks/filemock.js",
