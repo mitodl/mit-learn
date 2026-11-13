@@ -775,6 +775,7 @@ export interface DocumentResource {
   resource_type: DocumentResourceResourceTypeEnum
   content_files: Array<NestedContentFile> | null
   description: string | null
+  practice_problem: PracticeProblem | null
   readable_id: string
   title: string
   full_description?: string | null
@@ -1673,6 +1674,47 @@ export const PodcastResourceResourceTypeEnum = {
 export type PodcastResourceResourceTypeEnum =
   (typeof PodcastResourceResourceTypeEnum)[keyof typeof PodcastResourceResourceTypeEnum]
 
+/**
+ * Serializer for the PracticeProblem model; its solution is not shown
+ */
+export interface PracticeProblem {
+  number: string
+  /**
+   * The title of the PDF the problem is from
+   */
+  document_title: string
+  /**
+   * The problem\'s stem as markdown
+   */
+  statement: string
+  parts: Array<PracticeProblemPart>
+  pages: Array<number>
+  topics: Array<string>
+  points: string
+  source: PracticeProblemSource
+}
+/**
+ * A lettered part of a practice problem
+ */
+export interface PracticeProblemPart {
+  label: string
+  /**
+   * The part as markdown
+   */
+  body: string
+}
+/**
+ * The course and file a practice problem is from
+ */
+export interface PracticeProblemSource {
+  course_id: number | null
+  course_title: string | null
+  course_readable_id: string | null
+  semester: string | null
+  year: number | null
+  file_title: string | null
+  file_url: string | null
+}
 /**
  * Serializer for profile search preference filters
  */

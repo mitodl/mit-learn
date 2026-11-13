@@ -582,6 +582,62 @@ class VideoSerializer(serializers.ModelSerializer):
         exclude = ("learning_resource", "transcript", *COMMON_IGNORED_FIELDS)
 
 
+class PracticeProblemPartSerializer(serializers.Serializer):
+    """A lettered part of a practice problem"""
+
+    label = serializers.CharField(read_only=True)
+    body = serializers.CharField(read_only=True, help_text="The part as markdown")
+
+
+class PracticeProblemSourceSerializer(serializers.Serializer):
+    """The course and file a practice problem is from"""
+
+    course_id = serializers.IntegerField(allow_null=True)
+    course_title = serializers.CharField(allow_null=True)
+    course_readable_id = serializers.CharField(allow_null=True)
+    semester = serializers.CharField(allow_null=True)
+    year = serializers.IntegerField(allow_null=True)
+    file_title = serializers.CharField(allow_null=True)
+    file_url = serializers.CharField(allow_null=True)
+
+
+class PracticeProblemSerializer(serializers.ModelSerializer):
+    """Serializer for the PracticeProblem model; its solution is not shown"""
+
+    parts = PracticeProblemPartSerializer(many=True, read_only=True)
+    source = serializers.SerializerMethodField()
+
+    @extend_schema_field(PracticeProblemSourceSerializer)
+    def get_source(self, instance) -> dict:
+        """Return the course and file the problem is from"""
+        content_file = instance.content_file
+        run = content_file.run if content_file else None
+        course = run.learning_resource if run else None
+        return {
+            "course_id": course.id if course else None,
+            "course_title": course.title if course else None,
+            "course_readable_id": course.readable_id if course else None,
+            "semester": run.semester if run else None,
+            "year": run.year if run else None,
+            "file_title": content_file.title if content_file else None,
+            "file_url": content_file.url if content_file else None,
+        }
+
+    class Meta:
+        model = models.PracticeProblem
+        fields = (
+            "number",
+            "document_title",
+            "statement",
+            "parts",
+            "pages",
+            "topics",
+            "points",
+            "source",
+        )
+        read_only_fields = fields
+
+
 class VideoPlaylistSerializer(serializers.ModelSerializer):
     """Serializer for the VideoPlaylist model"""
 
@@ -1674,6 +1730,7 @@ class DocumentResourceSerializer(LearningResourceBaseSerializer):
 
     content_files = serializers.SerializerMethodField()
     description = serializers.SerializerMethodField()
+    practice_problem = PracticeProblemSerializer(read_only=True, allow_null=True)
 
     @extend_schema_field(NestedContentFileSerializer(many=True, allow_null=True))
     def get_content_files(self, instance):

@@ -1785,6 +1785,62 @@ class Video(LearningResourceDetailModel):
         return f"Video: {self.id} - {self.learning_resource.readable_id}"
 
 
+class PracticeProblemQuerySet(LearningResourceDetailQuerySet):
+    """QuerySet for PracticeProblem"""
+
+    def for_serialization(self):
+        """Return queryset for serialization"""
+        return self.select_related("content_file__run__learning_resource")
+
+
+class PracticeProblem(LearningResourceDetailModel):
+    """
+    A problem read from a converted PDF (a problem set or exam), shown as its
+    own "Practice & Assignment" learning material
+    """
+
+    objects = PracticeProblemQuerySet.as_manager()
+
+    learning_resource = models.OneToOneField(
+        LearningResource,
+        related_name="practice_problem",
+        on_delete=models.CASCADE,
+    )
+    content_file = models.ForeignKey(
+        "ContentFile",
+        related_name="practice_problems",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="The PDF the problem was read from",
+    )
+    node_id = models.CharField(
+        max_length=64, help_text="The problem's node in the PDF's structure"
+    )
+    number = models.CharField(max_length=64, blank=True, default="")
+    document_title = models.CharField(
+        max_length=256,
+        blank=True,
+        default="",
+        help_text="The title of the PDF the problem is from",
+    )
+    statement = models.TextField(
+        blank=True, default="", help_text="The problem's stem as markdown"
+    )
+    parts = models.JSONField(
+        default=list,
+        blank=True,
+        help_text='Its parts, as [{"label": "a", "body": markdown}]',
+    )
+    solution = models.TextField(blank=True, default="")
+    pages = ArrayField(models.PositiveIntegerField(), default=list, blank=True)
+    topics = ArrayField(models.CharField(max_length=256), default=list, blank=True)
+    points = models.CharField(max_length=64, blank=True, default="")
+
+    def __str__(self):
+        return f"Practice problem: {self.id} - {self.learning_resource.readable_id}"
+
+
 class VideoPlaylistQuerySet(LearningResourceDetailQuerySet):
     """QuerySet for VideoPlaylist"""
 

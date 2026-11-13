@@ -232,4 +232,31 @@ describe("ResourceCardView", () => {
     expect(screen.getByTestId("placeholder")).toBeInTheDocument()
     expect(queryByImageSrc(container, DEFAULT_RESOURCE_IMG)).toBeNull()
   })
+
+  test("Placeholder details replace the default image and the icon, but not a real image", () => {
+    const props = makeProps()
+    const icon = <svg data-testid="placeholder" />
+    const details = { label: "Problem set 2", value: "Kinematics" }
+    const { container, rerender } = renderWithTheme(
+      <ResourceCardView
+        {...props}
+        placeholderIcon={icon}
+        placeholderDetails={details}
+      />,
+    )
+    expect(getByImageSrc(container, props.imageSrc!)).toBeInTheDocument()
+    expect(screen.queryByText("Kinematics")).toBeNull()
+    rerender(
+      <ResourceCardView
+        {...props}
+        imageSrc={null}
+        placeholderIcon={icon}
+        placeholderDetails={details}
+      />,
+    )
+    expect(screen.getByText("Problem set 2")).toBeInTheDocument()
+    expect(screen.getByText("Kinematics")).toBeInTheDocument()
+    expect(screen.queryByTestId("placeholder")).toBeNull()
+    expect(queryByImageSrc(container, DEFAULT_RESOURCE_IMG)).toBeNull()
+  })
 })

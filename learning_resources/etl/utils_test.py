@@ -1879,6 +1879,44 @@ def test_extract_pdf_bytes_with_ocr(  # noqa: PLR0913
     assert utils.extract_pdf_bytes_with_ocr(pdf_bytes) == expected
 
 
+@pytest.mark.parametrize("converted", [True, False])
+def test_extract_pdf_bytes_with_ocr_saves_figures(mocker, settings, converted):
+    """With its key, an in-memory PDF's figures are saved for its version"""
+    settings.OCR_MODEL = "model"
+    settings.OCR_SAVE_FIGURES = True
+    settings.OCR_PDF_MAX_PAGE_THRESHOLD = 0
+    to_markdown = mocker.patch(
+        "learning_resources.etl.utils._pdf_to_markdown",
+        return_value="# OCR" if converted else "",
+    )
+    cleanup = mocker.patch(
+        "learning_resources.etl.utils._delete_unlinked_figure_versions"
+    )
+    utils.extract_pdf_bytes_with_ocr(_blank_pdf(), key="key", version="etag")
+    folder = utils._figure_folder("key", {"archive_checksum": "etag"})  # noqa: SLF001
+    assert folder.endswith("/etag")
+    assert to_markdown.call_args.args[1] == folder
+    if converted:
+        cleanup.assert_called_once_with(folder)
+    else:
+        cleanup.assert_not_called()
+
+
+def test_extract_pdf_bytes_with_ocr_without_key(mocker, settings):
+    """Without a key, an in-memory PDF's figures are placeholders"""
+    settings.OCR_MODEL = "model"
+    settings.OCR_SAVE_FIGURES = True
+    to_markdown = mocker.patch(
+        "learning_resources.etl.utils._pdf_to_markdown", return_value="# OCR"
+    )
+    cleanup = mocker.patch(
+        "learning_resources.etl.utils._delete_unlinked_figure_versions"
+    )
+    assert utils.extract_pdf_bytes_with_ocr(_blank_pdf()) == {"content": "# OCR"}
+    assert to_markdown.call_args.args[1] is None
+    cleanup.assert_not_called()
+
+
 @pytest.mark.django_db
 def test_transform_content_files_keys_colon_url_names(tmp_path, mocker):
     """A colon-named block's file is keyed by its url_name, failed or not"""

@@ -243,6 +243,47 @@ def test_serialize_document_resource_with_content_files():
         assert field not in serializer.data["content_files"][0]
 
 
+def test_serialize_practice_problem_resource():
+    """A practice problem is serialized with its source, without its solution"""
+    problem = factories.PracticeProblemFactory.create(pages=[2, 3])
+    problem.refresh_from_db()
+    run = problem.content_file.run
+    resource = LearningResource.objects.for_serialization().get(
+        pk=problem.learning_resource_id
+    )
+    data = serializers.LearningResourceSerializer(instance=resource).data
+
+    assert data["practice_problem"] == {
+        "number": problem.number,
+        "document_title": "Problem Set 1",
+        "statement": problem.statement,
+        "parts": [{"label": "a", "body": "Find $v(t)$."}],
+        "pages": [2, 3],
+        "topics": [],
+        "points": "",
+        "source": {
+            "course_id": run.learning_resource.id,
+            "course_title": run.learning_resource.title,
+            "course_readable_id": run.learning_resource.readable_id,
+            "semester": run.semester,
+            "year": run.year,
+            "file_title": problem.content_file.title,
+            "file_url": problem.content_file.url,
+        },
+    }
+    assert problem.solution not in str(data)
+
+
+def test_serialize_document_resource_without_practice_problem():
+    """A document that is not a practice problem has none"""
+    document = factories.LearningResourceFactory.create(
+        resource_type=LearningResourceType.document.name,
+    )
+    resource = LearningResource.objects.for_serialization().get(pk=document.pk)
+    data = serializers.LearningResourceSerializer(instance=resource).data
+    assert data["practice_problem"] is None
+
+
 def test_serialize_podcast_episode_playlists_to_json():
     """
     Verify that a serialized podcast episode resource has the correct podcast data

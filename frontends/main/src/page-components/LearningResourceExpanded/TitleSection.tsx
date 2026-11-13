@@ -2,6 +2,7 @@ import React from "react"
 import styled from "@emotion/styled"
 import { Skeleton, theme, Typography } from "ol-components"
 import { ActionButton } from "@mitodl/smoot-design"
+import { ResourceTypeEnum } from "api"
 import type { LearningResource } from "api"
 import { RiCloseLargeLine } from "@remixicon/react"
 
@@ -49,7 +50,12 @@ const TitleSection: React.FC<{
   ref: React.Ref<HTMLDivElement>
 }> = ({ resource, onClickClose, titleId, ref }) => {
   const type = resource ? (
-    resource.resource_category
+    resource.resource_type === ResourceTypeEnum.Document &&
+    resource.practice_problem ? (
+      "Practice Problem"
+    ) : (
+      resource.resource_category
+    )
   ) : (
     <Skeleton variant="text" width="33%" />
   )
