@@ -14,10 +14,8 @@ import {
   RiCloseLine,
   RiSparkling2Line,
 } from "@remixicon/react"
-import { FeatureFlags } from "@/common/feature_flags"
 import { analytics } from "@/common/analytics"
 import type { RegisteredSearchParams } from "@/common/searchParams"
-import { useFeatureFlag } from "@/common/useFeatureFlag"
 import type { BooleanFacets, Facets } from "@mitodl/course-search-utils"
 import {
   CloseButton,
@@ -394,7 +392,6 @@ const AiSearchOverview: React.FC<AiSearchOverviewProps> = ({
   onDismissed,
 }) => {
   const query = searchParams.get("q")?.trim() || undefined
-  const enabled = useFeatureFlag(FeatureFlags.SearchAiOverview)
   // Keyed on the serialized filters: channel pages rebuild
   // constantSearchParams on every render.
   const filtersKey = JSON.stringify(
@@ -405,7 +402,7 @@ const AiSearchOverview: React.FC<AiSearchOverviewProps> = ({
     [filtersKey],
   )
 
-  if (!enabled || !query) return null
+  if (!query) return null
 
   return (
     // Keyed on query and filters so a new search starts a fresh conversation.

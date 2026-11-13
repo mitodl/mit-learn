@@ -1,12 +1,10 @@
 import React from "react"
 import { renderWithProviders, screen, user } from "@/test-utils"
-import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { useAiChat } from "@mitodl/smoot-design/ai"
 import type { AiChatProps } from "@mitodl/smoot-design/ai"
 import AiSearchOverview from "./AiSearchOverview"
 import type { RegisteredSearchParams } from "@/common/searchParams"
 
-jest.mock("@/common/useFeatureFlag")
 const mockAiChatProvider = jest.fn()
 jest.mock("@mitodl/smoot-design/ai", () => ({
   ...jest.requireActual("@mitodl/smoot-design/ai"),
@@ -21,7 +19,6 @@ jest.mock("@mitodl/smoot-design/ai", () => ({
   useAiChat: jest.fn(),
 }))
 
-const mockUseFeatureFlag = jest.mocked(useFeatureFlag)
 const mockUseAiChat = jest.mocked(useAiChat)
 
 const params = (q?: string) =>
@@ -41,18 +38,6 @@ const setupChat = (
 }
 
 describe("AiSearchOverview", () => {
-  beforeEach(() => {
-    mockUseFeatureFlag.mockReturnValue(true)
-  })
-
-  test("renders nothing when the feature flag is disabled", () => {
-    mockUseFeatureFlag.mockReturnValue(false)
-    const append = setupChat()
-    renderWithProviders(<AiSearchOverview searchParams={params("ml")} />)
-    expect(screen.queryByText(/AI Overview/)).not.toBeInTheDocument()
-    expect(append).not.toHaveBeenCalled()
-  })
-
   test("renders nothing when there is no search query", () => {
     const append = setupChat()
     renderWithProviders(<AiSearchOverview searchParams={params()} />)

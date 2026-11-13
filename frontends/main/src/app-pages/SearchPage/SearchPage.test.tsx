@@ -28,6 +28,13 @@ import { capturePostHog } from "@/common/analytics/posthog"
 
 jest.mock("@/common/useFeatureFlag")
 
+// Covered by AiSearchOverview.test.tsx. Stubbed here because it requests an AI
+// summary for every search that has a query.
+jest.mock("@/page-components/SearchDisplay/AiSearchOverview", () => ({
+  __esModule: true,
+  default: () => null,
+}))
+
 jest.mock("@/common/analytics/posthog", () => ({
   capturePostHog: jest.fn(),
   initPostHog: jest.fn(),
