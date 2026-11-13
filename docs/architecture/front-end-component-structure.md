@@ -1,11 +1,6 @@
----
-parent: Architecture
-nav_order: 1
----
-
 # Front End Component Structure
 
-Referencing [RFC: Front End Component Structure](../rfcs/0006-front-end-component-structure.md)
+The reasoning behind this layout is in [the front-end component structure spec](../specs/front-end-component-structure.md).
 
 ## Directory structure and naming
 
