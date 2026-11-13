@@ -3,7 +3,7 @@ Render a unit's content files as the source text sent to the model.
 """
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from learning_resources.models import ContentFile, Unit, UnitContentFile
 
@@ -42,7 +42,7 @@ class Source:
 
     @property
     def truncated(self) -> bool:
-        """Whether the file was cut to fit the per-file limit"""
+        """Whether the file was cut to fit the per-file limit or the input budget"""
         return self.included_chars < self.total_chars
 
     @property
@@ -95,12 +95,43 @@ def truncate(text: str, max_tokens: int) -> tuple[str, int]:
         return text, len(text)
     breaks = [match.start() for match in _BREAK.finditer(text, 0, limit)]
     cut = next((pos for pos in reversed(breaks) if pos >= limit // 2), limit)
-    truncated = (
-        text[:cut].rstrip()
-        + f"\n[... truncated: the first {cut:,} of {len(text):,} characters"
-        " of this file are included ...]"
+    return text[:cut].rstrip() + _truncation_marker(cut, len(text)), cut
+
+
+def _truncation_marker(included_chars: int, total_chars: int) -> str:
+    return (
+        f"\n[... truncated: the first {included_chars:,} of {total_chars:,}"
+        " characters of this file are included ...]"
     )
-    return truncated, cut
+
+
+# the most tokens truncate() adds after the kept text, for files up to a
+# trillion characters
+_MAX_TRUNCATION_MARKER_TOKENS = estimate_tokens(_truncation_marker(10**12, 10**12))
+# share of the input budget one file may fill, leaving room for the course
+# outline, the unit header and the estimate's error
+FILE_BUDGET_SHARE = 0.9
+
+
+def _fit_to_budget(
+    source: Source, full_text: str, input_token_budget: int | None
+) -> Source:
+    """
+    Return the source, truncated further from its file's full text if its
+    block is over FILE_BUDGET_SHARE of the input budget, so that it fits one
+    part of a split unit.
+    """
+    if input_token_budget is None:
+        return source
+    max_block_tokens = int(input_token_budget * FILE_BUDGET_SHARE)
+    if source.tokens <= max_block_tokens:
+        return source
+    # the block's tokens are at most its text's plus the rest's
+    overhead = estimate_tokens(f"{source.header}\n\n=== END {source.source_id} ===\n")
+    included, included_chars = truncate(
+        full_text, max(1, max_block_tokens - overhead - _MAX_TRUNCATION_MARKER_TOKENS)
+    )
+    return replace(source, text=included, included_chars=included_chars)
 
 
 def _header(source_id: str, content_file: ContentFile, relation: str) -> str:
@@ -112,13 +143,46 @@ def _header(source_id: str, content_file: ContentFile, relation: str) -> str:
     )
 
 
-def unit_sources(unit: Unit, max_file_tokens: int) -> list[Source]:
+def pack_parts(sources: list[Source], input_token_budget: int) -> list[list[Source]]:
+    """
+    Pack a unit's sources, in unit order, into consecutive parts under a budget.
+
+    A source is never split across parts. One that is over the budget by
+    itself is a part of its own; unit_sources truncates files so none is,
+    when it is given the budget.
+
+    Args:
+        sources (list of Source): the unit's sources, in unit order
+        input_token_budget (int): the most estimated tokens of source text in
+            one part
+
+    Returns:
+        list of list of Source: the parts, in unit order; a single part when
+            every source fits in one call
+    """
+    parts: list[list[Source]] = []
+    part_tokens = 0
+    for source in sources:
+        if not parts or part_tokens + source.tokens > input_token_budget:
+            parts.append([])
+            part_tokens = 0
+        parts[-1].append(source)
+        part_tokens += source.tokens
+    return parts
+
+
+def unit_sources(
+    unit: Unit, max_file_tokens: int, input_token_budget: int | None = None
+) -> list[Source]:
     """
     Return the sources for a unit's published files with text, in unit order.
 
     Args:
         unit (Unit): the unit, bin or context unit
         max_file_tokens (int): the per-file limit, see truncate()
+        input_token_budget (int | None): the most tokens one call may read; a file whose
+            block would be over FILE_BUDGET_SHARE of it is truncated further,
+            so it fits one part of a split unit
 
     Returns:
         list of Source: one per file with text
@@ -135,16 +199,16 @@ def unit_sources(unit: Unit, max_file_tokens: int) -> list[Source]:
         if not text:
             continue
         source_id = f"S{len(sources) + 1:02d}"
+        header = _header(source_id, content_file, link.relation)
         included, included_chars = truncate(text, max_file_tokens)
-        sources.append(
-            Source(
-                source_id=source_id,
-                content_file_id=content_file.id,
-                checksum=content_file.checksum or "",
-                header=_header(source_id, content_file, link.relation),
-                text=included,
-                included_chars=included_chars,
-                total_chars=len(text),
-            )
+        source = Source(
+            source_id=source_id,
+            content_file_id=content_file.id,
+            checksum=content_file.checksum or "",
+            header=header,
+            text=included,
+            included_chars=included_chars,
+            total_chars=len(text),
         )
+        sources.append(_fit_to_budget(source, text, input_token_budget))
     return sources

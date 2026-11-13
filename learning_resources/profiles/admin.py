@@ -18,6 +18,7 @@ class ResourceProfileConfigurationAdmin(admin.ModelAdmin):
         "temperature",
         "max_file_tokens",
         "input_token_budget",
+        "max_parts",
         "updated_on",
     )
 
@@ -32,6 +33,7 @@ class ClaimExtractionAdmin(admin.ModelAdmin):
         "extractor_version",
         "model",
         "unit",
+        "part",
         "run",
         "published",
         "created_on",

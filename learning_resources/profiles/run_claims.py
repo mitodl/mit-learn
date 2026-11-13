@@ -32,7 +32,10 @@ from learning_resources.profiles.claims import (
     load_extractor,
 )
 from learning_resources.profiles.schemas import RunExtraction
-from learning_resources.profiles.unit_claims import CLAIM_PREFIXES
+from learning_resources.profiles.unit_claims import (
+    CLAIM_PREFIXES,
+    TEACHING_STATUSES,
+)
 
 log = logging.getLogger(__name__)
 
@@ -48,7 +51,6 @@ _KINDS_BY_PREFIX = {
 CLAIM_KINDS = {
     field: _KINDS_BY_PREFIX[prefix] for field, prefix in CLAIM_PREFIXES.items()
 }
-TEACHING_STATUSES = {"taught", "reviewed"}
 # a coverage limitation may cite this when no claim fits
 CONTEXT_NOTES_ID = "ctx:notes"
 
@@ -60,7 +62,7 @@ class UnitRecord:
     # U01, U02, ... in course order
     display_id: str
     unit: Unit
-    # None when the unit was skipped: no text, or over the input budget
+    # None when the unit was skipped: no text, or too many parts
     extraction: ClaimExtraction | None
     # 1, 2, ... in course order
     order: int
@@ -180,7 +182,7 @@ def _units_block(records: list[UnitRecord]) -> str:
     for record in records:
         header = f"## {record.display_id} {record.unit.title} (unit {record.order})"
         if record.extraction is None:
-            lines.append(f"{header}: NOT PROCESSED (no text, or over the budget)")
+            lines.append(f"{header}: NOT PROCESSED (no text, or too long)")
             continue
         lines.append(f"{header}\nSummary: {record.extraction.output['summary']}")
         claims = record.claims
@@ -424,7 +426,7 @@ def _check_and_complete_output(
         output["coverage_limitations"].append(
             {
                 "text": (
-                    f"Files over the per-file limit, read only in part: {truncated}."
+                    f"Files too long to read in full, read only in part: {truncated}."
                 ),
                 "claim_ids": [],
                 "from_code": True,
