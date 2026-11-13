@@ -49,10 +49,6 @@ import {
 import type { B2bManagerOrganizationsContractsCodesListStatusEnum } from "@mitodl/mitxonline-api-axios/v0"
 import type { AxiosError } from "axios"
 import { matchOrganizationBySlug } from "@/common/utils"
-import { ForbiddenError } from "@/common/errors"
-import { FeatureFlags } from "@/common/feature_flags"
-import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
-import { useFeatureFlag } from "@/common/useFeatureFlag"
 import ContractManagerNav from "@/components/ContractManagerNav/ContractManagerNav"
 import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
@@ -373,7 +369,7 @@ function buildCsvRow(values: (string | null | undefined)[]): string {
     .join(",")
 }
 
-type ContractAdminPageInternalProps = {
+type ContractAdminPageProps = {
   orgSlug: string
   contractSlug: string
 }
@@ -381,7 +377,7 @@ type ContractAdminPageInternalProps = {
 const CODES_PAGE_SIZE = 25
 const CSV_EXPORT_PAGE_SIZE = 500
 
-const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
+const ContractAdminPage: React.FC<ContractAdminPageProps> = ({
   orgSlug,
   contractSlug,
 }) => {
@@ -987,35 +983,6 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
         </SeatAssignmentsSection>
       </Stack>
     </Page>
-  )
-}
-
-type ContractAdminPageProps = {
-  orgSlug: string
-  contractSlug: string
-}
-
-const ContractAdminPage: React.FC<ContractAdminPageProps> = ({
-  orgSlug,
-  contractSlug,
-}) => {
-  const flagEnabled = useFeatureFlag(FeatureFlags.B2BContractManagerDashboard)
-  const flagsLoaded = useFeatureFlagsLoaded()
-
-  if (!flagsLoaded) {
-    return (
-      <Page>
-        <Skeleton width="100%" height="128px" />
-      </Page>
-    )
-  }
-
-  if (!flagEnabled) {
-    throw new ForbiddenError("Not enabled.")
-  }
-
-  return (
-    <ContractAdminPageInternal orgSlug={orgSlug} contractSlug={contractSlug} />
   )
 }
 

@@ -24,12 +24,7 @@ import {
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
 import { UserOrganizationPage } from "@mitodl/mitxonline-api-axios/v0"
-import { useFeatureFlag } from "@/common/useFeatureFlag"
 import mockRouter from "next-router-mock"
-import { FeatureFlags } from "@/common/feature_flags"
-
-jest.mock("@/common/useFeatureFlag")
-const mockedUseFeatureFlag = jest.mocked(useFeatureFlag)
 
 describe("DashboardLayout", () => {
   type SetupOptions = {
@@ -148,9 +143,6 @@ describe("DashboardLayout", () => {
   })
 
   test("A contract tab asks for data consent first, and declining goes to dashboard home", async () => {
-    mockedUseFeatureFlag.mockImplementation(
-      (flag) => flag === FeatureFlags.B2BDataConsent,
-    )
     const contract = mitxOnlineFactories.contracts.contract({
       name: "Consent Contract",
       consented_to_data_sharing: null,
