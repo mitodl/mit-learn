@@ -16,7 +16,7 @@ import { allowConsoleErrors } from "ol-test-utilities"
 import { ForbiddenError } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
-import { contractAnalyticsView } from "@/common/urls"
+import { ALL_MODULES, contractAnalyticsView } from "@/common/urls"
 import ContractLearnersPage from "./ContractLearnersPage"
 
 jest.mock("@/common/useFeatureFlag")
@@ -168,6 +168,24 @@ const pickStatus = async (label: string) => {
   await user.click(await screen.findByRole("combobox", { name: /status/i }))
   await user.click(within(await screen.findByRole("listbox")).getByText(label))
 }
+
+const statusField = () => screen.getByRole("combobox", { name: /status/i })
+
+const toggleModule = async (name: string) => {
+  await user.click(screen.getByRole("combobox", { name: /modules/i }))
+  await user.click(
+    within(await screen.findByRole("listbox")).getByRole("option", { name }),
+  )
+  await user.keyboard("{Escape}")
+}
+
+/** A contract with one module has no Modules filter, so Status applies to that module. */
+const oneModule = () => [
+  analyticsFactories.courseRun({
+    courserun_id: M5,
+    courserun_title: "Module 5",
+  }),
+]
 
 describe("ContractLearnersPage", () => {
   beforeEach(() => {
@@ -811,19 +829,6 @@ describe("ContractLearnersPage", () => {
         screen.getByRole("combobox", { name: /modules/i }),
       ).toHaveTextContent("Module 6")
 
-      mockGridPage(
-        contractId,
-        0,
-        [
-          analyticsFactories.learnerProgress({
-            learner_id: "a",
-            full_name: "Ada Lovelace",
-            courserun_readable_id: M5,
-          }),
-        ],
-        {},
-        { courserun_readable_id: [M5, M6] },
-      )
       await user.click(screen.getByRole("combobox", { name: /modules/i }))
       await user.click(
         within(await screen.findByRole("listbox")).getByRole("option", {
@@ -922,8 +927,204 @@ describe("ContractLearnersPage", () => {
   })
 
   describe("the Status filter", () => {
-    test("offers no Certificate or Consent withheld option, and Completed matches passed and certified", async () => {
+    test("follows Modules in the DOM, so tab and reading order match the screen", async () => {
       const { contractId } = renderGrid()
+      mockGridPage(contractId, 0, [learnerNamed("Everyone")])
+
+      await screen.findByText("Everyone")
+      const modules = screen.getByRole("combobox", { name: /modules/i })
+      expect(
+        modules.compareDocumentPosition(statusField()) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy()
+    })
+
+    test("is unavailable but still reachable, and says why, until a module is selected", async () => {
+      const { contractId, location } = renderGrid()
+      mockGridPage(contractId, 0, [learnerNamed("Everyone")])
+      mockGridPage(
+        contractId,
+        0,
+        [learnerNamed("In Module 6")],
+        {},
+        { courserun_readable_id: [M6] },
+      )
+      mockGridPage(
+        contractId,
+        0,
+        [learnerNamed("Completed In Module 6")],
+        {},
+        {
+          completion_status: ["passed", "certified"],
+          courserun_readable_id: [M6],
+        },
+      )
+
+      await screen.findByText("Everyone")
+      const status = statusField()
+      expect(status).toHaveAttribute("aria-disabled", "true")
+      expect(status).toHaveAttribute("tabindex", "0")
+      expect(status).toHaveTextContent("Select a module first")
+      expect(status).toHaveAccessibleDescription(
+        "Select a module to filter by status.",
+      )
+
+      await user.click(status)
+      expect(status).toHaveFocus()
+      expect(screen.queryByRole("listbox")).not.toBeInTheDocument()
+      for (const key of ["{ArrowDown}", "{Enter}", " "]) {
+        await user.keyboard(key)
+        expect(screen.queryByRole("listbox")).not.toBeInTheDocument()
+      }
+      /** `false` means the default was prevented, so the key doesn't scroll the page. */
+      for (const key of [" ", "ArrowUp", "ArrowDown", "Enter"]) {
+        expect(fireEvent.keyDown(status, { key })).toBe(false)
+      }
+
+      await toggleModule("Module 6")
+      await screen.findByText("In Module 6")
+      expect(statusField()).not.toHaveAttribute("aria-disabled")
+      expect(statusField()).toHaveTextContent("All learners")
+      expect(statusField()).not.toHaveAccessibleDescription()
+
+      await pickStatus("Completed")
+      await screen.findByText("Completed In Module 6")
+      expect(location.current.search).toBe(
+        `?modules=${encodeURIComponent(M6)}&status=passed`,
+      )
+    })
+
+    test("stays unavailable while the modules load", async () => {
+      const runs =
+        Promise.withResolvers<ReturnType<typeof analyticsFactories.envelope>>()
+      const { contractId } = renderGrid()
+      setMockResponse.get(
+        analyticsUrls.contracts.courseRuns(ORG_UUID, contractId, {
+          limit: 1000,
+        }),
+        runs.promise,
+      )
+      mockGridPage(contractId, 0, [learnerNamed("Everyone")])
+
+      const status = await screen.findByRole("combobox", { name: /status/i })
+      expect(status).toHaveAttribute("aria-disabled", "true")
+      expect(status).toHaveAttribute("aria-busy", "true")
+      expect(status).toHaveTextContent("Loading…")
+      expect(status).toHaveAccessibleDescription(
+        "Status needs this contract's modules, which are loading.",
+      )
+
+      await act(async () => {
+        runs.resolve(analyticsFactories.envelope(oneModule()))
+      })
+      await waitFor(() =>
+        expect(statusField()).not.toHaveAttribute("aria-disabled"),
+      )
+      expect(statusField()).not.toHaveAttribute("aria-busy")
+    })
+
+    test("says why it's unavailable when the modules fail to load", async () => {
+      const { contractId } = renderGrid()
+      setMockResponse.get(
+        analyticsUrls.contracts.courseRuns(ORG_UUID, contractId, {
+          limit: 1000,
+        }),
+        "Internal Server Error",
+        { code: 500 },
+      )
+      mockGridPage(contractId, 0, [learnerNamed("Everyone")])
+
+      await screen.findByText("Couldn't load modules. Reload to try again.")
+      expect(statusField()).toHaveAttribute("aria-disabled", "true")
+      expect(statusField()).toHaveTextContent("Unavailable")
+      expect(statusField()).toHaveAccessibleDescription(
+        "Status needs this contract's modules, which couldn't load.",
+      )
+    })
+
+    test("resets to All learners when the last module is cleared, and says so", async () => {
+      const { contractId, location } = renderGrid(
+        `/?modules=${encodeURIComponent(M6)}&status=passed`,
+      )
+      mockGridPage(
+        contractId,
+        0,
+        [learnerNamed("Completed In Module 6")],
+        {},
+        {
+          completion_status: ["passed", "certified"],
+          courserun_readable_id: [M6],
+        },
+      )
+      mockGridPage(contractId, 0, [learnerNamed("Everyone")])
+
+      await screen.findByText("Completed In Module 6")
+      expect(statusField()).toHaveTextContent("Completed")
+
+      await toggleModule("Module 6")
+      await screen.findByText("Everyone")
+      expect(location.current.search).toBe("")
+      expect(statusField()).toHaveAttribute("aria-disabled", "true")
+      expect(screen.getByText("Status filter cleared.")).toHaveAttribute(
+        "role",
+        "status",
+      )
+
+      mockGridPage(
+        contractId,
+        0,
+        [learnerNamed("In Module 6")],
+        {},
+        { courserun_readable_id: [M6] },
+      )
+      await toggleModule("Module 6")
+      await screen.findByText("In Module 6")
+      expect(
+        screen.queryByText("Status filter cleared."),
+      ).not.toBeInTheDocument()
+    })
+
+    /** An old link or bookmark, from before Status needed a module. */
+    test("drops a status a link carries without a module", async () => {
+      const { contractId, location } = renderGrid("/?status=passed")
+      mockGridPage(contractId, 0, [learnerNamed("Everyone")])
+
+      await screen.findByText("Everyone")
+      await waitFor(() => expect(location.current.search).toBe(""))
+      expect(statusField()).toHaveTextContent("Select a module first")
+    })
+
+    test("applies with no module selected when the contract has one module", async () => {
+      const { contractId, location } = renderGrid(
+        "/?status=passed",
+        oneModule(),
+      )
+      mockGridPage(
+        contractId,
+        0,
+        [learnerNamed("Completed Learner")],
+        {},
+        { completion_status: ["passed", "certified"] },
+      )
+
+      await screen.findByText("Completed Learner")
+      expect(statusField()).not.toHaveAttribute("aria-disabled")
+      expect(statusField()).not.toHaveAccessibleDescription()
+      expect(statusField()).toHaveTextContent("Completed")
+      expect(location.current.search).toBe("?status=passed")
+      const gridStatuses = makeRequest.mock.calls
+        .map(([{ url }]) => new URL(url, "http://localhost"))
+        .filter(
+          ({ pathname, searchParams }) =>
+            pathname.split("/").includes("learners") &&
+            searchParams.get("limit") === String(GRID_PAGE_SIZE),
+        )
+        .map(({ searchParams }) => searchParams.getAll("completion_status"))
+      expect(gridStatuses).toEqual([["passed", "certified"]])
+    })
+
+    test("offers no Certificate or Consent withheld option, and Completed matches passed and certified", async () => {
+      const { contractId } = renderGrid("/", oneModule())
       mockGridPage(contractId, 0, [learnerNamed("Everyone")])
       mockGridPage(
         contractId,
@@ -965,7 +1166,7 @@ describe("ContractLearnersPage", () => {
      * query is scoped to the cell.
      */
     test("a status filter with no matches reads as a filter, not an empty contract", async () => {
-      const { contractId } = renderGrid()
+      const { contractId } = renderGrid("/", oneModule())
       mockGridPage(contractId, 0, [learnerNamed("Everyone")])
       mockGridPage(
         contractId,
@@ -1019,7 +1220,7 @@ describe("ContractLearnersPage", () => {
      * partitioning them, so "in progress AND stale" has to be expressible.
      */
     test("combines with the status filter instead of replacing it", async () => {
-      const { contractId } = renderGrid()
+      const { contractId } = renderGrid("/", oneModule())
       mockGridPage(contractId, 0, [learnerNamed("Everyone")])
       mockGridPage(
         contractId,
@@ -1048,7 +1249,7 @@ describe("ContractLearnersPage", () => {
   describe("URL state", () => {
     test("opens with the filters a link carries", async () => {
       const { contractId } = renderGrid(
-        "/?status=in_progress&needs_attention=true",
+        `/?modules=${encodeURIComponent(M5)}&modules=${encodeURIComponent(M6)}&status=in_progress&needs_attention=true`,
       )
       mockGridPage(
         contractId,
@@ -1067,6 +1268,60 @@ describe("ContractLearnersPage", () => {
       ).toBeChecked()
     })
 
+    /** The API accepts at most 50 modules; every module is sent as no module filter instead. */
+    test("selects every module for a dashboard link, past the API's 50-module cap", async () => {
+      const runs = Array.from({ length: 51 }, (_, index) =>
+        analyticsFactories.courseRun({
+          courserun_id: `course-v1:MITx+M${index}+2026`,
+          courserun_title: `Module ${index}`,
+        }),
+      )
+      const { contractId } = renderGrid(
+        `/?modules=${ALL_MODULES}&status=passed`,
+        runs,
+      )
+      mockGridPage(
+        contractId,
+        0,
+        [learnerNamed("Every Module Learner")],
+        {},
+        { completion_status: ["passed", "certified"] },
+      )
+
+      await screen.findByText("Every Module Learner")
+      expect(statusField()).toHaveTextContent("Completed")
+      expect(
+        screen.getByRole("combobox", { name: /modules\s*, 51 selected/i }),
+      ).toBeInTheDocument()
+    })
+
+    test("shows and requests the same 50 modules when a link selects more than 50 but not all", async () => {
+      const runs = Array.from({ length: 52 }, (_, index) =>
+        analyticsFactories.courseRun({
+          courserun_id: `course-v1:MITx+M${index}+2026`,
+          courserun_title: `Module ${String(index).padStart(2, "0")}`,
+        }),
+      )
+      const ids = runs.map(({ courserun_id: id }) => id)
+      const modules = ids
+        .slice(0, 51)
+        .map((id) => `modules=${encodeURIComponent(id)}`)
+        .join("&")
+      const { contractId } = renderGrid(`/?${modules}`, runs)
+      mockGridPage(
+        contractId,
+        0,
+        [learnerNamed("Capped Learner")],
+        {},
+        { courserun_readable_id: ids.slice(0, 50) },
+      )
+
+      await screen.findByText("Capped Learner")
+      expect(
+        screen.getByRole("combobox", { name: /modules\s*, 50 selected/i }),
+      ).toBeInTheDocument()
+    })
+
     test("ignores filter values it does not recognize", async () => {
       const { contractId } = renderGrid(
         "/?status=bogus&modules=course-v1:Gone&needs_attention=yes&page=-3",
@@ -1074,9 +1329,7 @@ describe("ContractLearnersPage", () => {
       mockGridPage(contractId, 0, [learnerNamed("Everyone")])
 
       await screen.findByText("Everyone")
-      expect(
-        screen.getByRole("combobox", { name: /status/i }),
-      ).toHaveTextContent("All learners")
+      expect(statusField()).toHaveTextContent("Select a module first")
       expect(
         screen.getByRole("combobox", { name: /modules/i }),
       ).toHaveTextContent("All modules")
@@ -1093,7 +1346,7 @@ describe("ContractLearnersPage", () => {
       { status: "constructor", reason: "an inherited object key" },
       { status: "unknown", reason: "the removed withheld-consent status" },
     ])("ignores a status that is $reason", async ({ status }) => {
-      const { contractId } = renderGrid(`/?status=${status}`)
+      const { contractId } = renderGrid(`/?status=${status}`, oneModule())
       mockGridPage(contractId, 0, [learnerNamed("Everyone")])
 
       await screen.findByText("Everyone")
@@ -1124,7 +1377,7 @@ describe("ContractLearnersPage", () => {
     })
 
     test("writes filter changes to the URL and sends the page back to 1", async () => {
-      const { contractId, location } = renderGrid("/?page=2")
+      const { contractId, location } = renderGrid("/?page=2", oneModule())
       mockGridPage(contractId, GRID_PAGE_SIZE, [learnerNamed("Second Page")], {
         total_count: 30,
       })

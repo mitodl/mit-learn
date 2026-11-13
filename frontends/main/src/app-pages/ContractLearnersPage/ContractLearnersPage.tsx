@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useCallback, useMemo, useRef, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   keepPreviousData,
   useQuery,
@@ -52,8 +52,13 @@ import {
   GRID_PAGE_SIZE,
   ProgressGrid,
 } from "./ProgressGrid"
-import { completionStatusFilter } from "@/common/urls"
-import { ALL, SEARCH_MAX_LENGTH, useLearnerFilters } from "./useLearnerFilters"
+import { ALL_MODULES, completionStatusFilter } from "@/common/urls"
+import {
+  ALL,
+  MAX_GRID_MODULES,
+  SEARCH_MAX_LENGTH,
+  useLearnerFilters,
+} from "./useLearnerFilters"
 
 /**
  * The B2B learner directory: one row per learner, one column per course run
@@ -164,6 +169,14 @@ const FilterField = styled(SimpleSelectField)(({ theme }) => ({
   "& .MuiSelect-root": {
     width: "280px",
   },
+  "& .MuiInputBase-root.MuiInputBase-readOnly": {
+    backgroundColor: theme.custom.colors.lightGray1,
+    color: theme.custom.colors.silverGrayDark,
+    "&:hover:not(.Mui-focused)": {
+      borderColor: theme.custom.colors.silverGrayLight,
+    },
+    ".MuiSelect-select": { cursor: "default" },
+  },
   [theme.breakpoints.down("md")]: {
     width: "100%",
     "& .MuiSelect-root": {
@@ -178,19 +191,77 @@ const SelectedValue = styled.span({
   whiteSpace: "nowrap",
 })
 
-const FilterSelect: React.FC<React.ComponentProps<typeof FilterField>> = ({
-  options,
-  ...props
-}) => (
-  <FilterField
-    options={options}
-    {...props}
-    renderValue={(value) => (
-      <SelectedValue>
-        {options.find((option) => option.value === value)?.label}
-      </SelectedValue>
-    )}
-  />
+const STATUS_OPTIONS: { value: string; label: string }[] = [
+  { value: ALL, label: "All learners" },
+  { value: "not_started", label: "Not started" },
+  { value: "in_progress", label: "In progress" },
+  { value: "passed", label: "Completed" },
+]
+const STATUS_HINT_ID = "learner-status-hint"
+/** The keys MUI's select opens on. */
+const OPEN_KEYS = [" ", "ArrowUp", "ArrowDown", "Enter"]
+/** The value stands in for help text, which would sit below the field and shift the grid when it went away. */
+const STATUS_UNAVAILABLE = {
+  loading: {
+    value: "Loading…",
+    hint: "Status needs this contract's modules, which are loading.",
+  },
+  noModule: {
+    value: "Select a module first",
+    hint: "Select a module to filter by status.",
+  },
+  modulesFailed: {
+    value: "Unavailable",
+    hint: "Status needs this contract's modules, which couldn't load.",
+  },
+}
+
+/**
+ * Unavailable is `readOnly` plus `aria-disabled` rather than `disabled`, which
+ * would drop the field from the tab order and leave a keyboard or screen
+ * reader user no way to reach the reason. MUI skips `preventDefault` while
+ * `readOnly`, so the keys that would open it are stopped here to keep them
+ * from scrolling the page.
+ */
+const StatusSelect: React.FC<{
+  value: string
+  onChange: (value: string) => void
+  unavailable?: keyof typeof STATUS_UNAVAILABLE
+}> = ({ value, onChange, unavailable }) => (
+  <>
+    <FilterField
+      label="Status"
+      size="medium"
+      value={value}
+      options={STATUS_OPTIONS}
+      readOnly={!!unavailable}
+      SelectDisplayProps={
+        unavailable
+          ? {
+              "aria-disabled": "true",
+              "aria-busy": unavailable === "loading" ? "true" : undefined,
+              "aria-describedby": STATUS_HINT_ID,
+              onKeyDown: (event) => {
+                if (OPEN_KEYS.includes(event.key)) event.preventDefault()
+              },
+            }
+          : undefined
+      }
+      renderValue={(selected) => (
+        <SelectedValue>
+          {unavailable
+            ? STATUS_UNAVAILABLE[unavailable].value
+            : STATUS_OPTIONS.find((option) => option.value === selected)?.label}
+        </SelectedValue>
+      )}
+      onChange={(event) => onChange(String(event.target.value))}
+    />
+    {unavailable ? (
+      <VisuallyHidden id={STATUS_HINT_ID}>
+        {STATUS_UNAVAILABLE[unavailable].hint}
+      </VisuallyHidden>
+    ) : null}
+  </>
 )
 
 /**
@@ -286,13 +357,6 @@ const NOT_LOADED_MESSAGE_ID = "learner-analytics-not-loaded-message"
 const NO_LEARNERS_MESSAGE_ID = "learner-analytics-no-learners-message"
 const MODULES_FAILED_MESSAGE_ID = "learner-export-modules-failed-message"
 
-const STATUS_OPTIONS: { value: string; label: string }[] = [
-  { value: ALL, label: "All learners" },
-  { value: "not_started", label: "Not started" },
-  { value: "in_progress", label: "In progress" },
-  { value: "passed", label: "Completed" },
-]
-
 type ContractLearnersPageProps = {
   orgSlug: string
   contractSlug: string
@@ -311,7 +375,6 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     debouncedSearch,
     statusFilter,
     setStatusFilter,
-    completionStatus,
     needsAttentionOnly,
     setNeedsAttentionOnly,
     gridModules,
@@ -319,6 +382,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     clearAll,
   } = useLearnerFilters()
   const [isExporting, setIsExporting] = useState(false)
+  const [statusAnnouncement, setStatusAnnouncement] = useState("")
   const [actionResult, setActionResult] = useState<{
     message: string
     severity: "success" | "error"
@@ -362,18 +426,60 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   )
   /** Kept while loading or on error, so its error text can show. */
   const showModuleFilter = !courseRunsQuery.data || courseRunOptions.length > 1
-  const activeGridModules = useMemo(
-    () =>
-      showModuleFilter
-        ? courseRunOptions
-            .filter((option) => gridModules.includes(option.value))
-            .map((option) => option.value)
-        : [],
-    [showModuleFilter, gridModules, courseRunOptions],
+  /**
+   * Every module asks for the same learners as no module filter, so only a
+   * partial selection is held to the API's cap; that keeps a dashboard link on
+   * a contract with more modules than the API accepts from being cut short.
+   */
+  const activeGridModules = useMemo(() => {
+    if (!showModuleFilter) return []
+    const everyModule = gridModules.includes(ALL_MODULES)
+    const selected = courseRunOptions
+      .filter((option) => everyModule || gridModules.includes(option.value))
+      .map((option) => option.value)
+    return selected.length < courseRunOptions.length
+      ? selected.slice(0, MAX_GRID_MODULES)
+      : selected
+  }, [showModuleFilter, gridModules, courseRunOptions])
+
+  /** Status is per module, so it needs one selected, unless the contract has only one. */
+  const statusAvailable = !showModuleFilter || activeGridModules.length > 0
+  const activeStatus = statusAvailable ? statusFilter : ALL
+  const completionStatus = completionStatusFilter(
+    activeStatus === ALL ? undefined : activeStatus,
   )
 
+  useEffect(() => {
+    if (courseRunsQuery.isSuccess && !statusAvailable && statusFilter !== ALL) {
+      setStatusFilter(ALL)
+    }
+  }, [
+    courseRunsQuery.isSuccess,
+    statusAvailable,
+    statusFilter,
+    setStatusFilter,
+  ])
+
+  /** Emptied on every other change, so a later reset is announced again. */
+  const handleModulesChange = (values: string[]) => {
+    setStatusAnnouncement(
+      !values.length && activeStatus !== ALL ? "Status filter cleared." : "",
+    )
+    setGridModules(values)
+  }
+
   const courseRunsSettled = courseRunsQuery.isSuccess || courseRunsQuery.isError
-  const gridModulesResolved = gridModules.length === 0 || courseRunsSettled
+  /** Whether modules and status in the URL apply depends on the contract's modules. */
+  const filtersResolved =
+    (gridModules.length === 0 && statusFilter === ALL) || courseRunsSettled
+
+  const requestModules = useMemo(
+    () =>
+      activeGridModules.length < courseRunOptions.length
+        ? activeGridModules
+        : [],
+    [activeGridModules, courseRunOptions],
+  )
 
   const gridFilters = useMemo(
     () => ({
@@ -381,15 +487,15 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
       completion_status: completionStatus,
       /** Only ever sent as `true`: no control here asks for the learners who are fine. */
       ...(needsAttentionOnly ? { needs_attention: true } : {}),
-      ...(activeGridModules.length
-        ? { courserun_readable_id: activeGridModules }
+      ...(requestModules.length
+        ? { courserun_readable_id: requestModules }
         : {}),
     }),
-    [debouncedSearch, completionStatus, needsAttentionOnly, activeGridModules],
+    [debouncedSearch, completionStatus, needsAttentionOnly, requestModules],
   )
   const gridQuery = useQuery({
     ...gridLearnersQuery(orgUuid ?? "", contractId ?? 0, gridFilters, page),
-    enabled: canQuery && gridModulesResolved,
+    enabled: canQuery && filtersResolved,
     placeholderData: keepPreviousData,
   })
 
@@ -423,7 +529,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   const courseRuns = courseRunsQuery.data?.data
   const courseRunsFailed = courseRunsQuery.isError && !courseRuns
   const exportUnavailable =
-    !canQuery || notLoaded || noLearners || !gridModulesResolved || !courseRuns
+    !canQuery || notLoaded || noLearners || !filtersResolved || !courseRuns
 
   const handleExport = useCallback(async () => {
     if (isExporting || exportUnavailable || !orgUuid || !contractId) return
@@ -529,13 +635,13 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
 
   const hasActiveFilters =
     !!searchQuery ||
-    statusFilter !== ALL ||
+    activeStatus !== ALL ||
     hasModuleFilter ||
     needsAttentionOnly
 
   const emptyMessage = debouncedSearch
     ? "No learners match your search."
-    : statusFilter !== ALL || hasModuleFilter || needsAttentionOnly
+    : activeStatus !== ALL || hasModuleFilter || needsAttentionOnly
       ? "No learners match this filter."
       : "No learners found."
 
@@ -578,7 +684,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                 isExporting ||
                 (canQuery &&
                   !notLoaded &&
-                  (!gridModulesResolved || courseRunsQuery.isPending))
+                  (!filtersResolved || courseRunsQuery.isPending))
               }
               onClick={handleExport}
             >
@@ -661,23 +767,30 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                   onClear={clearSearch}
                   onSubmit={() => {}}
                 />
-                <FilterSelect
-                  label="Status"
-                  size="medium"
-                  value={statusFilter}
-                  options={STATUS_OPTIONS}
-                  onChange={(event) =>
-                    setStatusFilter(String(event.target.value))
-                  }
-                />
                 {showModuleFilter ? (
                   <ModulesSelect
                     options={courseRunOptions}
                     value={activeGridModules}
-                    onChange={setGridModules}
+                    onChange={handleModulesChange}
                     error={courseRunsFailed}
                   />
                 ) : null}
+                <StatusSelect
+                  value={activeStatus}
+                  onChange={setStatusFilter}
+                  unavailable={
+                    statusAvailable
+                      ? undefined
+                      : courseRunsQuery.isPending
+                        ? "loading"
+                        : courseRunsFailed
+                          ? "modulesFailed"
+                          : "noModule"
+                  }
+                />
+                <VisuallyHidden role="status" aria-atomic="true">
+                  {statusAnnouncement}
+                </VisuallyHidden>
                 <CheckboxField>
                   <Checkbox
                     label="Not started or inactive 30+ days"

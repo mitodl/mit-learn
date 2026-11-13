@@ -307,7 +307,10 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
     placeholderData: keepPreviousData,
   })
 
-  /** The tiles' learner counts, from the same requests their links open. */
+  /**
+   * The tiles' learner counts. A learner counts under each status they have in
+   * any module, which is what a tile's link shows by selecting every module.
+   */
   const learnerCounts = useQueries({
     queries: LEARNER_TILES.map((tile) => ({
       ...analyticsContractQueries.learners(orgUuid ?? "", contractId ?? 0, {
