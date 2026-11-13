@@ -3755,12 +3755,12 @@ def test_generate_claims_for_resource_publishes(mocker):
     context = factories.UnitFactory.create(
         run=best_run, kind=Unit.Kind.CONTEXT, position=None
     )
-    unit, failing, skipped = factories.UnitFactory.create_batch(3, run=best_run)
+    unit, skipped = factories.UnitFactory.create_batch(2, run=best_run)
     context_extraction, unit_extraction = (
         factories.ClaimExtractionFactory.create(unit=owner) for owner in (context, unit)
     )
     # left from before, or from when the old run was the best run
-    for owner in (failing, skipped, factories.UnitFactory.create(run=old_run)):
+    for owner in (skipped, factories.UnitFactory.create(run=old_run)):
         factories.ClaimExtractionFactory.create(unit=owner, published=True)
     other_course = factories.ClaimExtractionFactory.create(published=True)
     # its unit was deleted
@@ -3777,7 +3777,10 @@ def test_generate_claims_for_resource_publishes(mocker):
     )
     mocker.patch(
         "learning_resources.profiles.unit_claims.generate_unit_claims",
-        side_effect=[unit_extraction, ValueError("bad response"), None],
+        side_effect=[unit_extraction, None],
+    )
+    mocker.patch(
+        "learning_resources.profiles.run_claims.generate_run_claims", return_value=None
     )
 
     tasks.generate_claims_for_resource(resource.id)
@@ -3785,6 +3788,49 @@ def test_generate_claims_for_resource_publishes(mocker):
     assert set(
         ClaimExtraction.objects.filter(published=True).values_list("id", flat=True)
     ) == {context_extraction.id, unit_extraction.id, other_course.id}
+
+
+@pytest.mark.parametrize("failing", ["unit", "run"])
+def test_generate_claims_for_resource_failure_keeps_published(mocker, failing):
+    """
+    A sweep in which a unit or the run fails publishes and unpublishes
+    nothing, so the course keeps its last complete claims
+    """
+    resource = LearningResourceFactory.create(is_course=True, runs=[])
+    run = factories.LearningResourceRunFactory.create(learning_resource=resource)
+    unit, failing_unit = factories.UnitFactory.create_batch(2, run=run)
+    # extracted again this sweep, under a new key
+    new_extraction = factories.ClaimExtractionFactory.create(unit=unit)
+    published = [
+        factories.ClaimExtractionFactory.create(unit=failing_unit, published=True),
+        factories.ClaimExtractionFactory.create(
+            unit=None, run=run, level=ClaimExtraction.Level.RUN, published=True
+        ),
+        # its unit was deleted
+        factories.ClaimExtractionFactory.create(unit=None, published=True),
+    ]
+    mocker.patch.object(
+        LearningResource, "best_run", new_callable=mocker.PropertyMock, return_value=run
+    )
+    mocker.patch(
+        "learning_resources.profiles.unit_claims.generate_unit_claims",
+        side_effect=[
+            new_extraction,
+            ValueError("bad response") if failing == "unit" else published[0],
+        ],
+    )
+    generate_run = mocker.patch(
+        "learning_resources.profiles.run_claims.generate_run_claims",
+        side_effect=ValueError("bad response"),
+    )
+
+    result = tasks.generate_claims_for_resource(resource.id)
+
+    assert result[f"{failing}_failed"] == 1
+    assert generate_run.called is (failing == "run")
+    assert set(
+        ClaimExtraction.objects.filter(published=True).values_list("id", flat=True)
+    ) == {extraction.id for extraction in published}
 
 
 def test_generate_claims_for_resource_publishes_run(mocker):
@@ -3826,7 +3872,7 @@ def test_generate_claims_for_resource_publishes_run(mocker):
 
 
 def test_generate_claims_for_resource_run_failure(mocker):
-    """A failed run step is counted, and the units are still published"""
+    """A failed run step is counted, and the units aren't published yet"""
     unit = factories.UnitFactory.create()
     unit_extraction = factories.ClaimExtractionFactory.create(unit=unit)
     mocker.patch.object(
@@ -3848,7 +3894,7 @@ def test_generate_claims_for_resource_run_failure(mocker):
 
     assert result == {"unit_extracted": 1, "run_failed": 1}
     unit_extraction.refresh_from_db()
-    assert unit_extraction.published is True
+    assert unit_extraction.published is False
 
 
 def test_generate_claims_for_resource_no_units_unpublishes(mocker):

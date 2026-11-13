@@ -350,10 +350,10 @@ def merge_parts(  # noqa: PLR0913
     Merge a split unit's parts with the merge model.
 
     There is no fallback: a merge call over the merge's input budget, or one
-    with no valid response, raises, so the unit fails, the run's claims wait
-    for it, and it is tried again on the next sweep. The budget is checked
-    only when the merge isn't stored, against the system prompt and the
-    prompt together.
+    with no valid response, raises, so the unit fails and is tried again on
+    the next sweep, and the course keeps its last published claims until
+    then. The budget is checked only when the merge isn't stored, against
+    the system prompt and the prompt together.
 
     Args:
         extractor (ClaimExtractor): the merge extractor
@@ -705,7 +705,7 @@ def get_or_create_extraction(  # noqa: PLR0913
         output=_sanitize(output),
         raw_response=sanitize_llm_text(raw),
         # a replaced extraction is unpublished until the next claim generation
-        # sweep of its course publishes it again
+        # sweep of its course in which nothing fails publishes it again
         published=False,
     )
 

@@ -1484,8 +1484,11 @@ def generate_claims_for_resource(
     generated only when none failed: claims missing a unit would misjudge
     which knowledge the course teaches before it is needed.
 
-    The extractions the best run uses are then the course's only published
-    ones: see publish_claim_extractions.
+    When nothing failed, the extractions the best run uses are then the
+    course's only published ones: see publish_claim_extractions. When
+    something failed, what is published is left as it is, so the course keeps
+    its last complete claims, rather than none or claims missing a unit,
+    until a sweep succeeds.
 
     Args:
         resource_id (int): the LearningResource id
@@ -1559,14 +1562,21 @@ def generate_claims_for_resource(
         )
         stats["run_skipped"] += 1
     else:
-        _extract(
+        _, any_failed = _extract(
             "run",
             run.run_id,
             lambda: generate_run_claims(
                 run, context, unit_extractions, overwrite=overwrite
             ),
         )
-    publish_claim_extractions(resource, current_ids)
+    if any_failed:
+        log.info(
+            "Not publishing claims for %s: an extraction failed, so its last"
+            " published claims are kept",
+            resource.readable_id,
+        )
+    else:
+        publish_claim_extractions(resource, current_ids)
     log.info("Generated claims for %s: %s", resource.readable_id, dict(stats))
     return dict(stats)
 
@@ -1578,9 +1588,10 @@ def publish_claim_extractions(
     Publish a course's current claim extractions and unpublish the rest.
 
     The rest are those of runs that aren't the best run, and of best-run
-    units, or the best run itself, that failed or were skipped this time,
-    whose rows weren't brought up to date. Rows whose unit or run was deleted,
-    which no course sweeps, are unpublished too.
+    units, or the best run itself, that were skipped this time. Rows whose
+    unit or run was deleted, which no course sweeps, are unpublished too.
+    It isn't called when an extraction failed: see
+    generate_claims_for_resource.
 
     Args:
         resource (LearningResource): the course
