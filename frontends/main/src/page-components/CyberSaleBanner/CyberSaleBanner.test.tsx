@@ -88,6 +88,23 @@ describe("CyberSaleBanner", () => {
     expect(screen.queryByRole("complementary")).toBeNull()
   })
 
+  test("Dismissing still hides it when localStorage can't be written", async () => {
+    // A code no other test uses: the fallback lives in module memory.
+    setPayload({ ...SALE, code: "NOSTORAGE" })
+    const setItem = jest
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(() => {
+        throw new DOMException("QuotaExceededError")
+      })
+    try {
+      renderWithTheme(<CyberSaleBanner />)
+      await user.click(dismissButton()!)
+      expect(screen.queryByRole("complementary")).toBeNull()
+    } finally {
+      setItem.mockRestore()
+    }
+  })
+
   test("Dismissing the awareness banner does not hide the sale banner", async () => {
     setPayload(AWARENESS)
     renderWithTheme(<CyberSaleBanner />)

@@ -53,11 +53,14 @@ const subscribeStorage = (onChange: () => void) => {
   }
 }
 
+/** So dismissing still works for this visit when localStorage is blocked or full. */
+const memoryStorage = new Map<string, string>()
+
 const readStorage = (key: string): string | null => {
   try {
-    return window.localStorage.getItem(key)
+    return window.localStorage.getItem(key) ?? memoryStorage.get(key) ?? null
   } catch {
-    return null
+    return memoryStorage.get(key) ?? null
   }
 }
 
@@ -65,7 +68,7 @@ const writeStorage = (key: string, value: string) => {
   try {
     window.localStorage.setItem(key, value)
   } catch {
-    // Storage unavailable (e.g. blocked): the banner still hides for this page view.
+    memoryStorage.set(key, value)
   }
   localListeners.forEach((listener) => listener())
 }
