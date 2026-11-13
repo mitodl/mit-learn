@@ -109,27 +109,9 @@ class ReactURLField(serializers.URLField, ReactField):
         }
 
 
-class ReactCheckboxField(serializers.BooleanField, ReactField):
-    """ReactField extension for storing a boolean"""
-
-    def _get_input_type(self):
-        """Return the input type"""
-        return "checkbox"
-
-
 class ReactMarkdownWysiwygField(serializers.CharField, ReactField):
     """ReactField extension of CharField"""
 
     def _get_input_type(self):
         """Returns the field's input type"""  # noqa: D401
         return "markdown_wysiwyg"
-
-
-class ReactPeopleField(serializers.ListField, ReactField):
-    """ReactField extension of ListField"""
-
-    child = serializers.CharField()
-
-    def _get_input_type(self):
-        """Returns the field's input type"""  # noqa: D401
-        return "people"

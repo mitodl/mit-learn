@@ -36,7 +36,7 @@ import {
   LearningResource,
   LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as LRSearchRequest,
   LearningResourcesSearchResponse,
-  SearchModeEnumDescriptions,
+  SearchModeEnum,
 } from "api"
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { useAdminSearchParams } from "api/hooks/adminSearchParams"
@@ -790,9 +790,9 @@ const SORT_OPTIONS = [
   },
 ]
 
-const searchModeDropdownOptions = Object.entries(
-  SearchModeEnumDescriptions,
-).map(([label, value]) => ({ label, value }))
+const searchModeDropdownOptions = Object.values(SearchModeEnum).map(
+  (value) => ({ label: value, value }),
+)
 
 export interface SearchDisplayProps {
   page: number

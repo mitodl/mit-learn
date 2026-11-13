@@ -44,23 +44,6 @@ import {
  * * `resource_type` - resource_type * `certification` - certification * `certification_type` - certification_type * `offered_by` - offered_by * `platform` - platform * `topic` - topic * `department` - department * `level` - level * `course_feature` - course_feature * `professional` - professional * `free` - free * `delivery` - delivery * `resource_type_group` - resource_type_group * `resource_category` - resource_category
  */
 
-export const AggregationsEnumDescriptions = {
-  resource_type: "resource_type",
-  certification: "certification",
-  certification_type: "certification_type",
-  offered_by: "offered_by",
-  platform: "platform",
-  topic: "topic",
-  department: "department",
-  level: "level",
-  course_feature: "course_feature",
-  professional: "professional",
-  free: "free",
-  delivery: "delivery",
-  resource_type_group: "resource_type_group",
-  resource_category: "resource_category",
-} as const
-
 export const AggregationsEnum = {
   /**
    * resource_type
@@ -127,11 +110,6 @@ export type AggregationsEnum =
  * * `dated` - Dated * `anytime` - Anytime
  */
 
-export const AvailabilityEnumDescriptions = {
-  dated: "Dated",
-  anytime: "Anytime",
-} as const
-
 export const AvailabilityEnum = {
   /**
    * Dated
@@ -165,13 +143,6 @@ export interface CaptionUrlRequest {
 /**
  * * `micromasters` - MicroMasters Credential * `professional` - Professional Certificate * `completion` - Certificate of Completion * `none` - No Certificate
  */
-
-export const CertificationTypeEnumDescriptions = {
-  micromasters: "MicroMasters Credential",
-  professional: "Professional Certificate",
-  completion: "Certificate of Completion",
-  none: "No Certificate",
-} as const
 
 export const CertificationTypeEnum = {
   /**
@@ -243,13 +214,6 @@ export interface ContentFile {
 /**
  * * `page` - page * `file` - file * `video` - video * `pdf` - pdf
  */
-
-export const ContentFileContentTypeEnumDescriptions = {
-  page: "page",
-  file: "file",
-  video: "video",
-  pdf: "pdf",
-} as const
 
 export const ContentFileContentTypeEnum = {
   /**
@@ -522,10 +486,6 @@ export const CourseResourceRequestAvailabilityEnum = {
 export type CourseResourceRequestAvailabilityEnum =
   (typeof CourseResourceRequestAvailabilityEnum)[keyof typeof CourseResourceRequestAvailabilityEnum]
 
-export const CourseResourceResourceTypeEnumDescriptions = {
-  course: "",
-} as const
-
 export const CourseResourceResourceTypeEnum = {
   Course: "course",
 } as const
@@ -536,13 +496,6 @@ export type CourseResourceResourceTypeEnum =
 /**
  * * `online` - Online * `hybrid` - Hybrid * `in_person` - In person * `offline` - Offline
  */
-
-export const DeliveryEnumDescriptions = {
-  online: "Online",
-  hybrid: "Hybrid",
-  in_person: "In person",
-  offline: "Offline",
-} as const
 
 export const DeliveryEnum = {
   /**
@@ -568,47 +521,6 @@ export type DeliveryEnum = (typeof DeliveryEnum)[keyof typeof DeliveryEnum]
 /**
  * * `1` - Civil and Environmental Engineering * `2` - Mechanical Engineering * `3` - Materials Science and Engineering * `4` - Architecture * `5` - Chemistry * `6` - Electrical Engineering and Computer Science * `7` - Biology * `8` - Physics * `9` - Brain and Cognitive Sciences * `10` - Chemical Engineering * `11` - Urban Studies and Planning * `12` - Earth, Atmospheric, and Planetary Sciences * `14` - Economics * `15` - Management * `16` - Aeronautics and Astronautics * `17` - Political Science * `18` - Mathematics * `20` - Biological Engineering * `21A` - Anthropology * `21G` - Global Languages * `21H` - History * `21L` - Literature * `21M` - Music * `21T` - Theater Arts * `22` - Nuclear Science and Engineering * `24` - Linguistics and Philosophy * `CC` - Concourse * `CMS-W` - Comparative Media Studies/Writing * `EC` - Edgerton Center * `ES` - Experimental Study Group * `ESD` - Engineering Systems Division * `HST` - Medical Engineering and Science * `IDS` - Data, Systems, and Society * `MAS` - Media Arts and Sciences * `PE` - Athletics, Physical Education and Recreation * `SP` - Special Programs * `STS` - Science, Technology, and Society * `WGS` - Women\'s and Gender Studies
  */
-
-export const DepartmentEnumDescriptions = {
-  "1": "Civil and Environmental Engineering",
-  "2": "Mechanical Engineering",
-  "3": "Materials Science and Engineering",
-  "4": "Architecture",
-  "5": "Chemistry",
-  "6": "Electrical Engineering and Computer Science",
-  "7": "Biology",
-  "8": "Physics",
-  "9": "Brain and Cognitive Sciences",
-  "10": "Chemical Engineering",
-  "11": "Urban Studies and Planning",
-  "12": "Earth, Atmospheric, and Planetary Sciences",
-  "14": "Economics",
-  "15": "Management",
-  "16": "Aeronautics and Astronautics",
-  "17": "Political Science",
-  "18": "Mathematics",
-  "20": "Biological Engineering",
-  "21A": "Anthropology",
-  "21G": "Global Languages",
-  "21H": "History",
-  "21L": "Literature",
-  "21M": "Music",
-  "21T": "Theater Arts",
-  "22": "Nuclear Science and Engineering",
-  "24": "Linguistics and Philosophy",
-  CC: "Concourse",
-  "CMS-W": "Comparative Media Studies/Writing",
-  EC: "Edgerton Center",
-  ES: "Experimental Study Group",
-  ESD: "Engineering Systems Division",
-  HST: "Medical Engineering and Science",
-  IDS: "Data, Systems, and Society",
-  MAS: "Media Arts and Sciences",
-  PE: "Athletics, Physical Education and Recreation",
-  SP: "Special Programs",
-  STS: "Science, Technology, and Society",
-  WGS: "Women's and Gender Studies",
-} as const
 
 export const DepartmentEnum = {
   /**
@@ -884,10 +796,6 @@ export const DocumentResourceRequestAvailabilityEnum = {
 
 export type DocumentResourceRequestAvailabilityEnum =
   (typeof DocumentResourceRequestAvailabilityEnum)[keyof typeof DocumentResourceRequestAvailabilityEnum]
-
-export const DocumentResourceResourceTypeEnumDescriptions = {
-  document: "",
-} as const
 
 export const DocumentResourceResourceTypeEnum = {
   Document: "document",
@@ -1282,10 +1190,6 @@ export const LearningPathResourceRequestAvailabilityEnum = {
 
 export type LearningPathResourceRequestAvailabilityEnum =
   (typeof LearningPathResourceRequestAvailabilityEnum)[keyof typeof LearningPathResourceRequestAvailabilityEnum]
-
-export const LearningPathResourceResourceTypeEnumDescriptions = {
-  learning_path: "",
-} as const
 
 export const LearningPathResourceResourceTypeEnum = {
   LearningPath: "learning_path",
@@ -1738,17 +1642,6 @@ export interface LearningResourceSummary {
  * * `course` - Course * `program` - Program * `learning_path` - Learning Path * `podcast` - Podcast * `podcast_episode` - Podcast Episode * `video` - Video * `video_playlist` - Video Playlist * `document` - Document
  */
 
-export const LearningResourceSummaryResourceTypeEnumDescriptions = {
-  course: "Course",
-  program: "Program",
-  learning_path: "Learning Path",
-  podcast: "Podcast",
-  podcast_episode: "Podcast Episode",
-  video: "Video",
-  video_playlist: "Video Playlist",
-  document: "Document",
-} as const
-
 export const LearningResourceSummaryResourceTypeEnum = {
   /**
    * Course
@@ -1798,12 +1691,6 @@ export interface LearningResourceSyncPairRequest {
 /**
  * * `course` - course * `program` - program * `document` - document
  */
-
-export const LearningResourceSyncPairResourceTypeEnumDescriptions = {
-  course: "course",
-  program: "program",
-  document: "document",
-} as const
 
 export const LearningResourceSyncPairResourceTypeEnum = {
   /**
@@ -1866,16 +1753,6 @@ export interface LearningResourcesSearchResponse {
 /**
  * * `undergraduate` - Undergraduate * `graduate` - Graduate * `high_school` - High School * `noncredit` - Non-Credit * `advanced` - Advanced * `intermediate` - Intermediate * `introductory` - Introductory
  */
-
-export const LevelEnumDescriptions = {
-  undergraduate: "Undergraduate",
-  graduate: "Graduate",
-  high_school: "High School",
-  noncredit: "Non-Credit",
-  advanced: "Advanced",
-  intermediate: "Intermediate",
-  introductory: "Introductory",
-} as const
 
 export const LevelEnum = {
   /**
@@ -1977,8 +1854,6 @@ export interface NestedContentFile {
   youtube_id?: string | null
 }
 
-export const NullEnumDescriptions = {} as const
-
 export const NullEnum = {} as const
 
 export type NullEnum = (typeof NullEnum)[keyof typeof NullEnum]
@@ -1994,16 +1869,6 @@ export interface OVSVideoWebhookRequestRequest {
 /**
  * * `mitx` - MITx * `ocw` - MIT OpenCourseWare * `bootcamps` - Bootcamps * `xpro` - MIT xPRO * `mitpe` - MIT Professional Education * `see` - MIT Sloan Executive Education * `climate` - MIT Climate
  */
-
-export const OfferedByEnumDescriptions = {
-  mitx: "MITx",
-  ocw: "MIT OpenCourseWare",
-  bootcamps: "Bootcamps",
-  xpro: "MIT xPRO",
-  mitpe: "MIT Professional Education",
-  see: "MIT Sloan Executive Education",
-  climate: "MIT Climate",
-} as const
 
 export const OfferedByEnum = {
   /**
@@ -2395,17 +2260,6 @@ export interface PercolateQuerySubscriptionRequestRequest {
  * * `course` - course * `program` - program * `learning_path` - learning path * `podcast` - podcast * `podcast_episode` - podcast episode * `video` - video * `video_playlist` - video playlist * `document` - document
  */
 
-export const PercolateQuerySubscriptionRequestResourceTypeEnumDescriptions = {
-  course: "course",
-  program: "program",
-  learning_path: "learning path",
-  podcast: "podcast",
-  podcast_episode: "podcast episode",
-  video: "video",
-  video_playlist: "video playlist",
-  document: "document",
-} as const
-
 export const PercolateQuerySubscriptionRequestResourceTypeEnum = {
   /**
    * course
@@ -2447,30 +2301,6 @@ export type PercolateQuerySubscriptionRequestResourceTypeEnum =
 /**
  * * `edx` - edX * `ocw` - MIT OpenCourseWare * `oll` - Open Learning Library * `mitxonline` - MITx Online * `bootcamps` - Bootcamps * `xpro` - MIT xPRO * `csail` - CSAIL * `mitpe` - MIT Professional Education * `see` - MIT Sloan Executive Education * `scc` - Schwarzman College of Computing * `ctl` - Center for Transportation & Logistics * `whu` - WHU * `susskind` - Susskind * `globalalumni` - Global Alumni * `simplilearn` - Simplilearn * `emeritus` - Emeritus * `podcast` - Podcast * `youtube` - YouTube * `canvas` - Canvas * `climate` - MIT Climate * `ovs` - ODL Video Service
  */
-
-export const PlatformEnumDescriptions = {
-  edx: "edX",
-  ocw: "MIT OpenCourseWare",
-  oll: "Open Learning Library",
-  mitxonline: "MITx Online",
-  bootcamps: "Bootcamps",
-  xpro: "MIT xPRO",
-  csail: "CSAIL",
-  mitpe: "MIT Professional Education",
-  see: "MIT Sloan Executive Education",
-  scc: "Schwarzman College of Computing",
-  ctl: "Center for Transportation & Logistics",
-  whu: "WHU",
-  susskind: "Susskind",
-  globalalumni: "Global Alumni",
-  simplilearn: "Simplilearn",
-  emeritus: "Emeritus",
-  podcast: "Podcast",
-  youtube: "YouTube",
-  canvas: "Canvas",
-  climate: "MIT Climate",
-  ovs: "ODL Video Service",
-} as const
 
 export const PlatformEnum = {
   /**
@@ -2727,10 +2557,6 @@ export const PodcastEpisodeResourceRequestAvailabilityEnum = {
 export type PodcastEpisodeResourceRequestAvailabilityEnum =
   (typeof PodcastEpisodeResourceRequestAvailabilityEnum)[keyof typeof PodcastEpisodeResourceRequestAvailabilityEnum]
 
-export const PodcastEpisodeResourceResourceTypeEnumDescriptions = {
-  podcast_episode: "",
-} as const
-
 export const PodcastEpisodeResourceResourceTypeEnum = {
   PodcastEpisode: "podcast_episode",
 } as const
@@ -2872,10 +2698,6 @@ export const PodcastResourceRequestAvailabilityEnum = {
 export type PodcastResourceRequestAvailabilityEnum =
   (typeof PodcastResourceRequestAvailabilityEnum)[keyof typeof PodcastResourceRequestAvailabilityEnum]
 
-export const PodcastResourceResourceTypeEnumDescriptions = {
-  podcast: "",
-} as const
-
 export const PodcastResourceResourceTypeEnum = {
   Podcast: "podcast",
 } as const
@@ -2886,11 +2708,6 @@ export type PodcastResourceResourceTypeEnum =
 /**
  * * `private` - private * `unlisted` - unlisted
  */
-
-export const PrivacyLevelEnumDescriptions = {
-  private: "private",
-  unlisted: "unlisted",
-} as const
 
 export const PrivacyLevelEnum = {
   /**
@@ -3061,10 +2878,6 @@ export const ProgramResourceRequestAvailabilityEnum = {
 export type ProgramResourceRequestAvailabilityEnum =
   (typeof ProgramResourceRequestAvailabilityEnum)[keyof typeof ProgramResourceRequestAvailabilityEnum]
 
-export const ProgramResourceResourceTypeEnumDescriptions = {
-  program: "",
-} as const
-
 export const ProgramResourceResourceTypeEnum = {
   Program: "program",
 } as const
@@ -3075,15 +2888,6 @@ export type ProgramResourceResourceTypeEnum =
 /**
  * * `PROGRAM_COURSES` - Program Courses * `PROGRAM_PROGRAMS` - Program Programs * `LEARNING_PATH_ITEMS` - Learning Path Items * `PODCAST_EPISODES` - Podcast Episodes * `PLAYLIST_VIDEOS` - Playlist Videos * `COURSE_LEARNING_MATERIALS` - Course Learning Materials
  */
-
-export const RelationTypeEnumDescriptions = {
-  PROGRAM_COURSES: "Program Courses",
-  PROGRAM_PROGRAMS: "Program Programs",
-  LEARNING_PATH_ITEMS: "Learning Path Items",
-  PODCAST_EPISODES: "Podcast Episodes",
-  PLAYLIST_VIDEOS: "Playlist Videos",
-  COURSE_LEARNING_MATERIALS: "Course Learning Materials",
-} as const
 
 export const RelationTypeEnum = {
   /**
@@ -3130,17 +2934,6 @@ export interface ResourceChildSummary {
  * * `course` - course * `program` - program * `learning_path` - learning_path * `podcast` - podcast * `podcast_episode` - podcast_episode * `video` - video * `video_playlist` - video_playlist * `document` - document
  */
 
-export const ResourceTypeEnumDescriptions = {
-  course: "course",
-  program: "program",
-  learning_path: "learning_path",
-  podcast: "podcast",
-  podcast_episode: "podcast_episode",
-  video: "video",
-  video_playlist: "video_playlist",
-  document: "document",
-} as const
-
 export const ResourceTypeEnum = {
   /**
    * course
@@ -3183,12 +2976,6 @@ export type ResourceTypeEnum =
  * * `course` - Course * `program` - Program * `learning_material` - Learning Material
  */
 
-export const ResourceTypeGroupEnumDescriptions = {
-  course: "Course",
-  program: "Program",
-  learning_material: "Learning Material",
-} as const
-
 export const ResourceTypeGroupEnum = {
   /**
    * Course
@@ -3210,13 +2997,6 @@ export type ResourceTypeGroupEnum =
 /**
  * * `phrase` - phrase * `best_fields` - best_fields * `most_fields` - most_fields * `hybrid` - hybrid  * `phrase` - phrase * `best_fields` - best_fields * `most_fields` - most_fields * `hybrid` - hybrid
  */
-
-export const SearchModeEnumDescriptions = {
-  phrase: "phrase",
-  best_fields: "best_fields",
-  most_fields: "most_fields",
-  hybrid: "hybrid",
-} as const
 
 export const SearchModeEnum = {
   /**
@@ -3265,24 +3045,6 @@ export interface ShadowRunResult {
 /**
  * * `featured` - Featured * `id` - Object ID ascending * `-id` - Object ID descending * `readable_id` - Readable ID ascending * `-readable_id` - Readable ID descending * `last_modified` - Last Modified Date ascending * `-last_modified` - Last Modified Date descending * `new` - Newest resources first * `start_date` - Start Date ascending * `-start_date` - Start Date descending * `mitcoursenumber` - MIT course number ascending * `-mitcoursenumber` - MIT course number descending * `views` - Popularity ascending * `-views` - Popularity descending * `upcoming` - Next start date ascending
  */
-
-export const SortbyEnumDescriptions = {
-  featured: "Featured",
-  id: "Object ID ascending",
-  "-id": "Object ID descending",
-  readable_id: "Readable ID ascending",
-  "-readable_id": "Readable ID descending",
-  last_modified: "Last Modified Date ascending",
-  "-last_modified": "Last Modified Date descending",
-  new: "Newest resources first",
-  start_date: "Start Date ascending",
-  "-start_date": "Start Date descending",
-  mitcoursenumber: "MIT course number ascending",
-  "-mitcoursenumber": "MIT course number descending",
-  views: "Popularity ascending",
-  "-views": "Popularity descending",
-  upcoming: "Next start date ascending",
-} as const
 
 export const SortbyEnum = {
   /**
@@ -3353,20 +3115,6 @@ export type SortbyEnum = (typeof SortbyEnum)[keyof typeof SortbyEnum]
  * * `mitpe` - mitpe * `mitxonline` - mitxonline * `oll` - oll * `ocw` - ocw * `podcast` - podcast * `mit_climate` - mit_climate * `see` - see * `xpro` - xpro * `youtube` - youtube * `canvas` - canvas * `ovs` - ovs
  */
 
-export const SourceEnumDescriptions = {
-  mitpe: "mitpe",
-  mitxonline: "mitxonline",
-  oll: "oll",
-  ocw: "ocw",
-  podcast: "podcast",
-  mit_climate: "mit_climate",
-  see: "see",
-  xpro: "xpro",
-  youtube: "youtube",
-  canvas: "canvas",
-  ovs: "ovs",
-} as const
-
 export const SourceEnum = {
   /**
    * mitpe
@@ -3419,11 +3167,6 @@ export type SourceEnum = (typeof SourceEnum)[keyof typeof SourceEnum]
 /**
  * * `search_subscription_type` - search_subscription_type * `channel_subscription_type` - channel_subscription_type
  */
-
-export const SourceTypeEnumDescriptions = {
-  search_subscription_type: "search_subscription_type",
-  channel_subscription_type: "channel_subscription_type",
-} as const
 
 export const SourceTypeEnum = {
   /**
@@ -3661,10 +3404,6 @@ export const VideoPlaylistResourceRequestAvailabilityEnum = {
 export type VideoPlaylistResourceRequestAvailabilityEnum =
   (typeof VideoPlaylistResourceRequestAvailabilityEnum)[keyof typeof VideoPlaylistResourceRequestAvailabilityEnum]
 
-export const VideoPlaylistResourceResourceTypeEnumDescriptions = {
-  video_playlist: "",
-} as const
-
 export const VideoPlaylistResourceResourceTypeEnum = {
   VideoPlaylist: "video_playlist",
 } as const
@@ -3800,10 +3539,6 @@ export const VideoResourceRequestAvailabilityEnum = {
 export type VideoResourceRequestAvailabilityEnum =
   (typeof VideoResourceRequestAvailabilityEnum)[keyof typeof VideoResourceRequestAvailabilityEnum]
 
-export const VideoResourceResourceTypeEnumDescriptions = {
-  video: "",
-} as const
-
 export const VideoResourceResourceTypeEnum = {
   Video: "video",
 } as const
@@ -3850,11 +3585,6 @@ export interface WebsiteContent {
 /**
  * * `news` - News * `article` - Article
  */
-
-export const WebsiteContentContentTypeEnumDescriptions = {
-  news: "News",
-  article: "Article",
-} as const
 
 export const WebsiteContentContentTypeEnum = {
   /**

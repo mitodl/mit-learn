@@ -12,8 +12,6 @@ export enum FeatureFlags {
   CourseOutlineSection = "course-outline-section",
   OcwProductPages = "ocw-product-pages",
   VideoPlaylistPage = "video-playlist-page",
-  B2BContractManagerDashboard = "b2b-contract-manager-dashboard",
-  B2BAnalyticsDashboard = "b2b-analytics-dashboard",
   B2BLearnerAnalytics = "b2b-learner-analytics",
   Arithmix = "arithmix",
   Hacksnack = "hacksnack",
@@ -21,7 +19,7 @@ export enum FeatureFlags {
   SelfServiceRefunds = "self-service-refunds",
   DisableHybridSearch = "disable-hybrid-search",
   ProgramLetters = "program-letters",
-  B2BDataConsent = "b2b-data-consent",
   DepartmentPageRedesign = "department-page-redesign",
   ContactUs = "contact-us",
+  EducatorPage = "educator-page",
 }

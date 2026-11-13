@@ -21,9 +21,9 @@ import ContractManagerNav from "./ContractManagerNav"
 jest.mock("@/common/useFeatureFlag")
 const mockedUseFeatureFlag = jest.mocked(useFeatureFlag)
 
-const enableFlags = (...flags: FeatureFlags[]) =>
-  mockedUseFeatureFlag.mockImplementation((flag) =>
-    flags.includes(flag as FeatureFlags),
+const setLearnerAnalytics = (enabled: boolean) =>
+  mockedUseFeatureFlag.mockImplementation(
+    (flag) => enabled && flag === FeatureFlags.B2BLearnerAnalytics,
   )
 
 const linkNames = () =>
@@ -46,15 +46,12 @@ const mockUserWithContract = (hasContract = true) => {
 describe("ContractManagerNav", () => {
   beforeEach(() => {
     sessionStorage.clear()
+    setLearnerAnalytics(false)
     mockUserWithContract()
   })
 
   test("links to every section for the contract, marking only the current one", async () => {
-    enableFlags(
-      FeatureFlags.B2BAnalyticsDashboard,
-      FeatureFlags.B2BLearnerAnalytics,
-      FeatureFlags.B2BContractManagerDashboard,
-    )
+    setLearnerAnalytics(true)
     renderWithProviders(
       <ContractManagerNav orgSlug="acme" contractSlug="c1" current="seats" />,
     )
@@ -79,43 +76,7 @@ describe("ContractManagerNav", () => {
     }
   })
 
-  test.each([
-    {
-      flags: [FeatureFlags.B2BAnalyticsDashboard],
-      links: ["Overview", "Analytics"],
-    },
-    {
-      flags: [
-        FeatureFlags.B2BAnalyticsDashboard,
-        FeatureFlags.B2BLearnerAnalytics,
-      ],
-      links: ["Overview", "Analytics", "Learners"],
-    },
-    {
-      flags: [
-        FeatureFlags.B2BLearnerAnalytics,
-        FeatureFlags.B2BContractManagerDashboard,
-      ],
-      links: ["Overview", "Manage seats"],
-    },
-  ])(
-    "shows only the sections whose flags are on: $links",
-    async ({ flags, links }) => {
-      enableFlags(...flags)
-      renderWithProviders(
-        <ContractManagerNav
-          orgSlug="acme"
-          contractSlug="c1"
-          current="overview"
-        />,
-      )
-      await screen.findByRole("link", { name: "Overview" })
-      expect(linkNames()).toEqual(links)
-    },
-  )
-
-  test("renders nothing when Overview would be its only link", () => {
-    enableFlags(FeatureFlags.B2BLearnerAnalytics)
+  test("omits Learners when the learner analytics flag is off", async () => {
     renderWithProviders(
       <ContractManagerNav
         orgSlug="acme"
@@ -123,17 +84,12 @@ describe("ContractManagerNav", () => {
         current="overview"
       />,
     )
-    expect(
-      screen.queryByRole("navigation", { name: "Contract" }),
-    ).not.toBeInTheDocument()
+    await screen.findByRole("link", { name: "Overview" })
+    expect(linkNames()).toEqual(["Overview", "Analytics", "Manage seats"])
   })
 
   test("omits Overview when the contract is absent from the user's organizations", async () => {
     mockUserWithContract(false)
-    enableFlags(
-      FeatureFlags.B2BAnalyticsDashboard,
-      FeatureFlags.B2BContractManagerDashboard,
-    )
     renderWithProviders(
       <ContractManagerNav orgSlug="acme" contractSlug="c1" current="seats" />,
     )
@@ -155,11 +111,7 @@ describe("ContractManagerNav", () => {
         />,
       )
 
-    const enableLearnerFlags = () =>
-      enableFlags(
-        FeatureFlags.B2BAnalyticsDashboard,
-        FeatureFlags.B2BLearnerAnalytics,
-      )
+    beforeEach(() => setLearnerAnalytics(true))
 
     test.each([
       [
@@ -173,7 +125,6 @@ describe("ContractManagerNav", () => {
     ])(
       "refocuses the link that was activated by %s when the nav remounts",
       async (_input, activate) => {
-        enableLearnerFlags()
         const { view } = renderNav()
         await activate(await screen.findByRole("link", { name: "Learners" }))
         view.unmount()
@@ -186,7 +137,6 @@ describe("ContractManagerNav", () => {
     )
 
     test("does not refocus when no link was activated", async () => {
-      enableLearnerFlags()
       renderNav()
       await screen.findByRole("link", { name: "Learners" })
       expect(document.body).toHaveFocus()
@@ -196,7 +146,6 @@ describe("ContractManagerNav", () => {
       ["the current page's link", "Analytics", {}],
       ["a modifier-click that opens a new tab", "Learners", { metaKey: true }],
     ])("does not save %s for refocus", async (_case, name, eventInit) => {
-      enableLearnerFlags()
       const { view } = renderNav()
       fireEvent.click(await screen.findByRole("link", { name }), eventInit)
       view.unmount()
@@ -207,7 +156,6 @@ describe("ContractManagerNav", () => {
     })
 
     test("leaves focus alone when it already moved elsewhere", async () => {
-      enableLearnerFlags()
       const { view } = renderNav()
       await userEvent.click(
         await screen.findByRole("link", { name: "Learners" }),

@@ -89,6 +89,32 @@ def test_transform_items():
     assert result[0]["detail"]["publish_date"] == "2024-01-01T00:00:00+00:00"
 
 
+def test_transform_items_author_without_name_is_omitted():
+    """An author with no first/last name gets no byline, not their username"""
+    from datetime import UTC, datetime
+
+    class MockUser:
+        first_name = ""
+        last_name = ""
+        username = "author@example.com"
+
+    articles_data = [
+        {
+            "id": 1,
+            "title": "Test Article",
+            "slug": "test-article",
+            "content": {"blocks": [{"text": "Test content"}]},
+            "user": MockUser(),
+            "created_on": datetime(2024, 1, 1, tzinfo=UTC),
+            "publish_date": datetime(2024, 1, 1, tzinfo=UTC),
+        }
+    ]
+
+    result = articles_news.transform_items(articles_data)
+
+    assert result[0]["detail"]["authors"] == []
+
+
 def test_extract_text_from_content():
     """Test text extraction from JSON content"""
     # ProseMirror structure (actual format)
