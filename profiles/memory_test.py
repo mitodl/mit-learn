@@ -192,9 +192,9 @@ def test_forget_in_progress_does_not_fail_the_save(client, logged_in_profile, me
 
 
 def test_failure_partway_leaves_the_save(client, logged_in_profile, mocker):
-    """An outage after the first write stops the rest and the profile still saves"""
+    """An outage on one write skips the rest and the profile still saves"""
     notes = mocker.Mock()
-    notes.put.side_effect = [None, MemoryUnavailable("down", operation="put")]
+    notes.put.side_effect = MemoryUnavailable("down", operation="put")
     client_mock = mocker.Mock()
     client_mock.learner.return_value = notes
     mocker.patch("profiles.memory.get_memory", return_value=client_mock)
@@ -210,9 +210,26 @@ def test_failure_partway_leaves_the_save(client, logged_in_profile, mocker):
     )
 
     assert resp.status_code == status.HTTP_200_OK
-    assert notes.put.call_count == 2
+    # current_education is written first and fails, so time_commitment is not tried
+    notes.put.assert_called_once_with(
+        "profile-current-education", "Education level: Bachelor's degree."
+    )
     logged_in_profile.refresh_from_db()
     assert logged_in_profile.current_education == Profile.CurrentEducation.BACHELORS
+
+
+def test_thread_loop_closed_after_writing(client, logged_in_profile, mocker, memory):
+    """The request's ol-llm loop and its clients are closed after the writes"""
+    close_thread_loop = mocker.patch("ol_llm.close_thread_loop")
+
+    patch_profile(
+        client,
+        logged_in_profile,
+        {"time_commitment": Profile.TimeCommitment.ZERO_TO_FIVE_HOURS},
+        HTTP_X_ACCESS_TOKEN=TOKEN,
+    )
+
+    close_thread_loop.assert_called_once_with()
 
 
 @pytest.fixture
