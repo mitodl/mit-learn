@@ -5,15 +5,19 @@ django.conf.settings directly so these tests run in milliseconds with no
 database setup required.
 """
 
+import uuid
 from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock, patch
 
 import django
 import pytest
+from celery.exceptions import MaxRetriesExceededError, Retry
 from django.conf import settings as django_settings
+from django.core.cache import caches
 from django.core.exceptions import ImproperlyConfigured
 from django.test import override_settings
 from freezegun import freeze_time
+from redis.exceptions import LockNotOwnedError
 
 # Configure Django minimally if not already configured — keeps this test
 # module self-contained and fast (no database, no app registry needed).
@@ -46,10 +50,15 @@ from learning_resources.etl.ownership import (
 from learning_resources.factories import ETLSourceOwnershipFactory
 from learning_resources.lib.warehouse import (
     _WATERMARK_LOOKBACK,
+    SYNC_LOCK_CACHE,
+    SYNC_LOCK_MAX_RETRIES,
+    SYNC_LOCK_RETRY_SECONDS,
+    SYNC_LOCK_SECONDS,
     BaseWarehouseETLTask,
     connect_to_warehouse,
     iter_group_stats,
     iter_rows,
+    run_locked,
 )
 from learning_resources.models import ETLShadowRun
 
@@ -706,6 +715,18 @@ def test_base_warehouse_etl_task_rejects_non_int_return(mock_connect):
     mock_cache.set.assert_not_called()
 
 
+def test_a_sync_stops_inside_its_lock_and_the_broker_redelivery():
+    """
+    A run can't outlive the lock that keeps a second run out, or the hour after
+    which the broker hands an unacknowledged task to another worker
+    """
+    redis_visibility_timeout = 60 * 60  # kombu's default; main/ doesn't set one
+    assert BaseWarehouseETLTask.time_limit < SYNC_LOCK_SECONDS
+    assert BaseWarehouseETLTask.time_limit < redis_visibility_timeout
+    assert _ConcreteTask().time_limit == BaseWarehouseETLTask.time_limit
+    assert BaseWarehouseETLTask.reject_on_worker_lost is True
+
+
 def test_base_warehouse_etl_task_acks_late():
     """acks_late=True, matching the rest of the ETL task fleet (get_ocw_data,
     ingest_edx_run_archive, etc.) — a worker lost mid-pull shouldn't lose
@@ -742,7 +763,10 @@ def test_full_refresh_defaults_to_true_and_passes_since_none(mock_connect):
 
     assert result == 7
     assert task.seen_since is None
-    mock_caches.__getitem__.assert_not_called()
+    # only the sync lock
+    assert {c.args for c in mock_caches.__getitem__.call_args_list} == {
+        (SYNC_LOCK_CACHE,)
+    }
 
 
 @patch("learning_resources.lib.warehouse.connect_to_warehouse")
@@ -809,7 +833,11 @@ def test_full_refresh_does_not_advance_watermark(mock_connect):
     with patch("learning_resources.lib.warehouse.caches") as mock_caches:
         task.run(full_refresh=True)
 
-    mock_caches.__getitem__.assert_not_called()
+    # only the sync lock
+    assert {c.args for c in mock_caches.__getitem__.call_args_list} == {
+        (SYNC_LOCK_CACHE,)
+    }
+    mock_caches.__getitem__.return_value.set.assert_not_called()
 
 
 @patch("learning_resources.lib.warehouse.connect_to_warehouse")
@@ -888,3 +916,167 @@ def test_qualified_name_qualifies_any_view_with_the_warehouse_settings():
         )
     with pytest.raises(ValueError, match="Unsafe warehouse identifier"):
         _ConcreteTask.qualified_name("other; drop table x")
+
+
+# ---------------------------------------------------------------------------
+# One run at a time
+# ---------------------------------------------------------------------------
+
+
+def _mock_lock_cache(*, acquired):
+    """Return a cache whose lock() hands out one mock lock"""
+    mock_cache = MagicMock()
+    mock_cache.lock.return_value.acquire.return_value = acquired
+    return mock_cache
+
+
+@pytest.mark.parametrize("task_class", [_ConcreteTask, _ErrorTask])
+@patch("learning_resources.lib.warehouse.connect_to_warehouse")
+def test_run_holds_the_sync_lock_until_it_finishes(mock_connect, task_class):
+    """A run takes the task's lock before reading and lets it go, even on error"""
+    mock_cache = _mock_lock_cache(acquired=True)
+    mock_connect.return_value = MagicMock()
+
+    with (
+        patch("learning_resources.lib.warehouse.caches") as mock_caches,
+        patch("learning_resources.lib.warehouse.sentry_sdk"),
+    ):
+        mock_caches.__getitem__.return_value = mock_cache
+        try:
+            task_class().run()
+        except RuntimeError:
+            assert task_class is _ErrorTask
+
+    mock_caches.__getitem__.assert_any_call(SYNC_LOCK_CACHE)
+    mock_cache.lock.assert_called_once_with(
+        f"warehouse_etl:running:{task_class.name}", timeout=SYNC_LOCK_SECONDS
+    )
+    lock = mock_cache.lock.return_value
+    lock.acquire.assert_called_once_with(blocking=False)
+    lock.release.assert_called_once_with()
+
+
+@patch("learning_resources.lib.warehouse.connect_to_warehouse")
+def test_run_that_outlived_its_lock_still_finishes(mock_connect):
+    """A run whose lock expired before it finished returns what it loaded"""
+    mock_cache = _mock_lock_cache(acquired=True)
+    mock_cache.lock.return_value.release.side_effect = LockNotOwnedError()
+    mock_connect.return_value = MagicMock()
+
+    with patch("learning_resources.lib.warehouse.caches") as mock_caches:
+        mock_caches.__getitem__.return_value = mock_cache
+        assert _ConcreteTask().run() == 42
+
+
+@pytest.fixture
+def redis_lock_cache(settings):
+    """Point the sync lock at the real Redis the CI env provides"""
+    settings.CACHES = {
+        **settings.CACHES,
+        SYNC_LOCK_CACHE: {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": settings.REDIS_URL,
+            "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
+        },
+    }
+    return caches[SYNC_LOCK_CACHE]
+
+
+def test_run_locked_leaves_the_lock_the_next_run_took(redis_lock_cache):
+    """
+    A run whose lease ran out mid-run, and was taken by another run, finishes
+    without releasing the other run's lock
+    """
+    key = f"test:run_locked:{uuid.uuid4().hex}"
+    next_run = {}
+
+    def outlive_the_lock():
+        # the lease runs out, and the next run takes the lock
+        redis_lock_cache.delete(key)
+        next_run["lock"] = redis_lock_cache.lock(key, timeout=60)
+        assert next_run["lock"].acquire(blocking=False)
+        return "loaded"
+
+    try:
+        assert (
+            run_locked(
+                MagicMock(),
+                key,
+                outlive_the_lock,
+                lock_seconds=60,
+                retry_seconds=1,
+                max_retries=0,
+            )
+            == "loaded"
+        )
+        assert next_run["lock"].owned()
+    finally:
+        redis_lock_cache.delete(key)
+
+
+def test_run_locked_requeues_while_redis_holds_the_lock(redis_lock_cache):
+    """A second run of the same key re-queues instead of running beside the first"""
+    key = f"test:run_locked:{uuid.uuid4().hex}"
+    task = MagicMock()
+    task.retry.side_effect = Retry()
+    work = MagicMock()
+    held = redis_lock_cache.lock(key, timeout=60)
+    assert held.acquire(blocking=False)
+
+    try:
+        with pytest.raises(Retry):
+            run_locked(task, key, work, lock_seconds=60, retry_seconds=1, max_retries=1)
+    finally:
+        held.release()
+
+    work.assert_not_called()
+    task.retry.assert_called_once_with(countdown=1, max_retries=1)
+
+
+@patch("learning_resources.lib.warehouse.connect_to_warehouse")
+def test_run_requeues_while_another_run_holds_the_lock(mock_connect):
+    """A run that finds the lock held re-queues itself rather than waiting in the worker"""
+    mock_cache = _mock_lock_cache(acquired=False)
+    task = _ConcreteTask()
+
+    with (
+        patch("learning_resources.lib.warehouse.caches") as mock_caches,
+        patch.object(task, "retry", side_effect=Retry()) as mock_retry,
+    ):
+        mock_caches.__getitem__.return_value = mock_cache
+        with pytest.raises(Retry):
+            task.run()
+
+    mock_retry.assert_called_once_with(
+        countdown=SYNC_LOCK_RETRY_SECONDS, max_retries=SYNC_LOCK_MAX_RETRIES
+    )
+    mock_cache.lock.return_value.release.assert_not_called()
+    mock_connect.assert_not_called()
+
+
+@patch("learning_resources.lib.warehouse.connect_to_warehouse")
+def test_run_gives_up_to_the_next_run_after_its_retries(mock_connect):
+    """Past the retry cap, what the run would have read is left to the next run"""
+    mock_cache = _mock_lock_cache(acquired=False)
+    task = _ConcreteTask()
+
+    with (
+        patch("learning_resources.lib.warehouse.caches") as mock_caches,
+        patch.object(task, "retry", side_effect=MaxRetriesExceededError()),
+    ):
+        mock_caches.__getitem__.return_value = mock_cache
+        assert task.run() == 0
+
+    mock_cache.lock.return_value.release.assert_not_called()
+    mock_connect.assert_not_called()
+
+
+def test_run_takes_no_lock_when_the_warehouse_does_not_own_the_pair():
+    """A run that skips for ownership doesn't hold up one that would write"""
+    with (
+        patch("learning_resources.lib.warehouse.run_mode", return_value=RunMode.SKIP),
+        patch("learning_resources.lib.warehouse.caches") as mock_caches,
+    ):
+        assert _CatalogTask().run() == 0
+
+    mock_caches.__getitem__.assert_not_called()

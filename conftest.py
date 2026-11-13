@@ -41,7 +41,8 @@ def _clear_mail_outbox():
 def _use_dummy_redis_cache_backend(settings):
     new_cache_settings = settings.CACHES.copy()
     new_cache_settings["redis"] = {
-        "BACKEND": "django.core.cache.backends.dummy.DummyCache",
+        # a DummyCache whose lock() always acquires
+        "BACKEND": "main.test_utils.LockingDummyCache",
     }
     settings.CACHES = new_cache_settings
 

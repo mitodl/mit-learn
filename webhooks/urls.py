@@ -27,6 +27,11 @@ v1_urls = [
         views.LearningResourceWebhookView.as_view(),
         name="learning_resources_webhook",
     ),
+    re_path(
+        r"^warehouse_views_rebuilt/$",
+        views.WarehouseViewsWebhookView.as_view(),
+        name="warehouse_views_webhook",
+    ),
 ]
 
 urlpatterns = [

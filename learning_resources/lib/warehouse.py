@@ -11,6 +11,7 @@ new backend. ``iter_rows`` and ``iter_group_stats`` bind values with ``%s``, so
 one with another paramstyle needs that passed through.
 """
 
+import contextlib
 import logging
 import re
 import time
@@ -19,9 +20,11 @@ from datetime import UTC, datetime, timedelta
 
 import sentry_sdk
 from celery import Task
+from celery.exceptions import MaxRetriesExceededError
 from django.conf import settings
 from django.core.cache import caches
 from django.core.exceptions import ImproperlyConfigured
+from redis.exceptions import LockNotOwnedError
 
 from learning_resources.etl.ownership import Pipeline, RunMode, run_mode, writing_as
 from learning_resources.etl.shadow import run_shadow
@@ -44,6 +47,21 @@ _SAFE_NAME_PART = re.compile(r"^[a-zA-Z0-9_]+\Z")
 # domain data.
 WAREHOUSE_STATE_CACHE = "durable"
 _WATERMARK_SQL_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
+
+# A run of a sync holds a lock, so that two runs of it never prune at once on
+# reads that predate each other's writes: the daily beat entry and a webhook, or
+# two webhooks. A run that finds the lock held re-queues itself rather than
+# holding a worker slot, and gives up once the lock would have expired, leaving
+# what it would have read to the sync's next run. A worker killed mid-run holds
+# up the sync until then. The time limit keeps a run inside its lock, and inside
+# the hour after which the broker redelivers an unacknowledged task (kombu's
+# Redis visibility_timeout), so a redelivered copy can't prune beside it. It is
+# hard, so it fires whatever the sync is doing.
+SYNC_LOCK_CACHE = "redis"
+SYNC_LOCK_SECONDS = 60 * 60
+SYNC_TIME_LIMIT_SECONDS = 55 * 60
+SYNC_LOCK_RETRY_SECONDS = 60
+SYNC_LOCK_MAX_RETRIES = 60
 
 # Subtracted from the wall-clock watermark before it's stored: this consumer
 # doesn't know the warehouse's own build/replication lag, so a row modified
@@ -262,6 +280,44 @@ def iter_group_stats(  # noqa: PLR0913
     yield from _fetch_rows(conn, query, params, batch_size)
 
 
+def run_locked(  # noqa: PLR0913
+    task, lock_key, work, *, lock_seconds, retry_seconds, max_retries
+):
+    """Run ``work`` holding a lock, or re-queue ``task`` while another holds it.
+
+    The lock is taken without blocking, so a task waiting for it doesn't hold
+    a worker slot. Its release compares the lock's token and deletes it in one
+    step, so a run that outlives its lock leaves the lock of the run that took
+    it next alone.
+
+    Args:
+        task (celery.Task): the running task, bound, which re-queues itself
+        lock_key (str): what the lock excludes
+        work (Callable[[], T]): what to run holding it
+        lock_seconds (int): how long the lock lasts if it is never released
+        retry_seconds (int): how long to wait before trying again
+        max_retries (int): how many times to try again
+
+    Returns:
+        T | None: what ``work`` returned, or None once the retries are spent
+
+    Raises:
+        celery.exceptions.Retry: when the lock is held and retries are left
+    """
+    lock = caches[SYNC_LOCK_CACHE].lock(lock_key, timeout=lock_seconds)
+    if not lock.acquire(blocking=False):
+        try:
+            raise task.retry(countdown=retry_seconds, max_retries=max_retries)
+        except MaxRetriesExceededError:
+            return None
+    try:
+        return work()
+    finally:
+        # raised when the lock expired before the run finished
+        with contextlib.suppress(LockNotOwnedError):
+            lock.release()
+
+
 class BaseWarehouseETLTask(Task):
     """Celery task base class for warehouse-pull ETL jobs.
 
@@ -287,6 +343,9 @@ class BaseWarehouseETLTask(Task):
     and calls it positionally, which — given a class — tries to instantiate
     it as the task body instead of running its bound
     ``run()``/``fetch_and_upsert()`` methods.
+
+    One run of a task syncs at a time, whoever queued it. A run queued while
+    another holds the task's lock re-queues itself (see ``SYNC_LOCK_SECONDS``).
 
     Two sync modes, selected by the ``full_refresh`` kwarg passed to
     ``run()``/``.delay()``/``.apply_async()``:
@@ -330,6 +389,8 @@ class BaseWarehouseETLTask(Task):
 
     abstract = True
     acks_late = True
+    reject_on_worker_lost = True
+    time_limit = SYNC_TIME_LIMIT_SECONDS
     table_name: str = ""
     # No default: a task that forgot to say what it writes would run as a
     # second writer next to the pair's owner.
@@ -406,6 +467,36 @@ class BaseWarehouseETLTask(Task):
         if mode == RunMode.SHADOW:
             full_refresh = True
 
+        count = run_locked(
+            self,
+            f"warehouse_etl:running:{self.name}",
+            lambda: self._sync(
+                mode,
+                view_name,
+                full_refresh=full_refresh,
+                allow_mass_unpublish=allow_mass_unpublish,
+            ),
+            lock_seconds=SYNC_LOCK_SECONDS,
+            retry_seconds=SYNC_LOCK_RETRY_SECONDS,
+            max_retries=SYNC_LOCK_MAX_RETRIES,
+        )
+        if count is None:
+            log.warning(
+                "Gave up waiting for a run of %s, leaving it to the next one",
+                self.name,
+            )
+            return 0
+        return count
+
+    def _sync(
+        self,
+        mode: RunMode,
+        view_name: str,
+        *,
+        full_refresh: bool,
+        allow_mass_unpublish: bool,
+    ) -> int:
+        """Run one sync that ``run`` has decided to make, holding its lock."""
         since = None if full_refresh else self._get_watermark()
         # Captured before the fetch, not after: a row modified while the
         # fetch is in flight must still be picked up by the *next*

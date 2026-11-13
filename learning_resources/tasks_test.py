@@ -3345,6 +3345,103 @@ def test_ocw_sync_task_reads_nothing_it_does_not_own(mocker):
     assert not LearningResource.objects.exists()
 
 
+def test_queue_warehouse_syncs_queues_the_sync_that_reads_a_view(mocker):
+    """A rebuilt OCW course view queues one full SyncOCWCoursesTask"""
+    mock_chain = mocker.patch("learning_resources.tasks.celery.chain")
+
+    assert tasks.queue_warehouse_syncs(["integrations__learn__ocw_courses"]) == (
+        [tasks.SyncOCWCoursesTask.name],
+        [],
+    )
+
+    mock_chain.assert_called_once_with(tasks.SyncOCWCoursesTask.si())
+    mock_chain.return_value.delay.assert_called_once_with()
+
+
+def test_queue_warehouse_syncs_chains_a_sources_programs_after_its_courses(mocker):
+    """
+    Programs look their courses up, so a source's programs follow its courses.
+    Each source gets its own chain, and a view no sync reads is returned.
+    """
+    mock_chain = mocker.patch("learning_resources.tasks.celery.chain")
+
+    queued, unknown = tasks.queue_warehouse_syncs(
+        [
+            "integrations__learn__xpro_programs",
+            "integrations__learn__nonsense",
+            # the MITx Online program sync reads the course view too
+            "integrations__learn__mitxonline_courses",
+            "integrations__learn__mitxonline_runs",
+        ]
+    )
+
+    assert queued == [
+        tasks.SyncXproProgramsTask.name,
+        tasks.SyncMITxOnlineCoursesTask.name,
+        tasks.SyncMITxOnlineProgramsTask.name,
+    ]
+    assert unknown == ["integrations__learn__nonsense"]
+    assert mock_chain.call_args_list == [
+        mocker.call(tasks.SyncXproProgramsTask.si()),
+        mocker.call(
+            tasks.SyncMITxOnlineCoursesTask.si(), tasks.SyncMITxOnlineProgramsTask.si()
+        ),
+    ]
+    assert mock_chain.return_value.delay.call_count == 2
+
+
+def test_queue_warehouse_syncs_queues_nothing_for_unknown_views(mocker):
+    """A batch of names no sync reads queues nothing"""
+    mock_chain = mocker.patch("learning_resources.tasks.celery.chain")
+
+    assert tasks.queue_warehouse_syncs(["a", "b"]) == ([], ["a", "b"])
+
+    mock_chain.assert_not_called()
+
+
+@pytest.mark.parametrize("warehouse_owns", [MITXONLINE_OWNED], indirect=True)
+def test_a_retried_sync_keeps_the_sync_chained_after_it(mocker, warehouse_owns):
+    """
+    A courses sync that finds its lock held re-queues itself with the programs
+    sync still chained after it, so the programs still run once it does
+    """
+    mock_caches = mocker.patch("learning_resources.lib.warehouse.caches")
+    mock_caches.__getitem__.return_value.lock.return_value.acquire.return_value = False
+    mock_apply_async = mocker.patch(
+        "celery.canvas.Signature.apply_async", autospec=True
+    )
+    follow_up = dict(tasks.SyncMITxOnlineProgramsTask.si())
+    courses = tasks.SyncMITxOnlineCoursesTask
+
+    # a worker running the first link of queue_warehouse_syncs' chain
+    courses.push_request(
+        id="courses-run", chain=[follow_up], retries=0, called_directly=False
+    )
+    try:
+        with pytest.raises(Retry):
+            courses.run()
+    finally:
+        courses.pop_request()
+
+    retried = mock_apply_async.call_args.args[0]
+    assert retried.task == courses.name
+    assert retried.options["chain"] == [follow_up]
+    assert retried.options["retries"] == 1
+
+
+def test_warehouse_view_syncs_cover_every_catalog_sync():
+    """Each catalog sync is triggered by the view it is named for"""
+    by_task = dict(tasks.WAREHOUSE_VIEW_SYNCS)
+    for task in (
+        tasks.SyncOCWCoursesTask,
+        tasks.SyncXproCoursesTask,
+        tasks.SyncXproProgramsTask,
+        tasks.SyncMITxOnlineCoursesTask,
+        tasks.SyncMITxOnlineProgramsTask,
+    ):
+        assert task.table_name in by_task[task]
+
+
 def _warehouse_owns_content_files(etl_source):
     factories.ETLSourceOwnershipFactory.create(
         etl_source=etl_source,
@@ -3447,9 +3544,10 @@ def content_file_run(mocker, settings):
         ),
         published=True,
     )
-    mock_caches = mocker.patch("learning_resources.tasks.caches")
-    mock_caches.__getitem__.return_value.add.return_value = True
-    return SimpleNamespace(run=run, lock=mock_caches.__getitem__.return_value)
+    mock_caches = mocker.patch("learning_resources.lib.warehouse.caches")
+    cache = mock_caches.__getitem__.return_value
+    cache.lock.return_value.acquire.return_value = True
+    return SimpleNamespace(run=run, cache=cache, lock=cache.lock.return_value)
 
 
 def test_load_warehouse_content_files_reads_one_run(mocker, content_file_run):
@@ -3476,10 +3574,11 @@ def test_load_warehouse_content_files_reads_one_run(mocker, content_file_run):
         run, rows, expected_count=7, allow_mass_unpublish=False, allow_shrink=False
     )
     key = f"warehouse_content_files:{ETLSource.mitxonline.name}:{run.run_id}"
-    content_file_run.lock.add.assert_called_once_with(
-        key, "1", timeout=tasks.CONTENT_FILE_LOAD_LOCK_SECONDS
+    content_file_run.cache.lock.assert_called_once_with(
+        key, timeout=tasks.CONTENT_FILE_LOAD_LOCK_SECONDS
     )
-    content_file_run.lock.delete.assert_called_once_with(key)
+    content_file_run.lock.acquire.assert_called_once_with(blocking=False)
+    content_file_run.lock.release.assert_called_once_with()
 
 
 @pytest.mark.parametrize("override", ["allow_mass_unpublish", "allow_shrink"])
@@ -3519,14 +3618,14 @@ def test_load_warehouse_content_files_releases_the_lock_on_failure(
         )
 
     mock_connect.return_value.close.assert_called_once_with()
-    content_file_run.lock.delete.assert_called_once()
+    content_file_run.lock.release.assert_called_once()
 
 
 def test_load_warehouse_content_files_retries_when_the_run_is_locked(
     mocker, content_file_run
 ):
     """A second load of a run waits outside the worker instead of blocking it"""
-    content_file_run.lock.add.return_value = False
+    content_file_run.lock.acquire.return_value = False
     mock_connect = mocker.patch("learning_resources.tasks.connect_to_warehouse")
     mock_retry = mocker.patch.object(
         load_warehouse_content_files, "retry", side_effect=Retry()
@@ -3537,16 +3636,19 @@ def test_load_warehouse_content_files_retries_when_the_run_is_locked(
             ETLSource.mitxonline.name, content_file_run.run.run_id
         )
 
-    mock_retry.assert_called_once_with(countdown=tasks.CONTENT_FILE_LOAD_RETRY_SECONDS)
+    mock_retry.assert_called_once_with(
+        countdown=tasks.CONTENT_FILE_LOAD_RETRY_SECONDS,
+        max_retries=tasks.CONTENT_FILE_LOAD_MAX_RETRIES,
+    )
     mock_connect.assert_not_called()
-    content_file_run.lock.delete.assert_not_called()
+    content_file_run.lock.release.assert_not_called()
 
 
 def test_load_warehouse_content_files_gives_up_after_its_retries(
     mocker, content_file_run
 ):
     """Past the retry cap the run is left to the daily sync"""
-    content_file_run.lock.add.return_value = False
+    content_file_run.lock.acquire.return_value = False
     mocker.patch.object(
         load_warehouse_content_files, "retry", side_effect=MaxRetriesExceededError()
     )

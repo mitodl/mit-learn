@@ -10,7 +10,7 @@ from datetime import UTC, datetime
 
 import boto3
 import celery
-from celery.exceptions import Ignore, MaxRetriesExceededError
+from celery.exceptions import Ignore
 from django.conf import settings
 from django.core.cache import caches
 from django.db import OperationalError, transaction
@@ -82,6 +82,7 @@ from learning_resources.lib.warehouse import (
     connect_to_warehouse,
     iter_group_stats,
     iter_rows,
+    run_locked,
 )
 from learning_resources.models import (
     ClaimExtraction,
@@ -1963,6 +1964,61 @@ class SyncOCWCoursesTask(BaseWarehouseETLTask):
 SyncOCWCoursesTask = app.register_task(SyncOCWCoursesTask())
 
 
+# The catalog syncs, each with the views it reads, in the order a batch naming
+# several queues them: programs look their courses up, so a source's programs
+# follow its courses.
+WAREHOUSE_VIEW_SYNCS = (
+    (SyncOCWCoursesTask, {"integrations__learn__ocw_courses"}),
+    (
+        SyncXproCoursesTask,
+        {"integrations__learn__xpro_courses", "integrations__learn__xpro_runs"},
+    ),
+    (SyncXproProgramsTask, {"integrations__learn__xpro_programs"}),
+    (
+        SyncMITxOnlineCoursesTask,
+        {
+            "integrations__learn__mitxonline_courses",
+            "integrations__learn__mitxonline_runs",
+        },
+    ),
+    (
+        SyncMITxOnlineProgramsTask,
+        {
+            "integrations__learn__mitxonline_programs",
+            "integrations__learn__mitxonline_program_children",
+            "integrations__learn__mitxonline_courses",
+        },
+    ),
+)
+
+
+def queue_warehouse_syncs(view_names):
+    """
+    Queue a full run of each catalog sync that reads one of the named views.
+
+    A source's syncs are chained in WAREHOUSE_VIEW_SYNCS order, and the sources
+    run side by side. Each sync checks ownership when it runs, so this queues
+    them whoever owns the source.
+
+    Args:
+        view_names (Iterable[str]): bare view names, e.g.
+            "integrations__learn__ocw_courses"
+
+    Returns:
+        tuple[list[str], list[str]]: the names of the tasks queued, and the
+        view names no sync reads
+    """
+    named = set(view_names)
+    to_queue = [task for task, views in WAREHOUSE_VIEW_SYNCS if views & named]
+    read = set().union(*(views for _, views in WAREHOUSE_VIEW_SYNCS))
+    by_source = {}
+    for task in to_queue:
+        by_source.setdefault(task.writes[0], []).append(task.si())
+    for signatures in by_source.values():
+        celery.chain(*signatures).delay()
+    return [task.name for task in to_queue], sorted(named - read)
+
+
 # Two loads of one run at once could prune on a read that predates the other's
 # upserts. The time limit keeps a load inside the lock, and inside the hour after
 # which the broker redelivers an unacknowledged task, and it is hard because
@@ -2017,17 +2073,8 @@ def load_warehouse_content_files(  # noqa: PLR0913
         if run is None:
             log.info("No run to load %s content files for: %s", etl_source, run_id)
             return 0
-        lock = caches["redis"]
-        lock_key = f"warehouse_content_files:{etl_source}:{run_id}"
-        if not lock.add(lock_key, "1", timeout=CONTENT_FILE_LOAD_LOCK_SECONDS):
-            try:
-                raise self.retry(countdown=CONTENT_FILE_LOAD_RETRY_SECONDS)
-            except MaxRetriesExceededError:
-                log.warning(
-                    "Gave up waiting for a load of %s run %s", etl_source, run_id
-                )
-                return 0
-        try:
+
+        def load():
             conn = connect_to_warehouse()
             try:
                 rows = list(
@@ -2051,8 +2098,19 @@ def load_warehouse_content_files(  # noqa: PLR0913
                 allow_mass_unpublish=allow_mass_unpublish is True,
                 allow_shrink=allow_shrink is True,
             )
-        finally:
-            lock.delete(lock_key)
+
+        count = run_locked(
+            self,
+            f"warehouse_content_files:{etl_source}:{run_id}",
+            load,
+            lock_seconds=CONTENT_FILE_LOAD_LOCK_SECONDS,
+            retry_seconds=CONTENT_FILE_LOAD_RETRY_SECONDS,
+            max_retries=CONTENT_FILE_LOAD_MAX_RETRIES,
+        )
+        if count is None:
+            log.warning("Gave up waiting for a load of %s run %s", etl_source, run_id)
+            return 0
+        return count
 
 
 class SyncContentFilesTask(BaseWarehouseETLTask):
