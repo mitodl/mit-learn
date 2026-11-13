@@ -127,7 +127,7 @@ dependencies = [
     "pymysql>=1.1.1,<2",
     "pydantic>=2.13.5,<3",
     "azure-identity>=1.25.3,<2",
-    "ol-llm[memory]>=0.0.11",
+    "ol-llm[memory]>=0.0.14",
 ]
 
 [dependency-groups]
