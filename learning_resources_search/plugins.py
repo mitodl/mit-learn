@@ -69,26 +69,30 @@ class SearchIndexPlugin:
     @hookimpl
     def resource_upserted(self, resource, percolate, generate_embeddings):
         """
-        Upsert a created/modified resource to the search index
+        Upsert a created/modified resource to the search index. The tasks
+        are queued on commit, so a worker cannot index the resource before the
+        writes it reads commit.
 
         Args:
             resource(LearningResource): The Learning Resource that was upserted
         """
-        upsert_tasks = []
 
-        upsert_tasks.append(
-            tasks.upsert_learning_resource.si(resource.id),
-        )
-        if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS and generate_embeddings:
-            upsert_tasks.append(
-                vector_tasks.generate_embeddings.si(
-                    [resource.id], resource.resource_type, overwrite=True
+        def upsert():
+            upsert_tasks = [tasks.upsert_learning_resource.si(resource.id)]
+            if (
+                django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS
+                and generate_embeddings
+            ):
+                upsert_tasks.append(
+                    vector_tasks.generate_embeddings.si(
+                        [resource.id], resource.resource_type, overwrite=True
+                    )
                 )
-            )
-        if percolate:
-            upsert_tasks.append(tasks.percolate_learning_resource.si(resource.id))
+            if percolate:
+                upsert_tasks.append(tasks.percolate_learning_resource.si(resource.id))
+            try_with_retry_as_task(chain(*upsert_tasks))
 
-        try_with_retry_as_task(chain(*upsert_tasks))
+        transaction.on_commit(upsert)
 
     @hookimpl
     def resource_unpublished(self, resource):
