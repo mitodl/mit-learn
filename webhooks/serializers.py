@@ -63,9 +63,12 @@ class OVSVideoWebhookRequestSerializer(serializers.Serializer):
         The payload is attacker-controlled input, and its urls are fetched
         server-side (subtitles) or served to browsers (thumbnails, streams), so
         an unrecognized host is refused rather than silently dropped.
+
+        cta_link is not checked: it is only stored as the resource url, never
+        fetched, and the loader falls back to the OVS page url when its host is
+        not allowlisted.
         """
         candidates = [
-            ("cta_link", self.initial_data.get("cta_link")),
             *[("sources", src.get("src")) for src in self._nested_objects("sources")],
             *[
                 ("videothumbnail_set", thumbnail.get("cloudfront_url"))

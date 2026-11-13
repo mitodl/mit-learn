@@ -29,8 +29,6 @@ const ProgramEnrollArea: React.FC<ProgramEnrollAreaProps> = ({
   program,
   displayAsCourse,
 }) => {
-  const [anchor, setAnchor] = React.useState<null | HTMLButtonElement>(null)
-
   const { price, showsRange, savings, financialAid, breakdown } =
     useProgramCertificatePrice(program)
 
@@ -47,7 +45,7 @@ const ProgramEnrollArea: React.FC<ProgramEnrollAreaProps> = ({
       tracking: { placement: "infobox" },
       displayAsCourse,
       upgradeLabel: credit,
-      onRequireSignup: setAnchor,
+      resume: true,
     })
 
   // Savings framing is full-program-page presentation only; program-as-course
@@ -70,8 +68,6 @@ const ProgramEnrollArea: React.FC<ProgramEnrollAreaProps> = ({
       paidHeading={credit ? "Continue with full program" : undefined}
       paidNote={credit ? CREDIT_NOTE : undefined}
       productNoun={displayAsCourse ? "course" : "program"}
-      anchor={anchor}
-      onAnchorClose={() => setAnchor(null)}
     />
   )
 }

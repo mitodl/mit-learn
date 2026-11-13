@@ -96,11 +96,6 @@ export interface Attestation {
  * * `dated` - Dated * `anytime` - Anytime
  */
 
-export const AvailabilityEnumDescriptions = {
-  dated: "Dated",
-  anytime: "Anytime",
-} as const
-
 export const AvailabilityEnum = {
   /**
    * Dated
@@ -114,10 +109,6 @@ export const AvailabilityEnum = {
 
 export type AvailabilityEnum =
   (typeof AvailabilityEnum)[keyof typeof AvailabilityEnum]
-
-export const BlankEnumDescriptions = {
-  "": "",
-} as const
 
 export const BlankEnum = {
   Empty: "",
@@ -145,12 +136,6 @@ export interface CaptionUrl {
 /**
  * * `yes` - Yes, I am looking for a certificate * `no` - No, I am not looking for a certificate * `not-sure-yet` - Not Sure
  */
-
-export const CertificateDesiredEnumDescriptions = {
-  yes: "Yes, I am looking for a certificate",
-  no: "No, I am not looking for a certificate",
-  "not-sure-yet": "Not Sure",
-} as const
 
 export const CertificateDesiredEnum = {
   /**
@@ -213,13 +198,6 @@ export interface ChannelTopicDetail {
  * * `topic` - Topic * `department` - Department * `unit` - Unit * `pathway` - Pathway
  */
 
-export const ChannelTypeEnumDescriptions = {
-  topic: "Topic",
-  department: "Department",
-  unit: "Unit",
-  pathway: "Pathway",
-} as const
-
 export const ChannelTypeEnum = {
   /**
    * Topic
@@ -281,12 +259,6 @@ export interface ContentFeedbackRequest {
 /**
  * * `positive` - Positive * `negative` - Negative * `idea` - Idea
  */
-
-export const ContentFeedbackSentimentEnumDescriptions = {
-  positive: "Positive",
-  negative: "Negative",
-  idea: "Idea",
-} as const
 
 export const ContentFeedbackSentimentEnum = {
   /**
@@ -359,13 +331,6 @@ export interface ContentFile {
 /**
  * * `page` - page * `file` - file * `video` - video * `pdf` - pdf
  */
-
-export const ContentFileContentTypeEnumDescriptions = {
-  page: "page",
-  file: "file",
-  video: "video",
-  pdf: "pdf",
-} as const
 
 export const ContentFileContentTypeEnum = {
   /**
@@ -572,10 +537,6 @@ export const CourseResourcePaceInnerCodeEnum = {
 export type CourseResourcePaceInnerCodeEnum =
   (typeof CourseResourcePaceInnerCodeEnum)[keyof typeof CourseResourcePaceInnerCodeEnum]
 
-export const CourseResourceResourceTypeEnumDescriptions = {
-  course: "",
-} as const
-
 export const CourseResourceResourceTypeEnum = {
   Course: "course",
 } as const
@@ -626,18 +587,6 @@ export interface CredentialMetadataRequestRequest {
 /**
  * * `` - ---- * `Doctorate` - Doctorate * `Master\'s or professional degree` - Master\'s or professional degree * `Bachelor\'s degree` - Bachelor\'s degree * `Associate degree` - Associate degree * `Secondary/high school` - Secondary/high school * `Junior secondary/junior high/middle school` - Junior secondary/junior high/middle school * `No formal education` - No formal education * `Other education` - Other education
  */
-
-export const CurrentEducationEnumDescriptions = {
-  Doctorate: "Doctorate",
-  "Master's or professional degree": "Master's or professional degree",
-  "Bachelor's degree": "Bachelor's degree",
-  "Associate degree": "Associate degree",
-  "Secondary/high school": "Secondary/high school",
-  "Junior secondary/junior high/middle school":
-    "Junior secondary/junior high/middle school",
-  "No formal education": "No formal education",
-  "Other education": "Other education",
-} as const
 
 export const CurrentEducationEnum = {
   /**
@@ -700,13 +649,6 @@ export interface CurrentUser {
 /**
  * * `online` - Online * `hybrid` - Hybrid * `in_person` - In-Person * `offline` - Offline
  */
-
-export const DeliveryEnumDescriptions = {
-  online: "Online",
-  hybrid: "Hybrid",
-  in_person: "In-Person",
-  offline: "Offline",
-} as const
 
 export const DeliveryEnum = {
   /**
@@ -777,10 +719,6 @@ export interface DepartmentChannel {
 /**
  * * `department` - Department
  */
-
-export const DepartmentChannelTypeEnumDescriptions = {
-  department: "Department",
-} as const
 
 export const DepartmentChannelTypeEnum = {
   /**
@@ -875,10 +813,6 @@ export const DocumentResourceAvailabilityEnum = {
 export type DocumentResourceAvailabilityEnum =
   (typeof DocumentResourceAvailabilityEnum)[keyof typeof DocumentResourceAvailabilityEnum]
 
-export const DocumentResourceResourceTypeEnumDescriptions = {
-  document: "",
-} as const
-
 export const DocumentResourceResourceTypeEnum = {
   Document: "document",
 } as const
@@ -901,10 +835,6 @@ export interface EventFeedItem {
   content?: string
   source: number
 }
-
-export const EventFeedItemFeedTypeEnumDescriptions = {
-  events: "",
-} as const
 
 export const EventFeedItemFeedTypeEnum = {
   Events: "events",
@@ -965,11 +895,6 @@ export interface FeedSource {
  * * `news` - News * `events` - Events
  */
 
-export const FeedSourceFeedTypeEnumDescriptions = {
-  news: "News",
-  events: "Events",
-} as const
-
 export const FeedSourceFeedTypeEnum = {
   /**
    * News
@@ -987,12 +912,6 @@ export type FeedSourceFeedTypeEnum =
 /**
  * * `academic-excellence` - Academic Boost * `career-growth` - Career Growth * `lifelong-learning` - Lifelong Learning
  */
-
-export const GoalsEnumDescriptions = {
-  "academic-excellence": "Academic Boost",
-  "career-growth": "Career Growth",
-  "lifelong-learning": "Lifelong Learning",
-} as const
 
 export const GoalsEnum = {
   /**
@@ -1110,10 +1029,6 @@ export const LearningPathResourceAvailabilityEnum = {
 
 export type LearningPathResourceAvailabilityEnum =
   (typeof LearningPathResourceAvailabilityEnum)[keyof typeof LearningPathResourceAvailabilityEnum]
-
-export const LearningPathResourceResourceTypeEnumDescriptions = {
-  learning_path: "",
-} as const
 
 export const LearningPathResourceResourceTypeEnum = {
   LearningPath: "learning_path",
@@ -1373,18 +1288,12 @@ export interface NewsFeedItem {
   source: number
 }
 
-export const NewsFeedItemFeedTypeEnumDescriptions = {
-  news: "",
-} as const
-
 export const NewsFeedItemFeedTypeEnum = {
   News: "news",
 } as const
 
 export type NewsFeedItemFeedTypeEnum =
   (typeof NewsFeedItemFeedTypeEnum)[keyof typeof NewsFeedItemFeedTypeEnum]
-
-export const NullEnumDescriptions = {} as const
 
 export const NullEnum = {} as const
 
@@ -1537,10 +1446,6 @@ export interface PathwayChannel {
  * * `pathway` - Pathway
  */
 
-export const PathwayChannelTypeEnumDescriptions = {
-  pathway: "Pathway",
-} as const
-
 export const PathwayChannelTypeEnum = {
   /**
    * Pathway
@@ -1673,10 +1578,6 @@ export const PodcastEpisodeResourceAvailabilityEnum = {
 export type PodcastEpisodeResourceAvailabilityEnum =
   (typeof PodcastEpisodeResourceAvailabilityEnum)[keyof typeof PodcastEpisodeResourceAvailabilityEnum]
 
-export const PodcastEpisodeResourceResourceTypeEnumDescriptions = {
-  podcast_episode: "",
-} as const
-
 export const PodcastEpisodeResourceResourceTypeEnum = {
   PodcastEpisode: "podcast_episode",
 } as const
@@ -1765,10 +1666,6 @@ export const PodcastResourceAvailabilityEnum = {
 
 export type PodcastResourceAvailabilityEnum =
   (typeof PodcastResourceAvailabilityEnum)[keyof typeof PodcastResourceAvailabilityEnum]
-
-export const PodcastResourceResourceTypeEnumDescriptions = {
-  podcast: "",
-} as const
 
 export const PodcastResourceResourceTypeEnum = {
   Podcast: "podcast",
@@ -2078,10 +1975,6 @@ export const ProgramResourceAvailabilityEnum = {
 export type ProgramResourceAvailabilityEnum =
   (typeof ProgramResourceAvailabilityEnum)[keyof typeof ProgramResourceAvailabilityEnum]
 
-export const ProgramResourceResourceTypeEnumDescriptions = {
-  program: "",
-} as const
-
 export const ProgramResourceResourceTypeEnum = {
   Program: "program",
 } as const
@@ -2092,15 +1985,6 @@ export type ProgramResourceResourceTypeEnum =
 /**
  * * `PROGRAM_COURSES` - Program Courses * `PROGRAM_PROGRAMS` - Program Programs * `LEARNING_PATH_ITEMS` - Learning Path Items * `PODCAST_EPISODES` - Podcast Episodes * `PLAYLIST_VIDEOS` - Playlist Videos * `COURSE_LEARNING_MATERIALS` - Course Learning Materials
  */
-
-export const RelationTypeEnumDescriptions = {
-  PROGRAM_COURSES: "Program Courses",
-  PROGRAM_PROGRAMS: "Program Programs",
-  LEARNING_PATH_ITEMS: "Learning Path Items",
-  PODCAST_EPISODES: "Podcast Episodes",
-  PLAYLIST_VIDEOS: "Playlist Videos",
-  COURSE_LEARNING_MATERIALS: "Course Learning Materials",
-} as const
 
 export const RelationTypeEnum = {
   /**
@@ -2135,17 +2019,6 @@ export type RelationTypeEnum =
 /**
  * * `course` - course * `program` - program * `learning_path` - learning_path * `podcast` - podcast * `podcast_episode` - podcast_episode * `video` - video * `video_playlist` - video_playlist * `document` - document
  */
-
-export const ResourceTypeEnumDescriptions = {
-  course: "course",
-  program: "program",
-  learning_path: "learning_path",
-  podcast: "podcast",
-  podcast_episode: "podcast_episode",
-  video: "video",
-  video_playlist: "video_playlist",
-  document: "document",
-} as const
 
 export const ResourceTypeEnum = {
   /**
@@ -2189,12 +2062,6 @@ export type ResourceTypeEnum =
  * * `course` - Course * `program` - Program * `learning_material` - Learning Material
  */
 
-export const ResourceTypeGroupEnumDescriptions = {
-  course: "Course",
-  program: "Program",
-  learning_material: "Learning Material",
-} as const
-
 export const ResourceTypeGroupEnum = {
   /**
    * Course
@@ -2228,14 +2095,6 @@ export interface SubChannel {
 /**
  * * `0-to-5-hours` - <5 hours/week * `5-to-10-hours` - 5-10 hours/week * `10-to-20-hours` - 10-20 hours/week * `20-to-30-hours` - 20-30 hours/week * `30-plus-hours` - 30+ hours/week
  */
-
-export const TimeCommitmentEnumDescriptions = {
-  "0-to-5-hours": "<5 hours/week",
-  "5-to-10-hours": "5-10 hours/week",
-  "10-to-20-hours": "10-20 hours/week",
-  "20-to-30-hours": "20-30 hours/week",
-  "30-plus-hours": "30+ hours/week",
-} as const
 
 export const TimeCommitmentEnum = {
   /**
@@ -2312,10 +2171,6 @@ export interface TopicChannel {
  * * `topic` - Topic
  */
 
-export const TopicChannelTypeEnumDescriptions = {
-  topic: "Topic",
-} as const
-
 export const TopicChannelTypeEnum = {
   /**
    * Topic
@@ -2374,10 +2229,6 @@ export interface UnitChannel {
 /**
  * * `unit` - Unit
  */
-
-export const UnitChannelTypeEnumDescriptions = {
-  unit: "Unit",
-} as const
 
 export const UnitChannelTypeEnum = {
   /**
@@ -2524,10 +2375,6 @@ export const VideoPlaylistResourceAvailabilityEnum = {
 export type VideoPlaylistResourceAvailabilityEnum =
   (typeof VideoPlaylistResourceAvailabilityEnum)[keyof typeof VideoPlaylistResourceAvailabilityEnum]
 
-export const VideoPlaylistResourceResourceTypeEnumDescriptions = {
-  video_playlist: "",
-} as const
-
 export const VideoPlaylistResourceResourceTypeEnum = {
   VideoPlaylist: "video_playlist",
 } as const
@@ -2622,10 +2469,6 @@ export const VideoResourceAvailabilityEnum = {
 export type VideoResourceAvailabilityEnum =
   (typeof VideoResourceAvailabilityEnum)[keyof typeof VideoResourceAvailabilityEnum]
 
-export const VideoResourceResourceTypeEnumDescriptions = {
-  video: "",
-} as const
-
 export const VideoResourceResourceTypeEnum = {
   Video: "video",
 } as const
@@ -2675,14 +2518,8 @@ export interface WidgetListRequest {
   widgets?: Array<WidgetInstance> | null
 }
 /**
- * * `Markdown` - Markdown * `URL` - URL * `People` - People
+ * * `Markdown` - Markdown * `URL` - URL
  */
-
-export const WidgetTypeEnumDescriptions = {
-  Markdown: "Markdown",
-  URL: "URL",
-  People: "People",
-} as const
 
 export const WidgetTypeEnum = {
   /**
@@ -2693,10 +2530,6 @@ export const WidgetTypeEnum = {
    * URL
    */
   Url: "URL",
-  /**
-   * People
-   */
-  People: "People",
 } as const
 
 export type WidgetTypeEnum =

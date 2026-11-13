@@ -193,7 +193,8 @@ def test_custom_login_view_authenticated_user_needs_onboarding(
             == f"/onboarding?{urlencode({'next': expected_redirect, 'is_new_user': '1'})}"
         )
     else:
-        assert response.url == expected_redirect
+        separator = "&" if "?" in expected_redirect else "?"
+        assert response.url == f"{expected_redirect}{separator}is_new_user=1"
     mock_send_welcome_email.assert_called_once_with(request.user.id)
 
 
@@ -325,12 +326,12 @@ class LoginOrgUserRedirectParams(NamedTuple):
         LoginOrgUserRedirectParams(
             has_logged_in=False,
             login_url="/login/?next=/dashboard",
-            expected_redirect="/dashboard",
+            expected_redirect="/dashboard?is_new_user=1",
         ),
         LoginOrgUserRedirectParams(
             has_logged_in=False,
             login_url="/login/?next=/dashboard&signup_next=/somewhere-else",
-            expected_redirect="/somewhere-else",
+            expected_redirect="/somewhere-else?is_new_user=1",
         ),
         LoginOrgUserRedirectParams(
             has_logged_in=True,

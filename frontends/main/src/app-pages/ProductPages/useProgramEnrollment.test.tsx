@@ -18,6 +18,11 @@ import { programView } from "@/common/urls"
 import { PostHogEvents } from "@/common/constants"
 import { trackProgramEnrolled } from "@/common/analytics/gtm"
 import { capturePostHog } from "@/common/analytics/posthog"
+import {
+  lastAuthRedirect,
+  rememberClick,
+  setLocation,
+} from "./test-utils/enrollResume"
 import { PlatformEnum } from "api"
 
 // The paid path checks enrollment eligibility before the cart.
@@ -275,22 +280,21 @@ describe("useProgramEnrollment — actions", () => {
     )
   })
 
-  test("unauthenticated click still fires analytics and calls onRequireSignup", async () => {
+  test("unauthenticated click fires analytics and goes to login, returning to finish", async () => {
     setMockResponse.get(
       urls.userMe.get(),
       makeUser({ is_authenticated: false }),
     )
     const program = makeProgram({
-      enrollment_modes: [makeMode({ requires_payment: false })],
-      products: [],
+      enrollment_modes: [makeMode({ requires_payment: true })],
+      products: [makeProduct()],
     })
-    const onRequireSignup = jest.fn()
+    setLocation("/programs/some-program")
 
     const { result } = renderHook(
       () =>
         useProgramEnrollment(program, {
           tracking: { placement: "header" },
-          onRequireSignup,
         }),
       { wrapper },
     )
@@ -299,25 +303,125 @@ describe("useProgramEnrollment — actions", () => {
 
     const state = result.current.state
     if (state.status !== "options") throw new Error("expected options")
-    const free = state.options.find((o) => o.kind === "free")!
-
-    const anchorButton = document.createElement("button")
-    free.onClick!({
-      currentTarget: anchorButton,
-    } as React.MouseEvent<HTMLButtonElement>)
+    state.options.find((o) => o.kind === "paid")!.onClick!(fakeClickEvent())
 
     expect(mockCapturePostHog).toHaveBeenCalledWith(
       PostHogEvents.EnrollCtaClicked,
       expect.objectContaining({
         placement: "header",
-        enrollmentMode: "audit",
         resourceType: "program",
         readableId: program.readable_id,
       }),
     )
-    expect(onRequireSignup).toHaveBeenCalledWith(anchorButton)
+    const { url, next, signupNext } = lastAuthRedirect()
+    expect(next.pathname).toBe("/programs/some-program")
+    expect(Object.fromEntries(next.searchParams)).toEqual({ enroll: "paid" })
+    expect(signupNext.href).toBe(next.href)
+    expect(url.searchParams.get("skip_onboarding")).toBe("1")
   })
 
+  test("resuming a paid marker puts the program in the basket once", async () => {
+    const replaceState = jest
+      .spyOn(window.history, "replaceState")
+      .mockImplementation(() => {})
+    setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
+    setMockResponse.get(mitxUrls.programEnrollments.enrollmentsListV3(), [])
+    const product = makeProduct()
+    const program = makeProgram({
+      enrollment_modes: [makeMode({ requires_payment: true })],
+      products: [product],
+    })
+    setMockResponse.delete(mitxUrls.baskets.clear(), undefined)
+    setMockResponse.post(mitxUrls.baskets.createFromProduct(product.id), {
+      id: 1,
+      items: [],
+    })
+    setLocation("/programs/some-program?enroll=paid")
+    rememberClick("paid", null, "/programs/some-program")
+
+    renderHook(
+      () =>
+        useProgramEnrollment(program, {
+          tracking: { placement: "infobox" },
+          resume: true,
+        }),
+      { wrapper },
+    )
+
+    await waitFor(() =>
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "post",
+          url: mitxUrls.baskets.createFromProduct(product.id),
+        }),
+      ),
+    )
+    const basketCreates = jest
+      .mocked(makeRequest)
+      .mock.calls.filter(
+        ([req]) =>
+          req.method === "post" &&
+          req.url === mitxUrls.baskets.createFromProduct(product.id),
+      )
+    expect(basketCreates).toHaveLength(1)
+    expect(replaceState).toHaveBeenCalledTimes(1)
+    expect(new URL(String(replaceState.mock.calls[0][2])).search).toBe("")
+    replaceState.mockRestore()
+  })
+  test("resuming waits for a failed enrollments lookup to succeed", async () => {
+    const replaceState = jest
+      .spyOn(window.history, "replaceState")
+      .mockImplementation(() => {})
+    setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
+    setMockResponse.get(mitxUrls.programEnrollments.enrollmentsListV3(), null, {
+      code: 500,
+    })
+    const product = makeProduct()
+    const program = makeProgram({
+      enrollment_modes: [makeMode({ requires_payment: true })],
+      products: [product],
+    })
+    setMockResponse.delete(mitxUrls.baskets.clear(), undefined)
+    setMockResponse.post(mitxUrls.baskets.createFromProduct(product.id), {
+      id: 1,
+      items: [],
+    })
+    setLocation("/programs/some-program?enroll=paid")
+    rememberClick("paid", null, "/programs/some-program")
+    const queryClient = makeBrowserQueryClient({ maxRetries: 0 })
+
+    const { result } = renderHook(
+      () =>
+        useProgramEnrollment(program, {
+          tracking: { placement: "infobox" },
+          resume: true,
+        }),
+      {
+        wrapper: ({ children }) => (
+          <QueryClientProvider client={queryClient}>
+            {children}
+          </QueryClientProvider>
+        ),
+      },
+    )
+
+    await waitFor(() => expect(result.current.isStatusLoading).toBe(false))
+    expect(replaceState).not.toHaveBeenCalled()
+
+    setMockResponse.get(mitxUrls.programEnrollments.enrollmentsListV3(), [])
+    await queryClient.refetchQueries()
+
+    await waitFor(() =>
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "post",
+          url: mitxUrls.baskets.createFromProduct(product.id),
+        }),
+      ),
+    )
+    expect(replaceState).toHaveBeenCalledTimes(1)
+    replaceState.mockRestore()
+  })
   test("free action -> creates program enrollment and redirects to success URL", async () => {
     setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
     setMockResponse.get(mitxUrls.programEnrollments.enrollmentsListV3(), [])

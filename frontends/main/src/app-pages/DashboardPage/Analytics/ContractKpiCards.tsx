@@ -178,7 +178,7 @@ const ContractKpiCards: React.FC<{
                 format={formatPercent}
               />
               <Stat
-                label="Active learners"
+                label="Enrolled learners"
                 value={row.actively_enrolled_learners}
                 format={formatCount}
               />

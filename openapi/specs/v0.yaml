@@ -7134,13 +7134,10 @@ components:
       enum:
       - Markdown
       - URL
-      - People
       type: string
       description: |-
         * `Markdown` - Markdown
         * `URL` - URL
-        * `People` - People
       x-enum-descriptions:
       - Markdown
       - URL
-      - People

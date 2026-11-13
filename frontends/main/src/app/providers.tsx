@@ -14,6 +14,7 @@ import { usePrefetchWarnings } from "api/ssr/usePrefetchWarnings"
 import { AppProgressBar as ProgressBar } from "next-nprogress-bar"
 import type { NProgressOptions } from "next-nprogress-bar"
 import { ReloadOnUserChange } from "@/page-components/ReloadOnUserChange/ReloadOnUserChange"
+import { TrackAccountCreated } from "@/page-components/TrackAccountCreated/TrackAccountCreated"
 import { PublicEnvInsertedHtml } from "./components/PublicEnvInsertedHtml"
 import { Toaster } from "@/page-components/Toaster/Toaster"
 
@@ -35,6 +36,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       />
       <QueryClientProvider client={queryClient}>
         <ReloadOnUserChange />
+        <TrackAccountCreated />
         <NextJsAppRouterCacheProvider>
           <ThemeProvider>
             <NiceModalProvider>
