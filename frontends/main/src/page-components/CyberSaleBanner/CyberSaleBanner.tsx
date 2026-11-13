@@ -13,7 +13,8 @@ const CTA_HOSTS = new Set(["learn.mit.edu", "support.learn.mit.edu"])
 
 const isAllowedCtaUrl = (value: string | undefined) => {
   if (!value) return false
-  if (value.startsWith("/") && !value.startsWith("//")) return true
+  // Browsers read "/\" like "//", a link to another site.
+  if (/^\/(?![/\\])/.test(value)) return true
   try {
     const url = new URL(value)
     return url.protocol === "https:" && CTA_HOSTS.has(url.hostname)
@@ -35,7 +36,7 @@ const payloadSchema = yup.object({
     .string()
     .required()
     .test("allowed-host", "cta_url is not an allowed link", isAllowedCtaUrl),
-  dismiss_hours: yup.number().min(0),
+  dismiss_hours: yup.number().moreThan(0),
 })
 
 type BannerPayload = yup.InferType<typeof payloadSchema>
