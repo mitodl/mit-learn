@@ -3453,12 +3453,14 @@ def content_file_run(mocker, settings):
 
 
 def test_load_warehouse_content_files_reads_one_run(mocker, content_file_run):
-    """A load reads only its run, closes the connection, then writes under its lock"""
+    """A load reads only its run's files and units, then writes under its lock"""
     run = content_file_run.run
     rows = [{"key": "a"}]
+    unit_rows = [{"external_id": "context"}]
     mock_connect = mocker.patch("learning_resources.tasks.connect_to_warehouse")
     mock_iter_rows = mocker.patch(
-        "learning_resources.tasks.iter_rows", return_value=iter(rows)
+        "learning_resources.tasks.iter_rows",
+        side_effect=[iter(rows), iter(unit_rows)],
     )
     mock_load = mocker.patch(
         "learning_resources.tasks.warehouse_content_files.load_run", return_value=1
@@ -3466,14 +3468,27 @@ def test_load_warehouse_content_files_reads_one_run(mocker, content_file_run):
 
     assert load_warehouse_content_files(ETLSource.mitxonline.name, run.run_id, 7) == 1
 
-    mock_iter_rows.assert_called_once_with(
-        mock_connect.return_value,
-        "catalog.schema.integrations__learn__content_files",
-        where={"etl_source": ETLSource.mitxonline.name, "run_readable_id": run.run_id},
-    )
+    where = {"etl_source": ETLSource.mitxonline.name, "run_readable_id": run.run_id}
+    assert mock_iter_rows.call_args_list == [
+        mocker.call(
+            mock_connect.return_value,
+            "catalog.schema.integrations__learn__content_files",
+            where=where,
+        ),
+        mocker.call(
+            mock_connect.return_value,
+            "catalog.schema.integrations__learn__content_file_units",
+            where=where,
+        ),
+    ]
     mock_connect.return_value.close.assert_called_once_with()
     mock_load.assert_called_once_with(
-        run, rows, expected_count=7, allow_mass_unpublish=False, allow_shrink=False
+        run,
+        rows,
+        expected_count=7,
+        allow_mass_unpublish=False,
+        allow_shrink=False,
+        unit_rows=unit_rows,
     )
     key = f"warehouse_content_files:{ETLSource.mitxonline.name}:{run.run_id}"
     content_file_run.lock.add.assert_called_once_with(
@@ -3488,7 +3503,7 @@ def test_load_warehouse_content_files_passes_the_unpublish_override(
 ):
     """An operator, or a sync, loosens the run's unpublish limit through the task"""
     mocker.patch("learning_resources.tasks.connect_to_warehouse")
-    mocker.patch("learning_resources.tasks.iter_rows", return_value=iter([]))
+    mocker.patch("learning_resources.tasks.iter_rows", side_effect=lambda *_, **__: [])
     mock_load = mocker.patch(
         "learning_resources.tasks.warehouse_content_files.load_run", return_value=0
     )
@@ -3501,7 +3516,60 @@ def test_load_warehouse_content_files_passes_the_unpublish_override(
         "expected_count": 3,
         "allow_mass_unpublish": override == "allow_mass_unpublish",
         "allow_shrink": override == "allow_shrink",
+        "unit_rows": [],
     }
+
+
+def test_load_warehouse_content_files_loads_files_when_units_fail_to_read(
+    mocker, content_file_run
+):
+    """A failed read of the units view still loads the run's files"""
+    rows = [{"key": "a"}]
+    mocker.patch("learning_resources.tasks.connect_to_warehouse")
+    mocker.patch(
+        "learning_resources.tasks.iter_rows",
+        side_effect=[iter(rows), RuntimeError("no such table")],
+    )
+    mock_load = mocker.patch(
+        "learning_resources.tasks.warehouse_content_files.load_run", return_value=1
+    )
+
+    assert (
+        load_warehouse_content_files(
+            ETLSource.mitxonline.name, content_file_run.run.run_id
+        )
+        == 1
+    )
+    assert mock_load.call_args.args[1] == rows
+    assert mock_load.call_args.kwargs["unit_rows"] is None
+
+
+def test_load_warehouse_content_files_reads_no_units_for_ocw(mocker, settings):
+    """OCW runs have no units, so only the files view is read"""
+    settings.WAREHOUSE_CATALOG = "catalog"
+    settings.WAREHOUSE_SCHEMA = "schema"
+    _warehouse_owns_content_files(ETLSource.ocw.name)
+    run = factories.LearningResourceRunFactory.create(
+        learning_resource=factories.LearningResourceFactory.create(
+            is_course=True, etl_source=ETLSource.ocw.name, create_runs=False
+        ),
+        published=True,
+    )
+    mocker.patch("learning_resources.tasks.caches")
+    mocker.patch("learning_resources.tasks.connect_to_warehouse")
+    mock_iter_rows = mocker.patch(
+        "learning_resources.tasks.iter_rows", return_value=iter([])
+    )
+    mock_load = mocker.patch(
+        "learning_resources.tasks.warehouse_content_files.load_run", return_value=0
+    )
+
+    load_warehouse_content_files(ETLSource.ocw.name, run.run_id)
+
+    assert [call.args[1] for call in mock_iter_rows.call_args_list] == [
+        "catalog.schema.integrations__learn__ocw_content_files"
+    ]
+    assert mock_load.call_args.kwargs["unit_rows"] is None
 
 
 def test_load_warehouse_content_files_releases_the_lock_on_failure(

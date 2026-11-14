@@ -1992,7 +1992,9 @@ def load_warehouse_content_files(  # noqa: PLR0913
     allow_shrink: bool = False,
 ) -> int:
     """
-    Load one run's content files from the warehouse
+    Load one run's content files from the warehouse, and an Open edX run's
+    units. A failed read of the units keeps the run's units, as the archive
+    ETL does when it can't build them, and doesn't hold up the files.
 
     Args:
         etl_source (str): the run's source
@@ -2028,6 +2030,10 @@ def load_warehouse_content_files(  # noqa: PLR0913
                 )
                 return 0
         try:
+            run_scope = {
+                "etl_source": etl_source,
+                warehouse_content_files.RUN_COLUMN: run_id,
+            }
             conn = connect_to_warehouse()
             try:
                 rows = list(
@@ -2036,12 +2042,25 @@ def load_warehouse_content_files(  # noqa: PLR0913
                         BaseWarehouseETLTask.qualified_name(
                             warehouse_content_files.VIEWS[etl_source]
                         ),
-                        where={
-                            "etl_source": etl_source,
-                            warehouse_content_files.RUN_COLUMN: run_id,
-                        },
+                        where=run_scope,
                     )
                 )
+                unit_rows = None
+                if etl_source in warehouse_content_files.UNIT_VIEWS:
+                    try:
+                        unit_rows = list(
+                            iter_rows(
+                                conn,
+                                BaseWarehouseETLTask.qualified_name(
+                                    warehouse_content_files.UNIT_VIEWS[etl_source]
+                                ),
+                                where=run_scope,
+                            )
+                        )
+                    except Exception:
+                        log.exception(
+                            "Units not read for %s run %s", etl_source, run_id
+                        )
             finally:
                 conn.close()
             return warehouse_content_files.load_run(
@@ -2050,6 +2069,7 @@ def load_warehouse_content_files(  # noqa: PLR0913
                 expected_count=expected_count,
                 allow_mass_unpublish=allow_mass_unpublish is True,
                 allow_shrink=allow_shrink is True,
+                unit_rows=unit_rows,
             )
         finally:
             lock.delete(lock_key)
