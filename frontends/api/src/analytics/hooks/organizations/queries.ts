@@ -46,7 +46,7 @@ type LearnerProgressParams = Omit<
   ContractRequestIds
 >
 
-/** `limit` and `offset` count learners, not enrollments; the API caps `limit` at 25. */
+/** `limit` and `offset` count learners, not enrollments; the API caps `limit` at 100. */
 type LearnersParams = Omit<LearnersApiLearnersListRequest, ContractRequestIds>
 
 /**
