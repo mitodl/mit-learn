@@ -351,8 +351,8 @@ const ErrorRow = styled.div({
 
 /** The `/learners` endpoint's maximum page size, in learners. */
 const CSV_EXPORT_PAGE_SIZE = 100
-/** The export fetches this many pages at a time rather than one by one or all at once. */
-const CSV_EXPORT_CONCURRENCY = 5
+/** Pages fetched at a time. The analytics API builds each page in memory and shares a small database pool, so this stays low. */
+const CSV_EXPORT_CONCURRENCY = 2
 const UNAVAILABLE_MESSAGE_ID = "learner-analytics-unavailable-message"
 const NOT_LOADED_MESSAGE_ID = "learner-analytics-not-loaded-message"
 const NO_LEARNERS_MESSAGE_ID = "learner-analytics-no-learners-message"
