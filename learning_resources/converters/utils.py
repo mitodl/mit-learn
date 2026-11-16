@@ -28,9 +28,6 @@ from PIL import Image
 
 log = logging.getLogger(__name__)
 
-# drop unsupported model params
-litellm.drop_params = True
-
 
 def turn_on_litellm_debug() -> None:
     """Log litellm's requests at debug level (as litellm._turn_on_debug does)."""
@@ -1964,6 +1961,9 @@ class OCRProcessor:
             "model": settings.OCR_MODEL,
             "timeout": settings.OCR_REQUEST_TIMEOUT,
             "num_retries": settings.OCR_REQUEST_NUM_RETRIES,
+            # drop unsupported model params for this call only, rather than
+            # setting litellm.drop_params globally
+            "drop_params": True,
         }
 
     def _execute_batch_ocr(self, messages_list: list[list[dict]]) -> list[str | None]:
