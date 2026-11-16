@@ -336,7 +336,7 @@ def test_unmappable_glyphs_trigger_full_page_ocr(  # noqa: PLR0913
     mocker.patch(f"{MODULE}._optimize_image", return_value=mocker.MagicMock())
     mocker.patch(f"{MODULE}.PDFPageRenderer", return_value=fake_renderer)
     mocker.patch.object(
-        OCRProcessor, "process_images", return_value={888001: "FULL PAGE"}
+        OCRProcessor, "process_images", side_effect=_full_page_results("FULL PAGE")
     )
     converter = OpenDataLoaderLLMConverter(Path("test.pdf"))
     mocker.patch.object(
@@ -348,6 +348,11 @@ def test_unmappable_glyphs_trigger_full_page_ocr(  # noqa: PLR0913
     )
     markdown = converter.convert_to_markdown()
     assert (markdown == "<!-- page: 1 -->\n\nFULL PAGE") is expected
+
+
+def _full_page_results(text):
+    """Make process_images return text for each full-page image"""
+    return lambda images: {i.block_id: text for i in images if i.is_full_page}
 
 
 def _response(text):
@@ -385,7 +390,9 @@ def test_failed_ocr_falls_back(mocker, settings, fake_renderer, no_pdf):
     mocker.patch(f"{MODULE}._optimize_image", return_value=mocker.MagicMock())
     mocker.patch(f"{MODULE}.PDFPageRenderer", return_value=fake_renderer)
     mocker.patch.object(
-        OCRProcessor, "process_images", return_value={888001: None, 5: None}
+        OCRProcessor,
+        "process_images",
+        side_effect=lambda images: dict.fromkeys(i.block_id for i in images),
     )
     converter = OpenDataLoaderLLMConverter(Path("test.pdf"))
     mocker.patch.object(
@@ -571,7 +578,8 @@ def figure_page(no_pdf):
     image = _block(
         "image",
         box=figure.bounding_box,
-        block_id=converter._figure_block_id(figure),  # noqa: SLF001
+        block_id=1,
+        figure=figure,
     )
     return converter, figure, image
 
@@ -720,7 +728,7 @@ def test_page_needs_full_ocr(  # noqa: PLR0913
     mocker.patch(f"{MODULE}._optimize_image", return_value=mocker.MagicMock())
     mocker.patch(f"{MODULE}.PDFPageRenderer", return_value=fake_renderer)
     mocker.patch.object(
-        OCRProcessor, "process_images", return_value={888001: "FULL PAGE"}
+        OCRProcessor, "process_images", side_effect=_full_page_results("FULL PAGE")
     )
     converter = OpenDataLoaderLLMConverter(Path("test.pdf"))
     converter._layer_text = {1: layer}  # noqa: SLF001
