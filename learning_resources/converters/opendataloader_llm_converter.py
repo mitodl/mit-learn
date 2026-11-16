@@ -18,9 +18,11 @@ Strategy:
 5. Optionally (structure()), the markdown is split into problems, parts and
    solutions by source ranges the model labels; it never rewrites the text.
 
-The helpers live in utils.py and the structuring pass in structure.py.
+The figure helpers live in figures.py, the other helpers in utils.py and the
+structuring pass in structure.py.
 """
 
+import itertools
 import json
 import logging
 import re
@@ -35,76 +37,71 @@ import pypdfium2 as pdfium
 from django.conf import settings
 from PIL import Image
 
+from learning_resources.converters.figures import (
+    BLANK,
+    FIGURE_MARK,
+    FIGURE_PADDING,
+    FROM_OCR,
+    GRAPHIC,
+    MIXED,
+    REGION,
+    REGION_MARK,
+    REGION_MARKED,
+    REGION_PROMPT,
+    REGION_START,
+    TRANSCRIBED,
+    UNDECIDED,
+    Figure,
+    FigureOutput,
+    display_box,
+    find_figure_boxes,
+    fraction_box,
+    is_blank,
+    is_box,
+    page_prompt,
+    parse_figure_mark,
+    parse_region_ocr,
+    region_decisions,
+    share_inside,
+    snap_to_ink,
+)
 from learning_resources.converters.structure import (
     MAX_LOGGED_STRUCTURE_ERRORS,
     export_structure_markdown,
     structure_document,
 )
 from learning_resources.converters.utils import (
-    BLANK,
     DEFAULT_PAGE_SIZE,
-    FIGURE_MARK,
-    FIGURE_PADDING,
-    FROM_OCR,
-    GRAPHIC,
-    LATEX_COMMAND,
-    MIXED,
     PARSED_LINE_MIN_WORDS,
     PDFIUM_LOCK,
-    REGION,
-    REGION_MARK,
-    REGION_MARKED,
-    REGION_PROMPT,
-    REGION_START,
     TABLE_BOX_GAP,
     TABLE_BOX_SHARE,
-    TABLE_WORD,
     TABLE_WORD_SHARE,
-    TRANSCRIBED,
-    UNDECIDED,
     BlockType,
     ContentBlock,
-    Figure,
-    FigureOutput,
     ImageForOCR,
     MarkdownAssembler,
     OCRProcessor,
     PageMath,
     PDFPageRenderer,
     Usage,
-    _optimize_image,
-    _unwrap_header_footer,
-    display_box,
     document_math,
-    find_figure_boxes,
     flatten_lists,
-    fraction_box,
     has_equation_pieces,
     has_unmappable_text,
-    is_blank,
-    is_box,
     is_scanned_page,
     iter_text,
+    optimize_image,
     page_math_score,
-    page_prompt,
     parse_content_block,
-    parse_figure_mark,
-    parse_region_ocr,
     plain_words,
-    region_decisions,
-    share_inside,
-    snap_to_ink,
     strip_running_lines,
     text_lost_reason,
     turn_on_litellm_debug,
+    unwrap_header_footer,
 )
 
 log = logging.getLogger(__name__)
-
-# ids of the blocks standing for a page's full-page OCR (plus its page number)
-# and for a figure candidate (plus its index in figures)
-FULL_PAGE_BLOCK_ID = 888000
-FIGURE_BLOCK_ID = 999000
 
 
 class OpenDataLoaderLLMConverter:
@@ -132,7 +129,6 @@ class OpenDataLoaderLLMConverter:
         self.figure_output = figure_output
         self.json_path = Path(json_path) if json_path else None
         self.debug_mode = debug_mode
-        self._tempdir = tempfile.TemporaryDirectory()
         self._page_renderer = PDFPageRenderer(self.document_path, dpi=pdf_dpi)
         self._ocr_processor = OCRProcessor()
         self._markdown_assembler = MarkdownAssembler()
@@ -142,6 +138,9 @@ class OpenDataLoaderLLMConverter:
         self._layer_text: dict[int, str] = {}
         self._has_content: dict[int, bool] = {}
         self._page_math: dict[int, PageMath] | None = None
+        # ids for the blocks added here (full-page OCR and figure candidates),
+        # started past the parsed blocks' ids in _prepare
+        self._new_block_ids = itertools.count(1)
         if debug_mode:
             turn_on_litellm_debug()
 
@@ -201,8 +200,11 @@ class OpenDataLoaderLLMConverter:
         """Parse the PDF, find figures and decide each page's strategy."""
         # Lists are flattened first so that their nested blocks are grouped
         # under their own pages and nested images get OCR'd
-        kids = _unwrap_header_footer(self._convert_pdf_to_json().get("kids", []))
+        kids = unwrap_header_footer(self._convert_pdf_to_json().get("kids", []))
         raw_blocks = flatten_lists([parse_content_block(k) for k in kids])
+        self._new_block_ids = itertools.count(
+            max((b.block_id for b in raw_blocks), default=0) + 1
+        )
         self._turn_blocks(raw_blocks)
         pages = defaultdict(list)
         for b in raw_blocks:
@@ -241,17 +243,20 @@ class OpenDataLoaderLLMConverter:
     def _convert_pdf_to_json(self) -> dict[str, Any]:
         if self.json_path:
             return json.loads(self.json_path.read_text())
-        output_dir = Path(self._tempdir.name)
-        opendataloader_pdf.convert(
-            input_path=[str(self.document_path)],
-            output_dir=str(output_dir),
-            format="json",
-            use_struct_tree=True,
-            keep_line_breaks=True,
-            # headers and footers are kept for _unwrap_header_footer to sort
-            include_header_footer=True,
-        )
-        return json.loads((output_dir / f"{self.document_path.stem}.json").read_text())
+        with tempfile.TemporaryDirectory() as tempdir:
+            output_dir = Path(tempdir)
+            opendataloader_pdf.convert(
+                input_path=[str(self.document_path)],
+                output_dir=str(output_dir),
+                format="json",
+                use_struct_tree=True,
+                keep_line_breaks=True,
+                # headers and footers are kept for unwrap_header_footer to sort
+                include_header_footer=True,
+            )
+            return json.loads(
+                (output_dir / f"{self.document_path.stem}.json").read_text()
+            )
 
     def _turn_blocks(self, blocks: list[ContentBlock]) -> None:
         """
@@ -363,9 +368,9 @@ class OpenDataLoaderLLMConverter:
         self, page_num: int, page_blocks: list[ContentBlock]
     ) -> tuple[ContentBlock, ImageForOCR]:
         """Return the block standing for a page OCR'd in full, and its image."""
-        block_id = FULL_PAGE_BLOCK_ID + page_num
+        block_id = next(self._new_block_ids)
         page_image = self._page_renderer.get_page_image(page_num)
-        optimized = _optimize_image(page_image)
+        optimized = optimize_image(page_image)
         page_image.close()
         if self.debug_mode:
             self._save_debug_image(optimized, prefix=f"FULLPAGE_{page_num}_")
@@ -390,9 +395,9 @@ class OpenDataLoaderLLMConverter:
         crop = self._page_renderer.extract_region(block.page_number, block.bounding_box)
         if not crop:
             return None
-        is_figure = block.block_id >= FIGURE_BLOCK_ID
+        is_figure = block.figure is not None
         # figure regions stay in colour so a photo is described as it is
-        optimized = crop.convert("RGB") if is_figure else _optimize_image(crop)
+        optimized = crop.convert("RGB") if is_figure else optimize_image(crop)
         if self.debug_mode:
             self._save_debug_image(optimized, prefix=f"IMG_{block.block_id}_")
         image = ImageForOCR.from_pil_image(
@@ -409,9 +414,6 @@ class OpenDataLoaderLLMConverter:
 
     def _page_figures(self, page_num: int) -> list[Figure]:
         return [f for f in self.figures if f.page_number == page_num]
-
-    def _figure_block_id(self, figure: Figure) -> int:
-        return FIGURE_BLOCK_ID + self.figures.index(figure)
 
     def _figure_text(self, figure: Figure) -> str:
         """How a graphic appears in the markdown."""
@@ -452,9 +454,10 @@ class OpenDataLoaderLLMConverter:
         for i, figure in enumerate(figures):
             figure_block = ContentBlock(
                 block_type=BlockType.IMAGE,
-                block_id=self._figure_block_id(figure),
+                block_id=next(self._new_block_ids),
                 page_number=page_num,
                 bounding_box=figure.bounding_box,
+                figure=figure,
                 # the parsed text it replaces, written after it if its OCR fails
                 fallback_blocks=[
                     b
@@ -627,7 +630,6 @@ class OpenDataLoaderLLMConverter:
         """
         Decide each candidate (graphic or transcribed) and write it into the OCR text.
         """
-        by_block = {self._figure_block_id(f): f for f in self.figures}
         for block in blocks:
             if block.block_type == BlockType.FULL_PAGE_OCR:
                 text = ocr_results.get(block.block_id, "")
@@ -635,9 +637,9 @@ class OpenDataLoaderLLMConverter:
                     ocr_results[block.block_id] = self._resolve_full_page(
                         block.page_number, text
                     )
-            elif block.block_id in by_block:
+            elif block.figure is not None:
                 ocr_results[block.block_id] = self._resolve_candidate(
-                    by_block[block.block_id],
+                    block.figure,
                     block,
                     blocks,
                     ocr_results.get(block.block_id),
@@ -717,7 +719,7 @@ class OpenDataLoaderLLMConverter:
         Whether a candidate transcribed as text lies in a parsed table that already
         has nearly all its words (the drawing was the table's ruling).
         """
-        words = set(TABLE_WORD.findall(LATEX_COMMAND.sub(" ", text).lower()))
+        words = set(plain_words(text).split())
         if not words:
             return False
         for b in blocks:
@@ -730,7 +732,7 @@ class OpenDataLoaderLLMConverter:
             ):
                 continue
             table = set(
-                TABLE_WORD.findall(" ".join(c or "" for _, c in iter_text([b])).lower())
+                plain_words(" ".join(c or "" for _, c in iter_text([b]))).split()
             )
             # (a word or so may differ: the OCR fixes the table's typos)
             missing = len(words - table)

@@ -6,6 +6,14 @@ import pymupdf
 import pytest
 from PIL import Image
 
+from learning_resources.converters.figures import (
+    GRAPHIC,
+    REGION,
+    Figure,
+    FigureOutput,
+    display_box,
+    parse_figure_mark,
+)
 from learning_resources.converters.opendataloader_llm_converter import (
     OpenDataLoaderLLMConverter,
 )
@@ -16,28 +24,22 @@ from learning_resources.converters.structure import (
     structure_elements,
 )
 from learning_resources.converters.utils import (
-    GRAPHIC,
     OCR_FAILED_PLACEHOLDER,
     PAGE_CACHE_SIZE,
-    REGION,
     BlockType,
     ContentBlock,
-    Figure,
-    FigureOutput,
     ImageForOCR,
     MarkdownAssembler,
     OCRProcessor,
     PDFPageRenderer,
-    _optimize_image,
-    _unwrap_header_footer,
-    display_box,
     document_math,
     flatten_lists,
+    optimize_image,
     page_math,
     page_math_score,
     parse_content_block,
-    parse_figure_mark,
     strip_running_lines,
+    unwrap_header_footer,
 )
 
 MODULE = "learning_resources.converters.opendataloader_llm_converter"
@@ -87,7 +89,7 @@ def test_basic_conversion(settings, fake_renderer, mocker):
     settings.OCR_MODEL = "test"
     sample_pdf = Path("test_pdfs/notes.pdf")
     mocker.patch(
-        "learning_resources.converters.opendataloader_llm_converter._optimize_image",
+        "learning_resources.converters.opendataloader_llm_converter.optimize_image",
         return_value=mocker.MagicMock(),
     )
     mocker.patch(
@@ -110,7 +112,7 @@ def test_debug_images_written(tmp_path, mocker, settings, fake_renderer):
         tmp_path,
     )
     mocker.patch(
-        "learning_resources.converters.opendataloader_llm_converter._optimize_image",
+        "learning_resources.converters.opendataloader_llm_converter.optimize_image",
         return_value=mocker.MagicMock(),
     )
     mocker.patch(
@@ -252,7 +254,7 @@ def test_list_markers_not_scored_as_math():
 def test_nested_list_images_keep_their_page(mocker, settings, fake_renderer, no_pdf):
     """Images nested in a list should be OCR'd and placed on their own page"""
     settings.OCR_MATH_DENSITY_THRESHOLD = 100
-    mocker.patch(f"{MODULE}._optimize_image", return_value=mocker.MagicMock())
+    mocker.patch(f"{MODULE}.optimize_image", return_value=mocker.MagicMock())
     mocker.patch(f"{MODULE}.PDFPageRenderer", return_value=fake_renderer)
     process_images = mocker.patch.object(
         OCRProcessor, "process_images", return_value={42: "IMAGE TEXT"}
@@ -333,10 +335,10 @@ def test_unmappable_glyphs_trigger_full_page_ocr(  # noqa: PLR0913
 ):
     """Pages with undecodable glyphs should get full-page OCR"""
     settings.OCR_MATH_DENSITY_THRESHOLD = 100
-    mocker.patch(f"{MODULE}._optimize_image", return_value=mocker.MagicMock())
+    mocker.patch(f"{MODULE}.optimize_image", return_value=mocker.MagicMock())
     mocker.patch(f"{MODULE}.PDFPageRenderer", return_value=fake_renderer)
     mocker.patch.object(
-        OCRProcessor, "process_images", return_value={888001: "FULL PAGE"}
+        OCRProcessor, "process_images", side_effect=_full_page_results("FULL PAGE")
     )
     converter = OpenDataLoaderLLMConverter(Path("test.pdf"))
     mocker.patch.object(
@@ -348,6 +350,11 @@ def test_unmappable_glyphs_trigger_full_page_ocr(  # noqa: PLR0913
     )
     markdown = converter.convert_to_markdown()
     assert (markdown == "<!-- page: 1 -->\n\nFULL PAGE") is expected
+
+
+def _full_page_results(text):
+    """Make process_images return text for each full-page image"""
+    return lambda images: {i.block_id: text for i in images if i.is_full_page}
 
 
 def _response(text):
@@ -382,10 +389,12 @@ def test_failed_ocr_falls_back(mocker, settings, fake_renderer, no_pdf):
     becomes a placeholder
     """
     settings.OCR_MATH_DENSITY_THRESHOLD = 2
-    mocker.patch(f"{MODULE}._optimize_image", return_value=mocker.MagicMock())
+    mocker.patch(f"{MODULE}.optimize_image", return_value=mocker.MagicMock())
     mocker.patch(f"{MODULE}.PDFPageRenderer", return_value=fake_renderer)
     mocker.patch.object(
-        OCRProcessor, "process_images", return_value={888001: None, 5: None}
+        OCRProcessor,
+        "process_images",
+        side_effect=lambda images: dict.fromkeys(i.block_id for i in images),
     )
     converter = OpenDataLoaderLLMConverter(Path("test.pdf"))
     mocker.patch.object(
@@ -420,7 +429,7 @@ def test_optimize_image(num_colors, expect_binary):
     """Few-color images are thresholded, many-color images are blurred"""
     image = Image.new("RGB", (num_colors, 1))
     image.putdata([(255 * (i % 2), i % 256, i // 256) for i in range(num_colors)])
-    result = _optimize_image(image)
+    result = optimize_image(image)
     assert result.mode == "L"
     values = {value for _, value in result.getcolors()}
     is_binary = values <= {0, 255}
@@ -521,7 +530,7 @@ def test_running_headers_and_footers_are_removed():
         ),
         {"type": "footer", "page number": 2, "kids": [_paragraph("7", page=2)]},
     ]
-    assert [k["content"] for k in _unwrap_header_footer(kids)] == ["Problem 3"]
+    assert [k["content"] for k in unwrap_header_footer(kids)] == ["Problem 3"]
     pages = "".join(
         f"<!-- page: {n} -->\n\n{body}\n\nCalculus course notes\n\n"
         for n, body in enumerate(["Limits.", "Derivatives.", "Integrals."], start=1)
@@ -571,7 +580,8 @@ def figure_page(no_pdf):
     image = _block(
         "image",
         box=figure.bounding_box,
-        block_id=converter._figure_block_id(figure),  # noqa: SLF001
+        block_id=1,
+        figure=figure,
     )
     return converter, figure, image
 
@@ -717,10 +727,10 @@ def test_page_needs_full_ocr(  # noqa: PLR0913
 ):
     """Pages whose parsed text can't stand for the page are OCR'd in full"""
     settings.OCR_MATH_DENSITY_THRESHOLD = 100
-    mocker.patch(f"{MODULE}._optimize_image", return_value=mocker.MagicMock())
+    mocker.patch(f"{MODULE}.optimize_image", return_value=mocker.MagicMock())
     mocker.patch(f"{MODULE}.PDFPageRenderer", return_value=fake_renderer)
     mocker.patch.object(
-        OCRProcessor, "process_images", return_value={888001: "FULL PAGE"}
+        OCRProcessor, "process_images", side_effect=_full_page_results("FULL PAGE")
     )
     converter = OpenDataLoaderLLMConverter(Path("test.pdf"))
     converter._layer_text = {1: layer}  # noqa: SLF001

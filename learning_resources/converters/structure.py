@@ -12,11 +12,13 @@ from collections import Counter, defaultdict
 import litellm
 from django.conf import settings
 
-from learning_resources.converters.utils import (
+from learning_resources.converters.figures import (
     FIGURE_IMAGE,
     FIGURE_PLACEHOLDER,
-    Usage,
     is_box,
+)
+from learning_resources.converters.utils import (
+    Usage,
 )
 
 log = logging.getLogger(__name__)
@@ -299,10 +301,6 @@ def structure_elements(markdown: str) -> list[dict]:
         offset += len(line)
     splitter.flush()
     return splitter.elements
-
-
-def _normal_words(text):
-    return " ".join(re.findall(r"[^\W_]+", text.casefold()))
 
 
 def _ocw_covers(elements):
