@@ -1275,15 +1275,27 @@ describe("ContractLearnersPage", () => {
         {},
         { courserun_readable_id: ids.slice(1) },
       )
+      /**
+       * By text rather than `toggleModule`, whose `getByRole("option", { name })`
+       * takes several ms per option in jsdom: across this menu's 51 options
+       * that would be most of the test's runtime.
+       */
+      const toggleFirstModule = async () => {
+        await user.click(screen.getByRole("combobox", { name: /modules/i }))
+        await user.click(
+          within(await screen.findByRole("listbox")).getByText("Module 00"),
+        )
+        await user.keyboard("{Escape}")
+      }
 
       await screen.findByText("Every Module Learner")
-      await toggleModule("Module 00")
+      await toggleFirstModule()
       await screen.findByText("Fifty Module Learner")
       expect(
         screen.getByRole("combobox", { name: /modules\s*, 50 selected/i }),
       ).toBeInTheDocument()
 
-      await toggleModule("Module 00")
+      await toggleFirstModule()
       await screen.findByText("Every Module Learner")
       expect(
         screen.getByRole("combobox", { name: /modules\s*, 51 selected/i }),
