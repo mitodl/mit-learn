@@ -6,37 +6,24 @@ import { Container, styled } from "ol-components"
 import { ActionButton, ButtonLink } from "@mitodl/smoot-design"
 import { RiArrowRightLine, RiCloseLine } from "@remixicon/react"
 import { FeatureFlags } from "@/common/feature_flags"
-import { useFeatureFlagPayload } from "@/common/useFeatureFlagPayload"
+import { useFeatureFlagResult } from "@/common/useFeatureFlagResult"
 import { analytics } from "@/common/analytics"
 
 const payloadSchema = yup.object({
-  variant: yup.string().oneOf(["awareness", "sale"]).required(),
-  code: yup
+  eyebrow: yup.string().required(),
+  headline_bold: yup.string().required(),
+  headline: yup.string().required(),
+  date: yup.string().required(),
+  code: yup.string().trim(),
+  cta_url: yup
     .string()
-    .trim()
-    .when("variant", {
-      is: "sale",
-      then: (schema) => schema.required(),
-    }),
-  cta_url: yup.string().url(),
+    .url()
+    .matches(/^https:\/\//),
   dismiss_hours: yup.number().moreThan(0),
 })
 
-type BannerPayload = yup.InferType<typeof payloadSchema>
-
-const COPY = {
-  awareness: {
-    eyebrow: "Our Cyber Sale is coming",
-    date: "Starts November 24",
-  },
-  sale: {
-    eyebrow: "Learn more this Cyber Monday",
-    date: "Ends December 1",
-  },
-}
-
-const storageKey = ({ variant, code }: BannerPayload) =>
-  `cyber-sale-banner-dismissed:${variant}:${code ?? ""}`
+const storageKey = (variant: string | undefined, code: string | undefined) =>
+  `cyber-sale-banner-dismissed:${variant ?? ""}:${code ?? ""}`
 
 /**
  * The `storage` event only fires in other tabs, so dismissing here notifies
@@ -86,6 +73,7 @@ const Bar = styled.aside(({ theme }) => ({
   backgroundColor: theme.custom.colors.white,
   borderBottom: `2px solid ${theme.custom.colors.red}`,
   padding: "12px 0",
+  "@media print": { display: "none" },
 }))
 
 const Inner = styled(Container)(({ theme }) => ({
@@ -122,7 +110,7 @@ const Eyebrow = styled.p(({ theme }) => ({
 
 const Details = styled.div(({ theme }) => ({
   display: "flex",
-  alignItems: "flex-end",
+  alignItems: "baseline",
   columnGap: "32px",
   rowGap: "8px",
   [theme.breakpoints.down("lg")]: {
@@ -151,7 +139,7 @@ const Meta = styled.p(({ theme }) => ({
   ...theme.typography.body3,
   margin: 0,
   display: "flex",
-  alignItems: "center",
+  alignItems: "baseline",
   gap: "16px",
   color: theme.custom.colors.silverGrayDark,
   fontWeight: theme.typography.fontWeightBold,
@@ -186,11 +174,9 @@ const CloseButton = styled(ActionButton)(({ theme }) => ({
 }))
 
 const CyberSaleBanner: React.FC = () => {
-  const payload = useFeatureFlagPayload(
-    FeatureFlags.CyberSaleBanner,
-    payloadSchema,
-  )
-  const key = payload ? storageKey(payload) : null
+  const flag = useFeatureFlagResult(FeatureFlags.CyberSaleBanner, payloadSchema)
+  const payload = flag?.enabled ? flag.payload : undefined
+  const key = payload ? storageKey(flag?.variant, payload.code) : null
   const dismissedAt = useSyncExternalStore(
     subscribeStorage,
     () => (key ? readStorage(key) : null),
@@ -202,19 +188,18 @@ const CyberSaleBanner: React.FC = () => {
 
   if (!payload || isDismissed(dismissedAt, payload.dismiss_hours)) return null
 
-  const copy = COPY[payload.variant]
   return (
     <Bar aria-label="Cyber Sale">
       <Inner>
         <Text>
-          <Eyebrow>{copy.eyebrow}</Eyebrow>
+          <Eyebrow>{payload.eyebrow}</Eyebrow>
           <Details>
             <Headline>
-              <strong>Save 15%</strong> on select MIT courses and programs
+              <strong>{payload.headline_bold}</strong> {payload.headline}
             </Headline>
             <Meta>
-              <span>{copy.date}</span>
-              {payload.variant === "sale" ? (
+              <span>{payload.date}</span>
+              {payload.code ? (
                 <>
                   <Separator aria-hidden>|</Separator>
                   <span>
@@ -237,7 +222,7 @@ const CyberSaleBanner: React.FC = () => {
                 analytics.ctaClicked({
                   label: "View eligible courses",
                   banner: "cyber-sale",
-                  variant: payload.variant,
+                  variant: flag?.variant,
                 })
               }
             >
