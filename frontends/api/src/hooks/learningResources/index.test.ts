@@ -10,12 +10,15 @@ import {
   useLearningResourcesList,
   useLearningResourceTopics,
   useLearningResourceSetLearningPathRelationships,
+  courseQueries,
+  videoQueries,
+  podcastEpisodeQueries,
 } from "./index"
 import { learningResourceKeys } from "./queries"
 import { learningPathKeys } from "../learningPaths/queries"
 import { setMockResponse, urls, makeRequest } from "../../test-utils"
 import * as factories from "../../test-utils/factories"
-import { UseQueryResult } from "@tanstack/react-query"
+import { UseQueryResult, useQuery } from "@tanstack/react-query"
 
 const factory = factories.learningResources
 
@@ -172,5 +175,46 @@ describe("useLearningResourceSetLearningPathRelationships", () => {
     expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
       queryKey: learningResourceKeys.featuredRoot(),
     })
+  })
+})
+
+// Alphabetical, the order the generated client serializes them in.
+const listParams = {
+  limit: 2,
+  offered_by: ["ocw" as const],
+  sortby: "new" as const,
+}
+
+describe.each<{
+  name: string
+  useList: () => UseQueryResult
+  url: string
+  data: () => unknown
+}>([
+  {
+    name: "courseQueries.list",
+    useList: () => useQuery(courseQueries.list(listParams)),
+    url: urls.courses.list(listParams),
+    data: () => factory.courses({ count: 2 }),
+  },
+  {
+    name: "videoQueries.list",
+    useList: () => useQuery(videoQueries.list(listParams)),
+    url: urls.videos.list(listParams),
+    data: () => factory.videos({ count: 2 }),
+  },
+  {
+    name: "podcastEpisodeQueries.list",
+    useList: () => useQuery(podcastEpisodeQueries.list(listParams)),
+    url: urls.podcastEpisodes.list(listParams),
+    data: () => factory.podcastEpisodes({ count: 2 }),
+  },
+])("$name", ({ useList, url, data }) => {
+  it("calls the list API with the given params", async () => {
+    const expected = data()
+    setMockResponse.get(url, expected)
+    const { wrapper } = setupReactQueryTest()
+    const { result } = renderHook(useList, { wrapper })
+    await assertApiCalled(result, url, "GET", expected)
   })
 })

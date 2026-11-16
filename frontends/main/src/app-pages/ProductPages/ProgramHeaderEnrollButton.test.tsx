@@ -1,5 +1,11 @@
 import React from "react"
-import { renderWithProviders, screen, act, setMockResponse } from "@/test-utils"
+import {
+  renderWithProviders,
+  screen,
+  act,
+  setMockResponse,
+  setupLocationMock,
+} from "@/test-utils"
 import { factories, urls } from "api/test-utils"
 import {
   factories as mitxFactories,
@@ -12,6 +18,7 @@ import {
   PaymentTypeEnum,
 } from "@mitodl/mitxonline-api-axios/v0"
 import { makeProgram, setupUserPricing } from "./test-utils/userPricing"
+import { lastAuthRedirect } from "./test-utils/enrollResume"
 
 jest.mock("next-nprogress-bar", () => ({
   useRouter: () => ({ push: jest.fn() }),
@@ -240,25 +247,30 @@ describe("ProgramHeaderEnrollButton", () => {
     },
   )
 
-  test("unauthenticated click shows the signup popover", async () => {
-    const program = makeProgram({
-      enrollment_modes: [makeMode({ requires_payment: false })],
-    })
-    setMockResponse.get(
-      urls.userMe.get(),
-      makeUser({ is_authenticated: false }),
-    )
+  describe("signed out", () => {
+    setupLocationMock()
 
-    renderWithProviders(<ProgramHeaderEnrollButton program={program} />)
+    test("click goes to login instead of a popover", async () => {
+      const program = makeProgram({
+        enrollment_modes: [makeMode({ requires_payment: false })],
+      })
+      setMockResponse.get(
+        urls.userMe.get(),
+        makeUser({ is_authenticated: false }),
+      )
 
-    const startBtn = await screen.findByRole("button", {
-      name: "Start Learning",
-    })
-    await act(async () => {
-      startBtn.click()
-    })
+      renderWithProviders(<ProgramHeaderEnrollButton program={program} />)
 
-    expect(screen.getByTestId("signup-popover")).toBeInTheDocument()
+      const startBtn = await screen.findByRole("button", {
+        name: "Start Learning",
+      })
+      await act(async () => {
+        startBtn.click()
+      })
+
+      expect(screen.queryByTestId("signup-popover")).toBeNull()
+      expect(lastAuthRedirect().next.searchParams.get("enroll")).toBe("free")
+    })
   })
 
   test("shows an error alert below the button when enrollment fails", async () => {

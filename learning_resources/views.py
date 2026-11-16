@@ -19,7 +19,6 @@ from drf_spectacular.utils import (
     inline_serializer,
 )
 from grpc._channel import _InactiveRpcError
-from requests.exceptions import RequestException
 from rest_framework import serializers, views, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound, ValidationError
@@ -30,6 +29,7 @@ from rest_framework.response import Response
 from rest_framework_nested.viewsets import NestedViewSetMixin
 
 from authentication.decorators import blocked_ip_exempt
+from channels.api import clear_featured_caches
 from channels.constants import ChannelType
 from channels.models import Channel
 from learning_resources import permissions
@@ -121,9 +121,7 @@ from main.permissions import (
 from main.utils import (
     cache_page_for_all_users,
     cache_page_for_anonymous_users,
-    call_fastly_purge_api,
     chunks,
-    clear_views_cache,
     db_sync_to_async,
 )
 from main.views import AsyncAPIView
@@ -565,26 +563,6 @@ class PodcastEpisodeViewSet(BaseLearningResourceViewSet):
         )
 
 
-def clear_featured_caches(channels):
-    """
-    Clear the Redis featured-list cache, hard-purge channel pages from
-    Fastly, and soft-purge the homepage. Each Fastly purge is independently
-    best-effort so one failure doesn't leave the remaining pages stale.
-
-    Takes `(channel_type, name)` pairs: a channel's page lives under its own
-    type, and every type has a featured row to go stale.
-    """
-    clear_views_cache(key_prefix="featured_resources")
-    purges = [
-        (f"/c/{channel_type}/{name}", False) for channel_type, name in channels
-    ] + [("/", True)]
-    for relative_url, soft in purges:
-        try:
-            call_fastly_purge_api(relative_url, timeout=5, soft=soft)
-        except RequestException:
-            log.exception("Featured cache Fastly purge failed for %s", relative_url)
-
-
 def _clear_featured_caches_on_commit(path_resource_ids):
     """
     Clear the featured caches after commit if any of the given paths is a
@@ -597,21 +575,21 @@ def _clear_featured_caches_on_commit(path_resource_ids):
     Runs synchronously in the request (not via Celery) so the purge is done
     by the time the editor's save returns, regardless of worker backlog.
     """
-    channels = list(
-        Channel.objects.filter(
-            featured_list_id__in=path_resource_ids,
-        ).values_list("channel_type", "name")
-    )
+    channels = list(Channel.objects.filter(featured_list_id__in=path_resource_ids))
     if not channels:
         return
+    # An unpublished channel has no page to purge, but an unpublished unit's
+    # featured list still feeds the aggregated featured row, so it still
+    # triggers the clear.
+    channel_urls = [channel.channel_url for channel in channels if channel.channel_url]
 
     def _clear():
         try:
-            clear_featured_caches(channels)
+            clear_featured_caches(channel_urls)
         except Exception:
             log.exception(
                 "Failed to clear featured caches for channels %s",
-                channels,
+                channel_urls,
             )
 
     transaction.on_commit(_clear)
@@ -686,7 +664,7 @@ class LearningPathViewSet(BaseLearningResourceViewSet, viewsets.ModelViewSet):
         _clear_featured_caches_on_commit([serializer.instance.id])
 
     def perform_destroy(self, instance):
-        # Resolve channel names before the delete (Channel.featured_list is
+        # Resolve channel URLs before the delete (Channel.featured_list is
         # on_delete=SET_NULL); the atomic block defers the on_commit clear
         # until after the delete commits.
         with transaction.atomic():

@@ -235,6 +235,7 @@ const setupProgramsAndCourses = () => {
   const contract = makeContract({
     organization: orgX.id,
     name: "Org X Contract",
+    consented_to_data_sharing: true,
     programs: [], // Will be set after creating programs
   })
 
@@ -469,7 +470,11 @@ const createTestContracts = (
   programs: number[] = [],
 ): UserContractPage[] =>
   Array.from({ length: count }, () =>
-    makeContract({ organization: orgId, programs }),
+    makeContract({
+      organization: orgId,
+      programs,
+      consented_to_data_sharing: true,
+    }),
   )
 
 /**

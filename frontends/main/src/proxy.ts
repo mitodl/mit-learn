@@ -55,8 +55,10 @@ const PROGRAM_PATTERN = /^\/programs\/([^/?]+)$/
  *
  * Returns null instead of throwing when:
  *   - percent-encoding is malformed (decodeURIComponent would throw URIError)
- *   - the decoded value contains characters invalid in HTTP header values
- *     (control characters, \r, \n, \0) which would cause Headers.set() to throw
+ *   - the decoded value contains control characters (\r, \n, \0, ...) or
+ *     characters above U+00FF, either of which would cause Headers.set() to
+ *     throw. Latin-1 (U+0080-U+00FF) is rejected too, for simplicity: page
+ *     paths and readable ids are ASCII.
  */
 function safeDecodeSegment(segment: string): string | null {
   let decoded: string
@@ -66,13 +68,27 @@ function safeDecodeSegment(segment: string): string | null {
     return null
   }
   // HTTP header values must only contain visible ASCII + SP + HT (RFC 7230 §3.2.6).
-  // Reject anything with control chars (\x00-\x1F except \x09, or \x7F) to prevent
-  // header injection and avoid Headers.set() throwing.
+  // Reject anything else: control chars allow header injection, and Headers.set()
+  // throws on any character above U+00FF (e.g. a decoded en dash).
   // eslint-disable-next-line no-control-regex
-  if (/[\x00-\x08\x0A-\x1F\x7F]/.test(decoded)) {
+  if (/[^\x09\x20-\x7E]/.test(decoded)) {
     return null
   }
   return decoded
+}
+
+/**
+ * Derives the per-page `path:` Surrogate-Key tag from the request path, or
+ * returns null if the path can't be decoded into a header value.
+ *
+ * Fastly caches each whitelisted query-param variant of a page, and its RSC
+ * payload, as a separate object. All of them share this tag, so the backend
+ * can purge every variant of a page at once (main.utils.path_surrogate_key
+ * builds the same tag from a URL).
+ */
+export function pathSurrogateKey(pathname: string): string | null {
+  const decoded = safeDecodeSegment(pathname)
+  return decoded === null ? null : `path:${decoded}`
 }
 
 /**
@@ -147,11 +163,16 @@ export function proxy(request: NextRequest) {
   response.headers.set("Cache-Control", cacheControl)
 
   // All page routes share the html-pages tag so Fastly can purge them on
-  // deploy. MITxOnline course/program pages additionally carry a per-item tag
-  // so MITxOnline can invalidate individual product pages on data change.
-  const itemKey = mitxonlineSurrogateKey(request.nextUrl.pathname)
-  const surrogateKey = itemKey ? `html-pages ${itemKey}` : "html-pages"
-  response.headers.set("Surrogate-Key", surrogateKey)
+  // deploy, and each carries a path: tag so one page can be purged with all
+  // its query variants. MITxOnline course/program pages additionally carry a
+  // per-item tag so MITxOnline can invalidate individual product pages on
+  // data change.
+  const keys = [
+    "html-pages",
+    pathSurrogateKey(request.nextUrl.pathname),
+    mitxonlineSurrogateKey(request.nextUrl.pathname),
+  ].filter((key) => key !== null)
+  response.headers.set("Surrogate-Key", keys.join(" "))
 
   return response
 }

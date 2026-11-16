@@ -220,33 +220,6 @@ const learnerProgress = (
 })
 
 /**
- * A learner who has not consented. The API nulls every outcome field server
- * side, so this factory does too — a fixture that left them populated would
- * let a component pass its test while rendering data the API never sends.
- */
-const withheldLearnerProgress = (
-  overrides: Partial<LearnerProgress> = {},
-): LearnerProgress =>
-  learnerProgress({
-    outcomes_consent_status: "declined",
-    outcomes_shared: false,
-    completion_status: null,
-    is_passing: null,
-    grade: null,
-    letter_grade: null,
-    content_progress: null,
-    certificate_issued_on: null,
-    certificate_is_revoked: null,
-    last_active_on: null,
-    needs_attention: null,
-    days_active: null,
-    videos_watched: null,
-    problems_attempted: null,
-    chatbot_interactions: null,
-    ...overrides,
-  })
-
-/**
  * `courserun_id` holds a readable id, matching the API's own alias — see
  * `CourseRun`. Pair with `envelope` for a `CourseRunsResponse`.
  */
@@ -359,5 +332,4 @@ export {
   learnersFromRows,
   monthlyEngagementTrend,
   organizationId,
-  withheldLearnerProgress,
 }

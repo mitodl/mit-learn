@@ -4,7 +4,8 @@ import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { notFound } from "next/navigation"
 import { allowConsoleErrors } from "ol-test-utilities"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
-import ArithmixFlagGate from "./ArithmixFlagGate"
+import { FeatureFlags } from "@/common/feature_flags"
+import EducatorFlagGate from "./EducatorFlagGate"
 
 jest.mock("@/common/useFeatureFlagsLoaded", () => ({
   useFeatureFlagsLoaded: jest.fn(),
@@ -16,16 +17,17 @@ const mockUseFeatureFlag = jest.mocked(useFeatureFlag)
 const mockUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
 const mockNotFound = jest.mocked(notFound)
 
-describe("ArithmixFlagGate", () => {
+describe("EducatorFlagGate", () => {
   test("renders children when the feature flag is enabled", () => {
     mockUseFeatureFlagsLoaded.mockReturnValue(true)
     mockUseFeatureFlag.mockReturnValue(true)
     renderWithProviders(
-      <ArithmixFlagGate>
+      <EducatorFlagGate>
         <div data-testid="gated-content">Gated content</div>
-      </ArithmixFlagGate>,
+      </EducatorFlagGate>,
     )
     expect(screen.getByTestId("gated-content")).toBeInTheDocument()
+    expect(mockUseFeatureFlag).toHaveBeenCalledWith(FeatureFlags.EducatorPage)
     expect(mockNotFound).not.toHaveBeenCalled()
   })
 
@@ -33,9 +35,9 @@ describe("ArithmixFlagGate", () => {
     mockUseFeatureFlagsLoaded.mockReturnValue(false)
     mockUseFeatureFlag.mockReturnValue(false)
     renderWithProviders(
-      <ArithmixFlagGate>
+      <EducatorFlagGate>
         <div data-testid="gated-content">Gated content</div>
-      </ArithmixFlagGate>,
+      </EducatorFlagGate>,
     )
     expect(screen.queryByTestId("gated-content")).not.toBeInTheDocument()
     expect(mockNotFound).not.toHaveBeenCalled()
@@ -50,9 +52,9 @@ describe("ArithmixFlagGate", () => {
     mockUseFeatureFlag.mockReturnValue(false)
     expect(() =>
       renderWithProviders(
-        <ArithmixFlagGate>
+        <EducatorFlagGate>
           <div data-testid="gated-content">Gated content</div>
-        </ArithmixFlagGate>,
+        </EducatorFlagGate>,
       ),
     ).toThrow("NEXT_NOT_FOUND")
     expect(mockNotFound).toHaveBeenCalled()

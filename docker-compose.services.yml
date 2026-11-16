@@ -88,28 +88,6 @@ services:
     ports:
       - "9998:9998"
 
-  locust:
-    image: locustio/locust
-    ports:
-      - "8089:8089"
-    volumes:
-      - ./load_testing_locust:/mnt/locust
-    command: -f /mnt/locust/locustfile.py --master -H http://nginx:8063 --class-picker
-    links:
-      - nginx
-    profiles:
-      - load-testing
-
-  locust-worker:
-    image: locustio/locust
-    volumes:
-      - ./load_testing_locust:/mnt/locust
-    command: -f /mnt/locust/locustfile.py --worker --master-host locust
-    links:
-      - nginx
-    profiles:
-      - load-testing
-
   keycloak:
     profiles:
       - keycloak

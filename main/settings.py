@@ -461,6 +461,7 @@ RECAPTCHA_SECRET_KEY = get_string("RECAPTCHA_SECRET_KEY", "")
 
 # Fastly CDN settings
 FASTLY_API_KEY = get_string("FASTLY_API_KEY", "")
+FASTLY_SERVICE_ID = get_string("FASTLY_SERVICE_ID", "")
 FASTLY_URL = get_string("FASTLY_URL", "https://api.fastly.com")
 
 MEDIA_ROOT = get_string("MEDIA_ROOT", "/var/media/")

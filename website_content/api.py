@@ -31,14 +31,7 @@ def _purge_content_and_listing(content):
     """
     content_url = content.get_url()
     try:
-        purge_resp = fastly_purge_relative_url(
-            content_url, timeout=PURGE_TIMEOUT_SECONDS
-        )
-        if purge_resp.get("status") == "ok":
-            log.info("Content purge request processed OK.")
-        else:
-            fastly_purge_relative_url.delay(content_url)
-            log.error("Content purge request failed, enqueued for retry.")
+        fastly_purge_relative_url(content_url, timeout=PURGE_TIMEOUT_SECONDS)
     except Exception:
         fastly_purge_relative_url.delay(content_url)
         log.exception("Content purge request failed, enqueued for retry.")

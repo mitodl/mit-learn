@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import type { CompletionStatusFilter } from "api/analytics-hooks/organizations"
 import { useAppSearchParams } from "@/common/useAppSearchParams"
 import {
+  completionStatusFilter,
   CONTRACT_LEARNERS_STATUSES,
   type ContractLearnersStatus,
 } from "@/common/urls"
@@ -14,41 +14,19 @@ const MAX_PAGE = 10_000
 const SEARCH_MAX_LENGTH = 254
 /** The `/learners` endpoint rejects more `courserun_readable_id` values than this. */
 const MAX_GRID_MODULES = 50
-const VIEWS = { enrollments: "enrollments", grid: "grid" } as const
-type View = (typeof VIEWS)[keyof typeof VIEWS]
-
-/**
- * "Completed" queries both `passed` and `certified`, matching the count
- * tile above it: a learner who passed but hasn't certified yet is still
- * "Completed" to a manager, and a standalone "Certificate" filter option
- * previously returned fewer rows than the tile it was supposed to explain.
- * The row-level status pill (`getDisplayStatus`) still distinguishes the
- * two outcomes; only the filter groups them.
- */
-const STATUS_FILTER_COMPLETION_STATUS: Record<
-  ContractLearnersStatus,
-  CompletionStatusFilter[]
-> = {
-  not_started: ["not_started"],
-  in_progress: ["in_progress"],
-  passed: ["passed", "certified"],
-  unknown: ["unknown"],
-}
 
 const isStatus = (value: string | null): value is ContractLearnersStatus =>
   (CONTRACT_LEARNERS_STATUSES as readonly (string | null)[]).includes(value)
 
 /**
- * The learner directory's state: the filters both views share, the active
- * view, and the page. View, page, status, module and needs-attention live in
- * the URL; the search text deliberately does not, because it is a learner's
- * name or email and the URL is recorded by PostHog and Sentry. The grid's
- * module filter is multi-select, so it is a repeated `modules` param, apart
- * from the enrollments view's single `module`. Every URL
- * change is one `history.replaceState`, which Next feeds into
+ * The learner directory's filters and page. Page, status, modules and
+ * needs-attention live in the URL; the search text deliberately does not,
+ * because it is a learner's name or email and the URL is recorded by PostHog
+ * and Sentry. The module filter is multi-select, so it is a repeated `modules`
+ * param. Every URL change is one `history.replaceState`, which Next feeds into
  * `useSearchParams` without a server round trip (the app is `force-dynamic`,
  * so `router.replace` would re-render the route on every filter change). A
- * changed filter, view, or search always lands on page 1.
+ * changed filter or search always lands on page 1.
  */
 const useLearnerFilters = () => {
   const params = useAppSearchParams()
@@ -75,7 +53,6 @@ const useLearnerFilters = () => {
   const statusParam = params.get("status")
   const statusFilter = isStatus(statusParam) ? statusParam : ALL
   const needsAttentionOnly = params.get("needs_attention") === "true"
-  const moduleFilter = params.get("module") ?? ALL
   const gridModulesKey = [...new Set(params.getAll("modules"))].join("\n")
   const gridModules = useMemo(
     () =>
@@ -84,8 +61,6 @@ const useLearnerFilters = () => {
         : [],
     [gridModulesKey],
   )
-  const view: View =
-    params.get("view") === VIEWS.grid ? VIEWS.grid : VIEWS.enrollments
   const parsedPage = parseInt(params.get("page") ?? "", 10)
   const page =
     Number.isSafeInteger(parsedPage) && parsedPage > 0 && parsedPage <= MAX_PAGE
@@ -104,18 +79,13 @@ const useLearnerFilters = () => {
     return () => clearTimeout(id)
   }, [searchQuery, debouncedSearch, update])
 
-  const completionStatus = useMemo<CompletionStatusFilter[] | undefined>(
+  const completionStatus = useMemo(
     () =>
-      statusFilter === ALL
-        ? undefined
-        : STATUS_FILTER_COMPLETION_STATUS[statusFilter],
+      completionStatusFilter(statusFilter === ALL ? undefined : statusFilter),
     [statusFilter],
   )
 
   return {
-    view,
-    setView: (next: View) =>
-      update({ view: next === VIEWS.grid ? next : null, page: null }),
     page,
     setPage: (next: number) => update({ page: next > 1 ? String(next) : null }),
     searchQuery,
@@ -133,9 +103,6 @@ const useLearnerFilters = () => {
     needsAttentionOnly,
     setNeedsAttentionOnly: (value: boolean) =>
       update({ needs_attention: value ? "true" : null, page: null }),
-    moduleFilter,
-    setModuleFilter: (value: string) =>
-      update({ module: value === ALL ? null : value, page: null }),
     gridModules,
     setGridModules: (values: string[]) =>
       update({ modules: values.slice(0, MAX_GRID_MODULES), page: null }),
@@ -144,7 +111,6 @@ const useLearnerFilters = () => {
       setDebouncedSearch("")
       update({
         status: null,
-        module: null,
         modules: null,
         needs_attention: null,
         page: null,
@@ -153,5 +119,4 @@ const useLearnerFilters = () => {
   }
 }
 
-export { ALL, SEARCH_MAX_LENGTH, VIEWS, useLearnerFilters }
-export type { View }
+export { ALL, SEARCH_MAX_LENGTH, useLearnerFilters }

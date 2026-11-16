@@ -292,10 +292,15 @@ const TitleLink = styled(LinkAdapter)({
   },
 })
 
+/** Clamped like the title; the link's description still reads it in full. */
 const Secondary = styled.span(({ theme }) => ({
   ...theme.typography.body3,
   marginTop: "4px",
   color: theme.custom.colors.silverGrayDark,
+  display: "-webkit-box",
+  WebkitBoxOrient: "vertical",
+  WebkitLineClamp: 2,
+  overflow: "hidden",
   [NARROW]: { marginTop: 0 },
 }))
 

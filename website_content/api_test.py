@@ -1,10 +1,12 @@
 """Tests for website_content API functions"""
 
 import pytest
+from requests import RequestException
 
 from website_content.api import purge_content_on_save
 from website_content.constants import WebsiteContentType
 from website_content.factories import WebsiteContentFactory
+from website_content.tasks import PURGE_TIMEOUT_SECONDS
 
 
 @pytest.mark.django_db
@@ -19,14 +21,15 @@ from website_content.factories import WebsiteContentFactory
 )
 def test_purge_content_on_save(mocker, slug, is_published, expect_purge):
     """
-    CDN purge should only fire when the content is published AND has a slug.
-    Asserts on call_fastly_purge_api (the lowest plumbing before the HTTP call)
-    so the test is independent of FASTLY_API_KEY being set in the test env.
-    @single_task uses a Redis lock so fastly_purge_website_content_list.delay
-    is mocked to avoid that dependency in unit tests.
+    CDN purge should only fire when the content is published AND has a slug,
+    and purges the page by its `path:` key.
+    Asserts on call_fastly_purge_surrogate_keys (the lowest plumbing before the
+    HTTP call) so the test is independent of FASTLY_API_KEY being set in the
+    test env.
     """
-    mock_purge_api = mocker.patch("website_content.tasks.call_fastly_purge_api")
-    mock_purge_api.return_value = {"status": "ok", "id": "abc"}
+    mock_purge_api = mocker.patch(
+        "website_content.tasks.call_fastly_purge_surrogate_keys"
+    )
     mocker.patch("website_content.tasks.fastly_purge_website_content_list.delay")
 
     content = WebsiteContentFactory.build(
@@ -38,7 +41,9 @@ def test_purge_content_on_save(mocker, slug, is_published, expect_purge):
     purge_content_on_save(content)
 
     if expect_purge:
-        assert mock_purge_api.called
+        mock_purge_api.assert_called_once_with(
+            [f"path:/news/{slug}"], timeout=PURGE_TIMEOUT_SECONDS
+        )
     else:
         mock_purge_api.assert_not_called()
 
@@ -56,10 +61,7 @@ def test_purge_content_on_save_listing_url(mocker, content_type, expected_listin
     The listing-page purge task should be enqueued with the URL matching
     the content's content_type.
     """
-    mocker.patch("website_content.tasks.call_fastly_purge_api").return_value = {
-        "status": "ok",
-        "id": "abc",
-    }
+    mocker.patch("website_content.tasks.call_fastly_purge_surrogate_keys")
     mock_purge_list = mocker.patch(
         "website_content.tasks.fastly_purge_website_content_list.delay"
     )
@@ -76,6 +78,49 @@ def test_purge_content_on_save_listing_url(mocker, content_type, expected_listin
     purge_content_on_save(content)
 
     mock_purge_list.assert_called_once_with(expected_listing)
+
+
+@pytest.fixture
+def published_news():
+    """Return a published news item at /news/test-article"""
+    return WebsiteContentFactory.build(
+        is_published=True,
+        slug="test-article",
+        content_type=WebsiteContentType.news.name,
+    )
+
+
+@pytest.mark.django_db
+def test_purge_content_on_save_succeeds_without_retry(mocker, published_news):
+    """
+    A purge that returns is not retried, even though Fastly's response is a
+    map of key to purge ID with no `status` field.
+    """
+    mocker.patch(
+        "website_content.tasks.call_fastly_purge_surrogate_keys",
+        return_value={"path:/news/test-article": "108-1391560174-974124"},
+    )
+    mock_retry = mocker.patch("website_content.tasks.fastly_purge_relative_url.delay")
+    mocker.patch("website_content.tasks.fastly_purge_website_content_list.delay")
+
+    purge_content_on_save(published_news)
+
+    mock_retry.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_purge_content_on_save_retries_failed_purge(mocker, published_news):
+    """A purge that raises is enqueued for retry with the page's URL"""
+    mocker.patch(
+        "website_content.tasks.call_fastly_purge_surrogate_keys",
+        side_effect=RequestException("fastly down"),
+    )
+    mock_retry = mocker.patch("website_content.tasks.fastly_purge_relative_url.delay")
+    mocker.patch("website_content.tasks.fastly_purge_website_content_list.delay")
+
+    purge_content_on_save(published_news)
+
+    mock_retry.assert_called_once_with("/news/test-article")
 
 
 @pytest.mark.django_db
@@ -234,8 +279,9 @@ def test_purge_content_on_unpublish(mocker, slug, expect_purge):
     """
     from website_content.api import purge_content_on_unpublish
 
-    mock_purge_api = mocker.patch("website_content.tasks.call_fastly_purge_api")
-    mock_purge_api.return_value = {"status": "ok", "id": "abc"}
+    mock_purge_api = mocker.patch(
+        "website_content.tasks.call_fastly_purge_surrogate_keys"
+    )
     mocker.patch("website_content.tasks.fastly_purge_website_content_list.delay")
 
     content = WebsiteContentFactory.build(
@@ -261,10 +307,7 @@ def test_purge_content_on_unpublish_listing_url(mocker, content_type, expected_l
     """The listing purge has to name the unpublished item's own listing page"""
     from website_content.api import purge_content_on_unpublish
 
-    mocker.patch("website_content.tasks.call_fastly_purge_api").return_value = {
-        "status": "ok",
-        "id": "abc",
-    }
+    mocker.patch("website_content.tasks.call_fastly_purge_surrogate_keys")
     mock_purge_list = mocker.patch(
         "website_content.tasks.fastly_purge_website_content_list.delay"
     )

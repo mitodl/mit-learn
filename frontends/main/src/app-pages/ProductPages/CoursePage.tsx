@@ -47,14 +47,11 @@ const CourseHeaderEnrollButton: React.FC<{
   course: CourseWithCourseRunsSerializerV2
   selectedRun: CourseRunV2 | undefined
 }> = ({ course, selectedRun }) => {
-  const [anchor, setAnchor] = React.useState<null | HTMLButtonElement>(null)
-
   const { state, isStatusLoading, isPending, error } = useCourseEnrollment(
     course,
     selectedRun,
     {
       tracking: { placement: "header" },
-      onRequireSignup: setAnchor,
     },
   )
   const { price, breakdown } = useCertificatePricing(
@@ -70,8 +67,6 @@ const CourseHeaderEnrollButton: React.FC<{
       isStatusLoading={isStatusLoading}
       isPending={isPending}
       error={error}
-      anchor={anchor}
-      onAnchorClose={() => setAnchor(null)}
     />
   )
 }

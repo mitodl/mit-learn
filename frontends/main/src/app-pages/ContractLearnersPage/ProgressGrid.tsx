@@ -1,12 +1,11 @@
 "use client"
 
 import React, { useEffect, useMemo, useRef, useState } from "react"
-import { useQuery, type UseQueryResult } from "@tanstack/react-query"
+import type { UseQueryResult } from "@tanstack/react-query"
 import {
   RiAwardLine,
   RiCheckLine,
   RiErrorWarningLine,
-  RiLockLine,
   RiProgress4Line,
   RiQuestionLine,
   RiSubtractLine,
@@ -30,18 +29,17 @@ import {
   type LearnerWithEnrollments,
 } from "api/analytics-hooks/organizations"
 import {
+  buildCsvRow,
   EmptyTableMessage,
   TableCard,
   TableFooter,
   TableFootnote,
 } from "@/components/B2BTable/B2BTable"
-import { Avatar, ConsentNotice } from "./LearnerRow"
 import { LearnerSummaryPanel } from "./LearnerSummaryPanel"
 import {
   contentProgressPercent,
   DISPLAY_STATUS_LABEL,
   getDisplayStatus,
-  isWithheldStatus,
   type DisplayStatus,
 } from "./statusDisplay"
 import { ContentProgress } from "./ContentProgress"
@@ -64,6 +62,12 @@ const gridLearnersQuery = (
     offset: (page - 1) * PAGE_SIZE,
   })
 
+/** Every run, or only the selected ones. */
+const gridColumns = (courseRuns: CourseRun[], courserunIds: string[]) =>
+  courserunIds.length
+    ? courseRuns.filter((run) => courserunIds.includes(run.courserun_id))
+    : courseRuns
+
 const LEARNER_COLUMN_WIDTH = 280
 const MODULE_COLUMN_WIDTH = 160
 /** Columns grow into spare width up to this, so a contract with few modules doesn't leave the card mostly empty. */
@@ -81,15 +85,9 @@ const STATUS_SYMBOL: Record<
   certificate: { Icon: RiAwardLine, tone: "green" },
   "in-progress": { Icon: RiProgress4Line, tone: "blue" },
   "not-started": { Icon: RiSubtractLine, tone: "gray" },
-  declined: { Icon: RiLockLine, tone: "gray" },
-  "not-recorded": { Icon: RiLockLine, tone: "gray" },
   unknown: { Icon: RiQuestionLine, tone: "gray" },
 }
 
-/**
- * The API flags an enrollment that was never started or whose last activity
- * was 30 or more days ago; the status says which of the two it was.
- */
 const attentionReason = (status: DisplayStatus) =>
   status === "not-started" ? "Not started" : "Inactive 30+ days"
 
@@ -98,10 +96,21 @@ const LEGEND_STATUSES: DisplayStatus[] = [
   "certificate",
   "in-progress",
   "not-started",
-  "declined",
-  "not-recorded",
   "unknown",
 ]
+
+const Avatar = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: "32px",
+  height: "32px",
+  flexShrink: 0,
+  borderRadius: "4px",
+  backgroundColor: theme.custom.colors.lightGray2,
+  color: theme.custom.colors.darkGray2,
+  ...theme.typography.subtitle3,
+}))
 
 const ScrollRegion = styled.div({
   position: "relative",
@@ -197,31 +206,74 @@ const LastActive = styled(Typography)(({ theme }) => ({
 })) as typeof Typography
 
 /**
- * The learner's most recent activity across their shared modules, limited to
- * `courserunIds` when set: the API returns a matched learner's other
- * enrollments too, and their dates would read against columns the filter hid.
- * Null when every module is withheld, since nothing about their activity is
- * shared. Dates are `YYYY-MM-DD`, so they compare as strings.
+ * The learner's most recent activity, limited to `courserunIds` when set: the
+ * API returns a matched learner's other enrollments too, and their dates would
+ * read against columns the filter hid. Null when never active. Dates are
+ * `YYYY-MM-DD`, so they compare as strings.
  */
+const latestActivity = (
+  learner: LearnerWithEnrollments,
+  courserunIds: string[],
+) =>
+  learner.enrollments
+    .filter(
+      (enrollment) =>
+        !courserunIds.length ||
+        courserunIds.includes(enrollment.courserun_readable_id),
+    )
+    .reduce<string | null>(
+      (max, enrollment) =>
+        enrollment.last_active_on && (!max || enrollment.last_active_on > max)
+          ? enrollment.last_active_on
+          : max,
+      null,
+    )
+
 const lastActiveText = (
   learner: LearnerWithEnrollments,
   courserunIds: string[],
 ) => {
-  const shared = learner.enrollments.filter(
-    (enrollment) =>
-      (!courserunIds.length ||
-        courserunIds.includes(enrollment.courserun_readable_id)) &&
-      !isWithheldStatus(getDisplayStatus(enrollment)),
-  )
-  if (shared.length === 0) return null
-  const latest = shared.reduce<string | null>(
-    (max, enrollment) =>
-      enrollment.last_active_on && (!max || enrollment.last_active_on > max)
-        ? enrollment.last_active_on
-        : max,
-    null,
-  )
+  const latest = latestActivity(learner, courserunIds)
   return latest ? `Last active ${formatDate(latest)}` : "No activity"
+}
+
+const buildGridCsv = (
+  learners: LearnerWithEnrollments[],
+  columns: CourseRun[],
+) => {
+  const courserunIds = columns.map((run) => run.courserun_id)
+  const header = buildCsvRow([
+    "Name",
+    "Email",
+    "Last activity",
+    ...columns.flatMap((run) => [
+      `${run.courserun_title} status`,
+      `${run.courserun_title} progress`,
+    ]),
+  ])
+  const body = learners.map((learner) =>
+    buildCsvRow([
+      learner.full_name,
+      learner.email,
+      latestActivity(learner, courserunIds),
+      ...columns.flatMap((run) => {
+        const enrollment = learner.enrollments.find(
+          (item) => item.courserun_readable_id === run.courserun_id,
+        )
+        if (!enrollment) return ["N/A", ""]
+        const status = getDisplayStatus(enrollment)
+        const label = DISPLAY_STATUS_LABEL[status]
+        const progress = contentProgressPercent(enrollment, status)
+        return [
+          enrollment.needs_attention && status !== "not-started"
+            ? `${label} (inactive 30+ days)`
+            : label,
+          progress === null ? "" : `${progress}%`,
+        ]
+      }),
+    ]),
+  )
+  return [header, ...body].join("\n")
 }
 
 const LearnerText = styled.span({
@@ -276,7 +328,6 @@ const Legend = styled.ul(({ theme }) => ({
   "& li": { display: "inline-flex", alignItems: "center", gap: "6px" },
 }))
 
-/** The icon's height, so N/A, the not-started dash and every icon share a centerline across a row. */
 const StatusLine = styled.div({
   display: "flex",
   alignItems: "center",
@@ -326,8 +377,6 @@ const Muted = styled.span(({ theme }) => ({
 }))
 
 type ProgressGridProps = {
-  orgUuid: string
-  contractId: number
   /** `courserun_readable_id` narrows columns as well as rows. */
   filters: GridFilters
   /** The page's `gridLearnersQuery`, which it also reads for its "N of M" line. */
@@ -344,7 +393,7 @@ type ProgressGridProps = {
 
 const GridLearnerCell: React.FC<{
   learner: LearnerWithEnrollments
-  lastActive: string | null
+  lastActive: string
   scrolled: boolean
   onOpenSummary: () => void
 }> = ({ learner, lastActive, scrolled, onOpenSummary }) => (
@@ -374,7 +423,7 @@ const GridLearnerCell: React.FC<{
         )}
         {!learner.full_name && !learner.email ? "View learner" : null}
       </LearnerButton>
-      {lastActive && <LastActive component="div">{lastActive}</LastActive>}
+      <LastActive component="div">{lastActive}</LastActive>
     </LearnerText>
   </LearnerCell>
 )
@@ -420,8 +469,6 @@ const ModuleHeader: React.FC<{ title: string }> = ({ title }) => {
 }
 
 const ProgressGrid: React.FC<ProgressGridProps> = ({
-  orgUuid,
-  contractId,
   filters,
   query,
   courseRuns,
@@ -432,42 +479,10 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
   onPageChange,
   emptyMessage,
 }) => {
-  const {
-    completion_status: completionStatus,
-    needs_attention: needsAttentionOnly,
-  } = filters
   const courserunIds = useMemo(
     () => filters.courserun_readable_id ?? [],
     [filters.courserun_readable_id],
   )
-
-  /**
-   * Consent is per learner per contract, so learners matching `unknown` are
-   * exactly the withheld learners among those matched. Known statuses and
-   * `needs_attention` match only shared rows, so they leave none to count.
-   */
-  const countsWithheld =
-    !needsAttentionOnly &&
-    (!completionStatus || completionStatus.includes("unknown"))
-  const withheldOnly =
-    completionStatus?.length === 1 && completionStatus[0] === "unknown"
-  const withheldQuery = useQuery({
-    ...analyticsContractQueries.learners(orgUuid, contractId, {
-      ...filters,
-      completion_status: ["unknown"],
-      limit: 1,
-      offset: 0,
-    }),
-    enabled: query.isSuccess && countsWithheld && !withheldOnly,
-  })
-  const learnerCount = query.data?.total_count ?? 0
-  /** Zero while the learner page is stale, so a fresh withheld count never meets an old learner count. */
-  const withheldCount =
-    !countsWithheld || !query.data || query.isPlaceholderData
-      ? 0
-      : withheldOnly
-        ? learnerCount
-        : (withheldQuery.data?.total_count ?? 0)
 
   const learners = useMemo(
     () =>
@@ -589,24 +604,12 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
     )
   }
 
-  const columns = courserunIds.length
-    ? (courseRuns ?? []).filter((run) =>
-        courserunIds.includes(run.courserun_id),
-      )
-    : (courseRuns ?? [])
+  const columns = gridColumns(courseRuns ?? [], courserunIds)
   const width = LEARNER_COLUMN_WIDTH + columns.length * MODULE_COLUMN_WIDTH
 
   return (
     <>
       {liveRegion}
-
-      {withheldCount > 0 ? (
-        <ConsentNotice component="p">
-          {withheldCount} of these {learnerCount} learners{" "}
-          {withheldCount === 1 ? "has" : "have"} not agreed to share their
-          progress. Their modules read “Declined” or “Consent not recorded”.
-        </ConsentNotice>
-      ) : null}
 
       <TableCard>
         <Legend aria-label="Legend">
@@ -779,4 +782,10 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
   )
 }
 
-export { gridLearnersQuery, ProgressGrid }
+export {
+  buildGridCsv,
+  gridColumns,
+  gridLearnersQuery,
+  PAGE_SIZE as GRID_PAGE_SIZE,
+  ProgressGrid,
+}
