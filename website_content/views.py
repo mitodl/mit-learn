@@ -87,7 +87,8 @@ class WebsiteContentViewSet(viewsets.ModelViewSet):
             return queryset
         return super().filter_queryset(queryset)
 
-    # Not cached: the response depends on the caller (editors also get drafts).
+    # Not cached: with `?status=draft` or `?status=both` the response depends
+    # on the caller (only editors get drafts).
     # Django's cache_page can't vary this by user -- it stores the entry before
     # SessionMiddleware adds `Vary: Cookie`, so every caller would share it.
     # See https://github.com/mitodl/hq/issues/13846

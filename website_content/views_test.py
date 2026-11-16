@@ -187,15 +187,12 @@ def test_listing_is_what_the_caller_may_see(staff_client):
     draft = WebsiteContent.objects.create(
         title="Draft Article", content={}, is_published=False, content_type="news"
     )
-    url = reverse("website_content:v1:website_content-list")
-
-    url = f"{url}?status=both"
+    url = reverse("website_content:v1:website_content-list") + "?status=both"
 
     editor_ids = {item["id"] for item in staff_client.get(url).json()["results"]}
     assert editor_ids == {published.id, draft.id}
 
-    anonymous_ids = {item["id"] for item in APIClient().get(url).json()["results"]}
-    assert anonymous_ids == {published.id}
+    assert APIClient().get(url).status_code == 403
 
 
 @pytest.mark.parametrize(
@@ -208,11 +205,6 @@ def test_listing_is_what_the_caller_may_see(staff_client):
         (False, "?status=published", {"published"}),
         (True, "?status=draft", {"draft"}),
         (True, "?status=both", {"published", "draft"}),
-        # Asking is not enough: drafts need permission to edit.
-        (False, "?status=draft", set()),
-        (False, "?status=both", {"published"}),
-        # The old filter is gone; it no longer brings drafts back.
-        (True, "?draft=true", {"published"}),
     ],
 )
 def test_status_filter(staff_client, is_editor, query, expected):
@@ -230,6 +222,14 @@ def test_status_filter(staff_client, is_editor, query, expected):
     assert {item["id"] for item in resp.json()["results"]} == {
         ids[key] for key in expected
     }
+
+
+@pytest.mark.parametrize("status", ["draft", "both"])
+def test_status_filter_drafts_are_editor_only(status):
+    """Asking for drafts without permission to edit is a 403, not an empty list"""
+    url = reverse("website_content:v1:website_content-list") + f"?status={status}"
+
+    assert APIClient().get(url).status_code == 403
 
 
 def test_status_filter_rejects_unknown_values(client):
