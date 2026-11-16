@@ -66,6 +66,13 @@ describe("CyberSaleBanner", () => {
     expect(banner).not.toHaveTextContent("Use code")
   })
 
+  test("Without a cta_url it shows the banner but no button", () => {
+    setPayload({ ...SALE, cta_url: undefined })
+    renderWithTheme(<CyberSaleBanner />)
+    expect(screen.getByRole("complementary")).toHaveTextContent("LEVELUP")
+    expect(screen.queryByRole("link")).toBeNull()
+  })
+
   test.each([
     { case: "a cta_url that isn't a URL", payload: { ...SALE, cta_url: "/x" } },
     { case: "dismiss_hours of 0", payload: { ...SALE, dismiss_hours: 0 } },

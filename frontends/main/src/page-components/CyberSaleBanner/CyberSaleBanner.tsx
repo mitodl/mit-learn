@@ -18,7 +18,7 @@ const payloadSchema = yup.object({
       is: "sale",
       then: (schema) => schema.required(),
     }),
-  cta_url: yup.string().url().required(),
+  cta_url: yup.string().url(),
   dismiss_hours: yup.number().moreThan(0),
 })
 
@@ -167,12 +167,15 @@ const Code = styled.span(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
 }))
 
-const Actions = styled.div({
+const Actions = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: "16px",
   flexShrink: 0,
-})
+  [theme.breakpoints.down("sm")]: {
+    display: "contents",
+  },
+}))
 
 const CloseButton = styled(ActionButton)(({ theme }) => ({
   [theme.breakpoints.down("sm")]: {
@@ -223,22 +226,24 @@ const CyberSaleBanner: React.FC = () => {
           </Details>
         </Text>
         <Actions>
-          <ButtonLink
-            href={payload.cta_url}
-            variant="tertiary"
-            size="medium"
-            responsive
-            endIcon={<RiArrowRightLine />}
-            onClick={() =>
-              analytics.ctaClicked({
-                label: "View eligible courses",
-                banner: "cyber-sale",
-                variant: payload.variant,
-              })
-            }
-          >
-            View eligible courses
-          </ButtonLink>
+          {payload.cta_url ? (
+            <ButtonLink
+              href={payload.cta_url}
+              variant="tertiary"
+              size="medium"
+              responsive
+              endIcon={<RiArrowRightLine />}
+              onClick={() =>
+                analytics.ctaClicked({
+                  label: "View eligible courses",
+                  banner: "cyber-sale",
+                  variant: payload.variant,
+                })
+              }
+            >
+              View eligible courses
+            </ButtonLink>
+          ) : null}
           <CloseButton
             variant="text"
             size="small"
