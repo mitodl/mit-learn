@@ -1172,8 +1172,6 @@ UNIQUE_COLOR_THRESHOLD = 200
 PAGE_CACHE_SIZE = 4
 OCR_FAILED_PLACEHOLDER = "<!-- OCR failed for this region -->"
 
-# Score > 5 triggers full page OCR.
-
 # Private Use Area glyphs that Symbol/Wingdings fonts commonly use for list
 # bullets (e.g. U+F0B7 in Word PDFs). They're harmless, so they don't count.
 PRIVATE_USE_BULLETS = "\uf06c\uf06e\uf071\uf076\uf0a7\uf0a8\uf0b7\uf0d8\uf0e0\uf0fc"
