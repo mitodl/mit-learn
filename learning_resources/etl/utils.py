@@ -27,6 +27,8 @@ from defusedxml import ElementTree
 from django.conf import settings
 from django.core.files import File
 from django.core.files.storage import default_storage
+from django.db.models import Q, TextField
+from django.db.models.functions import Cast
 from django.utils.dateparse import parse_duration
 from django.utils.text import slugify
 from PIL import Image
@@ -65,9 +67,11 @@ from learning_resources.models import (
     ContentFile,
     Course,
     LearningResource,
+    LearningResourceImage,
     LearningResourceRun,
     LearningResourceTopic,
     LearningResourceTopicMapping,
+    PracticeProblem,
     TutorProblemFile,
 )
 from main.utils import now_in_utc
@@ -1492,11 +1496,24 @@ def _store_figures(markdown: str, figures: list, folder: str) -> str:
 
 
 def _figure_version_linked(folder: str) -> bool:
-    """Whether a saved ContentFile or TutorProblemFile still links to a folder."""
+    """
+    Whether a saved row still links to a folder: a ContentFile or
+    TutorProblemFile, or a promoted PracticeProblem (its text, its parts, or
+    its resource's image). A promotion can fail after its file is converted
+    again, leaving published problems on an older version's figures.
+    """
     link = f"{folder}/"
     return (
         ContentFile.objects.filter(content__contains=link).exists()
         or TutorProblemFile.objects.filter(content__contains=link).exists()
+        or PracticeProblem.objects.annotate(parts_text=Cast("parts", TextField()))
+        .filter(
+            Q(statement__contains=link)
+            | Q(solution__contains=link)
+            | Q(parts_text__contains=link)
+        )
+        .exists()
+        or LearningResourceImage.objects.filter(url__contains=link).exists()
     )
 
 

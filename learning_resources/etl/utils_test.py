@@ -41,9 +41,11 @@ from learning_resources.etl.utils import (
 from learning_resources.factories import (
     ContentFileFactory,
     LearningResourceFactory,
+    LearningResourceImageFactory,
     LearningResourceOfferorFactory,
     LearningResourceRunFactory,
     LearningResourceTopicFactory,
+    PracticeProblemFactory,
     TutorProblemFileFactory,
 )
 
@@ -1239,7 +1241,16 @@ def test_delete_unlinked_figure_versions(figure_storage):
     """Only other versions no saved row links to are deleted"""
     folders = {
         name: figure_storage / f"figures/file/{name}"
-        for name in ("new", "linked", "tutor", "unlinked")
+        for name in (
+            "new",
+            "linked",
+            "tutor",
+            "statement",
+            "solution",
+            "parts",
+            "image",
+            "unlinked",
+        )
     }
     for folder in folders.values():
         folder.mkdir(parents=True)
@@ -1251,10 +1262,24 @@ def test_delete_unlinked_figure_versions(figure_storage):
         run=LearningResourceRunFactory.create(),
         content="![a](https://cdn.test/figures/file/tutor/p1_1.png)",
     )
+    # promoted problems still on an older version keep its figures
+    PracticeProblemFactory.create(
+        statement="![a](https://cdn.test/figures/file/statement/p1_1.png)"
+    )
+    PracticeProblemFactory.create(
+        solution="![a](https://cdn.test/figures/file/solution/p1_1.png)"
+    )
+    PracticeProblemFactory.create(
+        parts=[
+            {"label": "a", "body": "![a](https://cdn.test/figures/file/parts/p1_1.png)"}
+        ]
+    )
+    LearningResourceImageFactory.create(
+        url="https://cdn.test/figures/file/image/p1_1.png"
+    )
     utils._delete_unlinked_figure_versions("figures/file/new")  # noqa: SLF001
-    assert (folders["new"] / "p1_1.png").exists()
-    assert (folders["linked"] / "p1_1.png").exists()
-    assert (folders["tutor"] / "p1_1.png").exists()
+    for name in ("new", "linked", "tutor", "statement", "solution", "parts", "image"):
+        assert (folders[name] / "p1_1.png").exists(), name
     assert not (folders["unlinked"] / "p1_1.png").exists()
 
 

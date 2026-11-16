@@ -1,5 +1,7 @@
 import React from "react"
 import ReactMarkdown from "react-markdown"
+import type { Options as MarkdownOptions } from "react-markdown"
+import remarkGfm from "remark-gfm"
 import remarkMath from "remark-math"
 import rehypeKatex from "rehype-katex"
 import styled from "@emotion/styled"
@@ -31,6 +33,15 @@ const Markdown = styled.div(({ theme }) => ({
   },
 }))
 
+/**
+ * GFM for the pipe tables the OCR assembler emits. singleTilde is off so a
+ * "~" used for "approximately" in problem text is not read as strikethrough.
+ */
+const REMARK_PLUGINS: MarkdownOptions["remarkPlugins"] = [
+  [remarkGfm, { singleTilde: false }],
+  remarkMath,
+]
+
 const DISPLAY_MATH = /\$\$([\s\S]+?)\$\$/g
 
 /**
@@ -48,7 +59,8 @@ const fenceDisplayMath = (markdown: string) =>
 
 /**
  * Markdown read from a PDF, with LaTeX math ($...$ and $$...$$) rendered by
- * KaTeX. Raw HTML in the markdown is not rendered.
+ * KaTeX and GFM pipe tables (which the OCR assembler emits) rendered as
+ * tables. Raw HTML in the markdown is not rendered.
  */
 const ProblemMarkdown: React.FC<{ children: string; className?: string }> = ({
   children,
@@ -57,7 +69,7 @@ const ProblemMarkdown: React.FC<{ children: string; className?: string }> = ({
   <Markdown className={className}>
     <ReactMarkdown
       skipHtml
-      remarkPlugins={[remarkMath]}
+      remarkPlugins={REMARK_PLUGINS}
       rehypePlugins={[rehypeKatex]}
     >
       {fenceDisplayMath(children)}

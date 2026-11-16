@@ -74,6 +74,7 @@
     "react-markdown": "^10.0.0",
     "react-slick": "^0.31.0",
     "rehype-katex": "^7.0.1",
+    "remark-gfm": "^4.0.1",
     "remark-math": "^6.0.0",
     "sharp": "0.35.5",
     "slick-carousel": "^1.8.1",
