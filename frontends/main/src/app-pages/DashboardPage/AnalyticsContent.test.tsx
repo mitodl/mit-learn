@@ -17,6 +17,7 @@ import type {
 import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { allowConsoleErrors } from "ol-test-utilities"
 import {
+  ALL_MODULES,
   contractAdminView,
   contractAnalyticsView,
   contractLearnersView,
@@ -1164,6 +1165,11 @@ describe("AnalyticsContent, contract-scoped", () => {
         "href",
         contractLearnersView(orgSlug, contract.slug, { status }),
       )
+      expect(
+        new URL(link.getAttribute("href")!, "http://test").searchParams.getAll(
+          "modules",
+        ),
+      ).toEqual(status ? [ALL_MODULES] : [])
     }
 
     const list = screen.getByRole("list", {
