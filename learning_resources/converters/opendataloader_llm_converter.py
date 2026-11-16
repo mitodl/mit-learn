@@ -71,8 +71,6 @@ from learning_resources.converters.utils import (
     PageMath,
     PDFPageRenderer,
     Usage,
-    _optimize_image,
-    _unwrap_header_footer,
     display_box,
     document_math,
     find_figure_boxes,
@@ -84,6 +82,7 @@ from learning_resources.converters.utils import (
     is_box,
     is_scanned_page,
     iter_text,
+    optimize_image,
     page_math_score,
     page_prompt,
     parse_content_block,
@@ -96,6 +95,7 @@ from learning_resources.converters.utils import (
     strip_running_lines,
     text_lost_reason,
     turn_on_litellm_debug,
+    unwrap_header_footer,
 )
 
 log = logging.getLogger(__name__)
@@ -197,7 +197,7 @@ class OpenDataLoaderLLMConverter:
         """Parse the PDF, find figures and decide each page's strategy."""
         # Lists are flattened first so that their nested blocks are grouped
         # under their own pages and nested images get OCR'd
-        kids = _unwrap_header_footer(self._convert_pdf_to_json().get("kids", []))
+        kids = unwrap_header_footer(self._convert_pdf_to_json().get("kids", []))
         raw_blocks = flatten_lists([parse_content_block(k) for k in kids])
         self._new_block_ids = itertools.count(
             max((b.block_id for b in raw_blocks), default=0) + 1
@@ -248,7 +248,7 @@ class OpenDataLoaderLLMConverter:
                 format="json",
                 use_struct_tree=True,
                 keep_line_breaks=True,
-                # headers and footers are kept for _unwrap_header_footer to sort
+                # headers and footers are kept for unwrap_header_footer to sort
                 include_header_footer=True,
             )
             return json.loads(
@@ -367,7 +367,7 @@ class OpenDataLoaderLLMConverter:
         """Return the block standing for a page OCR'd in full, and its image."""
         block_id = next(self._new_block_ids)
         page_image = self._page_renderer.get_page_image(page_num)
-        optimized = _optimize_image(page_image)
+        optimized = optimize_image(page_image)
         page_image.close()
         if self.debug_mode:
             self._save_debug_image(optimized, prefix=f"FULLPAGE_{page_num}_")
@@ -394,7 +394,7 @@ class OpenDataLoaderLLMConverter:
             return None
         is_figure = block.figure is not None
         # figure regions stay in colour so a photo is described as it is
-        optimized = crop.convert("RGB") if is_figure else _optimize_image(crop)
+        optimized = crop.convert("RGB") if is_figure else optimize_image(crop)
         if self.debug_mode:
             self._save_debug_image(optimized, prefix=f"IMG_{block.block_id}_")
         image = ImageForOCR.from_pil_image(

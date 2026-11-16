@@ -1493,7 +1493,7 @@ def _is_valid_image_dimensions(width: int, height: int) -> bool:
     return True
 
 
-def _optimize_image(pil_image: Image.Image) -> Image.Image:
+def optimize_image(pil_image: Image.Image) -> Image.Image:
     if pil_image.mode != "RGB":
         pil_image = pil_image.convert("RGB")
     np_image = np.array(pil_image)
@@ -1519,7 +1519,7 @@ def _header_footer_text(block: dict) -> str:
     return " ".join(t.strip() for t in texts if t and t.strip())
 
 
-def _unwrap_header_footer(kids: list[dict]) -> list[dict]:
+def unwrap_header_footer(kids: list[dict]) -> list[dict]:
     """
     Keep parser header/footer blocks that are content (a problem label, a
     line on one page only, a credit); drop page numbers and running lines.
