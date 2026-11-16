@@ -450,8 +450,6 @@ const ArticleListingPage: React.FC = () => {
   const { data: articles, isLoading } = useWebsiteContentList({
     limit: PAGE_SIZE,
     offset: (page - 1) * PAGE_SIZE,
-    // Published only, the API's default, for editors too: their drafts are
-    // listed at /articles/draft.
     content_type: "article",
   })
 

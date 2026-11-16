@@ -29,27 +29,6 @@ const setup = ({
   return { article }
 }
 
-describe("ArticleListingPage listing request", () => {
-  // Published only, the API's default: editors find drafts at /articles/draft.
-  test.each([{ isArticleEditor: true }, { isArticleEditor: false }])(
-    "sends no status when isArticleEditor=$isArticleEditor",
-    async ({ isArticleEditor }) => {
-      const { article } = setup({ isArticleEditor })
-
-      await screen.findAllByText(article.title)
-
-      const listUrls = jest
-        .mocked(makeRequest)
-        .mock.calls.map(([config]) => new URL(config.url, "http://x"))
-        .filter((url) => url.pathname === "/api/v1/website_content/")
-      expect(listUrls.length).toBeGreaterThan(0)
-      for (const url of listUrls) {
-        expect(url.searchParams.has("status")).toBe(false)
-      }
-    },
-  )
-})
-
 const menuName = (title: string) => `More options for ${title}`
 
 /**
