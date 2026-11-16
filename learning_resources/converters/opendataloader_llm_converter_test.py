@@ -6,6 +6,14 @@ import pymupdf
 import pytest
 from PIL import Image
 
+from learning_resources.converters.figures import (
+    GRAPHIC,
+    REGION,
+    Figure,
+    FigureOutput,
+    display_box,
+    parse_figure_mark,
+)
 from learning_resources.converters.opendataloader_llm_converter import (
     OpenDataLoaderLLMConverter,
 )
@@ -16,26 +24,20 @@ from learning_resources.converters.structure import (
     structure_elements,
 )
 from learning_resources.converters.utils import (
-    GRAPHIC,
     OCR_FAILED_PLACEHOLDER,
     PAGE_CACHE_SIZE,
-    REGION,
     BlockType,
     ContentBlock,
-    Figure,
-    FigureOutput,
     ImageForOCR,
     MarkdownAssembler,
     OCRProcessor,
     PDFPageRenderer,
-    display_box,
     document_math,
     flatten_lists,
     optimize_image,
     page_math,
     page_math_score,
     parse_content_block,
-    parse_figure_mark,
     strip_running_lines,
     unwrap_header_footer,
 )

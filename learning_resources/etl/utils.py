@@ -1435,10 +1435,10 @@ def _pdf_to_markdown(pdf_path, figure_folder: str | None = None):
     parts and solutions. With a figure_folder, its figures are saved there in the
     default storage and linked by url; otherwise they are placeholder comments.
     """
+    from learning_resources.converters.figures import FigureOutput
     from learning_resources.converters.opendataloader_llm_converter import (
         OpenDataLoaderLLMConverter,
     )
-    from learning_resources.converters.utils import FigureOutput
 
     if not figure_folder:
         return OpenDataLoaderLLMConverter(pdf_path).convert_to_structured_markdown()

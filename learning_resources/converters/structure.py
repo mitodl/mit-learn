@@ -12,11 +12,13 @@ from collections import Counter, defaultdict
 import litellm
 from django.conf import settings
 
-from learning_resources.converters.utils import (
+from learning_resources.converters.figures import (
     FIGURE_IMAGE,
     FIGURE_PLACEHOLDER,
-    Usage,
     is_box,
+)
+from learning_resources.converters.utils import (
+    Usage,
 )
 
 log = logging.getLogger(__name__)
