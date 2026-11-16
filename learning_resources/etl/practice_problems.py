@@ -117,7 +117,7 @@ def clean_display_markdown(markdown: str) -> str:
     """
     # the converter modules import litellm and OCR libraries, which must not
     # load when this module does (at boot, via the loaders)
-    from learning_resources.converters.utils import (
+    from learning_resources.converters.figures import (
         FIGURE_IMAGE,
         FIGURE_PLACEHOLDER,
         REGION_BLOCK,
