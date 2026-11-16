@@ -301,10 +301,6 @@ def structure_elements(markdown: str) -> list[dict]:
     return splitter.elements
 
 
-def _normal_words(text):
-    return " ".join(re.findall(r"[^\W_]+", text.casefold()))
-
-
 def _ocw_covers(elements):
     """Only unmistakable OCW citation covers are excluded without a model."""
     by_page = defaultdict(list)
