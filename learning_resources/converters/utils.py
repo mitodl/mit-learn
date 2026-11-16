@@ -1435,6 +1435,8 @@ class ContentBlock:
     list_marker: str | None = None
     # For full-page OCR: the page's parsed blocks, used if the OCR request fails
     fallback_blocks: list["ContentBlock"] = field(default_factory=list)
+    # For a figure candidate's IMAGE block: the figure it stands for
+    figure: Figure | None = None
 
 
 @dataclass
