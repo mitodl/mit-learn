@@ -391,6 +391,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
 
   const controlsRef = useRef<HTMLDivElement>(null)
   const handleClearAll = () => {
+    setStatusAnnouncement("")
     clearAll()
     controlsRef.current?.querySelector("input")?.focus()
   }
@@ -460,12 +461,20 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     setStatusFilter,
   ])
 
-  /** Emptied on every other change, so a later reset is announced again. */
+  /**
+   * Every module is stored as `ALL_MODULES`, so the URL's 50-module cap can't
+   * drop one. The announcement is emptied on every other change, so a later
+   * reset is announced again.
+   */
   const handleModulesChange = (values: string[]) => {
     setStatusAnnouncement(
       !values.length && activeStatus !== ALL ? "Status filter cleared." : "",
     )
-    setGridModules(values)
+    setGridModules(
+      values.length > 0 && values.length === courseRunOptions.length
+        ? [ALL_MODULES]
+        : values,
+    )
   }
 
   const courseRunsSettled = courseRunsQuery.isSuccess || courseRunsQuery.isError

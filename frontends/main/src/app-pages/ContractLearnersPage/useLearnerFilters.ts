@@ -75,6 +75,12 @@ const useLearnerFilters = () => {
     return () => clearTimeout(id)
   }, [searchQuery, debouncedSearch, update])
 
+  const setStatusFilter = useCallback(
+    (value: string) =>
+      update({ status: value === ALL ? null : value, page: null }),
+    [update],
+  )
+
   return {
     page,
     setPage: (next: number) => update({ page: next > 1 ? String(next) : null }),
@@ -87,12 +93,12 @@ const useLearnerFilters = () => {
     },
     debouncedSearch,
     statusFilter,
-    setStatusFilter: (value: string) =>
-      update({ status: value === ALL ? null : value, page: null }),
+    setStatusFilter,
     needsAttentionOnly,
     setNeedsAttentionOnly: (value: boolean) =>
       update({ needs_attention: value ? "true" : null, page: null }),
     gridModules,
+    /** shortcut: past the API's cap, a partial selection silently loses modules; limit the selection in the UI if a contract ever has more than 50. */
     setGridModules: (values: string[]) =>
       update({ modules: values.slice(0, MAX_GRID_MODULES), page: null }),
     clearAll: () => {

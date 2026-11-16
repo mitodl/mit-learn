@@ -1295,6 +1295,44 @@ describe("ContractLearnersPage", () => {
       ).toBeInTheDocument()
     })
 
+    test("returns to every module when the last one is selected again, past the API's 50-module cap", async () => {
+      const runs = Array.from({ length: 51 }, (_, index) =>
+        analyticsFactories.courseRun({
+          courserun_id: `course-v1:MITx+M${index}+2026`,
+          courserun_title: `Module ${String(index).padStart(2, "0")}`,
+        }),
+      )
+      const ids = runs.map(({ courserun_id: id }) => id)
+      const { contractId, location } = renderGrid(
+        `/?modules=${ALL_MODULES}`,
+        runs,
+      )
+      mockGridPage(contractId, 0, [learnerNamed("Every Module Learner")])
+      mockGridPage(
+        contractId,
+        0,
+        [learnerNamed("Fifty Module Learner")],
+        {},
+        { courserun_readable_id: ids.slice(1) },
+      )
+
+      await screen.findByText("Every Module Learner")
+      await toggleModule("Module 00")
+      await screen.findByText("Fifty Module Learner")
+      expect(
+        screen.getByRole("combobox", { name: /modules\s*, 50 selected/i }),
+      ).toBeInTheDocument()
+
+      await toggleModule("Module 00")
+      await screen.findByText("Every Module Learner")
+      expect(
+        screen.getByRole("combobox", { name: /modules\s*, 51 selected/i }),
+      ).toBeInTheDocument()
+      expect(location.current.searchParams.getAll("modules")).toEqual([
+        ALL_MODULES,
+      ])
+    })
+
     test("shows and requests the same 50 modules when a link selects more than 50 but not all", async () => {
       const runs = Array.from({ length: 52 }, (_, index) =>
         analyticsFactories.courseRun({
