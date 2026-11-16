@@ -3825,16 +3825,27 @@ def test_generate_claims_for_resource(mocker, overwrite):
         "learning_resources.profiles.unit_claims.generate_unit_claims",
         side_effect=unit_extractions,
     )
+    run_extraction = factories.ClaimExtractionFactory.create(unit=None)
     generate_run = mocker.patch(
         "learning_resources.profiles.run_claims.generate_run_claims",
-        return_value=factories.ClaimExtractionFactory.create(unit=None),
+        return_value=run_extraction,
+    )
+    publish_profile = mocker.patch(
+        "learning_resources.profiles.course_profile.publish_course_profile",
+        return_value=True,
     )
 
     result = tasks.generate_claims_for_resource(
         run.learning_resource.id, overwrite=overwrite
     )
 
-    assert result == {"context_extracted": 1, "unit_extracted": 3, "run_extracted": 1}
+    assert result == {
+        "context_extracted": 1,
+        "unit_extracted": 3,
+        "run_extracted": 1,
+        "profile_built": 1,
+    }
+    publish_profile.assert_called_once_with(run.learning_resource, run_extraction)
     generate_context.assert_called_once_with(run, overwrite=overwrite)
     units = [first, second, bin_unit]
     assert generate_unit.call_args_list == [
@@ -4104,6 +4115,116 @@ def test_generate_claims_for_resource_no_units_unpublishes(mocker):
     assert tasks.generate_claims_for_resource(resource.id) is None
     extraction.refresh_from_db()
     assert extraction.published is False
+
+
+@pytest.mark.parametrize(
+    ("built", "stat"), [(True, "profile_built"), (False, "profile_unchanged")]
+)
+def test_generate_claims_for_resource_builds_profile(mocker, built, stat):
+    """The best run's profile is built from its published claims"""
+    unit = factories.UnitFactory.create()
+    resource = unit.run.learning_resource
+    run_extraction = factories.ClaimExtractionFactory.create(
+        unit=None, run=unit.run, level=ClaimExtraction.Level.RUN
+    )
+    mocker.patch.object(
+        LearningResource,
+        "best_run",
+        new_callable=mocker.PropertyMock,
+        return_value=unit.run,
+    )
+    mocker.patch(
+        "learning_resources.profiles.unit_claims.generate_unit_claims",
+        return_value=factories.ClaimExtractionFactory.create(unit=unit),
+    )
+    mocker.patch(
+        "learning_resources.profiles.run_claims.generate_run_claims",
+        return_value=run_extraction,
+    )
+    publish_profile = mocker.patch(
+        "learning_resources.profiles.course_profile.publish_course_profile",
+        return_value=built,
+    )
+
+    result = tasks.generate_claims_for_resource(resource.id)
+
+    assert result[stat] == 1
+    publish_profile.assert_called_once_with(resource, run_extraction)
+    run_extraction.refresh_from_db()
+    assert run_extraction.published is True
+
+
+def test_generate_claims_for_resource_profile_failure(mocker):
+    """A profile that fails to build is counted, and the claims still published"""
+    unit = factories.UnitFactory.create()
+    unit_extraction = factories.ClaimExtractionFactory.create(unit=unit)
+    mocker.patch.object(
+        LearningResource,
+        "best_run",
+        new_callable=mocker.PropertyMock,
+        return_value=unit.run,
+    )
+    mocker.patch(
+        "learning_resources.profiles.unit_claims.generate_unit_claims",
+        return_value=unit_extraction,
+    )
+    mocker.patch(
+        "learning_resources.profiles.run_claims.generate_run_claims",
+        return_value=None,
+    )
+    mocker.patch(
+        "learning_resources.profiles.course_profile.publish_course_profile",
+        side_effect=ValueError("bad"),
+    )
+
+    result = tasks.generate_claims_for_resource(unit.run.learning_resource.id)
+
+    assert result == {"unit_extracted": 1, "run_skipped": 1, "profile_failed": 1}
+    unit_extraction.refresh_from_db()
+    assert unit_extraction.published is True
+
+
+@pytest.mark.parametrize("failing", ["unit", "run"])
+def test_generate_claims_for_resource_failure_keeps_profile(mocker, failing):
+    """A sweep in which an extraction fails doesn't touch the profile"""
+    unit = factories.UnitFactory.create()
+    mocker.patch.object(
+        LearningResource,
+        "best_run",
+        new_callable=mocker.PropertyMock,
+        return_value=unit.run,
+    )
+    mocker.patch(
+        "learning_resources.profiles.unit_claims.generate_unit_claims",
+        side_effect=ValueError("bad")
+        if failing == "unit"
+        else [factories.ClaimExtractionFactory.create(unit=unit)],
+    )
+    mocker.patch(
+        "learning_resources.profiles.run_claims.generate_run_claims",
+        side_effect=ValueError("bad"),
+    )
+    publish_profile = mocker.patch(
+        "learning_resources.profiles.course_profile.publish_course_profile"
+    )
+
+    tasks.generate_claims_for_resource(unit.run.learning_resource.id)
+
+    publish_profile.assert_not_called()
+
+
+def test_generate_claims_for_resource_no_units_deletes_profile(mocker):
+    """A course whose best run has no units has no profile"""
+    run = factories.LearningResourceRunFactory.create()
+    mocker.patch.object(
+        LearningResource, "best_run", new_callable=mocker.PropertyMock, return_value=run
+    )
+    publish_profile = mocker.patch(
+        "learning_resources.profiles.course_profile.publish_course_profile"
+    )
+
+    assert tasks.generate_claims_for_resource(run.learning_resource.id) is None
+    publish_profile.assert_called_once_with(run.learning_resource, None)
 
 
 def test_generate_all_claims(mocker):

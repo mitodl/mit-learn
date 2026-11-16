@@ -127,24 +127,47 @@ def _is_taught_concept(kind: str, claim: dict) -> bool:
     return kind == "concept" and claim.get("teaching_status") in TEACHING_STATUSES
 
 
+def context_claims(output: dict | None) -> list[tuple[str, str, dict, str]]:
+    """
+    Return the context extraction's claims, with the ids the run prompt
+    cites them by.
+
+    Returns:
+        list of (str, str, dict, str): the claim id, the output field it is
+            from, the item, and its text as the run prompt shows it
+    """
+    if not output:
+        return []
+    claims = [
+        (f"ctx:aud:{index}", "stated_audience", statement, statement["text"])
+        for index, statement in enumerate(output.get("stated_audience", []))
+    ]
+    if output.get("description"):
+        description = output["description"]
+        claims.append(("ctx:desc", "description", description, description["text"]))
+    claims += [
+        (f"ctx:obj:{index}", "objectives", statement, statement["text"])
+        for index, statement in enumerate(output.get("objectives", []))
+    ]
+    claims += [
+        (
+            f"ctx:prereq:{index}",
+            "prerequisites",
+            prerequisite,
+            f"[{prerequisite['kind']}] {prerequisite['statement']}",
+        )
+        for index, prerequisite in enumerate(output.get("prerequisites", []))
+    ]
+    claims += [
+        (f"ctx:req:{index}", "required_materials", statement, statement["text"])
+        for index, statement in enumerate(output.get("required_materials", []))
+    ]
+    return claims
+
+
 def context_claims_by_id(output: dict | None) -> dict[str, str]:
     """Give the context extraction's claims ids, as the run prompt cites them"""
-    if not output:
-        return {}
-    claims = {}
-    for index, statement in enumerate(output.get("stated_audience", [])):
-        claims[f"ctx:aud:{index}"] = statement["text"]
-    if output.get("description"):
-        claims["ctx:desc"] = output["description"]["text"]
-    for index, statement in enumerate(output.get("objectives", [])):
-        claims[f"ctx:obj:{index}"] = statement["text"]
-    for index, prerequisite in enumerate(output.get("prerequisites", [])):
-        claims[f"ctx:prereq:{index}"] = (
-            f"[{prerequisite['kind']}] {prerequisite['statement']}"
-        )
-    for index, statement in enumerate(output.get("required_materials", [])):
-        claims[f"ctx:req:{index}"] = statement["text"]
-    return claims
+    return {claim_id: text for claim_id, _, _, text in context_claims(output)}
 
 
 def _context_block(output: dict | None) -> str:

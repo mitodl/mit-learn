@@ -10,10 +10,8 @@ from learning_resources.tasks import (
 
 class Command(BaseCommand):
     """
-    Generate resource profile claims for resources' best runs.
-
-    Only step 1, the claims for the context unit, units and bins, exists so
-    far; later steps will run from here too.
+    Generate resource profile claims for resources' best runs, and load them
+    into their course profiles.
     """
 
     help = "Generate resource profile claims for resources' best runs"

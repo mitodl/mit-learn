@@ -1486,10 +1486,12 @@ def generate_claims_for_resource(
     which knowledge the course teaches before it is needed.
 
     When nothing failed, the extractions the best run uses are then the
-    course's only published ones: see publish_claim_extractions. When
-    something failed, what is published is left as it is, so the course keeps
-    its last complete claims, rather than none or claims missing a unit,
-    until a sweep succeeds.
+    course's only published ones: see publish_claim_extractions. Step 3 then
+    loads them into the best run's course profile, which is rebuilt only when
+    the run's claims changed, and the course's other profiles are deleted.
+    When something failed, what is published is left as it is, so the course
+    keeps its last complete claims and profile, rather than none or claims
+    missing a unit, until a sweep succeeds.
 
     Args:
         resource_id (int): the LearningResource id
@@ -1500,8 +1502,9 @@ def generate_claims_for_resource(
             extracted, skipped (no text, a context unit over the input budget,
             a unit that would need more than max_parts parts, or for the run,
             a failed unit) and failed (no valid response, or a split unit's
-            merge call over the merge's input budget), or None when the best
-            run has no units
+            merge call over the merge's input budget), and whether the
+            profile was built, unchanged or failed; or None when the best run
+            has no units
     """
     # deferred: the claim modules import the AI libraries, kept out of boot
     from learning_resources.profiles.context_claims import generate_context_claims
@@ -1513,6 +1516,7 @@ def generate_claims_for_resource(
     if not run or not run.units.exists():
         log.info("No units to generate claims for in %s", resource.readable_id)
         publish_claim_extractions(resource, [])
+        _publish_profile(resource, None, Counter())
         return None
 
     stats = Counter()
@@ -1563,7 +1567,7 @@ def generate_claims_for_resource(
         )
         stats["run_skipped"] += 1
     else:
-        _, any_failed = _extract(
+        run_extraction, any_failed = _extract(
             "run",
             run.run_id,
             lambda: generate_run_claims(
@@ -1573,13 +1577,36 @@ def generate_claims_for_resource(
     if any_failed:
         log.info(
             "Not publishing claims for %s: an extraction failed, so its last"
-            " published claims are kept",
+            " published claims and profile are kept",
             resource.readable_id,
         )
     else:
         publish_claim_extractions(resource, current_ids)
+        _publish_profile(resource, run_extraction, stats)
     log.info("Generated claims for %s: %s", resource.readable_id, dict(stats))
     return dict(stats)
+
+
+def _publish_profile(
+    resource: LearningResource, run_extraction: ClaimExtraction | None, stats: Counter
+) -> None:
+    """
+    Load the best run's published claims into its course profile: step 3.
+
+    A profile that fails to build is logged and counted, and the course keeps
+    its last profile.
+    """
+    # deferred, like the claim modules
+    from learning_resources.profiles.course_profile import publish_course_profile
+
+    try:
+        built = publish_course_profile(resource, run_extraction)
+    except Exception:
+        log.exception("Building the profile of %s failed", resource.readable_id)
+        stats["profile_failed"] += 1
+        return
+    if built is not None:
+        stats["profile_built" if built else "profile_unchanged"] += 1
 
 
 def publish_claim_extractions(
@@ -1616,7 +1643,8 @@ def generate_all_claims(resource_ids: list[int], *, overwrite: bool = False) -> 
     """
     Queue resource profile claim generation for each resource.
 
-    Step 1 (context and unit claims) and step 2 (run claims) both run.
+    Step 1 (context and unit claims), step 2 (run claims) and step 3 (the
+    course profile) all run.
 
     Args:
         resource_ids (list of int): the LearningResource ids

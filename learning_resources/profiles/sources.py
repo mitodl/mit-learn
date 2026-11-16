@@ -171,6 +171,31 @@ def pack_parts(sources: list[Source], input_token_budget: int) -> list[list[Sour
     return parts
 
 
+def unit_source_files(unit: Unit) -> list[tuple[str, UnitContentFile, str]]:
+    """
+    Return a unit's published files with text, in unit order, with the source
+    id each is sent to the model under.
+
+    Args:
+        unit (Unit): the unit, bin or context unit
+
+    Returns:
+        list of (str, UnitContentFile, str): the source id, the file's link to
+            the unit, with its content file, and the file's text
+    """
+    links = (
+        UnitContentFile.objects.filter(unit=unit, content_file__published=True)
+        .select_related("content_file")
+        .order_by("position", "id")
+    )
+    files = []
+    for link in links:
+        text = (link.content_file.content or "").strip()
+        if text:
+            files.append((f"S{len(files) + 1:02d}", link, text))
+    return files
+
+
 def unit_sources(
     unit: Unit, max_file_tokens: int, input_token_budget: int | None = None
 ) -> list[Source]:
@@ -187,18 +212,9 @@ def unit_sources(
     Returns:
         list of Source: one per file with text
     """
-    links = (
-        UnitContentFile.objects.filter(unit=unit, content_file__published=True)
-        .select_related("content_file")
-        .order_by("position", "id")
-    )
     sources = []
-    for link in links:
+    for source_id, link, text in unit_source_files(unit):
         content_file = link.content_file
-        text = (content_file.content or "").strip()
-        if not text:
-            continue
-        source_id = f"S{len(sources) + 1:02d}"
         header = _header(source_id, content_file, link.relation)
         included, included_chars = truncate(text, max_file_tokens)
         source = Source(

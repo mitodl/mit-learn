@@ -1610,6 +1610,160 @@ class ClaimExtraction(TimestampedModel):
         return f"{self.level} {self.extractor_version} {self.key[:12]}"
 
 
+class CourseProfile(TimestampedModel):
+    """
+    The published profile of a course's best run, loaded from its claim
+    extractions for querying.
+
+    It keeps everything it shows, so it outlives the extractions it was
+    loaded from: those rows are replaced and deleted as claims are
+    regenerated, and the profile is rebuilt from the new ones.
+    """
+
+    class Status(models.TextChoices):
+        BUILDING = "building", "Building"
+        READY = "ready", "Ready"
+        FAILED = "failed", "Failed"
+
+    run = models.ForeignKey(
+        LearningResourceRun, related_name="profiles", on_delete=models.CASCADE
+    )
+    # the run-level extraction the profile was loaded from
+    course_extraction = models.ForeignKey(
+        ClaimExtraction,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="profiles",
+    )
+    status = models.CharField(
+        max_length=16, choices=Status.choices, default=Status.BUILDING
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["run"], name="unique_profile_per_run")
+        ]
+
+    def __str__(self):
+        return f"CourseProfile for {self.run_id}: {self.status}"
+
+
+class ProfileClaim(models.Model):
+    """One claim of a course profile: a unit's claim, or a context claim"""
+
+    class Level(models.TextChoices):
+        UNIT = "unit", "Unit"
+        COURSE = "course", "Course"
+
+    class Kind(models.TextChoices):
+        CONCEPT = "concept", "Concept"
+        SKILL = "skill", "Skill"
+        ASSUMED = "assumed", "Assumed knowledge"
+        ASSESSMENT = "assessment", "Assessment expectation"
+        PRIOR = "prior", "Prior knowledge"
+        OUTCOME = "outcome", "Learning outcome"
+        CONTEXT = "context", "Context"
+
+    profile = models.ForeignKey(
+        CourseProfile, related_name="claims", on_delete=models.CASCADE
+    )
+    # stable across rebuilds while the extraction is unchanged: "u:91be07aa13cd:a4"
+    uid = models.CharField(max_length=64)
+    # the id the run step cites it by: "U03:a4", "ctx:prereq:0"
+    display_id = models.CharField(max_length=32)
+    level = models.CharField(max_length=16, choices=Level.choices)
+    kind = models.CharField(max_length=16, choices=Kind.choices)
+    label = models.CharField(max_length=512)
+    description = models.TextField()
+    unit = models.ForeignKey(
+        Unit,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="profile_claims",
+    )
+    # the extraction the claim was loaded from
+    extraction = models.ForeignKey(
+        ClaimExtraction,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="profile_claims",
+    )
+    # course claim -> unit claims
+    cites = models.ManyToManyField(
+        "self", symmetrical=False, blank=True, related_name="cited_by"
+    )
+    # kind-specific fields (teaching_status, how_used, tests_concept_labels, ...)
+    data = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["profile", "uid"], name="unique_claim_uid_per_profile"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.display_id} [{self.kind}] {self.label}"
+
+
+class ClaimEvidence(models.Model):
+    """A passage of a content file quoted as evidence for a claim"""
+
+    claim = models.ForeignKey(
+        ProfileClaim, related_name="evidence", on_delete=models.CASCADE
+    )
+    content_file = models.ForeignKey(
+        ContentFile, related_name="claim_evidence", on_delete=models.CASCADE
+    )
+    # the content version the span refers to
+    content_checksum = models.CharField(max_length=32, blank=True)
+    passage = models.TextField()
+    # [hh:mm:ss], p.N, or section heading
+    locator = models.CharField(max_length=64, blank=True)
+    # exact | fuzzy | unverified | unknown_source, see profiles.verification
+    verified = models.CharField(max_length=16)
+    span_start = models.PositiveIntegerField(null=True, blank=True)
+    span_end = models.PositiveIntegerField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.claim_id} <- {self.content_file_id}: {self.passage[:40]}"
+
+
+class ProfileStatement(models.Model):
+    """One item of a course profile, citing the claims that support it"""
+
+    class Section(models.TextChoices):
+        SUMMARY = "summary", "Summary"
+        AUDIENCE = "audience", "Audience"
+        OUTCOME = "outcome", "Learning outcome"
+        TOPIC = "topic", "Main topic"
+        PREPARATION = "preparation", "Inferred preparation"
+        LIMITATION = "limitation", "Coverage limitation"
+
+    profile = models.ForeignKey(
+        CourseProfile, related_name="statements", on_delete=models.CASCADE
+    )
+    section = models.CharField(max_length=32, choices=Section.choices)
+    # order within the section
+    position = models.PositiveIntegerField()
+    text = models.TextField()
+    # the item's other fields, as the run step stored them
+    data = models.JSONField(default=dict, blank=True)
+    # citations
+    claims = models.ManyToManyField(ProfileClaim, related_name="statements", blank=True)
+    # covers / first_needed / taught_in / cited
+    units = models.ManyToManyField(Unit, related_name="profile_statements", blank=True)
+
+    class Meta:
+        ordering = ["profile", "section", "position"]
+
+    def __str__(self):
+        return f"{self.section} {self.position}: {self.text[:60]}"
+
+
 class UserList(TimestampedModel):
     """
     Similar in concept to a LearningPath: a list of learning resources.
