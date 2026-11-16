@@ -31,6 +31,7 @@ const mockedUseFeatureFlag = jest.mocked(useFeatureFlag)
 
 const ORG_UUID = "11111111-2222-3333-4444-555555555555"
 const GRID_PAGE_SIZE = 25
+const EXPORT_PAGE_SIZE = 100
 const M5 = "course-v1:MITx+M5+2026"
 const M6 = "course-v1:MITx+M6+2026"
 const NEEDS_ATTENTION = "Not started or inactive 30+ days"
@@ -1488,6 +1489,18 @@ describe("ContractLearnersPage", () => {
       })
     }
 
+    const mockExportPage = (
+      contractId: number,
+      offset: number,
+      rows: Parameters<typeof mockGridPage>[2],
+      envelopeOverrides: Record<string, unknown> = {},
+      extraParams: Record<string, unknown> = {},
+    ) =>
+      mockGridPage(contractId, offset, rows, envelopeOverrides, {
+        limit: EXPORT_PAGE_SIZE,
+        ...extraParams,
+      })
+
     test("writes one row per learner with each module's status and progress", async () => {
       const { contractId } = renderGrid()
       const ada = {
@@ -1495,7 +1508,7 @@ describe("ContractLearnersPage", () => {
         email: "ada@example.com",
         full_name: "Ada Lovelace",
       }
-      mockGridPage(contractId, 0, [
+      const rows = [
         analyticsFactories.learnerProgress({
           ...ada,
           courserun_readable_id: M5,
@@ -1521,7 +1534,9 @@ describe("ContractLearnersPage", () => {
           content_progress: 0.35,
           last_active_on: null,
         }),
-      ])
+      ]
+      mockGridPage(contractId, 0, rows)
+      mockExportPage(contractId, 0, rows)
       await screen.findByText("Ada Lovelace")
 
       const csv = await exportCsv()
@@ -1542,20 +1557,20 @@ describe("ContractLearnersPage", () => {
       const { contractId } = renderGrid(
         `/?status=not_started&modules=${encodeURIComponent(M6)}`,
       )
-      mockGridPage(
-        contractId,
-        0,
-        [
-          analyticsFactories.learnerProgress({
-            email: "ada@example.com",
-            full_name: "Ada Lovelace",
-            courserun_readable_id: M6,
-            completion_status: "not_started",
-          }),
-        ],
-        {},
-        { completion_status: ["not_started"], courserun_readable_id: [M6] },
-      )
+      const rows = [
+        analyticsFactories.learnerProgress({
+          email: "ada@example.com",
+          full_name: "Ada Lovelace",
+          courserun_readable_id: M6,
+          completion_status: "not_started",
+        }),
+      ]
+      const filters = {
+        completion_status: ["not_started"],
+        courserun_readable_id: [M6],
+      }
+      mockGridPage(contractId, 0, rows, {}, filters)
+      mockExportPage(contractId, 0, rows, {}, filters)
       await screen.findByText("Ada Lovelace")
 
       const csv = await exportCsv()
@@ -1566,15 +1581,18 @@ describe("ContractLearnersPage", () => {
       ])
     })
 
-    test("fetches every page of learners, not just the one on screen", async () => {
+    test("fetches every page of learners in 100-learner pages, not just the one on screen", async () => {
       const { contractId } = renderGrid()
+      mockGridPage(contractId, 0, [learnerNamed("Ada Lovelace")], {
+        total_count: 250,
+      })
       const pages = [["Ada Lovelace"], ["Bob Barker"], ["Cy Young"]] as const
       pages.forEach((names, index) =>
-        mockGridPage(
+        mockExportPage(
           contractId,
-          index * GRID_PAGE_SIZE,
+          index * EXPORT_PAGE_SIZE,
           names.map(learnerNamed),
-          { total_count: 60 },
+          { total_count: 250 },
         ),
       )
       await screen.findByText("Ada Lovelace")
@@ -1649,12 +1667,15 @@ describe("ContractLearnersPage", () => {
     test("reports a failure instead of downloading a partial file", async () => {
       const { contractId } = renderGrid()
       mockGridPage(contractId, 0, [learnerNamed("Ada Lovelace")], {
-        total_count: 30,
+        total_count: 150,
+      })
+      mockExportPage(contractId, 0, [learnerNamed("Ada Lovelace")], {
+        total_count: 150,
       })
       setMockResponse.get(
         analyticsUrls.contracts.learners(ORG_UUID, contractId, {
-          limit: GRID_PAGE_SIZE,
-          offset: GRID_PAGE_SIZE,
+          limit: EXPORT_PAGE_SIZE,
+          offset: EXPORT_PAGE_SIZE,
           completion_status: SHARED_STATUSES,
         }),
         "Internal Server Error",
