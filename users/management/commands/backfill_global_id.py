@@ -1,7 +1,5 @@
 """Link SCIM-provisioned users to their Keycloak subject by setting global_id"""
 
-import logging
-
 from django.contrib.auth import get_user_model
 from django.core.management import BaseCommand
 from django.db import IntegrityError, transaction
@@ -10,8 +8,6 @@ from keycloak.exceptions import KeycloakGetError
 from mitol.keycloak import api as keycloak_api
 
 from main.utils import now_in_utc
-
-log = logging.getLogger(__name__)
 
 User = get_user_model()
 
@@ -26,8 +22,22 @@ def unlinked_users():
 
 
 def claimed_elsewhere():
-    """Return an Exists() for another row already holding scim_external_id"""
+    """Match a row whose external id is already another row's global_id"""
     return Exists(User.objects.filter(global_id=OuterRef("scim_external_id")))
+
+
+def shared_with_unlinked():
+    """Match a row whose external id is also on another unlinked row"""
+    return Exists(
+        unlinked_users()
+        .filter(scim_external_id=OuterRef("scim_external_id"))
+        .exclude(pk=OuterRef("pk"))
+    )
+
+
+def linkable_users():
+    """Return the unlinked users whose external id names only them"""
+    return unlinked_users().exclude(claimed_elsewhere()).exclude(shared_with_unlinked())
 
 
 class Command(BaseCommand):
@@ -40,9 +50,10 @@ class Command(BaseCommand):
     a row when its user logs in, but most never have, so they stay invisible to
     anything that looks users up by global_id.
 
-    Rows whose external id is already another row's global_id are skipped and
-    reported: those are duplicate accounts for one Keycloak subject and need a
-    merge, not a link.
+    Rows whose external id is already another row's global_id, or is shared
+    with another unlinked row, are skipped and listed. Those are duplicate
+    accounts for one Keycloak subject: linking one of them by id order would
+    pick an account arbitrarily, so they need a merge, not a link.
     """
 
     help = __doc__
@@ -72,19 +83,30 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):  # noqa: ARG002
-        """Report collisions, then sample, dry-run, or backfill"""
+        """Report duplicates, then sample, dry-run, or backfill"""
         candidates = unlinked_users()
-        collisions = list(
+        claimed = list(
             candidates.filter(claimed_elsewhere()).values_list("id", "scim_external_id")
         )
-        self.stdout.write(
-            f"{candidates.count()} users have no global_id and a SCIM external "
-            f"id; {len(collisions)} of those ids already belong to another user"
+        shared = list(
+            candidates.filter(shared_with_unlinked())
+            .order_by("scim_external_id", "id")
+            .values_list("id", "scim_external_id")
         )
-        for user_id, external_id in collisions:
+        self.stdout.write(
+            f"{candidates.count()} users have no global_id and a SCIM external id. "
+            f"Skipping {len(claimed)} whose id is another user's global_id and "
+            f"{len(shared)} that share their id with another unlinked user."
+        )
+        for user_id, external_id in claimed:
             self.stdout.write(
-                f"  skip user_id={user_id}: global_id {external_id} is held by "
-                "another user"
+                f"  needs merge: user_id={user_id} {external_id} is another "
+                "user's global_id"
+            )
+        for user_id, external_id in shared:
+            self.stdout.write(
+                f"  needs merge: user_id={user_id} {external_id} is on another "
+                "unlinked user"
             )
 
         if options["verify_sample"]:
@@ -93,17 +115,21 @@ class Command(BaseCommand):
         if options["dry_run"]:
             return
 
-        updated, skipped = self.backfill(options["batch_size"])
-        self.stdout.write(f"Set global_id on {updated} users, skipped {skipped}")
+        updated, conflicts = self.backfill(options["batch_size"])
+        self.stdout.write(
+            f"Set global_id on {updated} users; {len(conflicts)} conflicted "
+            "with a concurrent write"
+        )
+        for user_id, external_id in conflicts:
+            self.stdout.write(
+                f"  backfill_global_id_conflict: user_id={user_id} {external_id}"
+            )
 
     def verify_sample(self, size):
         """Check that a random sample of external ids names a Keycloak user"""
         client = keycloak_api.get_admin_client()
         sample = (
-            unlinked_users()
-            .exclude(claimed_elsewhere())
-            .order_by("?")
-            .values_list("id", "scim_external_id")[:size]
+            linkable_users().order_by("?").values_list("id", "scim_external_id")[:size]
         )
         missing = []
         for user_id, external_id in sample:
@@ -124,39 +150,39 @@ class Command(BaseCommand):
         """
         Link candidates in primary key order, one transaction per batch.
 
-        A batch that hits the global_id unique constraint (a login linked one
-        of its ids since the batch was selected, or two unlinked rows share an
-        external id) is retried row by row so only the conflicting rows are
-        skipped.
+        A batch can still hit the global_id unique constraint if another row
+        takes one of its ids after the batch is selected (e.g. a SCIM PUT sets
+        global_id from externalId). That batch is rolled back and retried row
+        by row, so only the conflicting rows are skipped.
+
+        :returns: the number of rows linked, and the (id, external id) pairs
+            that conflicted
         """
-        updated = skipped = 0
+        updated = 0
+        conflicts = []
         last_id = 0
         while True:
             batch = list(
-                unlinked_users()
-                .exclude(claimed_elsewhere())
+                linkable_users()
                 .filter(id__gt=last_id)
                 .order_by("id")
-                .values_list("id", flat=True)[:batch_size]
+                .values_list("id", "scim_external_id")[:batch_size]
             )
             if not batch:
-                return updated, skipped
-            last_id = batch[-1]
+                return updated, conflicts
+            last_id = batch[-1][0]
             try:
                 with transaction.atomic():
-                    updated += self.link(User.objects.filter(id__in=batch))
+                    updated += self.link(
+                        User.objects.filter(id__in=[user_id for user_id, _ in batch])
+                    )
             except IntegrityError:
-                for user_id in batch:
+                for user_id, external_id in batch:
                     try:
                         with transaction.atomic():
                             updated += self.link(User.objects.filter(id=user_id))
                     except IntegrityError:
-                        skipped += 1
-                        log.warning(
-                            "backfill_global_id: global_id_linked_to_other_user "
-                            "user_id=%s",
-                            user_id,
-                        )
+                        conflicts.append((user_id, external_id))
             self.stdout.write(f"Linked {updated} users so far (through id {last_id})")
 
     def link(self, users):
