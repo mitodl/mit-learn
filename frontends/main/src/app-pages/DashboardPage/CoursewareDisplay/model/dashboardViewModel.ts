@@ -1644,9 +1644,10 @@ const runMatchesVariant =
  * If no run matches, returns `null`, signalling to the caller that it should
  * fall back to the course's `next_run_id`-based default.
  *
- * Among matching runs, enrollable runs are preferred first; within each
- * tier, runs are sorted by start date descending (most recent first); runs
- * with no start date are last.
+ * Among matching runs, enrollable runs that haven't ended come first, then
+ * archived runs (ended, still enrollable), then the rest. Within each tier,
+ * runs are sorted by start date descending (most recent first); runs with no
+ * start date are last.
  */
 const selectVariantRunForCourse = (
   runs: BaseCourseRun[],
@@ -1658,10 +1659,9 @@ const selectVariantRunForCourse = (
 
   return (
     [...matching].sort((a, b) => {
-      // Enrollable runs first
-      const aEnrollable = a.is_enrollable ? 0 : 1
-      const bEnrollable = b.is_enrollable ? 0 : 1
-      if (aEnrollable !== bEnrollable) return aEnrollable - bEnrollable
+      const tier = (run: BaseCourseRun) =>
+        !run.is_enrollable ? 2 : runHasEnded(run) ? 1 : 0
+      if (tier(a) !== tier(b)) return tier(a) - tier(b)
 
       // Within each tier: descending by start date, nulls last
       const aMs = a.start_date ? new Date(a.start_date).getTime() : null
