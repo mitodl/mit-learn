@@ -32,8 +32,24 @@ log = logging.getLogger(__name__)
 
 USE_CASE = "profile-notes"
 ACCESS_TOKEN_HEADER = "HTTP_X_ACCESS_TOKEN"  # noqa: S105 - a header name
-NOTE_FIELDS = ("topic_interests", "current_education", "time_commitment")
+NOTE_TEMPLATES = {
+    "topic_interests": "Interested in these topics: {}.",
+    "goals": "Learning goals: {}.",
+    "certificate_desired": "Wants a certificate: {}.",
+    "current_education": "Education level: {}.",
+    "time_commitment": "Time available for learning: {}.",
+    "delivery": "Preferred learning formats: {}.",
+}
+NOTE_FIELDS = tuple(NOTE_TEMPLATES)
 NOTE_KEYS = {field: f"profile-{field.replace('_', '-')}" for field in NOTE_FIELDS}
+# The choice labels are written as the learner's answer ("Yes, I am looking for
+# a certificate"), which reads wrong in a note about them.
+CERTIFICATE_DESIRED_ANSWERS = {
+    Profile.CertificateDesired.YES: "yes",
+    Profile.CertificateDesired.NO: "no",
+    Profile.CertificateDesired.NOT_SURE_YET: "not sure yet",
+}
+LIST_CHOICES = {"goals": Profile.Goal, "delivery": Profile.LearningResourceDelivery}
 
 
 @cache
@@ -54,21 +70,30 @@ def get_memory() -> "SyncMemory | None":
     return SyncMemory(build_memory())
 
 
+def _note_value(profile: Profile, field: str) -> str:
+    """Return the field's value as note text, or "" when the field is empty."""
+    if field == "topic_interests":
+        names = [topic.name for topic in profile.topic_interests.all()]
+    elif field in LIST_CHOICES:
+        names = [
+            str(LIST_CHOICES[field](value).label) for value in getattr(profile, field)
+        ]
+    elif not getattr(profile, field):
+        return ""
+    elif field == "certificate_desired":
+        return CERTIFICATE_DESIRED_ANSWERS[profile.certificate_desired]
+    else:
+        return getattr(profile, f"get_{field}_display")()
+    return ", ".join(sorted(names))
+
+
 def note_text(profile: Profile, field: str) -> str:
     """Return the note for one profile field, or "" when the field is empty."""
-    if field == "topic_interests":
-        names = sorted(topic.name for topic in profile.topic_interests.all())
-        return f"Interested in these topics: {', '.join(names)}." if names else ""
-    if field == "current_education":
-        if not profile.current_education:
-            return ""
-        return f"Education level: {profile.get_current_education_display()}."
-    if field == "time_commitment":
-        if not profile.time_commitment:
-            return ""
-        return f"Time available for learning: {profile.get_time_commitment_display()}."
-    msg = f"{field} is not a profile note field"
-    raise ValueError(msg)
+    if field not in NOTE_TEMPLATES:
+        msg = f"{field} is not a profile note field"
+        raise ValueError(msg)
+    value = _note_value(profile, field)
+    return NOTE_TEMPLATES[field].format(value) if value else ""
 
 
 def sync_profile_notes(

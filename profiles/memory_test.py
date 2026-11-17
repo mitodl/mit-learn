@@ -77,6 +77,43 @@ def test_profile_save_writes_changed_fields(client, logged_in_profile, memory):
     assert note.app == "mit-learn"
 
 
+def test_preference_fields_write_notes(client, logged_in_profile, memory):
+    """Goals, certificate and delivery preferences are written as notes"""
+    resp = patch_profile(
+        client,
+        logged_in_profile,
+        {
+            "goals": [
+                Profile.Goal.LIFELONG_LEARNING,
+                Profile.Goal.CAREER_GROWTH,
+            ],
+            "certificate_desired": Profile.CertificateDesired.NOT_SURE_YET,
+            "delivery": [
+                Profile.LearningResourceDelivery.ONLINE,
+                Profile.LearningResourceDelivery.HYBRID,
+            ],
+        },
+        HTTP_X_ACCESS_TOKEN=TOKEN,
+    )
+
+    assert resp.status_code == status.HTTP_200_OK
+    assert learner_notes(memory) == {
+        "profile-goals": "Learning goals: Career Growth, Lifelong Learning.",
+        "profile-certificate-desired": "Wants a certificate: not sure yet.",
+        "profile-delivery": "Preferred learning formats: Hybrid, Online.",
+    }
+
+    resp = patch_profile(
+        client,
+        logged_in_profile,
+        {"goals": [], "certificate_desired": "", "delivery": []},
+        HTTP_X_ACCESS_TOKEN=TOKEN,
+    )
+
+    assert resp.status_code == status.HTTP_200_OK
+    assert learner_notes(memory) == {}
+
+
 def test_clearing_a_field_deletes_its_note(client, logged_in_profile, memory):
     """A field saved empty removes the note it had"""
     patch_profile(
