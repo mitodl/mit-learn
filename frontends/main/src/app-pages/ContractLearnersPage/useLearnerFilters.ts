@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useAppSearchParams } from "@/common/useAppSearchParams"
 import {
-  completionStatusFilter,
   CONTRACT_LEARNERS_STATUSES,
   type ContractLearnersStatus,
 } from "@/common/urls"
 
-const ALL = "all"
+const ALL = "all" as const
 const SEARCH_DEBOUNCE_MS = 300
 /** Past this, a page number is a typo or a hand-edited link, and its offset would overflow what the API accepts. */
 const MAX_PAGE = 10_000
@@ -55,10 +54,7 @@ const useLearnerFilters = () => {
   const needsAttentionOnly = params.get("needs_attention") === "true"
   const gridModulesKey = [...new Set(params.getAll("modules"))].join("\n")
   const gridModules = useMemo(
-    () =>
-      gridModulesKey
-        ? gridModulesKey.split("\n").slice(0, MAX_GRID_MODULES)
-        : [],
+    () => (gridModulesKey ? gridModulesKey.split("\n") : []),
     [gridModulesKey],
   )
   const parsedPage = parseInt(params.get("page") ?? "", 10)
@@ -79,10 +75,10 @@ const useLearnerFilters = () => {
     return () => clearTimeout(id)
   }, [searchQuery, debouncedSearch, update])
 
-  const completionStatus = useMemo(
-    () =>
-      completionStatusFilter(statusFilter === ALL ? undefined : statusFilter),
-    [statusFilter],
+  const setStatusFilter = useCallback(
+    (value: string) =>
+      update({ status: value === ALL ? null : value, page: null }),
+    [update],
   )
 
   return {
@@ -97,13 +93,12 @@ const useLearnerFilters = () => {
     },
     debouncedSearch,
     statusFilter,
-    setStatusFilter: (value: string) =>
-      update({ status: value === ALL ? null : value, page: null }),
-    completionStatus,
+    setStatusFilter,
     needsAttentionOnly,
     setNeedsAttentionOnly: (value: boolean) =>
       update({ needs_attention: value ? "true" : null, page: null }),
     gridModules,
+    /** shortcut: past the API's cap, a partial selection silently loses modules; limit the selection in the UI if a contract ever has more than 50. */
     setGridModules: (values: string[]) =>
       update({ modules: values.slice(0, MAX_GRID_MODULES), page: null }),
     clearAll: () => {
@@ -119,4 +114,4 @@ const useLearnerFilters = () => {
   }
 }
 
-export { ALL, SEARCH_MAX_LENGTH, useLearnerFilters }
+export { ALL, MAX_GRID_MODULES, SEARCH_MAX_LENGTH, useLearnerFilters }

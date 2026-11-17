@@ -22,13 +22,42 @@ const setup = ({
     is_published: isPublished,
   })
   setMockResponse.get(
-    urls.websiteContent.list({ limit: 10, offset: 0, content_type: "article" }),
+    urls.websiteContent.list({
+      limit: 10,
+      offset: 0,
+      content_type: "article",
+      // The API lists published content unless asked; editors ask for both.
+      ...(isArticleEditor ? { status: "both" as const } : {}),
+    }),
     { count: 1, next: null, previous: null, results: [article] },
   )
 
   renderWithProviders(<ArticleListingPage />, { user })
   return { article }
 }
+
+describe("ArticleListingPage listing request", () => {
+  test.each([
+    { isArticleEditor: true, status: "both" },
+    { isArticleEditor: false, status: null },
+  ])(
+    "asks for status=$status when isArticleEditor=$isArticleEditor",
+    async ({ isArticleEditor, status }) => {
+      const { article } = setup({ isArticleEditor })
+
+      await screen.findAllByText(article.title)
+
+      const listUrls = jest
+        .mocked(makeRequest)
+        .mock.calls.map(([config]) => new URL(config.url, "http://x"))
+        .filter((url) => url.pathname === "/api/v1/website_content/")
+      expect(listUrls.length).toBeGreaterThan(0)
+      for (const url of listUrls) {
+        expect(url.searchParams.get("status")).toBe(status)
+      }
+    },
+  )
+})
 
 const menuName = (title: string) => `More options for ${title}`
 

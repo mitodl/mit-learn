@@ -19,7 +19,11 @@ import {
 } from "ol-components"
 import Link from "next/link"
 import { RiArrowLeftLine, RiArrowRightLine } from "@remixicon/react"
-import { WebsiteContentContentTypeEnum, type WebsiteContent } from "api/v1"
+import {
+  WebsiteContentContentTypeEnum,
+  WebsiteContentListStatusEnum,
+  type WebsiteContent,
+} from "api/v1"
 import { LocalDate } from "ol-utilities"
 import { useWebsiteContentList } from "api/hooks/website_content"
 import { extractArticleContent } from "@/common/websiteContentUtils"
@@ -467,6 +471,9 @@ const ArticleListingPage: React.FC = () => {
     limit: PAGE_SIZE,
     offset: (page - 1) * PAGE_SIZE,
     content_type: "article",
+    // The API lists published content unless asked otherwise; editors still
+    // see their drafts here.
+    ...(isArticleEditor ? { status: WebsiteContentListStatusEnum.Both } : {}),
   })
 
   const gridStories = articles?.results ?? []

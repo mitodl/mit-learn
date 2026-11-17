@@ -1,5 +1,12 @@
 import React from "react"
-import { renderWithProviders, screen, user, waitFor } from "@/test-utils"
+import {
+  renderWithProviders,
+  screen,
+  TestingErrorBoundary,
+  user,
+  waitFor,
+} from "@/test-utils"
+import { allowConsoleErrors } from "ol-test-utilities"
 import { setMockResponse, factories, urls, makeRequest } from "api/test-utils"
 import { WebsiteContentDraftListingPage } from "./WebsiteContentDraftListingPage"
 
@@ -9,6 +16,54 @@ const setupEditor = () => {
     factories.user.user({ is_authenticated: true, is_article_editor: true }),
   )
 }
+
+test("lists drafts only", async () => {
+  setupEditor()
+  const draft = factories.websiteContent.websiteContent({
+    title: "My Draft",
+    content_type: "news",
+    is_published: false,
+  })
+  // The API lists published content unless asked for drafts.
+  setMockResponse.get(
+    urls.websiteContent.list({
+      limit: 20,
+      offset: 0,
+      status: "draft",
+      content_type: "news",
+    }),
+    { count: 1, next: null, previous: null, results: [draft] },
+  )
+
+  renderWithProviders(<WebsiteContentDraftListingPage contentType="news" />)
+
+  await screen.findByText(draft.title)
+})
+
+test("does not request drafts for a non-editor", async () => {
+  setMockResponse.get(
+    urls.userMe.get(),
+    factories.user.user({ is_authenticated: true, is_article_editor: false }),
+  )
+
+  // RestrictedRoute throws ForbiddenError for the error page to show.
+  allowConsoleErrors()
+  const onError = jest.fn()
+
+  renderWithProviders(
+    <TestingErrorBoundary onError={onError}>
+      <WebsiteContentDraftListingPage contentType="news" />
+    </TestingErrorBoundary>,
+  )
+
+  await waitFor(() => expect(onError).toHaveBeenCalled())
+  // The API answers a non-editor's request for drafts with a 403.
+  expect(makeRequest).not.toHaveBeenCalledWith(
+    expect.objectContaining({
+      url: expect.stringContaining("/api/v1/website_content/"),
+    }),
+  )
+})
 
 describe("WebsiteContentDraftListingPage delete", () => {
   test("editor can delete a draft after confirming", async () => {

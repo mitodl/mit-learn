@@ -1,6 +1,25 @@
 Release Notes
 =============
 
+Version 0.87.3
+--------------
+
+- Purge website content pages by path surrogate key (#4263)
+- Send signed-out enroll clicks to sign-up and finish the enrollment after (#4277)
+- Move the load tests to mitodl/load-testing (#4307)
+- Clear channel caches when a channel is saved in admin (#4261)
+- Drop the custom enum template; hardcode the profile choice labels (#4308)
+- fix(widgets): remove the People widget type (#4310)
+- Remove dead catalog-filter event emission (#4309)
+- Update gtm docs (#4305)
+- chore(deps): remove unused safety to unblock filelock 4 (#4303)
+- Log in SCIM-provisioned users by their external id and prefer linked rows (#4248)
+- feat(b2b-learner-analytics): Match the Progress grid's Modules filter to the topic page's facet controls (#4246)
+- Keep Celery workers on the structlog logging configuration (#4289)
+- Read actively_enrolled_* on the B2B analytics dashboard (#4298)
+- Offer Start on a program course whose enrolled runs have all ended (#4257)
+- Show the price in the mobile enroll button (#4276)
+
 Version 0.87.2
 --------------
 
