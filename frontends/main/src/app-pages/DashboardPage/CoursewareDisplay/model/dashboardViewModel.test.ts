@@ -2310,7 +2310,7 @@ describe("dashboardViewModel", () => {
         expect(resolved.pastEnrollments).toEqual([])
       })
 
-      test("offers the next run even when it is archived", () => {
+      test("does not offer the next run when it is archived", () => {
         const taken = endedRun(10, -400)
         const archived = { ...endedRun(20, -200), is_enrollable: true }
         const course = factories.courses.course({
@@ -2320,10 +2320,11 @@ describe("dashboardViewModel", () => {
         })
         const enrollment = enrollmentIn(course, taken)
 
-        const resolved = resolveDisplayedRunAndEnrollment(course, [enrollment])
-        expect(resolved.displayedEnrollment).toBeNull()
-        expect(resolved.displayedRun).toEqual(archived)
-        expect(resolved.pastEnrollments).toEqual([enrollment])
+        expect(resolveDisplayedRunAndEnrollment(course, [enrollment])).toEqual({
+          displayedEnrollment: enrollment,
+          displayedRun: taken,
+          pastEnrollments: [],
+        })
       })
 
       test("does not apply on a contract dashboard", () => {
@@ -2344,6 +2345,49 @@ describe("dashboardViewModel", () => {
         )
         expect(resolved.displayedEnrollment).toEqual(enrollment)
         expect(resolved.pastEnrollments).toEqual([])
+      })
+    })
+
+    describe("never-enrolled course with an archived run", () => {
+      // Ended but still open for enrollment, as mitxonline's archived runs are.
+      const archivedRun = factories.courses.courseRun({
+        id: 10,
+        start_date: daysFromNow(-200),
+        end_date: daysFromNow(-100),
+        is_enrollable: true,
+      })
+      const upcomingRun = factories.courses.courseRun({
+        id: 20,
+        start_date: daysFromNow(30),
+        end_date: daysFromNow(120),
+        is_enrollable: true,
+      })
+
+      test("shows the archived run when it is the only enrollable run", () => {
+        const course = factories.courses.course({
+          id: 1,
+          courseruns: [archivedRun],
+          next_run_id: archivedRun.id,
+        })
+
+        // The card disables Start on it, as for a closed run.
+        expect(resolveDisplayedRunAndEnrollment(course, [])).toEqual({
+          displayedEnrollment: null,
+          displayedRun: archivedRun,
+          pastEnrollments: [],
+        })
+      })
+
+      test("offers the upcoming run over the archived next run", () => {
+        const course = factories.courses.course({
+          id: 1,
+          courseruns: [archivedRun, upcomingRun],
+          next_run_id: archivedRun.id,
+        })
+
+        expect(
+          resolveDisplayedRunAndEnrollment(course, []).displayedRun,
+        ).toEqual(upcomingRun)
       })
     })
 

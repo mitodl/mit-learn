@@ -22,6 +22,7 @@ import {
 import { SiblingRunsPanel, SiblingRunsToggle } from "./SiblingRunsAccordion"
 import { getCourseDateText } from "./courseDateUtils"
 import { EnrollmentStatus, getBestRun } from "./helpers"
+import { getBestStartableRun, runHasEnded } from "./model/dashboardViewModel"
 import { isPaidProgramEnrollmentMode } from "@/common/mitxonline"
 import { useEnrollmentHandler } from "./hooks/useEnrollmentHandler"
 import { EnrollmentStatusIcon } from "./EnrollmentStatus"
@@ -62,11 +63,18 @@ export const UnenrolledCourseCard = ({
   const enrollment = useEnrollmentHandler()
   const isPending = enrollment.isPending
   const courseRun =
-    displayedRunProp ?? getBestRun(course, { enrollableOnly: true })
+    displayedRunProp ??
+    getBestStartableRun(course) ??
+    getBestRun(course, { enrollableOnly: true })
   const coursewareUrl = courseRun?.courseware_url || undefined
   const readableId = courseRun?.courseware_id
+  // An archived run (ended, still enrollable) is shown like a closed one.
   const isDisabled =
-    disabled || !courseRun?.is_enrollable || !coursewareUrl || !readableId
+    disabled ||
+    !courseRun?.is_enrollable ||
+    runHasEnded(courseRun) ||
+    !coursewareUrl ||
+    !readableId
   const title =
     layout === "compact" ? course.title : courseRun?.title || course.title
   const isContractPageResource = Boolean(contractId)

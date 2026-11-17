@@ -735,8 +735,9 @@ const filterEnrollmentsForContract = (
  * (`certificate_available_date` in the future), since a learner who passed
  * gets theirs then.
  *
- * Not when the learner is already in the next run. That happens with an
- * archived run: it has ended but stays open, so it can be the next run.
+ * Not when the next run has ended. mitxonline falls back to an archived run
+ * (ended, still enrollable) for `next_run_id` when no other run is open, and
+ * an ended run can't be started.
  *
  * Contract dashboards are left alone.
  */
@@ -764,9 +765,27 @@ const getRunToStartAgain = (
   if (!allEnded) return null
   const nextRun = course.courseruns.find((run) => run.id === course.next_run_id)
   if (!nextRun) return null
-  if (courseEnrollments.some((e) => e.run.id === nextRun.id)) return null
+  if (runHasEnded(nextRun)) return null
   return nextRun
 }
+
+const runHasEnded = (run: BaseCourseRun) =>
+  getRunTimeState(run.start_date, run.end_date) === "ended"
+
+/**
+ * The run an unenrolled dashboard card offers with Start: like
+ * `getBestRun(course, { enrollableOnly: true })`, but never a run that has
+ * ended. Product pages keep using `getBestRun`, which can return an archived
+ * run, so archived courses stay enrollable there.
+ */
+const getBestStartableRun = (course: CourseWithCourseRunsSerializerV2) =>
+  getBestRun(
+    {
+      ...course,
+      courseruns: (course.courseruns ?? []).filter((run) => !runHasEnded(run)),
+    },
+    { enrollableOnly: true },
+  )
 
 /**
  * Resolve the `displayedEnrollment`, `displayedRun` and `pastEnrollments` for
@@ -777,8 +796,9 @@ const getRunToStartAgain = (
  * again (`getRunToStartAgain`), the entry is unenrolled on the new run and
  * the ended enrollments become `pastEnrollments`. Otherwise it picks the best
  * enrollment via `selectBestEnrollment`. If the user is not enrolled, falls
- * back to the best run from `getBestRun` (or `selectVariantRunForCourse` when
- * a variant is active).
+ * back to the best run that hasn't ended from `getBestStartableRun` (or
+ * `selectVariantRunForCourse` when a variant is active). With no such run it
+ * shows `getBestRun`'s pick, whose Start the card disables if it has ended.
  */
 const resolveDisplayedRunAndEnrollment = (
   course: CourseWithCourseRunsSerializerV2,
@@ -823,12 +843,7 @@ const resolveDisplayedRunAndEnrollment = (
     return { displayedEnrollment, displayedRun, pastEnrollments: [] }
   }
 
-  const defaultRun =
-    getBestRun(course, {
-      enrollableOnly: true,
-    }) ??
-    getBestRun(course) ??
-    null
+  const defaultRun = getBestStartableRun(course) ?? getBestRun(course) ?? null
   const isNonDefaultVariant = opts?.variant && !opts.variant.default_variant
   const displayedRun = isNonDefaultVariant
     ? selectVariantRunForCourse(opts.variantCandidateRuns ?? [], opts.variant!)
@@ -1771,6 +1786,8 @@ export {
   groupCourseRunEnrollmentsByCourseId,
   groupProgramEnrollmentsByProgramId,
   resolveDisplayedRunAndEnrollment,
+  getBestStartableRun,
+  runHasEnded,
   isProgramAsCourse,
   isNonContractEnrollment,
   enrollmentCourseIsInPrograms,
