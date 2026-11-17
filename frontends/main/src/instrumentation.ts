@@ -9,6 +9,12 @@ export async function register() {
     await import("./instrumentation-node")
     const { bootstrapApiClients } = await import("./bootstrap/api")
     bootstrapApiClients()
+    // Next awaits register() before the server takes requests, so loading
+    // flag definitions here keeps a new pod's first renders from being cached
+    // by the CDN with env defaults. Nothing depends on this having run: a
+    // cold getServerFlags() call does the same bounded wait.
+    const { getServerFlags } = await import("./common/serverFeatureFlags")
+    await getServerFlags()
   }
 }
 
