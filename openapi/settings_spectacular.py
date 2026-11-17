@@ -17,6 +17,10 @@ open_spectacular_settings = {
         "ContentFileContentTypeEnum": (
             "learning_resources.constants.VALID_COURSE_CONTENT_CHOICES"
         ),
+        "UnitKindEnum": "learning_resources.models.Unit.Kind",
+        "UnitContentFileRelationEnum": (
+            "learning_resources.models.UnitContentFile.Relation"
+        ),
     },
     "AUTHENTICATION_WHITELIST": [],
     "SCHEMA_PATH_PREFIX": "/api/v[0-9]",

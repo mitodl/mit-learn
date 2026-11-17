@@ -2005,6 +2005,12 @@ export interface PaginatedProgramResourceList {
   previous?: string | null
   results: Array<ProgramResource>
 }
+export interface PaginatedUnitList {
+  count: number
+  next?: string | null
+  previous?: string | null
+  results: Array<Unit>
+}
 export interface PaginatedUserListList {
   count: number
   next?: string | null
@@ -3181,6 +3187,130 @@ export const SourceTypeEnum = {
 
 export type SourceTypeEnum =
   (typeof SourceTypeEnum)[keyof typeof SourceTypeEnum]
+
+/**
+ * Serializer for Units
+ */
+export interface Unit {
+  id: number
+  run_id: number
+  run_readable_id: string
+  resource_id: number
+  resource_readable_id: string
+  external_id: string
+  kind: UnitKindEnum
+  title: string
+  position: number | null
+  url: string
+  content_file_count: number
+  created_on: string
+  updated_on: string
+}
+
+/**
+ * A content file in a unit, with its place and role in the unit
+ */
+export interface UnitContentFile {
+  relation: UnitContentFileRelationEnum
+  position: number | null
+  content_file: UnitNestedContentFile
+}
+
+/**
+ * * `core` - Core * `assessment` - Assessment * `supplementary` - Supplementary * `reference` - Reference
+ */
+
+export const UnitContentFileRelationEnum = {
+  /**
+   * Core
+   */
+  Core: "core",
+  /**
+   * Assessment
+   */
+  Assessment: "assessment",
+  /**
+   * Supplementary
+   */
+  Supplementary: "supplementary",
+  /**
+   * Reference
+   */
+  Reference: "reference",
+} as const
+
+export type UnitContentFileRelationEnum =
+  (typeof UnitContentFileRelationEnum)[keyof typeof UnitContentFileRelationEnum]
+
+/**
+ * Serializer for a Unit with its content files, in unit order
+ */
+export interface UnitDetail {
+  id: number
+  run_id: number
+  run_readable_id: string
+  resource_id: number
+  resource_readable_id: string
+  external_id: string
+  kind: UnitKindEnum
+  title: string
+  position: number | null
+  url: string
+  content_file_count: number
+  created_on: string
+  updated_on: string
+  content_files: Array<UnitContentFile>
+}
+
+/**
+ * * `unit` - Unit * `context` - Context * `bin` - Bin
+ */
+
+export const UnitKindEnum = {
+  /**
+   * Unit
+   */
+  Unit: "unit",
+  /**
+   * Context
+   */
+  Context: "context",
+  /**
+   * Bin
+   */
+  Bin: "bin",
+} as const
+
+export type UnitKindEnum = (typeof UnitKindEnum)[keyof typeof UnitKindEnum]
+
+/**
+ * A content file inside a unit, without the run and resource fields, which are the same for every file in the unit and on the unit itself. Admins see hidden files too, so it says whether each one is published and released.
+ */
+export interface UnitNestedContentFile {
+  id: number
+  key: string | null
+  uid: string | null
+  title: string | null
+  description: string | null
+  url: string | null
+  content_feature_type: Array<string>
+  content_type: ContentFileContentTypeEnum
+  content_title: string | null
+  content_author: string | null
+  content_language: string | null
+  checksum: string | null
+  image_src: string | null
+  source_path: string | null
+  file_type: string | null
+  file_extension: string | null
+  edx_module_id: string | null
+  youtube_id: string | null
+  published: boolean
+  /**
+   * When the course releases this file to learners; null if the course does not gate it.
+   */
+  release_date: string | null
+}
 
 export interface UnsubscribeCreate400Response {
   error?: string
@@ -21571,6 +21701,376 @@ export class TopicsApi extends BaseAPI {
       .then((request) => request(this.axios, this.basePath))
   }
 }
+
+/**
+ * UnitsApi - axios parameter creator
+ */
+export const UnitsApiAxiosParamCreator = function (
+  configuration?: Configuration,
+) {
+  return {
+    /**
+     * Units, for admins only, unpublished runs and hidden content files included. A unit\'s detail lists its content files in unit order.
+     * @summary List
+     * @param {Array<number>} [content_file_id] The id of a content file in the unit
+     * @param {Array<UnitsListKindEnum>} [kind] The kind of unit  * &#x60;unit&#x60; - Unit * &#x60;context&#x60; - Context * &#x60;bin&#x60; - Bin
+     * @param {number} [limit] Number of results to return per page.
+     * @param {number} [offset] The initial index from which to return the results.
+     * @param {Array<number>} [resource_id] The id of the learning resource the unit belongs to
+     * @param {Array<number>} [run_id] The id of the learning resource run the unit belongs to
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    unitsList: async (
+      content_file_id?: Array<number>,
+      kind?: Array<UnitsListKindEnum>,
+      limit?: number,
+      offset?: number,
+      resource_id?: Array<number>,
+      run_id?: Array<number>,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      const localVarPath = `/api/v1/units/`
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
+
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
+
+      if (content_file_id) {
+        localVarQueryParameter["content_file_id"] = content_file_id
+      }
+
+      if (kind) {
+        localVarQueryParameter["kind"] = kind
+      }
+
+      if (limit !== undefined) {
+        localVarQueryParameter["limit"] = limit
+      }
+
+      if (offset !== undefined) {
+        localVarQueryParameter["offset"] = offset
+      }
+
+      if (resource_id) {
+        localVarQueryParameter["resource_id"] = resource_id
+      }
+
+      if (run_id) {
+        localVarQueryParameter["run_id"] = run_id
+      }
+
+      localVarHeaderParameter["Accept"] = "application/json"
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+    /**
+     * Units, for admins only, unpublished runs and hidden content files included. A unit\'s detail lists its content files in unit order.
+     * @summary Retrieve
+     * @param {number} id A unique integer value identifying this unit.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    unitsRetrieve: async (
+      id: number,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'id' is not null or undefined
+      assertParamExists("unitsRetrieve", "id", id)
+      const localVarPath = `/api/v1/units/{id}/`.replace(
+        "{id}",
+        encodeURIComponent(String(id)),
+      )
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
+
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
+
+      localVarHeaderParameter["Accept"] = "application/json"
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+  }
+}
+
+/**
+ * UnitsApi - functional programming interface
+ */
+export const UnitsApiFp = function (configuration?: Configuration) {
+  const localVarAxiosParamCreator = UnitsApiAxiosParamCreator(configuration)
+  return {
+    /**
+     * Units, for admins only, unpublished runs and hidden content files included. A unit\'s detail lists its content files in unit order.
+     * @summary List
+     * @param {Array<number>} [content_file_id] The id of a content file in the unit
+     * @param {Array<UnitsListKindEnum>} [kind] The kind of unit  * &#x60;unit&#x60; - Unit * &#x60;context&#x60; - Context * &#x60;bin&#x60; - Bin
+     * @param {number} [limit] Number of results to return per page.
+     * @param {number} [offset] The initial index from which to return the results.
+     * @param {Array<number>} [resource_id] The id of the learning resource the unit belongs to
+     * @param {Array<number>} [run_id] The id of the learning resource run the unit belongs to
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async unitsList(
+      content_file_id?: Array<number>,
+      kind?: Array<UnitsListKindEnum>,
+      limit?: number,
+      offset?: number,
+      resource_id?: Array<number>,
+      run_id?: Array<number>,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<PaginatedUnitList>
+    > {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.unitsList(
+        content_file_id,
+        kind,
+        limit,
+        offset,
+        resource_id,
+        run_id,
+        options,
+      )
+      const localVarOperationServerIndex = configuration?.serverIndex ?? 0
+      const localVarOperationServerBasePath =
+        operationServerMap["UnitsApi.unitsList"]?.[localVarOperationServerIndex]
+          ?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, localVarOperationServerBasePath || basePath)
+    },
+    /**
+     * Units, for admins only, unpublished runs and hidden content files included. A unit\'s detail lists its content files in unit order.
+     * @summary Retrieve
+     * @param {number} id A unique integer value identifying this unit.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async unitsRetrieve(
+      id: number,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<UnitDetail>
+    > {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.unitsRetrieve(
+        id,
+        options,
+      )
+      const localVarOperationServerIndex = configuration?.serverIndex ?? 0
+      const localVarOperationServerBasePath =
+        operationServerMap["UnitsApi.unitsRetrieve"]?.[
+          localVarOperationServerIndex
+        ]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, localVarOperationServerBasePath || basePath)
+    },
+  }
+}
+
+/**
+ * UnitsApi - factory interface
+ */
+export const UnitsApiFactory = function (
+  configuration?: Configuration,
+  basePath?: string,
+  axios?: AxiosInstance,
+) {
+  const localVarFp = UnitsApiFp(configuration)
+  return {
+    /**
+     * Units, for admins only, unpublished runs and hidden content files included. A unit\'s detail lists its content files in unit order.
+     * @summary List
+     * @param {UnitsApiUnitsListRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    unitsList(
+      requestParameters: UnitsApiUnitsListRequest = {},
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<PaginatedUnitList> {
+      return localVarFp
+        .unitsList(
+          requestParameters.content_file_id,
+          requestParameters.kind,
+          requestParameters.limit,
+          requestParameters.offset,
+          requestParameters.resource_id,
+          requestParameters.run_id,
+          options,
+        )
+        .then((request) => request(axios, basePath))
+    },
+    /**
+     * Units, for admins only, unpublished runs and hidden content files included. A unit\'s detail lists its content files in unit order.
+     * @summary Retrieve
+     * @param {UnitsApiUnitsRetrieveRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    unitsRetrieve(
+      requestParameters: UnitsApiUnitsRetrieveRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<UnitDetail> {
+      return localVarFp
+        .unitsRetrieve(requestParameters.id, options)
+        .then((request) => request(axios, basePath))
+    },
+  }
+}
+
+/**
+ * Request parameters for unitsList operation in UnitsApi.
+ */
+export interface UnitsApiUnitsListRequest {
+  /**
+   * The id of a content file in the unit
+   */
+  readonly content_file_id?: Array<number>
+
+  /**
+   * The kind of unit  * &#x60;unit&#x60; - Unit * &#x60;context&#x60; - Context * &#x60;bin&#x60; - Bin
+   */
+  readonly kind?: Array<UnitsListKindEnum>
+
+  /**
+   * Number of results to return per page.
+   */
+  readonly limit?: number
+
+  /**
+   * The initial index from which to return the results.
+   */
+  readonly offset?: number
+
+  /**
+   * The id of the learning resource the unit belongs to
+   */
+  readonly resource_id?: Array<number>
+
+  /**
+   * The id of the learning resource run the unit belongs to
+   */
+  readonly run_id?: Array<number>
+}
+
+/**
+ * Request parameters for unitsRetrieve operation in UnitsApi.
+ */
+export interface UnitsApiUnitsRetrieveRequest {
+  /**
+   * A unique integer value identifying this unit.
+   */
+  readonly id: number
+}
+
+/**
+ * UnitsApi - object-oriented interface
+ */
+export class UnitsApi extends BaseAPI {
+  /**
+   * Units, for admins only, unpublished runs and hidden content files included. A unit\'s detail lists its content files in unit order.
+   * @summary List
+   * @param {UnitsApiUnitsListRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   */
+  public unitsList(
+    requestParameters: UnitsApiUnitsListRequest = {},
+    options?: RawAxiosRequestConfig,
+  ) {
+    return UnitsApiFp(this.configuration)
+      .unitsList(
+        requestParameters.content_file_id,
+        requestParameters.kind,
+        requestParameters.limit,
+        requestParameters.offset,
+        requestParameters.resource_id,
+        requestParameters.run_id,
+        options,
+      )
+      .then((request) => request(this.axios, this.basePath))
+  }
+
+  /**
+   * Units, for admins only, unpublished runs and hidden content files included. A unit\'s detail lists its content files in unit order.
+   * @summary Retrieve
+   * @param {UnitsApiUnitsRetrieveRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   */
+  public unitsRetrieve(
+    requestParameters: UnitsApiUnitsRetrieveRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return UnitsApiFp(this.configuration)
+      .unitsRetrieve(requestParameters.id, options)
+      .then((request) => request(this.axios, this.basePath))
+  }
+}
+
+export const UnitsListKindEnum = {
+  Bin: "bin",
+  Context: "context",
+  Unit: "unit",
+} as const
+export type UnitsListKindEnum =
+  (typeof UnitsListKindEnum)[keyof typeof UnitsListKindEnum]
 
 /**
  * UnsubscribeApi - axios parameter creator
