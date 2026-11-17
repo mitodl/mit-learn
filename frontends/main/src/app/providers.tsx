@@ -17,16 +17,24 @@ import { ReloadOnUserChange } from "@/page-components/ReloadOnUserChange/ReloadO
 import { TrackAccountCreated } from "@/page-components/TrackAccountCreated/TrackAccountCreated"
 import { PublicEnvInsertedHtml } from "./components/PublicEnvInsertedHtml"
 import { Toaster } from "@/page-components/Toaster/Toaster"
+import type { ServerFlags } from "@/common/feature_flags"
+import { ServerFlagsContext } from "@/common/useFeatureFlag"
 
 const PROGRESS_BAR_OPTS: NProgressOptions = { showSpinner: false }
 
-export default function Providers({ children }: { children: React.ReactNode }) {
+export default function Providers({
+  children,
+  serverFlags,
+}: {
+  children: React.ReactNode
+  serverFlags: ServerFlags
+}) {
   const queryClient = getQueryClient()
 
   usePrefetchWarnings({ queryClient })
 
   return (
-    <>
+    <ServerFlagsContext.Provider value={serverFlags}>
       <PublicEnvInsertedHtml />
       <ProgressBar
         height="3px"
@@ -46,6 +54,6 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           </ThemeProvider>
         </NextJsAppRouterCacheProvider>
       </QueryClientProvider>
-    </>
+    </ServerFlagsContext.Provider>
   )
 }
