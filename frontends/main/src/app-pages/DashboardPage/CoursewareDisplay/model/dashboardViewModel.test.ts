@@ -3003,6 +3003,33 @@ describe("selectVariantRunForCourse", () => {
     expect(selectVariantRunForCourse([older, newer], makeVariant())).toBe(newer)
   })
 
+  test("prefers an enrollable run that hasn't ended over a newer archived one", () => {
+    const underway = makeRun({
+      id: 1,
+      is_enrollable: true,
+      start_date: daysFromNow(-60),
+      end_date: daysFromNow(30),
+    })
+    const archived = makeRun({
+      id: 2,
+      is_enrollable: true,
+      start_date: daysFromNow(-40),
+      end_date: daysFromNow(-10),
+    })
+    const closed = makeRun({
+      id: 3,
+      is_enrollable: false,
+      start_date: daysFromNow(-20),
+      end_date: daysFromNow(60),
+    })
+    expect(
+      selectVariantRunForCourse([closed, archived, underway], makeVariant()),
+    ).toBe(underway)
+    expect(selectVariantRunForCourse([closed, archived], makeVariant())).toBe(
+      archived,
+    )
+  })
+
   test("runs with no start date are ranked last", () => {
     const noDate = makeRun({ id: 1, start_date: null })
     const past = makeRun({ id: 2, start_date: "2020-01-01T00:00:00Z" })
