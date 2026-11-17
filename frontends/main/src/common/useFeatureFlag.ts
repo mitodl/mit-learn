@@ -1,22 +1,7 @@
 import posthog from "posthog-js"
 import { createContext, useContext, useSyncExternalStore } from "react"
-import { env, fullEnv } from "@/env"
+import { flagFallback } from "./feature_flags"
 import type { FeatureFlags, ServerFlags } from "./feature_flags"
-
-/**
- * The flag's env default: `NEXT_PUBLIC_FEATURE_<flag>`, with dashes in the
- * flag key read as underscores in the env var name. Only "true" (any case) is
- * on; anything else, including unset, is off.
- */
-const flagDefault = (flag: FeatureFlags): boolean => {
-  const prefix = env("NEXT_PUBLIC_POSTHOG_FEATURE_PREFIX") ?? "FEATURE_"
-  /**
-   * fullEnv(), not env(): these keys are built at runtime, and env() only
-   * accepts the keys declared in the env schema.
-   */
-  const value = fullEnv()[`NEXT_PUBLIC_${prefix}${flag.replaceAll("-", "_")}`]
-  return value?.toLowerCase() === "true"
-}
 
 /**
  * The flag values the Next.js server evaluated for this document. Empty
@@ -64,7 +49,7 @@ const subscribe = (onChange: () => void) => posthog.onFeatureFlags(onChange)
  */
 const useFeatureFlag = (flag: FeatureFlags): boolean => {
   const serverFlags = useContext(ServerFlagsContext)
-  const fallback = serverFlags[flag] ?? flagDefault(flag)
+  const fallback = flagFallback(flag, serverFlags)
   return useSyncExternalStore(
     subscribe,
     () => posthog.isFeatureEnabled(flag) ?? fallback,
