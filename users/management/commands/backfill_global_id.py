@@ -90,6 +90,7 @@ class Command(BaseCommand):
         )
         shared = list(
             candidates.filter(shared_with_unlinked())
+            .exclude(claimed_elsewhere())
             .order_by("scim_external_id", "id")
             .values_list("id", "scim_external_id")
         )
