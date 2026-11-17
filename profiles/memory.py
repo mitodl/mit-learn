@@ -26,7 +26,7 @@ from django.http import HttpRequest
 from profiles.models import Profile
 
 if TYPE_CHECKING:
-    from ol_llm.memory import SyncMemory
+    from ol_llm.memory import SyncLearnerMemory, SyncMemory
 
 log = logging.getLogger(__name__)
 
@@ -96,6 +96,30 @@ def note_text(profile: Profile, field: str) -> str:
     return NOTE_TEMPLATES[field].format(value) if value else ""
 
 
+def _write_note(notes: "SyncLearnerMemory", profile: Profile, field: str) -> None:
+    """
+    Write or delete one field's note, so a failure leaves the others to be tried.
+
+    A forget in progress refuses every write, so it is raised to stop the rest.
+    """
+    from ol_llm.memory import MemoryFenced
+
+    text = note_text(profile, field)
+    try:
+        if text:
+            notes.put(NOTE_KEYS[field], text)
+        else:
+            notes.delete(NOTE_KEYS[field])
+    except MemoryFenced:
+        raise
+    except Exception as exc:  # noqa: BLE001 - the other fields still get written
+        # The exception's message can carry a service response; the class is
+        # enough to triage and keeps anything token-shaped out of the logs.
+        log.warning(
+            "Profile note %s was not written: %s", NOTE_KEYS[field], type(exc).__name__
+        )
+
+
 def sync_profile_notes(
     request: HttpRequest, profile: Profile, fields: Iterable[str]
 ) -> None:
@@ -105,8 +129,8 @@ def sync_profile_notes(
     Only the learner's own request writes: a staff edit of someone else's
     profile carries the staff member's token, which would write to their memory.
     A memory outage, a forget in progress, a misconfigured memory client, or any
-    other failure leaves the notes unwritten rather than failing the profile
-    save, which has already been committed.
+    other failure leaves notes unwritten rather than failing the profile save,
+    which has already been committed. A failed write skips only its own note.
     """
     fields = [field for field in NOTE_FIELDS if field in fields]
     if not fields or profile.user_id != request.user.id:
@@ -129,26 +153,18 @@ def sync_profile_notes(
         log.warning("No forwarded access token, so profile notes were not written")
         return
     from ol_llm import close_thread_loop
-    from ol_llm.memory import MemoryFenced, MemoryStoreError
+    from ol_llm.memory import MemoryFenced
 
     try:
         notes = memory.learner(token, use_case=USE_CASE)
         for field in fields:
-            text = note_text(profile, field)
-            if text:
-                notes.put(NOTE_KEYS[field], text)
-            else:
-                notes.delete(NOTE_KEYS[field])
+            _write_note(notes, profile, field)
     except MemoryFenced:
         log.info("Learner memory is being forgotten, so profile notes were not written")
-    except MemoryStoreError as exc:
-        # The exception's message can carry a service response; the class is
-        # enough to triage and keeps anything token-shaped out of the logs.
-        log.warning("Profile notes were not written: %s", type(exc).__name__)
     except Exception as exc:  # noqa: BLE001 - the save is already committed
-        # Anything ol-llm doesn't wrap, e.g. a 2xx token exchange whose body isn't
-        # the expected JSON. Class only, since a JSON or validation error can quote
-        # the response body.
+        # e.g. a refused token exchange, or a 2xx exchange whose body isn't the
+        # expected JSON, which ol-llm doesn't wrap. See _write_note for why only
+        # the class is logged.
         log.warning("Profile notes were not written: %s", type(exc).__name__)
     finally:
         # SyncMemory runs on a per-thread ol-llm loop, and under ASGI each

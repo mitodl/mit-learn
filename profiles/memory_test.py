@@ -228,10 +228,12 @@ def test_forget_in_progress_does_not_fail_the_save(client, logged_in_profile, me
     assert learner_notes(memory) == {}
 
 
-def test_failure_partway_leaves_the_save(client, logged_in_profile, mocker):
-    """An outage on one write skips the rest and the profile still saves"""
+def test_failed_note_does_not_skip_the_others(
+    client, logged_in_profile, mocker, caplog
+):
+    """An outage on one write is logged, the next field is still written"""
     notes = mocker.Mock()
-    notes.put.side_effect = MemoryUnavailable("down", operation="put")
+    notes.put.side_effect = [MemoryUnavailable("down", operation="put"), None]
     client_mock = mocker.Mock()
     client_mock.learner.return_value = notes
     mocker.patch("profiles.memory.get_memory", return_value=client_mock)
@@ -247,9 +249,15 @@ def test_failure_partway_leaves_the_save(client, logged_in_profile, mocker):
     )
 
     assert resp.status_code == status.HTTP_200_OK
-    # current_education is written first and fails, so time_commitment is not tried
-    notes.put.assert_called_once_with(
-        "profile-current-education", "Education level: Bachelor's degree."
+    assert notes.put.call_args_list == [
+        mocker.call("profile-current-education", "Education level: Bachelor's degree."),
+        mocker.call(
+            "profile-time-commitment", "Time available for learning: <5 hours/week."
+        ),
+    ]
+    assert (
+        "Profile note profile-current-education was not written: MemoryUnavailable"
+        in caplog.text
     )
     logged_in_profile.refresh_from_db()
     assert logged_in_profile.current_education == Profile.CurrentEducation.BACHELORS
