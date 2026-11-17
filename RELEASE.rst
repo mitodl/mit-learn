@@ -1,6 +1,18 @@
 Release Notes
 =============
 
+Version 0.88.1
+--------------
+
+- Remove the external-schema write guard left over from Hightouch (#4302)
+- Hide dashboard details links to product pages that don't load (#4325)
+- Write profile notes to the learner's shared memory (#4326)
+- refactor and reduce complexity of learning_resources/converters/opendataloader_llm_converter.py (#4306)
+- Export the B2B Learners CSV in 100-learner pages (#4336)
+- Add the Cyber Sale banner on MIT Learn (#4332)
+- Find the option by text in the 51-module ContractLearnersPage test (#4337)
+- Bump smoot-design to 6.41.0 for the Contact Us escalation button (#4333)
+
 Version 0.88.0
 --------------
 
