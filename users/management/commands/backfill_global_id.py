@@ -1,5 +1,7 @@
 """Link SCIM-provisioned users to their Keycloak subject by setting global_id"""
 
+from argparse import ArgumentTypeError
+
 from django.contrib.auth import get_user_model
 from django.core.management import BaseCommand
 from django.db import IntegrityError, transaction
@@ -12,6 +14,15 @@ from main.utils import now_in_utc
 User = get_user_model()
 
 HTTP_NOT_FOUND = 404
+
+
+def positive_int(value):
+    """Parse a command-line integer that must be at least 1"""
+    number = int(value)
+    if number < 1:
+        msg = f"must be at least 1, got {number}"
+        raise ArgumentTypeError(msg)
+    return number
 
 
 def unlinked_users():
@@ -62,7 +73,7 @@ class Command(BaseCommand):
         """Add command arguments"""
         parser.add_argument(
             "--batch-size",
-            type=int,
+            type=positive_int,
             default=1000,
             help="Number of rows to update per transaction",
         )
@@ -73,8 +84,7 @@ class Command(BaseCommand):
         )
         parser.add_argument(
             "--verify-sample",
-            type=int,
-            default=0,
+            type=positive_int,
             metavar="N",
             help=(
                 "Look up N random candidates in Keycloak and report how many "
@@ -110,7 +120,7 @@ class Command(BaseCommand):
                 "unlinked user"
             )
 
-        if options["verify_sample"]:
+        if options["verify_sample"] is not None:
             self.verify_sample(options["verify_sample"])
             return
         if options["dry_run"]:
@@ -174,20 +184,26 @@ class Command(BaseCommand):
             last_id = batch[-1][0]
             try:
                 with transaction.atomic():
-                    updated += self.link(
-                        User.objects.filter(id__in=[user_id for user_id, _ in batch])
-                    )
+                    updated += self.link([user_id for user_id, _ in batch])
             except IntegrityError:
                 for user_id, external_id in batch:
                     try:
                         with transaction.atomic():
-                            updated += self.link(User.objects.filter(id=user_id))
+                            updated += self.link([user_id])
                     except IntegrityError:
                         conflicts.append((user_id, external_id))
             self.stdout.write(f"Linked {updated} users so far (through id {last_id})")
 
-    def link(self, users):
-        """Set global_id on the rows of users that are still unlinked"""
-        return users.filter(global_id__isnull=True).update(
-            global_id=F("scim_external_id"), updated_on=now_in_utc()
+    def link(self, user_ids):
+        """
+        Set global_id on the given users that are still linkable.
+
+        The eligibility filter is applied again in the UPDATE itself, so a row
+        that gained a duplicate (or lost its external id) after the batch was
+        selected is left alone rather than linked.
+        """
+        return (
+            linkable_users()
+            .filter(id__in=user_ids)
+            .update(global_id=F("scim_external_id"), updated_on=now_in_utc())
         )

@@ -3,7 +3,7 @@
 from io import StringIO
 
 import pytest
-from django.core.management import call_command
+from django.core.management import CommandError, call_command
 from keycloak.exceptions import KeycloakGetError
 
 from main.factories import UserFactory
@@ -160,3 +160,36 @@ def test_backfill_verify_sample_raises_other_keycloak_errors(mocker):
 
     with pytest.raises(KeycloakGetError):
         run("--verify-sample", "1")
+
+
+def test_backfill_rechecks_eligibility_when_linking(mocker):
+    """A duplicate that appears after the batch is selected blocks the link"""
+    user = UserFactory.create(global_id=None)
+    real_link = backfill_global_id.Command.link
+
+    def link(self, user_ids):
+        UserFactory.create(global_id=None, scim_external_id=user.scim_external_id)
+        return real_link(self, user_ids)
+
+    mocker.patch.object(
+        backfill_global_id.Command, "link", autospec=True, side_effect=link
+    )
+
+    output = run()
+
+    user.refresh_from_db()
+    assert user.global_id is None
+    assert "Set global_id on 0 users; 0 conflicted" in output
+
+
+@pytest.mark.parametrize("option", ["--batch-size", "--verify-sample"])
+@pytest.mark.parametrize("value", ["0", "-1"])
+def test_backfill_rejects_nonpositive_sizes(option, value):
+    """A size below 1 is an error, not a silent no-op or a real backfill"""
+    user = UserFactory.create(global_id=None)
+
+    with pytest.raises(CommandError, match="must be at least 1"):
+        run(option, value)
+
+    user.refresh_from_db()
+    assert user.global_id is None
