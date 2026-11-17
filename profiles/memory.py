@@ -79,20 +79,22 @@ def sync_profile_notes(
 
     Only the learner's own request writes: a staff edit of someone else's
     profile carries the staff member's token, which would write to their memory.
-    A memory outage, a forget in progress, or a misconfigured memory client
-    leaves the notes unwritten rather than failing the profile save, which has
-    already been committed.
+    A memory outage, a forget in progress, a misconfigured memory client, or any
+    other failure leaves the notes unwritten rather than failing the profile
+    save, which has already been committed.
     """
     fields = [field for field in NOTE_FIELDS if field in fields]
     if not fields or profile.user_id != request.user.id:
         return
     try:
         memory = get_memory()
-    except ValueError:
-        # An incomplete OL_LLM_MEMORY_* deployment. Logged with its stack on
-        # every save so it reaches Sentry; ol-llm's messages carry no secrets.
-        log.exception(
-            "Learner memory is misconfigured, so profile notes were not written"
+    except ValueError as exc:
+        # An incomplete OL_LLM_MEMORY_* deployment, logged as an error on every
+        # save so it reaches Sentry. No stack: Sentry captures frame locals, and
+        # the raising frame in ol-llm holds the client secret and the environment.
+        log.error(  # noqa: TRY400
+            "Learner memory is misconfigured, so profile notes were not written: %s",
+            type(exc).__name__,
         )
         return
     if memory is None:
@@ -117,6 +119,11 @@ def sync_profile_notes(
     except MemoryStoreError as exc:
         # The exception's message can carry a service response; the class is
         # enough to triage and keeps anything token-shaped out of the logs.
+        log.warning("Profile notes were not written: %s", type(exc).__name__)
+    except Exception as exc:  # noqa: BLE001 - the save is already committed
+        # Anything ol-llm doesn't wrap, e.g. a 2xx token exchange whose body isn't
+        # the expected JSON. Class only, since a JSON or validation error can quote
+        # the response body.
         log.warning("Profile notes were not written: %s", type(exc).__name__)
     finally:
         # SyncMemory runs on a per-thread ol-llm loop, and under ASGI each

@@ -280,3 +280,26 @@ def test_misconfigured_memory_does_not_fail_the_save(  # noqa: PLR0913
         logged_in_profile.time_commitment == Profile.TimeCommitment.ZERO_TO_FIVE_HOURS
     )
     assert "Learner memory is misconfigured" in caplog.text
+    assert all(record.exc_info is None for record in caplog.records)
+
+
+def test_unexpected_memory_error_does_not_fail_the_save(
+    client, logged_in_profile, mocker, caplog
+):
+    """An error ol-llm doesn't wrap is logged by class only and the save stands"""
+    client_mock = mocker.Mock()
+    # e.g. ol-llm's exchange reading a 2xx body that isn't the expected JSON
+    client_mock.learner.side_effect = KeyError(f"access_token {TOKEN}")
+    mocker.patch("profiles.memory.get_memory", return_value=client_mock)
+
+    resp = patch_profile(
+        client,
+        logged_in_profile,
+        {"time_commitment": Profile.TimeCommitment.ZERO_TO_FIVE_HOURS},
+        HTTP_X_ACCESS_TOKEN=TOKEN,
+    )
+
+    assert resp.status_code == status.HTTP_200_OK
+    assert "Profile notes were not written: KeyError" in caplog.text
+    assert TOKEN not in caplog.text
+    assert all(record.exc_info is None for record in caplog.records)
