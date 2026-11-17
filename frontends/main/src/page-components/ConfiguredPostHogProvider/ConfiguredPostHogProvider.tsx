@@ -80,7 +80,7 @@ const KeyedPostHogProvider: React.FC<{ children: React.ReactNode }> = ({
     currentLoad.current ??= firstLoad
     cap.current = setTimeout(() => {
       console.warn(
-        `PostHog feature flags did not load within ${FLAGS_LOADED_CAP_MS / 1000}s; pages waiting on flags now decide on stored flags or env defaults.`,
+        `PostHog feature flags did not load within ${FLAGS_LOADED_CAP_MS / 1000}s; pages waiting on flags now decide on stored flags, the server's values or env defaults.`,
       )
       setFlagsLoaded(true)
     }, FLAGS_LOADED_CAP_MS)
@@ -118,9 +118,9 @@ const KeyedPostHogProvider: React.FC<{ children: React.ReactNode }> = ({
 }
 
 /**
- * Without an api key nothing loads flags from a PostHog server, so the env
- * defaults that useFeatureFlag falls back to are final, and
- * useFeatureFlagsLoaded keeps its default, `true`.
+ * Without an api key nothing loads flags from a PostHog server, so the
+ * server's values and env defaults that useFeatureFlag falls back to are
+ * final, and useFeatureFlagsLoaded keeps its default, `true`.
  */
 const ConfiguredPostHogProvider: React.FC<{ children: React.ReactNode }> = ({
   children,

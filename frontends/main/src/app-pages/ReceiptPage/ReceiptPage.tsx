@@ -214,9 +214,9 @@ const ReceiptPage: React.FC<{ orderId: number }> = ({ orderId }) => {
   const router = useRouter()
   const orderQuery = useQuery(orderQueries.receipt(orderId))
   /**
-   * On a first visit this reads the env default until PostHog answers. With
-   * that default off, the card stays hidden rather than appearing and then
-   * vanishing for learners who should not see it.
+   * On a first visit this reads the server's value, then the env default, until
+   * PostHog answers. With neither on, the card stays hidden rather than
+   * appearing and then vanishing for learners who should not see it.
    */
   const refundsEnabled = useFeatureFlag(FeatureFlags.SelfServiceRefunds)
   const [submitted, setSubmitted] = React.useState(false)
