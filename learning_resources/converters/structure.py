@@ -19,6 +19,7 @@ from learning_resources.converters.figures import (
 )
 from learning_resources.converters.utils import (
     Usage,
+    litellm_kwargs,
 )
 
 log = logging.getLogger(__name__)
@@ -1185,11 +1186,7 @@ def _structure_attempt(markdown, usage, metadata, errors=None):
     for body in requests:
         try:
             response = litellm.completion(
-                **body,
-                custom_llm_provider=settings.LITELLM_CUSTOM_PROVIDER,
-                api_base=settings.LITELLM_API_BASE,
-                timeout=settings.OCR_REQUEST_TIMEOUT * 3,
-                num_retries=settings.OCR_REQUEST_NUM_RETRIES,
+                **body, **litellm_kwargs(settings.OCR_REQUEST_TIMEOUT * 3)
             )
             if usage is not None:
                 usage.add(response.usage)

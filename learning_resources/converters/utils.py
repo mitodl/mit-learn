@@ -33,6 +33,19 @@ from learning_resources.converters.figures import (
 log = logging.getLogger(__name__)
 
 
+def litellm_kwargs(timeout: float) -> dict[str, Any]:
+    """
+    Shared settings used by the converter's litellm requests (OCR and structure).
+    """
+    return {
+        "custom_llm_provider": settings.LITELLM_CUSTOM_PROVIDER,
+        "api_base": settings.LITELLM_API_BASE,
+        "timeout": timeout,
+        "num_retries": settings.OCR_REQUEST_NUM_RETRIES,
+        "drop_params": True,
+    }
+
+
 def turn_on_litellm_debug() -> None:
     """Log litellm's requests at debug level (as litellm._turn_on_debug does)."""
     for name in ("LiteLLM", "LiteLLM Router", "LiteLLM Proxy"):
@@ -1295,14 +1308,8 @@ class OCRProcessor:
 
     def _completion_kwargs(self) -> dict[str, Any]:
         return {
-            "custom_llm_provider": settings.LITELLM_CUSTOM_PROVIDER,
-            "api_base": settings.LITELLM_API_BASE,
             "model": settings.OCR_MODEL,
-            "timeout": settings.OCR_REQUEST_TIMEOUT,
-            "num_retries": settings.OCR_REQUEST_NUM_RETRIES,
-            # drop unsupported model params for this call only, rather than
-            # setting litellm.drop_params globally
-            "drop_params": True,
+            **litellm_kwargs(settings.OCR_REQUEST_TIMEOUT),
         }
 
     def _execute_batch_ocr(self, messages_list: list[list[dict]]) -> list[str | None]:
