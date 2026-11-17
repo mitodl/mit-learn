@@ -270,6 +270,12 @@ Personal API keys only need read permission to Query. When creating a personal A
 
 Once these are set (and you've restarted the app), you should see events flowing into the PostHog dashboard.
 
+The Next.js server evaluates feature flags itself when `POSTHOG_SECRET_KEY` (the project secret key, which usually starts with `phs_`) is set. Without it, the server renders each flag's `NEXT_PUBLIC_FEATURE_*` default. Two optional variables tune it: `POSTHOG_SERVER_FLAGS_POLLING_INTERVAL_MS` (default `300000`) and `POSTHOG_SERVER_FLAGS_WAIT_MS` (default `3000`, how long a new process waits for flag definitions).
+
+The server's flag values are part of the HTML the CDN caches. After changing a flag in PostHog, wait for the server's next poll, then purge the `html-pages` surrogate key in Fastly if the change must reach everyone at once. Without a purge, a cached page renders the old value first and switches to the visitor's value after load, until the cached copy is replaced. It expires after `NEXT_PUBLIC_CACHE_S_MAXAGE_SECONDS`, and the CDN can serve it stale for up to a day after that while it revalidates.
+
+The server evaluates every flag for the distinct id `mit-learn-nextjs-server`, so a flag's server value can be pinned by naming that id in the flag's conditions in PostHog. For example, during a percentage rollout you might want the server to render the flag off: a single condition set with the filter "Distinct ID doesn't equal `mit-learn-nextjs-server`" and an increasing rollout percentage does that. A flag whose every condition set uses person properties or a cohort needs no filter: the server cannot evaluate those for its id, so it renders the flag's env default.
+
 ### Connecting with MITxOnline
 
 Both MITxOnline and MIT Learn repos have keycloak and apisix containers included in their stacks. In connecting the two projects, we want to use the same Keycloak+Apisix container for both projects. Here we assume that the Learn Keycloak+Apisix will be used. There are some caveats to this setup:
