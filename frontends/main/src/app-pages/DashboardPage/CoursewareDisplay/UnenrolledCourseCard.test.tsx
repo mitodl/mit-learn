@@ -243,6 +243,56 @@ describe.each([
     expect(within(getCard()).getByTestId("courseware-button")).toBeDisabled()
   })
 
+  test("CTA is disabled when the displayed run is archived", () => {
+    setupUserApis()
+    // Ended but still open for enrollment, as mitxonline's archived runs are.
+    const archivedRun = mitxonline.factories.courses.courseRun({
+      is_enrollable: true,
+      start_date: moment().subtract(200, "days").toISOString(),
+      end_date: moment().subtract(100, "days").toISOString(),
+    })
+    const course = mitxOnlineCourse({
+      courseruns: [archivedRun],
+      next_run_id: archivedRun.id,
+    })
+
+    renderWithProviders(
+      <UnenrolledCourseCard course={course} displayedRun={archivedRun} />,
+    )
+
+    const card = getCard()
+    expect(within(card).getByTestId("courseware-button")).toBeDisabled()
+    expect(
+      within(card).queryByRole("button", { name: archivedRun.title }),
+    ).not.toBeInTheDocument()
+  })
+
+  test("without a displayed run, offers an upcoming run over an archived next run", () => {
+    setupUserApis()
+    const archivedRun = mitxonline.factories.courses.courseRun({
+      is_enrollable: true,
+      start_date: moment().subtract(200, "days").toISOString(),
+      end_date: moment().subtract(100, "days").toISOString(),
+    })
+    const upcomingRun = mitxonline.factories.courses.courseRun({
+      is_enrollable: true,
+      start_date: moment().add(30, "days").toISOString(),
+      end_date: moment().add(120, "days").toISOString(),
+    })
+    const course = mitxOnlineCourse({
+      courseruns: [archivedRun, upcomingRun],
+      next_run_id: archivedRun.id,
+    })
+
+    renderWithProviders(<UnenrolledCourseCard course={course} />)
+
+    const card = getCard()
+    expect(within(card).getByTestId("courseware-button")).toBeEnabled()
+    expect(
+      within(card).getByRole("button", { name: upcomingRun.title }),
+    ).toBeInTheDocument()
+  })
+
   test("uses displayedRun title when provided", () => {
     setupUserApis()
     const defaultRun = mitxonline.factories.courses.courseRun({
