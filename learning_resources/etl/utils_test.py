@@ -1147,8 +1147,9 @@ def test_pdf_to_markdown_stores_figures(mocker, figure_storage, tmp_path):
     saved = Figure("p1_1", 1, [100, 400, 300, 600], "a diagram", 612, 792)
     unsaved = Figure("p1_2", 1, [100, 100, 300, 300], "a plot", 612, 792)
 
-    def converter(pdf_path, *, figures_dir, figure_link_prefix):
-        assert figure_link_prefix == ""
+    def converter(pdf_path, *, figure_output):
+        assert figure_output.link_prefix == ""
+        figures_dir = figure_output.directory
         saved.path = figures_dir / "p1_1.png"
         saved.path.write_bytes(b"png")
         unsaved.path = figures_dir / "missing.png"  # its crop cannot be read
