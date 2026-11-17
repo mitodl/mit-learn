@@ -49,7 +49,6 @@ import {
   buildGridCsv,
   gridColumns,
   gridLearnersQuery,
-  GRID_PAGE_SIZE,
   ProgressGrid,
 } from "./ProgressGrid"
 import { ALL_MODULES, completionStatusFilter } from "@/common/urls"
@@ -350,8 +349,10 @@ const ErrorRow = styled.div({
   gap: "16px",
 })
 
-/** `/learners` caps a page at 25 learners, so the export fetches this many pages at a time rather than one by one or all at once. */
-const CSV_EXPORT_CONCURRENCY = 5
+/** The `/learners` endpoint's maximum page size, in learners. */
+const CSV_EXPORT_PAGE_SIZE = 100
+/** Pages fetched at a time. The analytics API builds each page in memory and shares a small database pool, so this stays low. */
+const CSV_EXPORT_CONCURRENCY = 2
 const UNAVAILABLE_MESSAGE_ID = "learner-analytics-unavailable-message"
 const NOT_LOADED_MESSAGE_ID = "learner-analytics-not-loaded-message"
 const NO_LEARNERS_MESSAGE_ID = "learner-analytics-no-learners-message"
@@ -546,11 +547,17 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     try {
       const fetchPage = (pageNumber: number) =>
         queryClient.fetchQuery(
-          gridLearnersQuery(orgUuid, contractId, gridFilters, pageNumber),
+          gridLearnersQuery(
+            orgUuid,
+            contractId,
+            gridFilters,
+            pageNumber,
+            CSV_EXPORT_PAGE_SIZE,
+          ),
         )
       const first = await fetchPage(1)
       const learners: LearnerWithEnrollments[] = [...first.data]
-      const pageCount = Math.ceil(first.total_count / GRID_PAGE_SIZE)
+      const pageCount = Math.ceil(first.total_count / CSV_EXPORT_PAGE_SIZE)
       for (let next = 2; next <= pageCount; next += CSV_EXPORT_CONCURRENCY) {
         const batch = await Promise.all(
           Array.from(
