@@ -100,9 +100,11 @@ def _write_note(notes: "SyncLearnerMemory", profile: Profile, field: str) -> Non
     """
     Write or delete one field's note, so a failure leaves the others to be tried.
 
-    A forget in progress refuses every write, so it is raised to stop the rest.
+    A forget in progress refuses every write, and a hung service would make each
+    remaining field wait out its own timeout (six in a row run past the gateway's
+    read timeout), so both are raised to stop the rest.
     """
-    from ol_llm.memory import MemoryFenced
+    from ol_llm.memory import MemoryFenced, MemoryTimeout
 
     text = note_text(profile, field)
     try:
@@ -110,7 +112,7 @@ def _write_note(notes: "SyncLearnerMemory", profile: Profile, field: str) -> Non
             notes.put(NOTE_KEYS[field], text)
         else:
             notes.delete(NOTE_KEYS[field])
-    except MemoryFenced:
+    except (MemoryFenced, MemoryTimeout):
         raise
     except Exception as exc:  # noqa: BLE001 - the other fields still get written
         # The exception's message can carry a service response; the class is
@@ -130,7 +132,8 @@ def sync_profile_notes(
     profile carries the staff member's token, which would write to their memory.
     A memory outage, a forget in progress, a misconfigured memory client, or any
     other failure leaves notes unwritten rather than failing the profile save,
-    which has already been committed. A failed write skips only its own note.
+    which has already been committed. A failed write skips only its own note,
+    unless it timed out.
     """
     fields = [field for field in NOTE_FIELDS if field in fields]
     if not fields or profile.user_id != request.user.id:

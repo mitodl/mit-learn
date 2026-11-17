@@ -8,6 +8,7 @@ from ol_llm.memory import (
     InMemoryStore,
     Memory,
     MemoryNotFound,
+    MemoryTimeout,
     MemoryUnavailable,
     SyncMemory,
 )
@@ -261,6 +262,31 @@ def test_failed_note_does_not_skip_the_others(
     )
     logged_in_profile.refresh_from_db()
     assert logged_in_profile.current_education == Profile.CurrentEducation.BACHELORS
+
+
+def test_timeout_stops_the_remaining_notes(client, logged_in_profile, mocker, caplog):
+    """A hung memory service times out once, not once per field"""
+    notes = mocker.Mock()
+    notes.put.side_effect = MemoryTimeout("hung", operation="put")
+    client_mock = mocker.Mock()
+    client_mock.learner.return_value = notes
+    mocker.patch("profiles.memory.get_memory", return_value=client_mock)
+
+    resp = patch_profile(
+        client,
+        logged_in_profile,
+        {
+            "current_education": Profile.CurrentEducation.BACHELORS,
+            "time_commitment": Profile.TimeCommitment.ZERO_TO_FIVE_HOURS,
+        },
+        HTTP_X_ACCESS_TOKEN=TOKEN,
+    )
+
+    assert resp.status_code == status.HTTP_200_OK
+    notes.put.assert_called_once_with(
+        "profile-current-education", "Education level: Bachelor's degree."
+    )
+    assert "Profile notes were not written: MemoryTimeout" in caplog.text
 
 
 def test_thread_loop_closed_after_writing(client, logged_in_profile, mocker, memory):
