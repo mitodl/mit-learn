@@ -68,7 +68,8 @@ const ChannelPage: React.FC = () => {
   /**
    * The whole page is behind the flag, so wait until flags are final rather
    * than deciding on what the flag reads before then: a value PostHog stored on
-   * an earlier visit, or the env default (see useFeatureFlagsLoaded's USE CASE).
+   * an earlier visit, or the server's value and then the env default (see
+   * useFeatureFlagsLoaded's USE CASE).
    *
    * Only where there is something to wait for: only the department page is
    * still behind a flag. Every other one draws the page it has always drawn

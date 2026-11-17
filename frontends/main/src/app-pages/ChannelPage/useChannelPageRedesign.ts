@@ -15,10 +15,10 @@ import { useFeatureFlag } from "@/common/useFeatureFlag"
  * without asking PostHog.
  *
  * The department page is still behind a flag of its own, so it can be turned
- * on when it is ready. A flag that has not resolved reads as its env default,
- * off unless set, which draws the page every other channel draws. That is the
- * page the department page had before the redesign, so the fallback is the old
- * page rather than an empty one.
+ * on when it is ready. A flag that has not resolved reads as the server's
+ * value, then its env default. With neither on, it draws the page every other
+ * channel draws, which is the page the department page had before the
+ * redesign, so the fallback is the old page rather than an empty one.
  */
 const useChannelPageRedesign = (channelType: string): boolean => {
   const departmentEnabled = useFeatureFlag(FeatureFlags.DepartmentPageRedesign)
