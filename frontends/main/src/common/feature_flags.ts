@@ -1,3 +1,5 @@
+import { env, fullEnv } from "@/env"
+
 // Feature flags for the app. These should correspond to the flag that's set up
 // in PostHog.
 
@@ -22,3 +24,27 @@ export enum FeatureFlags {
 
 /** Flag values the Next.js server evaluated for this document. */
 export type ServerFlags = Partial<Record<FeatureFlags, boolean>>
+
+/**
+ * The flag's env default: `NEXT_PUBLIC_FEATURE_<flag>`, with dashes in the
+ * flag key read as underscores in the env var name. Only "true" (any case) is
+ * on; anything else, including unset, is off.
+ */
+const flagDefault = (flag: FeatureFlags): boolean => {
+  const prefix = env("NEXT_PUBLIC_POSTHOG_FEATURE_PREFIX") ?? "FEATURE_"
+  /**
+   * fullEnv(), not env(): these keys are built at runtime, and env() only
+   * accepts the keys declared in the env schema.
+   */
+  const value = fullEnv()[`NEXT_PUBLIC_${prefix}${flag.replaceAll("-", "_")}`]
+  return value?.toLowerCase() === "true"
+}
+
+/**
+ * The value a flag renders with on the server and during hydration: the
+ * server's value, then the flag's env default.
+ */
+export const flagFallback = (
+  flag: FeatureFlags,
+  serverFlags: ServerFlags,
+): boolean => serverFlags[flag] ?? flagDefault(flag)

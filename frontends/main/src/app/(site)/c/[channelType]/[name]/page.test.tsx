@@ -1,6 +1,11 @@
 import { factories, makeRequest, setMockResponse, urls } from "api/test-utils"
 import { ChannelTypeEnum } from "api/v0"
 import Page from "./page"
+import { getServerFlags } from "@/common/serverFeatureFlags"
+import { FeatureFlags } from "@/common/feature_flags"
+
+jest.mock("@/common/serverFeatureFlags", () => ({ getServerFlags: jest.fn() }))
+const mockGetServerFlags = jest.mocked(getServerFlags)
 
 jest.mock("@/app/getQueryClient", () => {
   const { makeBrowserQueryClient } = jest.requireActual("@/app/getQueryClient")
@@ -50,6 +55,10 @@ const setupChannel = (channelType: ChannelTypeEnum = ChannelTypeEnum.Topic) => {
 
 const calledWith = (base: string) =>
   makeRequest.mock.calls.some(([args]) => args.url.startsWith(base))
+
+beforeEach(() => {
+  mockGetServerFlags.mockResolvedValue({})
+})
 
 afterEach(() => {
   delete process.env.NEXT_PUBLIC_DISABLE_HYBRID_SEARCH
@@ -108,10 +117,25 @@ test("prefetches OpenSearch results when vector_search is disabled", async () =>
 })
 
 test("prefetches OpenSearch results when the env kill switch is set", async () => {
-  // Server components cannot read PostHog flags. Without this env var the
-  // prefetch would fetch a hybrid query that the client discards and refetches
-  // from OpenSearch on hydration.
   process.env.NEXT_PUBLIC_DISABLE_HYBRID_SEARCH = "true"
+  const channel = setupChannel()
+
+  await Page({
+    params: Promise.resolve({
+      channelType: channel.channel_type,
+      name: channel.name,
+    }),
+    searchParams: Promise.resolve({ q: "test" }),
+  })
+
+  expect(calledWith(urls.search.resources())).toBe(true)
+  expect(calledWith(urls.search.vectorResources())).toBe(false)
+})
+
+test("prefetches OpenSearch results when the server's disable-hybrid-search flag is on", async () => {
+  mockGetServerFlags.mockResolvedValue({
+    [FeatureFlags.DisableHybridSearch]: true,
+  })
   const channel = setupChannel()
 
   await Page({
