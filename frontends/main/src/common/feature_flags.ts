@@ -19,3 +19,6 @@ export enum FeatureFlags {
   EducatorPage = "educator-page",
   CyberSaleBanner = "cyber-sale-banner",
 }
+
+/** Flag values the Next.js server evaluated for this document. */
+export type ServerFlags = Partial<Record<FeatureFlags, boolean>>

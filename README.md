@@ -261,6 +261,8 @@ Personal API keys only need read permission to Query. When creating a personal A
 
 Once these are set (and you've restarted the app), you should see events flowing into the PostHog dashboard.
 
+The Next.js server evaluates feature flags itself when `POSTHOG_SECRET_KEY` (the project secret key, which usually starts with `phs_`) is set. Without it, the server renders each flag's `NEXT_PUBLIC_FEATURE_*` default.
+
 ### Connecting with MITxOnline
 
 Both MITxOnline and MIT Learn repos have keycloak and apisix containers included in their stacks. In connecting the two projects, we want to use the same Keycloak+Apisix container for both projects. Here we assume that the Learn Keycloak+Apisix will be used. There are some caveats to this setup:
