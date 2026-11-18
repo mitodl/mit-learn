@@ -1308,14 +1308,6 @@ def load_course_units(run: LearningResourceRun, units_data: list[dict]) -> list[
     return unit_ids
 
 
-# solutions files restate the problems of their problem set or exam, which
-# are read from that file instead
-PRACTICE_PROBLEM_SOLUTION_TAGS = frozenset({"Exams Solutions", "Problem Set Solutions"})
-PRACTICE_PROBLEM_TAGS = frozenset(
-    tag
-    for tag, category in OCW_COURSE_CONTENT_CATEGORY_MAPPING.items()
-    if category == OCW_CONTENT_CATEGORY_PRACTICE_AND_ASSIGNMENT
-)
 # a problem's description: its text, up to this many characters
 PRACTICE_PROBLEM_DESCRIPTION_CHARS = 1000
 
@@ -1332,10 +1324,17 @@ def load_learning_materials(
     instead of one for the whole file; a file with no problems read from it
     becomes none.
     """
+    # solutions files restate the problems of their problem set or exam, which
+    # are read from that file instead
+    solution_tags = frozenset({"Exams Solutions", "Problem Set Solutions"})
     material_ids = []
     if settings.CREATE_HIDDEN_OCW_LEARNING_MATERIALS:
         promoted_ocw_file_types = set(OCW_COURSE_CONTENT_CATEGORY_MAPPING.keys())
-        practice_problem_tags = PRACTICE_PROBLEM_TAGS
+        practice_problem_tags = frozenset(
+            tag
+            for tag, category in OCW_COURSE_CONTENT_CATEGORY_MAPPING.items()
+            if category == OCW_CONTENT_CATEGORY_PRACTICE_AND_ASSIGNMENT
+        )
     else:
         promoted_ocw_file_types = set(OCW_VISIBLE_TAGS)
         practice_problem_tags = frozenset()
@@ -1355,7 +1354,7 @@ def load_learning_materials(
         problems = (
             parse_structured_problems(content_file.content)
             if problem_tags
-            and not problem_tags & PRACTICE_PROBLEM_SOLUTION_TAGS
+            and not problem_tags & solution_tags
             and content_file.content_type != CONTENT_TYPE_PAGE
             and (content_file.file_extension or "").lower() == ".pdf"
             else None
