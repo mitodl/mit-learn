@@ -108,6 +108,7 @@ def _open_edx_row(key="block-1", **overrides):
         "published": 1,
         "last_modified": "2026-10-20T10:00:00.000Z",
         "release_date": None,
+        "course_xml_version": "v1",
         **overrides,
     }
 
@@ -431,6 +432,7 @@ def _unit_row(unit_order, external_id, content_files, **overrides):
         "url": f"https://example.com/jump_to_id/{external_id}",
         "unit_order": unit_order,
         "content_files": json.dumps(content_files),
+        "course_xml_version": "v1",
         **overrides,
     }
 
@@ -536,10 +538,13 @@ def test_load_run_unread_units_keep_the_outline_and_retry(
     assert run.checksum is None
 
 
-def test_load_run_no_unit_rows_keep_the_outline_and_the_fingerprint(
+def test_load_run_no_unit_rows_keep_the_outline_and_retry(
     warehouse_owns_content_files,
 ):
-    """An empty units view keeps the outline, and doesn't hold the run for retry"""
+    """
+    A built run always has its context unit, so no unit rows means the units
+    aren't built for this export yet: the outline stays and the run is retried
+    """
     run = _run()
     old_unit = UnitFactory.create(run=run, external_id="old")
 
@@ -549,7 +554,65 @@ def test_load_run_no_unit_rows_keep_the_outline_and_the_fingerprint(
 
     assert list(run.units.values_list("id", flat=True)) == [old_unit.id]
     run.refresh_from_db()
-    assert run.checksum is not None
+    assert run.checksum is None
+
+
+def test_load_run_files_from_two_exports_keep_the_outline(
+    warehouse_owns_content_files,
+):
+    """File rows from more than one export can't be matched to the units"""
+    run = _run()
+    old_unit = UnitFactory.create(run=run, external_id="old")
+
+    warehouse_content_files.load_run(
+        run,
+        [_open_edx_row("a"), _open_edx_row("b", course_xml_version="v2")],
+        expected_count=2,
+        unit_rows=[_unit_row(0, "seq1", [["a", "core"]])],
+    )
+
+    assert list(run.units.values_list("id", flat=True)) == [old_unit.id]
+    run.refresh_from_db()
+    assert run.checksum is None
+
+
+def test_load_run_view_without_the_export_version_writes_nothing(
+    warehouse_owns_content_files,
+):
+    """A view built before course_xml_version fails the load before any write"""
+    run = _run()
+    row = _open_edx_row("a")
+    del row["course_xml_version"]
+
+    with pytest.raises(KeyError):
+        warehouse_content_files.load_run(
+            run,
+            [row],
+            expected_count=1,
+            unit_rows=[_unit_row(0, "seq1", [["a", "core"]])],
+        )
+
+    assert not run.content_files.exists()
+
+
+def test_load_run_units_from_another_export_keep_the_outline_and_retry(
+    warehouse_owns_content_files,
+):
+    """Units read from another export than the files leave the outline and retry"""
+    run = _run()
+    old_unit = UnitFactory.create(run=run, external_id="old")
+
+    loaded = warehouse_content_files.load_run(
+        run,
+        [_open_edx_row("a", course_xml_version="v2")],
+        expected_count=1,
+        unit_rows=[_unit_row(0, "seq1", [["a", "core"]])],
+    )
+
+    assert loaded == 1
+    assert list(run.units.values_list("id", flat=True)) == [old_unit.id]
+    run.refresh_from_db()
+    assert run.checksum is None
 
 
 def test_load_run_short_read_keeps_the_outline(warehouse_owns_content_files):

@@ -279,25 +279,62 @@ def load_run_units(run: LearningResourceRun, unit_rows: list[dict]) -> bool:
     return loaded
 
 
+def _units_match_files(
+    run: LearningResourceRun, rows: list[dict], unit_rows: list[dict] | None
+) -> bool:
+    """
+    Tell whether a run's unit rows come from the export its file rows do. The
+    files and units views are replaced in separate commits, so a read between
+    the two can pair a new export's files with the last export's units. With no
+    rows of either there is nothing to compare.
+    """
+    if not (rows and unit_rows):
+        return True
+    file_versions = {row["course_xml_version"] for row in rows}
+    unit_versions = {row["course_xml_version"] for row in unit_rows}
+    if len(file_versions) == 1 and unit_versions == file_versions:
+        return True
+    log.warning(
+        "Units of %s are from export %s and its files from %s; keeping its units",
+        run.run_id,
+        sorted(unit_versions),
+        sorted(file_versions),
+    )
+    return False
+
+
+def _keep_outline(run: LearningResourceRun):
+    """
+    Keep a run's units, less their links to files no longer published, logging
+    a failure as load_run_units does so the run's files still count as loaded
+    """
+    try:
+        loaders.load_course_units(run, [])
+    except Exception:
+        log.exception("Unit links not pruned for run %s", run.run_id)
+
+
 def _load_open_edx_units(
     run: LearningResourceRun,
     unit_rows: list[dict] | None,
     *,
     files_landed: bool,
     units_unread: bool,
+    units_match: bool,
 ) -> bool:
     """
     Replace an Open edX run's units once all its files have landed, and say
     whether its fingerprint can be stored.
 
-    Before the files land (a short read, or a file that failed to save), a unit
-    whose new file is missing would lose its links and then the unit itself, so
-    the outline is kept, less its links to unpublished files. It is kept the
-    same way with no unit rows (a source with no units view) and when the units
-    view couldn't be read, which also holds back the fingerprint so the next
-    sync reads the units again. An empty list is the view saying the run has no
-    units, as it does for a run whose units couldn't be built, and keeps the
-    outline too.
+    Otherwise the outline is kept, less its links to unpublished files: before
+    the files land (a short read, or a file that failed to save), because a unit
+    whose new file is missing would lose its links and then the unit itself;
+    with no unit rows (a source with no units view); and when the units can't
+    be trusted for this export, which also holds back the fingerprint so the
+    next sync reads them again. That is when the units view couldn't be read,
+    when its rows are from another export than the files, and when it has no
+    rows for the run: a built run always has its context unit, so none means
+    the units for this export aren't built yet, or their build failed.
 
     Args:
         run (LearningResourceRun): the run
@@ -305,14 +342,23 @@ def _load_open_edx_units(
         files_landed (bool): every expected row was read and every file tried
             was saved
         units_unread (bool): the units view was there to read and the read failed
+        units_match (bool): the unit rows are from the files' export
 
     Returns:
         bool: False when the units should be read again
     """
-    if files_landed and unit_rows is not None:
-        return load_run_units(run, unit_rows)
-    loaders.load_course_units(run, [])
-    return not units_unread
+    if unit_rows is None and not units_unread:
+        _keep_outline(run)
+        return True
+    if units_unread or not unit_rows or not units_match:
+        if unit_rows == []:
+            log.warning("No units built yet for run %s; keeping its units", run.run_id)
+        _keep_outline(run)
+        return False
+    if not files_landed:
+        _keep_outline(run)
+        return False
+    return load_run_units(run, unit_rows)
 
 
 def _refuse_unpublish_by_key(
@@ -392,6 +438,9 @@ def load_run(  # noqa: PLR0913
             etl_source,
             run.run_id,
         )
+    # before anything is written, so a view without course_xml_version fails
+    # the load with nothing changed
+    units_match = _units_match_files(run, rows, unit_rows)
     if run.checksum:
         run.checksum = None
         run.save(update_fields=["checksum"])
@@ -440,7 +489,11 @@ def load_run(  # noqa: PLR0913
         )
     else:
         units_loaded = _load_open_edx_units(
-            run, unit_rows, files_landed=landed, units_unread=units_unread
+            run,
+            unit_rows,
+            files_landed=landed,
+            units_unread=units_unread,
+            units_match=units_match,
         )
     if landed and units_loaded:
         run.checksum = _fingerprint(etl_source, _stats_of_rows(etl_source, rows))
