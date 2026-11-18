@@ -543,3 +543,48 @@ def test_ocw_courses_etl_skips_when_legacy_does_not_own_courses(mocker):
 
     mock_boto.resource.assert_not_called()
     mock_extract.assert_not_called()
+
+
+@mock_aws
+@pytest.mark.django_db
+def test_ocw_courses_etl_ocr_pdfs(settings, mocker):
+    """ocr_pdfs reloads an unchanged course, OCRing its PDFs and nothing else"""
+    setup_s3_ocw(settings)
+    mocker.patch("learning_resources.etl.pipelines.loaders.resource_upserted_actions")
+    mocker.patch(
+        "learning_resources.etl.pipelines.loaders.content_files_loaded_actions"
+    )
+    mocker.patch(
+        "learning_resources.etl.ocw.extract_text_metadata",
+        return_value={"content": "TIKA"},
+    )
+    mock_ocr = mocker.patch(
+        "learning_resources.etl.ocw.extract_pdf_bytes_with_ocr",
+        return_value={"content": "OCR"},
+    )
+    pipelines.ocw_courses_etl(url_paths=[OCW_TEST_PREFIX], force_overwrite=False)
+    mock_ocr.assert_not_called()
+
+    mocker.patch(
+        "learning_resources.etl.ocw.extract_text_metadata",
+        return_value={"content": "NEW TIKA"},
+    )
+    pipelines.ocw_courses_etl(
+        url_paths=[OCW_TEST_PREFIX], force_overwrite=False, ocr_pdfs=True
+    )
+
+    run = LearningResource.objects.get(
+        resource_type=LearningResourceType.course.name
+    ).runs.first()
+    contents = {
+        content_file.file_extension: content_file.content
+        for content_file in run.content_files.filter(published=True)
+        if content_file.content
+    }
+    # the video's transcript is a PDF too, but is not OCR'd
+    assert contents[".pdf"] == "OCR"
+    assert contents[".mp4"] == "TIKA"
+    assert (
+        mock_ocr.call_count
+        == run.content_files.filter(published=True, file_extension=".pdf").count()
+    )

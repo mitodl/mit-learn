@@ -53,4 +53,17 @@ export const toAppliedSavings = (
   }
 }
 
+/**
+ * The savings a program page shows. A credit is earned by buying one of the
+ * program's own courses and is worded throughout as an upgrade to the full
+ * program, which a page presenting that program as a single course cannot say.
+ * Every other discount, financial aid above all, applies just as much there as
+ * on the program page, and shows.
+ */
+export const programAppliedSavings = (
+  breakdown: AppliedSavings | null,
+  displayAsCourse?: boolean,
+): AppliedSavings | null =>
+  displayAsCourse && breakdown?.kind === "credit" ? null : breakdown
+
 export { toNumericPrice }

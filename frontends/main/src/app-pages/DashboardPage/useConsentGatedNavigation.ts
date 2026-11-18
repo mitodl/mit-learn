@@ -3,9 +3,7 @@ import NiceModal from "@ebay/nice-modal-react"
 import { usePathname } from "next/navigation"
 import { useRouter } from "next-nprogress-bar"
 import type { UserContractPage } from "@mitodl/mitxonline-api-axios/v0"
-import { FeatureFlags } from "@/common/feature_flags"
 import { DASHBOARD_HOME } from "@/common/urls"
-import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { DataConsentModal } from "./DataConsentPrompt"
 import { useDashboardAnnounce } from "./DashboardAnnouncer"
 
@@ -19,7 +17,6 @@ type GatedLinkProps = {
  * dashboard. Cancelling goes to dashboard home instead.
  */
 const useConsentGatedNavigation = () => {
-  const consentFlag = useFeatureFlag(FeatureFlags.B2BDataConsent)
   const router = useRouter()
   const pathname = usePathname()
   const announce = useDashboardAnnounce()
@@ -32,7 +29,7 @@ const useConsentGatedNavigation = () => {
       >,
       href: string,
     ): GatedLinkProps => {
-      if (!consentFlag || contract.consented_to_data_sharing === true) {
+      if (contract.consented_to_data_sharing === true) {
         return {}
       }
       return {
@@ -52,7 +49,7 @@ const useConsentGatedNavigation = () => {
         },
       }
     },
-    [consentFlag, router, pathname, announce],
+    [router, pathname, announce],
   )
 }
 

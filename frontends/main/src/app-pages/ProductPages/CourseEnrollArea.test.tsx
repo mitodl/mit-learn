@@ -464,7 +464,7 @@ describe("CourseEnrollArea — click smoke tests", () => {
 
     await waitFor(() => {
       expect(window.location.assign).toHaveBeenCalledWith(
-        mitxonlineLegacyUrl("/cart/"),
+        mitxonlineLegacyUrl("/switch-session/?next=/cart/&basket_id=1"),
       )
     })
   })

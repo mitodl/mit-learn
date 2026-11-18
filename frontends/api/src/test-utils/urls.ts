@@ -26,6 +26,9 @@ import type {
   DepartmentsApi,
   SchoolsApi,
   VideoPlaylistsApi,
+  CoursesApi,
+  VideosApi,
+  PodcastEpisodesApi,
   LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as LearningResourcesSearchRequest,
 } from "../generated/v1"
 import type { BaseAPI } from "../generated/v1/base"
@@ -270,7 +273,19 @@ const videoPlaylists = {
     `${getApiBaseUrl()}/api/v1/video_playlists/${params.id}/`,
 }
 
+const courses = {
+  list: (params?: Params<CoursesApi, "coursesList">) =>
+    `${getApiBaseUrl()}/api/v1/courses/${query(params)}`,
+}
+
+const videos = {
+  list: (params?: Params<VideosApi, "videosList">) =>
+    `${getApiBaseUrl()}/api/v1/videos/${query(params)}`,
+}
+
 const podcastEpisodes = {
+  list: (params?: Params<PodcastEpisodesApi, "podcastEpisodesList">) =>
+    `${getApiBaseUrl()}/api/v1/podcast_episodes/${query(params)}`,
   transcript: (id: number) =>
     `${getApiBaseUrl()}/api/v1/podcast_episodes/${id}/transcript/`,
 }
@@ -278,6 +293,8 @@ const podcastEpisodes = {
 export {
   learningResources,
   videoPlaylists,
+  courses,
+  videos,
   podcastEpisodes,
   topics,
   learningPaths,

@@ -1,6 +1,77 @@
 Release Notes
 =============
 
+Version 0.88.1
+--------------
+
+- Remove the external-schema write guard left over from Hightouch (#4302)
+- Hide dashboard details links to product pages that don't load (#4325)
+- Write profile notes to the learner's shared memory (#4326)
+- refactor and reduce complexity of learning_resources/converters/opendataloader_llm_converter.py (#4306)
+- Export the B2B Learners CSV in 100-learner pages (#4336)
+- Add the Cyber Sale banner on MIT Learn (#4332)
+- Find the option by text in the 51-module ContractLearnersPage test (#4337)
+- Bump smoot-design to 6.41.0 for the Contact Us escalation button (#4333)
+
+Version 0.88.0
+--------------
+
+- handle large units (#4297)
+- Put Modules before Status on the B2B Learners page, and disable Status until a module is selected (#4318)
+- Remove the search-ai-overview feature flag (#4321)
+- Remove the account-management and program-letters PostHog flags (#4324)
+- Remove brotli uv exclude-newer override (#4314)
+- Replace the website content draft filter with ?status (#4313)
+- Remove the arithmix and hacksnack feature flags (#4322)
+- Remove the b2b-contract-manager-dashboard, b2b-analytics-dashboard and b2b-data-consent flags (#4323)
+- Expect the /switch-session redirect in the sign-up-return checkout test (#4327)
+- Clamp the card's parent course name at two lines (#4317)
+- fix: send checkout through MITx Online's /switch-session (#4311)
+- Add the Educator page (#4260)
+- Do not reject OVS webhook videos with a non-allowlisted cta_link (#4315)
+- Drop the By enrollment view and hide unconsented learners (#4266)
+
+Version 0.87.3
+--------------
+
+- Purge website content pages by path surrogate key (#4263)
+- Send signed-out enroll clicks to sign-up and finish the enrollment after (#4277)
+- Move the load tests to mitodl/load-testing (#4307)
+- Clear channel caches when a channel is saved in admin (#4261)
+- Drop the custom enum template; hardcode the profile choice labels (#4308)
+- fix(widgets): remove the People widget type (#4310)
+- Remove dead catalog-filter event emission (#4309)
+- Update gtm docs (#4305)
+- chore(deps): remove unused safety to unblock filelock 4 (#4303)
+- Log in SCIM-provisioned users by their external id and prefer linked rows (#4248)
+- feat(b2b-learner-analytics): Match the Progress grid's Modules filter to the topic page's facet controls (#4246)
+- Keep Celery workers on the structlog logging configuration (#4289)
+- Read actively_enrolled_* on the B2B analytics dashboard (#4298)
+- Offer Start on a program course whose enrolled runs have all ended (#4257)
+- Show the price in the mobile enroll button (#4276)
+
+Version 0.87.2
+--------------
+
+- Remove the resource-card-redesign flag (#4295)
+- Put cards' actions beside the metadata, off the image (#4294)
+- run level claims (#4270)
+- Management command for running pdf to markdown for arbitrary courses (#4281)
+- Remove Sloan news/events ETL (#4274)
+- upgrade qdrant (#4267)
+- Read OLX blocks whose url_name has a colon (#4264)
+- Remove the unused org-wide analytics page (#4273)
+
+Version 0.87.0
+--------------
+
+- Show "Free", not "Free to audit", on redesigned cards (#4275)
+- Fix ProgramAsCoursePage enroll-button test timeouts (#4286)
+- Backport PDF processing fixes and a structuring pass to the converter (#4235)
+- Delete mit_edx resources and remove ETLSource.mit_edx (#4254)
+- Treat program enrollment mode "upgrade" as paid alongside "verified" (#4195)
+- Prefer an upcoming run over an ended one on dashboard cards (#4256)
+
 Version 0.86.5
 --------------
 

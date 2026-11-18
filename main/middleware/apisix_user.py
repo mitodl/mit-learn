@@ -23,6 +23,8 @@ from profiles.models import filter_profile_props
 log = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
+    from django.db.models import QuerySet
+
     from users.models import User
 
 # User fields synced from the APISIX user headers (defaults match update_or_create).
@@ -124,7 +126,7 @@ def resolve_apisix_user(
     Returns:
         (user, created) tuple. user is None if the identity is ambiguous, or if
         it's unknown and MITOL_APIGATEWAY_USERINFO_CREATE is disabled. A legacy
-        user matched by email gets global_id set before it's returned.
+        user matched by SCIM external id gets global_id set before it's returned.
 
     """
     User = get_user_model()
@@ -136,62 +138,95 @@ def resolve_apisix_user(
     ):
         return request.user, False
 
-    def match(**email_lookup):
-        # Without an email the lookup would claim any legacy user whose email
-        # is blank, so only the global_id can match.
-        query = Q(global_id=global_id)
-        if email:
-            query |= Q(global_id__isnull=True, **email_lookup)
-        return User.objects.filter(query).select_related("profile")
+    users = User.objects.select_related("profile")
 
-    candidates = match(email=email)
-
+    # A row already linked to this subject wins, even when an unlinked row also
+    # matches by email (e.g. an account SCIM provisioned twice). Refusing both
+    # would lock the learner out on every request.
     try:
-        try:
-            user, created = candidates.get(), False
-        except User.DoesNotExist:
-            # Only fall back to a case-insensitive email match when nothing
-            # matched exactly, so a legacy row differing only in email case
-            # doesn't make an already-linked user ambiguous. The global_id match
-            # stays in so a row a concurrent request just linked or created is
-            # found, including on get_or_create's retry after an IntegrityError.
-            candidates = match(email__iexact=email)
-            if settings.MITOL_APIGATEWAY_USERINFO_CREATE:
-                user, created = candidates.get_or_create(defaults=user_fields)
-            else:
-                user, created = candidates.get(), False
-    except User.MultipleObjectsReturned:
-        log.exception(
-            "resolve_apisix_user: ambiguous_apisix_identity global_id=%s email=%s "
-            "user_ids=%s",
-            global_id,
-            email,
-            list(candidates.values_list("id", flat=True)),
-        )
-        return None, False
+        return users.get(global_id=global_id), False
     except User.DoesNotExist:
+        pass
+
+    user, matched = resolve_legacy_user(users, global_id, email)
+    if matched:
+        return user, False
+
+    if not settings.MITOL_APIGATEWAY_USERINFO_CREATE:
         log.debug(
             "resolve_apisix_user: User %s not found and user creation is disabled",
             global_id,
         )
         return None, False
 
-    # Link a legacy user matched by email to its Keycloak identity even when
-    # MITOL_APIGATEWAY_USERINFO_UPDATE is off, otherwise it stays matched by
-    # email on every request and is never linked.
-    if user.global_id is None and not link_legacy_user(user, global_id, email):
-        return None, False
+    # get_or_create's retry after an IntegrityError finds a row a concurrent
+    # request created for the same subject.
+    return users.get_or_create(
+        global_id=global_id,
+        defaults={k: v for k, v in user_fields.items() if k != "global_id"},
+    )
 
-    return user, created
+
+def resolve_legacy_user(
+    users: "QuerySet[User]", global_id: str, email: str
+) -> "tuple[User | None, bool]":
+    """
+    Find and link the SCIM-provisioned user for a subject no user is linked to yet.
+
+    SCIM-provisioned rows created before mitol-django-scim stamped global_id
+    carry the Keycloak id only as scim_external_id. Rows are never matched by
+    email: it can change in Keycloak, and an unlinked row with a matching email
+    may belong to a different subject.
+
+    Args:
+        users: the User queryset to search
+        global_id: global_id from the APISIX headers
+        email: email from the APISIX headers, for logging
+
+    Returns:
+        (user, matched) tuple. matched is False if no user matched, so the caller
+        may create one. user is None if the match was ambiguous, or if the
+        matched user was linked to another subject first.
+
+    """
+    User = get_user_model()
+    # The global_id match stays in so a row a concurrent request just linked is
+    # found rather than creating a second user for the subject.
+    matches = users.filter(
+        Q(global_id=global_id) | Q(global_id__isnull=True, scim_external_id=global_id)
+    )
+    try:
+        user = matches.get()
+    except User.DoesNotExist:
+        return None, False
+    except User.MultipleObjectsReturned:
+        # A concurrent request may have linked one of the unlinked matches since
+        # the global_id lookup missed. That row wins, as it would have there;
+        # global_id is unique, so there's at most one.
+        user = matches.filter(global_id=global_id).first()
+    if user is None:
+        log.error(
+            "resolve_apisix_user: ambiguous_apisix_identity global_id=%s "
+            "email=%s user_ids=%s",
+            global_id,
+            email,
+            list(matches.values_list("id", flat=True)),
+        )
+        return None, True
+    # Link the legacy user to its Keycloak identity even when
+    # MITOL_APIGATEWAY_USERINFO_UPDATE is off, otherwise it stays matched this
+    # way on every request and is never linked.
+    if user.global_id is None and not link_legacy_user(user, global_id, email):
+        return None, True
+    return user, True
 
 
 def link_legacy_user(user: "User", global_id: str, email: str) -> bool:
     """
-    Set global_id on a legacy user that was matched by email.
+    Set global_id on a legacy user that was matched by SCIM external id.
 
-    The row is claimed only while it's still unlinked: a concurrent request for
-    another subject with a matching email may have loaded it too, and a plain
-    save would let both requests authenticate as it.
+    The row is claimed only while it's still unlinked, so a row another request
+    linked after this one loaded it isn't overwritten.
 
     Args:
         user: the unlinked legacy user
@@ -210,9 +245,7 @@ def link_legacy_user(user: "User", global_id: str, email: str) -> bool:
                 global_id=global_id, updated_on=now_in_utc()
             )
     except IntegrityError:
-        # A concurrent request for the same subject linked a different legacy
-        # row first, e.g. one matched by the email from before an email change.
-        # Both rows now match this subject, so later requests are ambiguous too.
+        # A concurrent request for the same subject linked a different row first.
         log.exception(
             "link_legacy_user: global_id_linked_to_other_user "
             "global_id=%s email=%s user_id=%s",

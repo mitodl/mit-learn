@@ -2,6 +2,7 @@ import React from "react"
 import { CourseWithCourseRunsSerializerV2 } from "@mitodl/mitxonline-api-axios/v2"
 import {
   BaseCourseRun,
+  CourseRunEnrollmentV3,
   V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v3"
 import { LoadingSpinner, Stack } from "ol-components"
@@ -14,7 +15,11 @@ import {
   TitleButton,
   CourseDateSummary,
   Separator,
+  RunsCardShell,
+  CardHeaderContent,
+  MobileAccordionWrapper,
 } from "./CardShared"
+import { SiblingRunsPanel, SiblingRunsToggle } from "./SiblingRunsAccordion"
 import { getCourseDateText } from "./courseDateUtils"
 import { EnrollmentStatus, getBestRun } from "./helpers"
 import { isPaidProgramEnrollmentMode } from "@/common/mitxonline"
@@ -25,6 +30,8 @@ import { ProgressBadge } from "./ProgressBadge"
 type UnenrolledCourseCardProps = {
   course: CourseWithCourseRunsSerializerV2
   displayedRun?: BaseCourseRun
+  /** Ended enrollments to list under the "Course runs" toggle. */
+  pastEnrollments?: CourseRunEnrollmentV3[]
   contractId?: number
   ancestorContext?: {
     programEnrollment?: V3UserProgramEnrollment
@@ -42,6 +49,7 @@ type UnenrolledCourseCardProps = {
 export const UnenrolledCourseCard = ({
   course,
   displayedRun: displayedRunProp,
+  pastEnrollments = [],
   contractId,
   ancestorContext,
   layout = "default",
@@ -154,37 +162,91 @@ export const UnenrolledCourseCard = ({
   const showEnrollmentStatusIcon =
     !isContractPageResource && isModule && isCompact
 
+  const hasPastRuns = pastEnrollments.length > 0 && !!courseRun
+  const [runsExpanded, setRunsExpanded] = React.useState(false)
+  const toggleRunsExpanded = () => setRunsExpanded((v) => !v)
+  // Per instance: the same course can appear in more than one card on a page.
+  const runsIdBase = `past-runs-${React.useId()}`
+  const runsPanel = (screen: "desktop" | "mobile") => (
+    <SiblingRunsPanel
+      siblingEnrollments={pastEnrollments}
+      expanded={runsExpanded}
+      id={`${runsIdBase}-panel-${screen}`}
+      labelledBy={`${runsIdBase}-toggle-${screen}`}
+      disabled={disabled}
+    />
+  )
+  const runsToggle = (screen: "desktop" | "mobile") => (
+    <SiblingRunsToggle
+      runCount={pastEnrollments.length}
+      expanded={runsExpanded}
+      onClick={toggleRunsExpanded}
+      id={`${runsIdBase}-toggle-${screen}`}
+      controls={`${runsIdBase}-panel-${screen}`}
+    />
+  )
+
+  const desktopContent = (
+    <>
+      {showEnrollmentStatusIcon && (
+        <Stack alignSelf="start">
+          <EnrollmentStatusIcon status={EnrollmentStatus.NotEnrolled} />
+        </Stack>
+      )}
+      <Stack justifyContent="start" alignItems="stretch" gap="4px" flex={1}>
+        {progressBadgeSection}
+        <Stack gap="12px">
+          {titleSection}
+          {courseDateText}
+        </Stack>
+      </Stack>
+    </>
+  )
+
   return (
     <>
-      <CardRoot
-        screenSize="desktop"
-        data-testid="enrollment-card-desktop"
-        as={Component}
-        className={className}
-        layout={layout}
-      >
-        {showEnrollmentStatusIcon && (
-          <Stack alignSelf="start">
-            <EnrollmentStatusIcon status={EnrollmentStatus.NotEnrolled} />
-          </Stack>
-        )}
-        <Stack justifyContent="start" alignItems="stretch" gap="4px" flex={1}>
-          {progressBadgeSection}
-          <Stack gap="12px">
-            {titleSection}
-            {courseDateText}
-          </Stack>
-        </Stack>
-        <Stack
-          direction="row"
-          gap="8px"
-          paddingRight="40px"
-          alignItems="center"
-          justifyContent="end"
+      {hasPastRuns ? (
+        <RunsCardShell
+          data-testid="enrollment-card-desktop"
+          data-layout={layout}
+          className={className}
+          as={Component}
         >
-          {startButton}
-        </Stack>
-      </CardRoot>
+          <CardHeaderContent>
+            {desktopContent}
+            <Stack
+              direction="column"
+              alignSelf="stretch"
+              gap="8px"
+              alignItems="flex-end"
+              justifyContent="space-between"
+            >
+              {startButton}
+              {runsToggle("desktop")}
+            </Stack>
+          </CardHeaderContent>
+          {runsPanel("desktop")}
+        </RunsCardShell>
+      ) : (
+        <CardRoot
+          screenSize="desktop"
+          data-testid="enrollment-card-desktop"
+          as={Component}
+          className={className}
+          layout={layout}
+        >
+          {desktopContent}
+          <Stack
+            direction="row"
+            gap="8px"
+            paddingRight="40px"
+            alignItems="center"
+            justifyContent="end"
+          >
+            {startButton}
+          </Stack>
+        </CardRoot>
+      )}
 
       <CardRoot
         screenSize="mobile"
@@ -231,6 +293,14 @@ export const UnenrolledCourseCard = ({
             </Stack>
           </Stack>
         </Stack>
+        {hasPastRuns && (
+          <MobileAccordionWrapper>
+            <Stack direction="row" justifyContent="flex-end" width="100%">
+              {runsToggle("mobile")}
+            </Stack>
+            {runsPanel("mobile")}
+          </MobileAccordionWrapper>
+        )}
       </CardRoot>
     </>
   )

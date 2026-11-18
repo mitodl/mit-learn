@@ -24,8 +24,8 @@
       "matchPackageNames": ["opensearchproject/opensearch"]
     },
     {
-      "description": "Keep the local server in the series qdrant-client ~=1.18.0 targets.",
-      "allowedVersions": "<1.19",
+      "description": "Keep the local server in the series qdrant-client ~=1.20.0 targets.",
+      "allowedVersions": "<1.21",
       "matchPackageNames": ["qdrant/qdrant"]
     },
     {

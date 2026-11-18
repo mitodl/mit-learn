@@ -7,6 +7,7 @@ import { PageWrapper, PageWrapperInner } from "@/app/styled"
 import { MITLearnGlobalStyles } from "ol-components"
 import SiteProviders from "./SiteProviders"
 import ContactUsLauncherGate from "@/page-components/ContactUsLauncher/ContactUsLauncherGate"
+import CyberSaleBanner from "@/page-components/CyberSaleBanner/CyberSaleBanner"
 
 const getGtmConfig = () => {
   const trackingId = process.env.GTM_TRACKING_ID?.trim()
@@ -84,6 +85,7 @@ j=d.createElement(s),dl=l!=='dataLayer'?'&l='+l:'';j.async=true;j.src=
       <SiteProviders>
         <PageWrapper>
           <Header />
+          <CyberSaleBanner />
           <PageWrapperInner>{children}</PageWrapperInner>
           <Footer />
         </PageWrapper>

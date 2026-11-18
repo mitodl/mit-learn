@@ -543,7 +543,7 @@ def test_litellm_encoder_azure_prefix_keeps_vector_name(
     create_qdrant_collection("test.resources", force_recreate=False)
 
     assert encoder.token_encoding_name == "cl100k_base"  # noqa: S105
-    vectors_config = mock_qdrant.recreate_collection.call_args.kwargs["vectors_config"]
+    vectors_config = mock_qdrant.create_collection.call_args.kwargs["vectors_config"]
     assert list(vectors_config) == ["text-embedding-3-large"]
     assert vectors_config["text-embedding-3-large"].size == 3072
 

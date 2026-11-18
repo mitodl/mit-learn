@@ -2,7 +2,6 @@ import React from "react"
 import { screen, within } from "@testing-library/react"
 import { courses } from "./testUtils"
 import InfoSection from "./InfoSection"
-import { DeliveryEnumDescriptions } from "api"
 import { renderWithTheme } from "@/test-utils"
 
 describe("Differing runs comparison table", () => {
@@ -17,12 +16,8 @@ describe("Differing runs comparison table", () => {
     renderWithTheme(<InfoSection resource={course} />)
     const differingRunsTable = screen.getByTestId("differing-runs-table")
     expect(differingRunsTable).toBeInTheDocument()
-    const onlineLabels = within(differingRunsTable).getAllByText(
-      DeliveryEnumDescriptions.online,
-    )
-    const inPersonLabels = within(differingRunsTable).getAllByText(
-      DeliveryEnumDescriptions.in_person,
-    )
+    const onlineLabels = within(differingRunsTable).getAllByText("Online")
+    const inPersonLabels = within(differingRunsTable).getAllByText("In person")
     const onlinePriceLabels = within(differingRunsTable).getAllByText("$100")
     const inPersonPriceLabels = within(differingRunsTable).getAllByText("$150")
     const earthLocationLabels = within(differingRunsTable).getAllByText("Earth")

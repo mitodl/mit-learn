@@ -481,7 +481,9 @@ describe("CourseEnrollmentDialog", () => {
       )
 
       // Verify redirect to cart page
-      expect(assign).toHaveBeenCalledWith(mitxonlineLegacyUrl("/cart/"))
+      expect(assign).toHaveBeenCalledWith(
+        mitxonlineLegacyUrl("/switch-session/?next=/cart/&basket_id=1"),
+      )
 
       expect(trackAddToCart).toHaveBeenCalledWith(
         expect.objectContaining({ courseName: course.title }),

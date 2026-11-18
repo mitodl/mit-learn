@@ -90,6 +90,13 @@ type SimpleSelectFieldProps<V = unknown> = Pick<
   | "renderValue"
   | "multiple"
   | "disabled"
+  /**
+   * Keeps the menu shut while leaving the field in the tab order, which
+   * `disabled` does not. Pair with `aria-disabled` in `SelectDisplayProps`.
+   */
+  | "readOnly"
+  | "SelectDisplayProps"
+  | "MenuProps"
 > & {
   /**
    * The options for the dropdown
