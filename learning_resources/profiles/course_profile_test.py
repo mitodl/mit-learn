@@ -19,12 +19,14 @@ from learning_resources.models import (
     ProfileClaim,
     ProfileStatement,
     Unit,
+    UnitContentFile,
 )
 from learning_resources.profiles.course_profile import (
     ProfileBuildError,
     build_course_profile,
     publish_course_profile,
 )
+from learning_resources.profiles.sources import text_checksum
 from main.utils import now_in_utc
 
 pytestmark = pytest.mark.django_db
@@ -83,8 +85,11 @@ def _unit_output(files, concepts=(), skills=(), assumed=()):
             {
                 "source_id": f"S{index:02d}",
                 "checksum": content_file.checksum,
-                "included_chars": 10,
-                "total_chars": 10,
+                "text_checksum": text_checksum(
+                    content_file.content, len(content_file.content)
+                ),
+                "included_chars": len(content_file.content),
+                "total_chars": len(content_file.content),
                 "truncated": False,
             }
             for index, content_file in enumerate(files, 1)
@@ -247,7 +252,7 @@ def test_build_course_profile_claims(course):
         "U02:c1",
     }
     concept = claims["U01:c1"]
-    assert concept.uid == f"u:{first_extraction.key[:12]}:c1"
+    assert concept.uid == f"u:{first_extraction.key[:12]}:{first.id}:c1"
     assert concept.kind == ProfileClaim.Kind.CONCEPT
     assert concept.level == ProfileClaim.Level.UNIT
     assert concept.label == "Newton's second law"
@@ -264,7 +269,7 @@ def test_build_course_profile_claims(course):
     assert claims["U02:c1"].unit == second
     prerequisite = claims["ctx:prereq:0"]
     assert prerequisite.kind == ProfileClaim.Kind.CONTEXT
-    assert prerequisite.uid == f"u:{context.key[:12]}:ctx:prereq:0"
+    assert prerequisite.uid == (f"u:{context.key[:12]}:{context_unit.id}:ctx:prereq:0")
     assert prerequisite.label == "Calculus I"
     assert prerequisite.description == "Calculus I is required."
     assert prerequisite.unit == context_unit
@@ -333,8 +338,64 @@ def test_changed_file_evidence_left_out(course):
     assert [item.content_file for item in assumed.evidence.all()] == [first_files[0]]
 
 
+@pytest.mark.parametrize(
+    "change",
+    [
+        # whitespace around the text, which is stripped before it is read
+        lambda content: f"\n  {content}\n\n",
+        # text after the part read, which a truncated source never saw
+        lambda content: f"{content} and more text past the cut",
+    ],
+)
+def test_unread_file_change_keeps_evidence(course, change):
+    """
+    Evidence is kept when its file's raw content changed but the text its
+    source read didn't, since the extraction is still the one for that text
+    """
+    _, first_files, _ = course["files"]
+    extraction = course["extractions"][1]
+    first_files[1].content = change(first_files[1].content)
+    first_files[1].save()
+    assert first_files[1].checksum != extraction.output["sources"][1]["checksum"]
+
+    profile, _ = build_course_profile(course["run_extraction"])
+
+    assumed = profile.claims.get(display_id="U01:a1")
+    evidence = list(assumed.evidence.order_by("id"))
+    assert [item.content_file for item in evidence] == first_files
+    assert evidence[1].content_checksum == first_files[1].checksum
+
+
+@pytest.mark.parametrize("checksum_matches", [True, False])
+def test_source_without_text_checksum(course, checksum_matches):
+    """A source stored without text_checksum is checked by the file's checksum"""
+    _, first_files, _ = course["files"]
+    extraction = course["extractions"][1]
+    source = extraction.output["sources"][1]
+    del source["text_checksum"]
+    if not checksum_matches:
+        source["checksum"] = "stale"
+    extraction.save()
+
+    profile, _ = build_course_profile(course["run_extraction"])
+
+    assumed = profile.claims.get(display_id="U01:a1")
+    assert [item.content_file for item in assumed.evidence.order_by("id")] == (
+        first_files if checksum_matches else first_files[:1]
+    )
+
+
 def test_shared_extraction_uids(course):
-    """Units sharing an extraction get claims with uids of their own"""
+    """
+    Units sharing an extraction get claims with uids of their own, which
+    don't depend on whether the extraction is shared
+    """
+    _, first, second = course["units"]
+    _, first_extraction, _ = course["extractions"]
+    profile, _ = build_course_profile(course["run_extraction"])
+    first_uids = dict(
+        profile.claims.filter(unit=first).values_list("display_id", "uid")
+    )
     output = course["run_extraction"].output
     output["units"][1]["extraction"] = output["units"][0]["extraction"]
     course["run_extraction"].save()
@@ -343,7 +404,45 @@ def test_shared_extraction_uids(course):
 
     uids = list(profile.claims.values_list("uid", flat=True))
     assert len(uids) == len(set(uids))
-    assert profile.claims.filter(display_id="U02:c1", unit=course["units"][2]).exists()
+    assert (
+        dict(profile.claims.filter(unit=first).values_list("display_id", "uid"))
+        == first_uids
+    )
+    assert profile.claims.get(display_id="U02:c1", unit=second).uid == (
+        f"u:{first_extraction.key[:12]}:{second.id}:c1"
+    )
+
+
+def test_shared_context_extraction(course):
+    """
+    A context extraction stored by another run's context unit is loaded for
+    this run's context unit and its files
+    """
+    context_unit, _, _ = course["units"]
+    context_files, _, _ = course["files"]
+    context, _, _ = course["extractions"]
+    other_run = LearningResourceRunFactory.create(learning_resource=course["resource"])
+    other_unit = UnitFactory.create(
+        run=other_run, kind=Unit.Kind.CONTEXT, position=None, external_id="context"
+    )
+    _files(other_unit, 1)
+    context.unit = other_unit
+    context.save()
+
+    profile, _ = build_course_profile(course["run_extraction"])
+
+    prerequisite = profile.claims.get(display_id="ctx:prereq:0")
+    assert prerequisite.unit == context_unit
+    assert prerequisite.evidence.get().content_file == context_files[0]
+
+
+def test_context_extraction_without_context_unit(course):
+    """A run with a context extraction but no context unit can't be built"""
+    context_unit, _, _ = course["units"]
+    Unit.objects.filter(id=context_unit.id).update(kind=Unit.Kind.UNIT)
+
+    with pytest.raises(ProfileBuildError, match="no context unit"):
+        build_course_profile(course["run_extraction"])
 
 
 def test_profile_not_rebuilt_when_current(course):
@@ -364,6 +463,37 @@ def test_profile_not_rebuilt_when_current(course):
     assert built is True
     assert profile.statements.get(section="summary").text == "New summary."
     assert CourseProfile.objects.count() == 1
+
+
+def test_profile_rebuilt_when_file_recreated(course):
+    """
+    A profile whose evidence was deleted with its content file is rebuilt,
+    though its extractions are unchanged, when the file is recreated with
+    the same text
+    """
+    _, first_files, _ = course["files"]
+    profile, _ = build_course_profile(course["run_extraction"])
+    assert (
+        profile.row_counts["evidence"]
+        == ClaimEvidence.objects.filter(claim__profile=profile).count()
+    )
+    old = first_files[1]
+    link = UnitContentFile.objects.get(content_file=old)
+    new = ContentFileFactory.create(run=old.run, content=old.content, published=True)
+    UnitContentFileFactory.create(
+        unit=link.unit, content_file=new, position=link.position
+    )
+    old.delete()
+
+    profile, built = build_course_profile(course["run_extraction"])
+
+    assert built is True
+    assumed = profile.claims.get(display_id="U01:a1")
+    assert [item.content_file for item in assumed.evidence.order_by("id")] == [
+        first_files[0],
+        new,
+    ]
+    assert build_course_profile(course["run_extraction"]) == (profile, False)
 
 
 def test_build_failure_keeps_last_profile(course, mocker):

@@ -6,6 +6,7 @@ import re
 from dataclasses import dataclass, replace
 
 from learning_resources.models import ContentFile, Unit, UnitContentFile
+from main.utils import checksum_for_content
 
 # Token counts are estimated from length, so the ETL needs no tokenizer.
 CHARS_PER_TOKEN = 4
@@ -39,6 +40,8 @@ class Source:
     # how much of the file's text was kept, and how long it is
     included_chars: int
     total_chars: int
+    # checksum of the part of the file's text that was read, see text_checksum()
+    text_checksum: str = ""
 
     @property
     def truncated(self) -> bool:
@@ -64,16 +67,35 @@ class Source:
         Describe the source in a stored extraction.
 
         The content file id is left out: the extraction is reused by any unit
-        with the same files, so its sources are found by position and checksum
-        in whichever unit reads it.
+        with the same files, so its sources are found by position in whichever
+        unit reads it, and checked against text_checksum, the checksum of the
+        text it was read from. The file's own checksum is of its raw content,
+        which can change while the text read stays the same.
         """
         return {
             "source_id": self.source_id,
             "checksum": self.checksum,
+            "text_checksum": self.text_checksum,
             "included_chars": self.included_chars,
             "total_chars": self.total_chars,
             "truncated": self.truncated,
         }
+
+
+def text_checksum(text: str, included_chars: int) -> str:
+    """
+    Return the checksum of the part of a file's text a source was read from.
+
+    Args:
+        text (str): the file's text, stripped, as unit_source_files returns it
+        included_chars (int): how many characters of it were kept
+
+    Returns:
+        str: the checksum of the kept characters; it is the same for any later
+            version of the file whose kept characters are, which an extraction
+            keyed on the text sent stays valid for
+    """
+    return checksum_for_content(text[:included_chars]) or ""
 
 
 def truncate(text: str, max_tokens: int) -> tuple[str, int]:
@@ -226,5 +248,8 @@ def unit_sources(
             included_chars=included_chars,
             total_chars=len(text),
         )
-        sources.append(_fit_to_budget(source, text, input_token_budget))
+        source = _fit_to_budget(source, text, input_token_budget)
+        sources.append(
+            replace(source, text_checksum=text_checksum(text, source.included_chars))
+        )
     return sources

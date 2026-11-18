@@ -1639,6 +1639,9 @@ class CourseProfile(TimestampedModel):
     status = models.CharField(
         max_length=16, choices=Status.choices, default=Status.BUILDING
     )
+    # counts of the rows the profile was built with that deleting content
+    # files or units removes, to tell that it must be rebuilt
+    row_counts = models.JSONField(default=dict, blank=True)
 
     class Meta:
         constraints = [
@@ -1668,7 +1671,8 @@ class ProfileClaim(models.Model):
     profile = models.ForeignKey(
         CourseProfile, related_name="claims", on_delete=models.CASCADE
     )
-    # stable across rebuilds while the extraction is unchanged: "u:91be07aa13cd:a4"
+    # stable across rebuilds while the extraction and unit are unchanged:
+    # "u:91be07aa13cd:4211:a4", from the extraction key, unit id and claim id
     uid = models.CharField(max_length=64)
     # the id the run step cites it by: "U03:a4", "ctx:prereq:0"
     display_id = models.CharField(max_length=32)

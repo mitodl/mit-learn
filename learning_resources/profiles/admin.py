@@ -60,6 +60,7 @@ class CourseProfileAdmin(admin.ModelAdmin):
     list_filter = ("status",)
     search_fields = ("run__run_id", "run__learning_resource__readable_id")
     raw_id_fields = ("run", "course_extraction")
+    readonly_fields = ("row_counts",)
 
 
 class ClaimEvidenceInline(admin.TabularInline):

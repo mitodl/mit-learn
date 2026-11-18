@@ -36,6 +36,7 @@ class Migration(migrations.Migration):
                         max_length=16,
                     ),
                 ),
+                ("row_counts", models.JSONField(blank=True, default=dict)),
                 (
                     "course_extraction",
                     models.ForeignKey(

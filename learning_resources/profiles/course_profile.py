@@ -7,12 +7,14 @@ ProfileStatement rows, which can be queried, and makes no model calls.
 
 - Each unit claim, and each context claim, is a ProfileClaim, with the id the
   run step cites it by (U03:a4, ctx:prereq:0) and a uid built from its
-  extraction's key, which stays the same while the extraction does.
+  extraction's key and its unit's id, which stays the same while they do.
+  Context claims belong to the run's own context unit: a context extraction
+  is shared by the runs of a course with the same context files.
 - Each evidence item is a ClaimEvidence. The stored outputs name their
   sources S01, S02, ... by position, without content file ids, since an
   extraction is shared by every unit with the same files. A source is
   resolved to the content file at its position in the unit that reads it,
-  when that file's checksum is the one the source was read with; evidence
+  when the part of that file's text the source read is unchanged; evidence
   whose source can't be resolved is left out and logged.
 - Each item of the run output's summary, audience, learning outcomes, main
   topics, inferred preparation and coverage limitations is a
@@ -21,7 +23,9 @@ ProfileStatement rows, which can be queried, and makes no model calls.
 
 A run's profile is rebuilt in one transaction, so readers never see a
 partial profile, and only when its run extraction has changed since the
-profile was built.
+profile was built, or when deleting content files or units removed some of
+its rows, such as evidence quoting a file that ETL replaced with an identical
+one.
 """
 
 import logging
@@ -44,7 +48,7 @@ from learning_resources.profiles.run_claims import (
     CONTEXT_NOTES_ID,
     context_claims,
 )
-from learning_resources.profiles.sources import unit_source_files
+from learning_resources.profiles.sources import text_checksum, unit_source_files
 
 log = logging.getLogger(__name__)
 
@@ -73,15 +77,22 @@ def _max_length(model, field: str) -> int:
 # --------------------------------------------------------------------------- inputs
 def _load_references(
     extraction: ClaimExtraction,
-) -> tuple[list[tuple[str, Unit, ClaimExtraction | None]], ClaimExtraction | None]:
+) -> tuple[
+    list[tuple[str, Unit, ClaimExtraction | None]],
+    tuple[ClaimExtraction, Unit] | None,
+]:
     """
     Return the run's units, as (display id, unit, extraction), and its context
-    extraction, from the run output's references.
+    extraction with the run's context unit, from the run output's references.
+
+    The context extraction's own unit is whichever run's context unit last
+    stored it, since runs of a course with the same context files share it,
+    so its claims are loaded for the run's own context unit.
 
     Raises:
         ProfileBuildError: when a referenced unit or extraction is gone or
-            belongs to another run, so the run's claims must be generated
-            again first
+            belongs to another run, or the run has a context extraction but
+            no context unit, so the run's claims must be generated again first
     """
     output = extraction.output
     references = output.get("units", [])
@@ -93,7 +104,7 @@ def _load_references(
     if context_id:
         extraction_ids.append(context_id)
     units = Unit.objects.in_bulk(unit_ids)
-    extractions = ClaimExtraction.objects.select_related("unit").in_bulk(extraction_ids)
+    extractions = ClaimExtraction.objects.in_bulk(extraction_ids)
     missing = [
         f"unit {unit_id}"
         for unit_id in unit_ids
@@ -117,27 +128,50 @@ def _load_references(
         )
         for reference in references
     ]
-    context = extractions[context_id] if context_id else None
-    if context and context.unit is None:
-        msg = f"Context extraction {context.id} has no unit"
+    if not context_id:
+        return records, None
+    context_unit = Unit.objects.filter(
+        run_id=extraction.run_id, kind=Unit.Kind.CONTEXT
+    ).first()
+    if context_unit is None:
+        msg = (
+            f"Run extraction {extraction.id} has context extraction {context_id}"
+            f" but run {extraction.run_id} has no context unit"
+        )
         raise ProfileBuildError(msg)
-    return records, context
+    return records, (extractions[context_id], context_unit)
+
+
+def _source_unchanged(source: dict, content_file: ContentFile, text: str) -> bool:
+    """
+    Return whether a stored source still reads the same as the file at its
+    position in a unit.
+
+    The extraction is keyed on the text sent, so it is reused while that text
+    is the same, even when the file's raw content, and so its checksum, has
+    changed outside the part read. Sources stored before text_checksum was
+    recorded are checked against the file's checksum.
+    """
+    if source.get("text_checksum"):
+        return source["text_checksum"] == text_checksum(
+            text, source.get("included_chars", len(text))
+        )
+    return (content_file.checksum or "") == (source.get("checksum") or "")
 
 
 def _source_files(unit: Unit, extraction: ClaimExtraction) -> dict[str, ContentFile]:
     """
     Return the content file each of an extraction's sources was read from,
-    by source id, for the sources whose file in this unit is unchanged
+    by source id, for the sources whose text in this unit is unchanged
     """
     current = {
-        source_id: link.content_file for source_id, link, _ in unit_source_files(unit)
+        source_id: (link.content_file, text)
+        for source_id, link, text in unit_source_files(unit)
     }
     files = {}
     for source in extraction.output.get("sources", []):
-        content_file = current.get(source["source_id"])
-        if content_file and (content_file.checksum or "") == (
-            source.get("checksum") or ""
-        ):
+        content_file, text = current.get(source["source_id"], (None, ""))
+        if content_file and _source_unchanged(source, content_file, text):
             files[source["source_id"]] = content_file
     return files
 
@@ -151,21 +185,18 @@ class _ProfileLoader:
         self.claims: list[ProfileClaim] = []
         # each claim's evidence items and the files of its sources, in claim order
         self.evidence: list[tuple[list[dict], dict[str, ContentFile]]] = []
-        self.uids: set[str] = set()
         self.stats = Counter()
 
-    def _uid(self, extraction: ClaimExtraction, local_id: str, unit_id: str) -> str:
+    @staticmethod
+    def _uid(extraction: ClaimExtraction, unit: Unit, local_id: str) -> str:
         """
         Return a claim's uid, unique in the profile.
 
-        Units with the same files share an extraction, so a uid already taken
-        by another unit's claim is told apart by the unit's display id.
+        Units with the same files share an extraction, so the uid has the
+        unit's id as well as the extraction's key. It doesn't depend on which
+        other units share the extraction, or on the unit's position.
         """
-        uid = f"u:{extraction.key[:12]}:{local_id}"
-        if uid in self.uids:
-            uid = f"u:{extraction.key[:12]}:{unit_id}:{local_id}"
-        self.uids.add(uid)
-        return uid
+        return f"u:{extraction.key[:12]}:{unit.id}:{local_id}"
 
     def _add_claim(  # noqa: PLR0913
         self,
@@ -184,7 +215,7 @@ class _ProfileLoader:
         self.claims.append(
             ProfileClaim(
                 profile=self.profile,
-                uid=self._uid(extraction, local_id, display_id.split(":", 1)[0]),
+                uid=self._uid(extraction, unit, local_id),
                 display_id=_clip(display_id, _max_length(ProfileClaim, "display_id")),
                 level=ProfileClaim.Level.UNIT,
                 kind=kind,
@@ -221,15 +252,15 @@ class _ProfileLoader:
                     files=files,
                 )
 
-    def add_context(self, extraction: ClaimExtraction) -> None:
-        """Add the context unit's claims"""
-        files = _source_files(extraction.unit, extraction)
+    def add_context(self, extraction: ClaimExtraction, unit: Unit) -> None:
+        """Add the context unit's claims, for the run's context unit"""
+        files = _source_files(unit, extraction)
         for claim_id, field, item, text in context_claims(extraction.output):
             # a prerequisite has a label and a statement; the rest only text
             description = item.get("statement") or item.get("text") or text
             self._add_claim(
                 extraction=extraction,
-                unit=extraction.unit,
+                unit=unit,
                 local_id=claim_id,
                 display_id=claim_id,
                 kind=ProfileClaim.Kind.CONTEXT,
@@ -402,13 +433,36 @@ def _save_statements(
 
 
 # --------------------------------------------------------------------------- build
+def _row_counts(profile: CourseProfile) -> dict[str, int]:
+    """
+    Count the profile's rows that deleting a content file or unit elsewhere
+    removes: evidence (cascade), claims' units (set to null) and statements'
+    links to units
+    """
+    return {
+        "evidence": ClaimEvidence.objects.filter(claim__profile=profile).count(),
+        "claim_units": profile.claims.filter(unit__isnull=False).count(),
+        "statement_units": ProfileStatement.units.through.objects.filter(
+            profilestatement__profile=profile
+        ).count(),
+    }
+
+
 def _is_current(profile: CourseProfile | None, extraction: ClaimExtraction) -> bool:
-    """Whether a profile was built from the extraction as it is now"""
+    """
+    Whether a profile was built from the extraction as it is now, and still
+    has every row it was built with.
+
+    ETL can delete and recreate a unit's content files with the same text,
+    which leaves the extractions as they are but deletes the evidence quoting
+    the old files, so the rows are counted as well.
+    """
     return (
         profile is not None
         and profile.status == CourseProfile.Status.READY
         and profile.course_extraction_id == extraction.id
         and profile.updated_on >= extraction.updated_on
+        and profile.row_counts == _row_counts(profile)
     )
 
 
@@ -419,7 +473,7 @@ def _load(profile: CourseProfile, extraction: ClaimExtraction) -> Counter:
     profile.statements.all().delete()
     loader = _ProfileLoader(profile)
     if context:
-        loader.add_context(context)
+        loader.add_context(*context)
     for display_id, unit, unit_extraction in records:
         if unit_extraction is not None:
             loader.add_unit(display_id, unit, unit_extraction)
@@ -471,6 +525,7 @@ def build_course_profile(
                 },
             )
             stats = _load(profile, extraction)
+            profile.row_counts = _row_counts(profile)
             profile.status = CourseProfile.Status.READY
             profile.save()
     except Exception:

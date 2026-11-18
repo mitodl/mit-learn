@@ -13,6 +13,7 @@ from learning_resources.profiles.sources import (
     FILE_BUDGET_SHARE,
     Source,
     pack_parts,
+    text_checksum,
     truncate,
     unit_sources,
 )
@@ -73,6 +74,8 @@ def test_unit_sources():
     assert sources[1].text == "text 2"
     files[2].refresh_from_db()
     assert sources[1].checksum == files[2].checksum
+    assert sources[1].text_checksum == text_checksum("text 2", 6)
+    assert sources[1].summary()["text_checksum"] == sources[1].text_checksum
     assert sources[1].header == (
         f"=== SOURCE S02 | type={files[2].content_type} | title='T2'"
         " | relation=assessment ==="
@@ -101,6 +104,10 @@ def test_unit_sources_fit_budget(budget):
         assert long.tokens <= budget * FILE_BUDGET_SHARE
         assert long.tokens > budget * FILE_BUDGET_SHARE / 2
         assert long.text.endswith("characters of this file are included ...]")
+    full_text = ("A long transcript. " * 500).strip()
+    # the checksum is of the part read, so text past it can change
+    assert long.text_checksum == text_checksum(full_text, long.included_chars)
+    assert long.text_checksum == text_checksum(f"{full_text} more", long.included_chars)
 
 
 def _source(index, tokens):
