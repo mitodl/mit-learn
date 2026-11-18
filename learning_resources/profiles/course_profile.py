@@ -52,8 +52,6 @@ log = logging.getLogger(__name__)
 _CLAIM_COLUMNS = {"id", "label", "description", "evidence"}
 # a context claim's fields stored in ProfileClaim's own columns, not in data
 _CONTEXT_COLUMNS = {"label", "text", "statement", "evidence"}
-# longest label made from a context claim's text
-CONTEXT_LABEL_CHARS = 160
 # claim id prefix of the context claims
 CONTEXT_PREFIX = "ctx:"
 
@@ -235,7 +233,7 @@ class _ProfileLoader:
                 local_id=claim_id,
                 display_id=claim_id,
                 kind=ProfileClaim.Kind.CONTEXT,
-                label=item.get("label") or _clip(description, CONTEXT_LABEL_CHARS),
+                label=item.get("label") or description,
                 description=description,
                 data={
                     "field": field,
