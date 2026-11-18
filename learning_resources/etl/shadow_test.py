@@ -220,7 +220,9 @@ def _state():
     )
 
 
-def test_run_shadow_reports_the_load_and_writes_nothing(catalog, mock_index):
+def test_run_shadow_reports_the_load_and_writes_nothing(
+    catalog, mock_index, django_capture_on_commit_callbacks
+):
     """
     The batch is compared and not loaded: the catalog is as it was afterwards,
     the report says what a load would have changed, and no index task is sent.
@@ -230,7 +232,8 @@ def test_run_shadow_reports_the_load_and_writes_nothing(catalog, mock_index):
     before = _state()
     batch = [_course("same"), _course("retitled", title="A new title"), _course("new")]
 
-    run = _shadow([(SOURCE, COURSE)], lambda: _load_courses(batch))[COURSE]
+    with django_capture_on_commit_callbacks(execute=True):
+        run = _shadow([(SOURCE, COURSE)], lambda: _load_courses(batch))[COURSE]
 
     assert _state() == before
     mock_index.assert_not_called()
