@@ -1610,9 +1610,9 @@ class ClaimExtraction(TimestampedModel):
         return f"{self.level} {self.extractor_version} {self.key[:12]}"
 
 
-class CourseProfile(TimestampedModel):
+class RunProfile(TimestampedModel):
     """
-    The published profile of a course's best run, loaded from its claim
+    The published profile of a resource's best run, loaded from its claim
     extractions for querying.
 
     It keeps everything it shows, so it outlives the extractions it was
@@ -1623,13 +1623,17 @@ class CourseProfile(TimestampedModel):
     class Status(models.TextChoices):
         BUILDING = "building", "Building"
         READY = "ready", "Ready"
+        # a rebuild failed after the run's extraction changed: the profile
+        # keeps the claims of the extraction's earlier output, which it no
+        # longer matches, until a rebuild succeeds
+        STALE = "stale", "Stale"
         FAILED = "failed", "Failed"
 
     run = models.ForeignKey(
         LearningResourceRun, related_name="profiles", on_delete=models.CASCADE
     )
     # the run-level extraction the profile was loaded from
-    course_extraction = models.ForeignKey(
+    resource_extraction = models.ForeignKey(
         ClaimExtraction,
         null=True,
         blank=True,
@@ -1649,15 +1653,18 @@ class CourseProfile(TimestampedModel):
         ]
 
     def __str__(self):
-        return f"CourseProfile for {self.run_id}: {self.status}"
+        return f"RunProfile for {self.run_id}: {self.status}"
 
 
 class ProfileClaim(models.Model):
-    """One claim of a course profile: a unit's claim, or a context claim"""
+    """
+    One claim of a run profile: a unit's claim, a context claim, or a claim
+    of the run extraction, which cites the unit and context claims it rests on
+    """
 
     class Level(models.TextChoices):
         UNIT = "unit", "Unit"
-        COURSE = "course", "Course"
+        RUN = "run", "Run"
 
     class Kind(models.TextChoices):
         CONCEPT = "concept", "Concept"
@@ -1669,12 +1676,13 @@ class ProfileClaim(models.Model):
         CONTEXT = "context", "Context"
 
     profile = models.ForeignKey(
-        CourseProfile, related_name="claims", on_delete=models.CASCADE
+        RunProfile, related_name="claims", on_delete=models.CASCADE
     )
     # stable across rebuilds while the extraction and unit are unchanged:
     # "u:91be07aa13cd:4211:a4", from the extraction key, unit id and claim id
     uid = models.CharField(max_length=64)
-    # the id the run step cites it by: "U03:a4", "ctx:prereq:0"
+    # the id the run step cites it by: "U03:a4", "ctx:prereq:0"; run claims
+    # have ids of their own: "run:outcome:0", "run:prior:0"
     display_id = models.CharField(max_length=32)
     level = models.CharField(max_length=16, choices=Level.choices)
     kind = models.CharField(max_length=16, choices=Kind.choices)
@@ -1695,7 +1703,7 @@ class ProfileClaim(models.Model):
         on_delete=models.SET_NULL,
         related_name="profile_claims",
     )
-    # course claim -> unit claims
+    # run claim -> the unit and context claims it rests on
     cites = models.ManyToManyField(
         "self", symmetrical=False, blank=True, related_name="cited_by"
     )
@@ -1737,7 +1745,7 @@ class ClaimEvidence(models.Model):
 
 
 class ProfileStatement(models.Model):
-    """One item of a course profile, citing the claims that support it"""
+    """One item of a resource profile, citing the claims that support it"""
 
     class Section(models.TextChoices):
         SUMMARY = "summary", "Summary"
@@ -1748,7 +1756,7 @@ class ProfileStatement(models.Model):
         LIMITATION = "limitation", "Coverage limitation"
 
     profile = models.ForeignKey(
-        CourseProfile, related_name="statements", on_delete=models.CASCADE
+        RunProfile, related_name="statements", on_delete=models.CASCADE
     )
     section = models.CharField(max_length=32, choices=Section.choices)
     # order within the section

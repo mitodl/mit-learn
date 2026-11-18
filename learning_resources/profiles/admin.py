@@ -5,10 +5,10 @@ from django.contrib import admin
 from learning_resources.models import (
     ClaimEvidence,
     ClaimExtraction,
-    CourseProfile,
     ProfileClaim,
     ProfileStatement,
     ResourceProfileConfiguration,
+    RunProfile,
 )
 
 
@@ -52,14 +52,14 @@ class ClaimExtractionAdmin(admin.ModelAdmin):
         return super().get_queryset(request).defer("output", "raw_response")
 
 
-class CourseProfileAdmin(admin.ModelAdmin):
-    """CourseProfile Admin"""
+class RunProfileAdmin(admin.ModelAdmin):
+    """RunProfile Admin"""
 
-    model = CourseProfile
-    list_display = ("id", "run", "status", "course_extraction", "updated_on")
+    model = RunProfile
+    list_display = ("id", "run", "status", "resource_extraction", "updated_on")
     list_filter = ("status",)
     search_fields = ("run__run_id", "run__learning_resource__readable_id")
-    raw_id_fields = ("run", "course_extraction")
+    raw_id_fields = ("run", "resource_extraction")
     readonly_fields = ("row_counts",)
 
 
@@ -98,6 +98,6 @@ class ProfileStatementAdmin(admin.ModelAdmin):
 
 admin.site.register(ResourceProfileConfiguration, ResourceProfileConfigurationAdmin)
 admin.site.register(ClaimExtraction, ClaimExtractionAdmin)
-admin.site.register(CourseProfile, CourseProfileAdmin)
+admin.site.register(RunProfile, RunProfileAdmin)
 admin.site.register(ProfileClaim, ProfileClaimAdmin)
 admin.site.register(ProfileStatement, ProfileStatementAdmin)

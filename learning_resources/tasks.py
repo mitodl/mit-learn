@@ -1486,10 +1486,10 @@ def generate_claims_for_resource(
     which knowledge the course teaches before it is needed.
 
     When nothing failed, the extractions the best run uses are then the
-    course's only published ones: see publish_claim_extractions. Step 3 then
-    loads them into the best run's course profile, which is rebuilt only when
-    the run's claims changed, and the course's other profiles are deleted.
-    When something failed, what is published is left as it is, so the course
+    resource's only published ones: see publish_claim_extractions. Step 3 then
+    loads them into the best run's resource profile, which is rebuilt only when
+    the run's claims changed, and the resource's other profiles are deleted.
+    When something failed, what is published is left as it is, so the resource
     keeps its last complete claims and profile, rather than none or claims
     missing a unit, until a sweep succeeds.
 
@@ -1591,16 +1591,16 @@ def _publish_profile(
     resource: LearningResource, run_extraction: ClaimExtraction | None, stats: Counter
 ) -> None:
     """
-    Load the best run's published claims into its course profile: step 3.
+    Load the best run's published claims into its resource profile: step 3.
 
-    A profile that fails to build is logged and counted, and the course keeps
+    A profile that fails to build is logged and counted, and the resource keeps
     its last profile.
     """
     # deferred, like the claim modules
-    from learning_resources.profiles.course_profile import publish_course_profile
+    from learning_resources.profiles.resource_profile import publish_resource_profile
 
     try:
-        built = publish_course_profile(resource, run_extraction)
+        built = publish_resource_profile(resource, run_extraction)
     except Exception:
         log.exception("Building the profile of %s failed", resource.readable_id)
         stats["profile_failed"] += 1
@@ -1644,7 +1644,7 @@ def generate_all_claims(resource_ids: list[int], *, overwrite: bool = False) -> 
     Queue resource profile claim generation for each resource.
 
     Step 1 (context and unit claims), step 2 (run claims) and step 3 (the
-    course profile) all run.
+    resource profile) all run.
 
     Args:
         resource_ids (list of int): the LearningResource ids

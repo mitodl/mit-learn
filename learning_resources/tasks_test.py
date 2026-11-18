@@ -3831,7 +3831,7 @@ def test_generate_claims_for_resource(mocker, overwrite):
         return_value=run_extraction,
     )
     publish_profile = mocker.patch(
-        "learning_resources.profiles.course_profile.publish_course_profile",
+        "learning_resources.profiles.resource_profile.publish_resource_profile",
         return_value=True,
     )
 
@@ -4142,7 +4142,7 @@ def test_generate_claims_for_resource_builds_profile(mocker, built, stat):
         return_value=run_extraction,
     )
     publish_profile = mocker.patch(
-        "learning_resources.profiles.course_profile.publish_course_profile",
+        "learning_resources.profiles.resource_profile.publish_resource_profile",
         return_value=built,
     )
 
@@ -4173,7 +4173,7 @@ def test_generate_claims_for_resource_profile_failure(mocker):
         return_value=None,
     )
     mocker.patch(
-        "learning_resources.profiles.course_profile.publish_course_profile",
+        "learning_resources.profiles.resource_profile.publish_resource_profile",
         side_effect=ValueError("bad"),
     )
 
@@ -4205,7 +4205,7 @@ def test_generate_claims_for_resource_failure_keeps_profile(mocker, failing):
         side_effect=ValueError("bad"),
     )
     publish_profile = mocker.patch(
-        "learning_resources.profiles.course_profile.publish_course_profile"
+        "learning_resources.profiles.resource_profile.publish_resource_profile"
     )
 
     tasks.generate_claims_for_resource(unit.run.learning_resource.id)
@@ -4214,13 +4214,13 @@ def test_generate_claims_for_resource_failure_keeps_profile(mocker, failing):
 
 
 def test_generate_claims_for_resource_no_units_deletes_profile(mocker):
-    """A course whose best run has no units has no profile"""
+    """A resource whose best run has no units has no profile"""
     run = factories.LearningResourceRunFactory.create()
     mocker.patch.object(
         LearningResource, "best_run", new_callable=mocker.PropertyMock, return_value=run
     )
     publish_profile = mocker.patch(
-        "learning_resources.profiles.course_profile.publish_course_profile"
+        "learning_resources.profiles.resource_profile.publish_resource_profile"
     )
 
     assert tasks.generate_claims_for_resource(run.learning_resource.id) is None

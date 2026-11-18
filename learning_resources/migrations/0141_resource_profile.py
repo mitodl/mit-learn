@@ -11,7 +11,7 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name="CourseProfile",
+            name="RunProfile",
             fields=[
                 (
                     "id",
@@ -30,6 +30,7 @@ class Migration(migrations.Migration):
                         choices=[
                             ("building", "Building"),
                             ("ready", "Ready"),
+                            ("stale", "Stale"),
                             ("failed", "Failed"),
                         ],
                         default="building",
@@ -38,7 +39,7 @@ class Migration(migrations.Migration):
                 ),
                 ("row_counts", models.JSONField(blank=True, default=dict)),
                 (
-                    "course_extraction",
+                    "resource_extraction",
                     models.ForeignKey(
                         blank=True,
                         null=True,
@@ -74,7 +75,7 @@ class Migration(migrations.Migration):
                 (
                     "level",
                     models.CharField(
-                        choices=[("unit", "Unit"), ("course", "Course")], max_length=16
+                        choices=[("unit", "Unit"), ("run", "Run")], max_length=16
                     ),
                 ),
                 (
@@ -118,7 +119,7 @@ class Migration(migrations.Migration):
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
                         related_name="claims",
-                        to="learning_resources.courseprofile",
+                        to="learning_resources.runprofile",
                     ),
                 ),
                 (
@@ -211,7 +212,7 @@ class Migration(migrations.Migration):
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
                         related_name="statements",
-                        to="learning_resources.courseprofile",
+                        to="learning_resources.runprofile",
                     ),
                 ),
                 (
@@ -228,7 +229,7 @@ class Migration(migrations.Migration):
             },
         ),
         migrations.AddConstraint(
-            model_name="courseprofile",
+            model_name="runprofile",
             constraint=models.UniqueConstraint(
                 fields=("run",), name="unique_profile_per_run"
             ),

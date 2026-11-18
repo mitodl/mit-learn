@@ -2,20 +2,23 @@
 Step 3 of resource profile generation: load a run's claims into its profile.
 
 The run's context, unit and run extractions are already stored. This step
-parses their JSON into CourseProfile, ProfileClaim, ClaimEvidence and
+parses their JSON into RunProfile, ProfileClaim, ClaimEvidence and
 ProfileStatement rows, which can be queried, and makes no model calls.
 
 - Each unit claim, and each context claim, is a ProfileClaim, with the id the
   run step cites it by (U03:a4, ctx:prereq:0) and a uid built from its
   extraction's key and its unit's id, which stays the same while they do.
   Context claims belong to the run's own context unit: a context extraction
-  is shared by the runs of a course with the same context files.
+  is shared by the runs of a resource with the same context files.
 - Each evidence item is a ClaimEvidence. The stored outputs name their
   sources S01, S02, ... by position, without content file ids, since an
   extraction is shared by every unit with the same files. A source is
   resolved to the content file at its position in the unit that reads it,
   when the part of that file's text the source read is unchanged; evidence
   whose source can't be resolved is left out and logged.
+- Each learning outcome and inferred preparation item of the run output is
+  also a run-level ProfileClaim (run:outcome:0, run:prior:0), which cites the
+  unit and context claims it rests on.
 - Each item of the run output's summary, audience, learning outcomes, main
   topics, inferred preparation and coverage limitations is a
   ProfileStatement, linked to the claims and units it cites. The items the
@@ -37,10 +40,10 @@ from learning_resources.models import (
     ClaimEvidence,
     ClaimExtraction,
     ContentFile,
-    CourseProfile,
     LearningResource,
     ProfileClaim,
     ProfileStatement,
+    RunProfile,
     Unit,
 )
 from learning_resources.profiles.run_claims import (
@@ -58,6 +61,24 @@ _CLAIM_COLUMNS = {"id", "label", "description", "evidence"}
 _CONTEXT_COLUMNS = {"label", "text", "statement", "evidence"}
 # claim id prefix of the context claims
 CONTEXT_PREFIX = "ctx:"
+# claim id prefix of the run claims
+RUN_PREFIX = "run:"
+# the run output's fields loaded as run claims: (kind, local id prefix, the
+# item's fields listing the claim ids it cites)
+RUN_CLAIM_FIELDS = {
+    "learning_outcomes": (ProfileClaim.Kind.OUTCOME, "outcome", ("claim_ids",)),
+    "inferred_preparation": (
+        ProfileClaim.Kind.PRIOR,
+        "prior",
+        (
+            "assumed_claim_ids",
+            "taught_before_first_use_claim_ids",
+            "taught_after_first_use_claim_ids",
+        ),
+    ),
+}
+# a run claim's fields stored in ProfileClaim's own columns, not in data
+_RUN_COLUMNS = {"label", "text", "description"}
 
 
 class ProfileBuildError(Exception):
@@ -86,7 +107,7 @@ def _load_references(
     extraction with the run's context unit, from the run output's references.
 
     The context extraction's own unit is whichever run's context unit last
-    stored it, since runs of a course with the same context files share it,
+    stored it, since runs of a resource with the same context files share it,
     so its claims are loaded for the run's own context unit.
 
     Raises:
@@ -180,29 +201,34 @@ def _source_files(unit: Unit, extraction: ClaimExtraction) -> dict[str, ContentF
 class _ProfileLoader:
     """Build the rows of one profile from its run's extractions"""
 
-    def __init__(self, profile: CourseProfile):
+    def __init__(self, profile: RunProfile):
         self.profile = profile
         self.claims: list[ProfileClaim] = []
         # each claim's evidence items and the files of its sources, in claim order
         self.evidence: list[tuple[list[dict], dict[str, ContentFile]]] = []
+        # each claim's cited claim ids, in claim order
+        self.cites: list[list[str]] = []
         self.stats = Counter()
 
     @staticmethod
-    def _uid(extraction: ClaimExtraction, unit: Unit, local_id: str) -> str:
+    def _uid(extraction: ClaimExtraction, unit: Unit | None, local_id: str) -> str:
         """
         Return a claim's uid, unique in the profile.
 
-        Units with the same files share an extraction, so the uid has the
-        unit's id as well as the extraction's key. It doesn't depend on which
-        other units share the extraction, or on the unit's position.
+        Units with the same files share an extraction, so a unit claim's uid
+        has the unit's id as well as the extraction's key. It doesn't depend
+        on which other units share the extraction, or on the unit's position.
+        A run claim, with no unit, has only the run extraction's key.
         """
+        if unit is None:
+            return f"r:{extraction.key[:12]}:{local_id}"
         return f"u:{extraction.key[:12]}:{unit.id}:{local_id}"
 
     def _add_claim(  # noqa: PLR0913
         self,
         *,
         extraction: ClaimExtraction,
-        unit: Unit,
+        unit: Unit | None,
         local_id: str,
         display_id: str,
         kind: str,
@@ -211,13 +237,15 @@ class _ProfileLoader:
         data: dict,
         evidence: list[dict],
         files: dict[str, ContentFile],
+        level: str = ProfileClaim.Level.UNIT,
+        cites: list[str] | None = None,
     ) -> None:
         self.claims.append(
             ProfileClaim(
                 profile=self.profile,
                 uid=self._uid(extraction, unit, local_id),
                 display_id=_clip(display_id, _max_length(ProfileClaim, "display_id")),
-                level=ProfileClaim.Level.UNIT,
+                level=level,
                 kind=kind,
                 label=_clip(label, _max_length(ProfileClaim, "label")),
                 description=description or "",
@@ -227,6 +255,7 @@ class _ProfileLoader:
             )
         )
         self.evidence.append((evidence, files))
+        self.cites.append(cites or [])
 
     def add_unit(
         self, display_id: str, unit: Unit, extraction: ClaimExtraction
@@ -278,6 +307,41 @@ class _ProfileLoader:
                 files=files,
             )
 
+    def add_run(self, extraction: ClaimExtraction) -> None:
+        """
+        Add the run extraction's claims: its learning outcomes and inferred
+        preparation. They quote no sources, so they have no evidence, and cite
+        the unit and context claims they rest on instead.
+        """
+        for field, (kind, prefix, cite_fields) in RUN_CLAIM_FIELDS.items():
+            for index, item in enumerate(extraction.output.get(field, [])):
+                local_id = f"{prefix}:{index}"
+                # an outcome has only text; a preparation item a label and a
+                # description
+                description = item.get("description") or item.get("text") or ""
+                self._add_claim(
+                    extraction=extraction,
+                    unit=None,
+                    local_id=local_id,
+                    display_id=f"{RUN_PREFIX}{local_id}",
+                    kind=kind,
+                    label=item.get("label") or description,
+                    description=description,
+                    data={
+                        name: value
+                        for name, value in item.items()
+                        if name not in _RUN_COLUMNS
+                    },
+                    evidence=[],
+                    files={},
+                    level=ProfileClaim.Level.RUN,
+                    cites=[
+                        claim_id
+                        for cite_field in cite_fields
+                        for claim_id in item.get(cite_field, [])
+                    ],
+                )
+
     def _evidence_rows(self) -> list[ClaimEvidence]:
         locator_length = _max_length(ClaimEvidence, "locator")
         rows = []
@@ -301,12 +365,31 @@ class _ProfileLoader:
                 )
         return rows
 
+    def _cites_rows(self, claims: dict[str, ProfileClaim]) -> list:
+        """
+        Link each claim to the claims it cites. Cited ids that aren't claims,
+        like a unit's U03 or ctx:notes, are left in the claim's data.
+        """
+        through = ProfileClaim.cites.through
+        return [
+            through(from_profileclaim_id=claim.id, to_profileclaim_id=cited.id)
+            for claim, cited_ids in zip(self.claims, self.cites, strict=True)
+            for cited in dict.fromkeys(
+                claims[cited_id] for cited_id in cited_ids if cited_id in claims
+            )
+        ]
+
     def save_claims(self) -> dict[str, ProfileClaim]:
-        """Store the claims and their evidence; return the claims by display id"""
+        """
+        Store the claims, their evidence and their citations; return the
+        claims by display id
+        """
         ProfileClaim.objects.bulk_create(self.claims)
         ClaimEvidence.objects.bulk_create(self._evidence_rows())
+        claims = {claim.display_id: claim for claim in self.claims}
+        ProfileClaim.cites.through.objects.bulk_create(self._cites_rows(claims))
         self.stats["claims"] += len(self.claims)
-        return {claim.display_id: claim for claim in self.claims}
+        return claims
 
 
 # --------------------------------------------------------------------------- statements
@@ -361,7 +444,7 @@ def _items(output: dict) -> list[tuple[str, dict, str, list[str], list[str]]]:
                 {name: value for name, value in item.items() if name != "description"},
                 item["description"],
                 item.get("assumed_claim_ids", []) + taught,
-                # first_needed, then where the course teaches it
+                # first_needed, then where the resource teaches it
                 ([first_needed] if first_needed else [])
                 + [claim_id.split(":")[0] for claim_id in taught],
             )
@@ -370,7 +453,7 @@ def _items(output: dict) -> list[tuple[str, dict, str, list[str], list[str]]]:
 
 
 def _save_statements(
-    profile: CourseProfile,
+    profile: RunProfile,
     output: dict,
     claims: dict[str, ProfileClaim],
     units: dict[str, Unit],
@@ -433,7 +516,7 @@ def _save_statements(
 
 
 # --------------------------------------------------------------------------- build
-def _row_counts(profile: CourseProfile) -> dict[str, int]:
+def _row_counts(profile: RunProfile) -> dict[str, int]:
     """
     Count the profile's rows that deleting a content file or unit elsewhere
     removes: evidence (cascade), claims' units (set to null) and statements'
@@ -448,7 +531,7 @@ def _row_counts(profile: CourseProfile) -> dict[str, int]:
     }
 
 
-def _is_current(profile: CourseProfile | None, extraction: ClaimExtraction) -> bool:
+def _is_current(profile: RunProfile | None, extraction: ClaimExtraction) -> bool:
     """
     Whether a profile was built from the extraction as it is now, and still
     has every row it was built with.
@@ -459,14 +542,14 @@ def _is_current(profile: CourseProfile | None, extraction: ClaimExtraction) -> b
     """
     return (
         profile is not None
-        and profile.status == CourseProfile.Status.READY
-        and profile.course_extraction_id == extraction.id
+        and profile.status == RunProfile.Status.READY
+        and profile.resource_extraction_id == extraction.id
         and profile.updated_on >= extraction.updated_on
         and profile.row_counts == _row_counts(profile)
     )
 
 
-def _load(profile: CourseProfile, extraction: ClaimExtraction) -> Counter:
+def _load(profile: RunProfile, extraction: ClaimExtraction) -> Counter:
     """Replace a profile's claims and statements with the extraction's"""
     records, context = _load_references(extraction)
     profile.claims.all().delete()
@@ -477,6 +560,8 @@ def _load(profile: CourseProfile, extraction: ClaimExtraction) -> Counter:
     for display_id, unit, unit_extraction in records:
         if unit_extraction is not None:
             loader.add_unit(display_id, unit, unit_extraction)
+    # last, so the claims they cite are stored before them
+    loader.add_run(extraction)
     claims = loader.save_claims()
     units = {display_id: unit for display_id, unit, _ in records}
     loader.stats["statements"] += _save_statements(
@@ -485,16 +570,17 @@ def _load(profile: CourseProfile, extraction: ClaimExtraction) -> Counter:
     return loader.stats
 
 
-def build_course_profile(
+def build_resource_profile(
     extraction: ClaimExtraction, *, force: bool = False
-) -> tuple[CourseProfile, bool]:
+) -> tuple[RunProfile, bool]:
     """
     Build the profile of a run from its run extraction, unless it was already
     built from it.
 
     The profile is replaced in one transaction. When building fails, the
-    run's last profile is left as it was, and a run with none gets one with
-    status failed.
+    run's last profile keeps its claims, and a ready one is marked stale,
+    since the extraction it points at may have been replaced in place; a run
+    with no profile gets one with status failed.
 
     Args:
         extraction (ClaimExtraction): the run's run-level extraction
@@ -502,7 +588,7 @@ def build_course_profile(
             change to this code
 
     Returns:
-        tuple of (CourseProfile, bool): the profile, and whether it was built
+        tuple of (RunProfile, bool): the profile, and whether it was built
 
     Raises:
         ProfileBuildError: when the extraction refers to units or extractions
@@ -511,31 +597,36 @@ def build_course_profile(
     if extraction.level != ClaimExtraction.Level.RUN or extraction.run_id is None:
         msg = f"Extraction {extraction.id} is not a run's run-level extraction"
         raise ValueError(msg)
-    profile = CourseProfile.objects.filter(run_id=extraction.run_id).first()
+    profile = RunProfile.objects.filter(run_id=extraction.run_id).first()
     if not force and _is_current(profile, extraction):
         return profile, False
     try:
         with transaction.atomic():
             # update_or_create locks the row, so concurrent builds take turns
-            profile, _ = CourseProfile.objects.update_or_create(
+            profile, _ = RunProfile.objects.update_or_create(
                 run_id=extraction.run_id,
                 defaults={
-                    "course_extraction": extraction,
-                    "status": CourseProfile.Status.BUILDING,
+                    "resource_extraction": extraction,
+                    "status": RunProfile.Status.BUILDING,
                 },
             )
             stats = _load(profile, extraction)
             profile.row_counts = _row_counts(profile)
-            profile.status = CourseProfile.Status.READY
+            profile.status = RunProfile.Status.READY
             profile.save()
     except Exception:
-        CourseProfile.objects.get_or_create(
+        profile, created = RunProfile.objects.get_or_create(
             run_id=extraction.run_id,
             defaults={
-                "course_extraction": extraction,
-                "status": CourseProfile.Status.FAILED,
+                "resource_extraction": extraction,
+                "status": RunProfile.Status.FAILED,
             },
         )
+        if not created and profile.status == RunProfile.Status.READY:
+            # the extraction's row may have been replaced in place, so the
+            # profile's claims no longer match what its foreign key points at
+            profile.status = RunProfile.Status.STALE
+            profile.save(update_fields=["status", "updated_on"])
         raise
     if stats["evidence_unresolved"]:
         log.warning(
@@ -548,38 +639,40 @@ def build_course_profile(
     return profile, True
 
 
-def publish_course_profile(
+def publish_resource_profile(
     resource: LearningResource,
     extraction: ClaimExtraction | None,
     *,
     force: bool = False,
 ) -> bool | None:
     """
-    Build the profile of a course's best run, and delete its other profiles.
+    Build the profile of a resource's best run, and delete its other profiles.
 
-    The course's profile follows its published extractions: see
-    publish_claim_extractions. A course without a run extraction has no
-    profile. When building fails, the course's profiles are left as they
-    were.
+    The resource's profile follows its published extractions: see
+    publish_claim_extractions. A resource without a run extraction has no
+    profile. The profiles of the resource's other runs are deleted before
+    building, since their claims are no longer published, so the resource never
+    has more than one profile. When building fails, the best run's profile is
+    handled as in build_resource_profile.
 
     Args:
-        resource (LearningResource): the course
+        resource (LearningResource): the resource
         extraction (ClaimExtraction | None): the best run's run-level
             extraction, or None when it has none
         force (bool): rebuild even when the profile is current
 
     Returns:
-        bool | None: whether the profile was built, or None when the course
+        bool | None: whether the profile was built, or None when the resource
             has no run extraction
 
     Raises:
         ProfileBuildError: when the extraction refers to units or extractions
             that are gone
     """
-    profiles = CourseProfile.objects.filter(run__learning_resource=resource)
+    profiles = RunProfile.objects.filter(run__learning_resource=resource)
     if extraction is None:
         profiles.delete()
         return None
-    profile, built = build_course_profile(extraction, force=force)
-    profiles.exclude(id=profile.id).delete()
+    profiles.exclude(run_id=extraction.run_id).delete()
+    _, built = build_resource_profile(extraction, force=force)
     return built

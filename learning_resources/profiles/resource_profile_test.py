@@ -1,4 +1,4 @@
-"""Tests for step 3 of resource profile generation: loading course profiles"""
+"""Tests for step 3 of resource profile generation: loading resource profiles"""
 
 from datetime import timedelta
 
@@ -15,16 +15,16 @@ from learning_resources.factories import (
 from learning_resources.models import (
     ClaimEvidence,
     ClaimExtraction,
-    CourseProfile,
     ProfileClaim,
     ProfileStatement,
+    RunProfile,
     Unit,
     UnitContentFile,
 )
-from learning_resources.profiles.course_profile import (
+from learning_resources.profiles.resource_profile import (
     ProfileBuildError,
-    build_course_profile,
-    publish_course_profile,
+    build_resource_profile,
+    publish_resource_profile,
 )
 from learning_resources.profiles.sources import text_checksum
 from main.utils import now_in_utc
@@ -111,7 +111,7 @@ def _files(unit, count):
 
 
 @pytest.fixture
-def course():
+def resource():
     """Return a best run with a context unit and two units, extracted in steps 1-2"""
     resource = LearningResourceFactory.create(is_course=True, runs=[])
     run = LearningResourceRunFactory.create(learning_resource=resource)
@@ -168,7 +168,7 @@ def course():
         run=run,
         level=ClaimExtraction.Level.RUN,
         output={
-            "summary": "A course on mechanics.",
+            "summary": "A resource on mechanics.",
             "summary_claim_ids": ["U01:c1", "ctx:aud:0"],
             "audience": [{"text": "First-years.", "claim_ids": ["ctx:aud:0"]}],
             "main_topics": [
@@ -231,16 +231,16 @@ def _statements(profile, section):
     return list(profile.statements.filter(section=section).order_by("position"))
 
 
-def test_build_course_profile_claims(course):
+def test_build_resource_profile_claims(resource):
     """Each unit and context claim is loaded, with its evidence"""
-    profile, built = build_course_profile(course["run_extraction"])
+    profile, built = build_resource_profile(resource["run_extraction"])
 
     assert built is True
-    assert profile.status == CourseProfile.Status.READY
-    assert profile.run == course["run"]
-    assert profile.course_extraction == course["run_extraction"]
-    context_unit, first, second = course["units"]
-    context, first_extraction, _ = course["extractions"]
+    assert profile.status == RunProfile.Status.READY
+    assert profile.run == resource["run"]
+    assert profile.resource_extraction == resource["run_extraction"]
+    context_unit, first, second = resource["units"]
+    context, first_extraction, _ = resource["extractions"]
     claims = {claim.display_id: claim for claim in profile.claims.all()}
     assert set(claims) == {
         "ctx:aud:0",
@@ -250,6 +250,8 @@ def test_build_course_profile_claims(course):
         "U01:s1",
         "U01:a1",
         "U02:c1",
+        "run:outcome:0",
+        "run:prior:0",
     }
     concept = claims["U01:c1"]
     assert concept.uid == f"u:{first_extraction.key[:12]}:{first.id}:c1"
@@ -281,7 +283,7 @@ def test_build_course_profile_claims(course):
     assert claims["ctx:aud:0"].label == "First-year undergraduates."
     assert claims["ctx:aud:0"].data == {"field": "stated_audience"}
 
-    _, first_files, _ = course["files"]
+    _, first_files, _ = resource["files"]
     evidence = list(claims["U01:a1"].evidence.order_by("id"))
     assert [item.content_file for item in evidence] == first_files
     assert evidence[0].content_checksum == first_files[0].checksum
@@ -289,17 +291,56 @@ def test_build_course_profile_claims(course):
     assert evidence[0].locator == "p.2"
     assert evidence[0].verified == "exact"
     assert (evidence[0].span_start, evidence[0].span_end) == (3, 24)
-    assert claims["ctx:prereq:0"].evidence.get().content_file == (course["files"][0][0])
+    assert (
+        claims["ctx:prereq:0"].evidence.get().content_file == (resource["files"][0][0])
+    )
 
 
-def test_build_course_profile_statements(course):
+def test_build_resource_profile_run_claims(resource):
+    """The run output's outcomes and preparation are run claims citing claims"""
+    profile, _ = build_resource_profile(resource["run_extraction"])
+
+    run_extraction = resource["run_extraction"]
+    claims = {claim.display_id: claim for claim in profile.claims.all()}
+    outcome = claims["run:outcome:0"]
+    assert outcome.uid == f"r:{run_extraction.key[:12]}:outcome:0"
+    assert outcome.level == ProfileClaim.Level.RUN
+    assert outcome.kind == ProfileClaim.Kind.OUTCOME
+    assert outcome.label == "Draw free-body diagrams."
+    assert outcome.description == "Draw free-body diagrams."
+    assert outcome.unit is None
+    assert outcome.extraction == run_extraction
+    assert outcome.data == {"claim_ids": ["U01:s1"]}
+    assert list(outcome.cites.all()) == [claims["U01:s1"]]
+    assert not outcome.evidence.exists()
+
+    prior = claims["run:prior:0"]
+    assert prior.level == ProfileClaim.Level.RUN
+    assert prior.kind == ProfileClaim.Kind.PRIOR
+    assert prior.label == "Derivatives"
+    assert prior.description == "Differentiate polynomials."
+    assert prior.data["rationale"] == "Used in U01."
+    assert prior.data["taught_after_first_use_claim_ids"] == ["U02:c1"]
+    assert "label" not in prior.data
+    assert "description" not in prior.data
+    assert set(prior.cites.all()) == {claims["U01:a1"], claims["U02:c1"]}
+    assert list(claims["U02:c1"].cited_by.all()) == [prior]
+
+    # every other claim is a unit-level one
+    assert {
+        claim.display_id
+        for claim in profile.claims.filter(level=ProfileClaim.Level.RUN)
+    } == {"run:outcome:0", "run:prior:0"}
+
+
+def test_build_resource_profile_statements(resource):
     """Each item of the run output is a statement citing its claims and units"""
-    profile, _ = build_course_profile(course["run_extraction"])
+    profile, _ = build_resource_profile(resource["run_extraction"])
 
-    _, first, second = course["units"]
+    _, first, second = resource["units"]
     claims = {claim.display_id: claim for claim in profile.claims.all()}
     (summary,) = _statements(profile, ProfileStatement.Section.SUMMARY)
-    assert summary.text == "A course on mechanics."
+    assert summary.text == "A resource on mechanics."
     assert set(summary.claims.all()) == {claims["U01:c1"], claims["ctx:aud:0"]}
     (audience,) = _statements(profile, ProfileStatement.Section.AUDIENCE)
     assert audience.text == "First-years."
@@ -326,13 +367,13 @@ def test_build_course_profile_statements(course):
     assert limitations[1].data == {"claim_ids": [], "from_code": True}
 
 
-def test_changed_file_evidence_left_out(course):
+def test_changed_file_evidence_left_out(resource):
     """Evidence whose source file changed since it was read is left out"""
-    _, first_files, _ = course["files"]
+    _, first_files, _ = resource["files"]
     first_files[1].content = "new text"
     first_files[1].save()
 
-    profile, _ = build_course_profile(course["run_extraction"])
+    profile, _ = build_resource_profile(resource["run_extraction"])
 
     assumed = profile.claims.get(display_id="U01:a1")
     assert [item.content_file for item in assumed.evidence.all()] == [first_files[0]]
@@ -347,18 +388,18 @@ def test_changed_file_evidence_left_out(course):
         lambda content: f"{content} and more text past the cut",
     ],
 )
-def test_unread_file_change_keeps_evidence(course, change):
+def test_unread_file_change_keeps_evidence(resource, change):
     """
     Evidence is kept when its file's raw content changed but the text its
     source read didn't, since the extraction is still the one for that text
     """
-    _, first_files, _ = course["files"]
-    extraction = course["extractions"][1]
+    _, first_files, _ = resource["files"]
+    extraction = resource["extractions"][1]
     first_files[1].content = change(first_files[1].content)
     first_files[1].save()
     assert first_files[1].checksum != extraction.output["sources"][1]["checksum"]
 
-    profile, _ = build_course_profile(course["run_extraction"])
+    profile, _ = build_resource_profile(resource["run_extraction"])
 
     assumed = profile.claims.get(display_id="U01:a1")
     evidence = list(assumed.evidence.order_by("id"))
@@ -367,17 +408,17 @@ def test_unread_file_change_keeps_evidence(course, change):
 
 
 @pytest.mark.parametrize("checksum_matches", [True, False])
-def test_source_without_text_checksum(course, checksum_matches):
+def test_source_without_text_checksum(resource, checksum_matches):
     """A source stored without text_checksum is checked by the file's checksum"""
-    _, first_files, _ = course["files"]
-    extraction = course["extractions"][1]
+    _, first_files, _ = resource["files"]
+    extraction = resource["extractions"][1]
     source = extraction.output["sources"][1]
     del source["text_checksum"]
     if not checksum_matches:
         source["checksum"] = "stale"
     extraction.save()
 
-    profile, _ = build_course_profile(course["run_extraction"])
+    profile, _ = build_resource_profile(resource["run_extraction"])
 
     assumed = profile.claims.get(display_id="U01:a1")
     assert [item.content_file for item in assumed.evidence.order_by("id")] == (
@@ -385,22 +426,22 @@ def test_source_without_text_checksum(course, checksum_matches):
     )
 
 
-def test_shared_extraction_uids(course):
+def test_shared_extraction_uids(resource):
     """
     Units sharing an extraction get claims with uids of their own, which
     don't depend on whether the extraction is shared
     """
-    _, first, second = course["units"]
-    _, first_extraction, _ = course["extractions"]
-    profile, _ = build_course_profile(course["run_extraction"])
+    _, first, second = resource["units"]
+    _, first_extraction, _ = resource["extractions"]
+    profile, _ = build_resource_profile(resource["run_extraction"])
     first_uids = dict(
         profile.claims.filter(unit=first).values_list("display_id", "uid")
     )
-    output = course["run_extraction"].output
+    output = resource["run_extraction"].output
     output["units"][1]["extraction"] = output["units"][0]["extraction"]
-    course["run_extraction"].save()
+    resource["run_extraction"].save()
 
-    profile, _ = build_course_profile(course["run_extraction"])
+    profile, _ = build_resource_profile(resource["run_extraction"])
 
     uids = list(profile.claims.values_list("uid", flat=True))
     assert len(uids) == len(set(uids))
@@ -413,15 +454,17 @@ def test_shared_extraction_uids(course):
     )
 
 
-def test_shared_context_extraction(course):
+def test_shared_context_extraction(resource):
     """
     A context extraction stored by another run's context unit is loaded for
     this run's context unit and its files
     """
-    context_unit, _, _ = course["units"]
-    context_files, _, _ = course["files"]
-    context, _, _ = course["extractions"]
-    other_run = LearningResourceRunFactory.create(learning_resource=course["resource"])
+    context_unit, _, _ = resource["units"]
+    context_files, _, _ = resource["files"]
+    context, _, _ = resource["extractions"]
+    other_run = LearningResourceRunFactory.create(
+        learning_resource=resource["resource"]
+    )
     other_unit = UnitFactory.create(
         run=other_run, kind=Unit.Kind.CONTEXT, position=None, external_id="context"
     )
@@ -429,50 +472,50 @@ def test_shared_context_extraction(course):
     context.unit = other_unit
     context.save()
 
-    profile, _ = build_course_profile(course["run_extraction"])
+    profile, _ = build_resource_profile(resource["run_extraction"])
 
     prerequisite = profile.claims.get(display_id="ctx:prereq:0")
     assert prerequisite.unit == context_unit
     assert prerequisite.evidence.get().content_file == context_files[0]
 
 
-def test_context_extraction_without_context_unit(course):
+def test_context_extraction_without_context_unit(resource):
     """A run with a context extraction but no context unit can't be built"""
-    context_unit, _, _ = course["units"]
+    context_unit, _, _ = resource["units"]
     Unit.objects.filter(id=context_unit.id).update(kind=Unit.Kind.UNIT)
 
     with pytest.raises(ProfileBuildError, match="no context unit"):
-        build_course_profile(course["run_extraction"])
+        build_resource_profile(resource["run_extraction"])
 
 
-def test_profile_not_rebuilt_when_current(course):
+def test_profile_not_rebuilt_when_current(resource):
     """A profile is rebuilt only when its run extraction changed, or forced"""
-    profile, _ = build_course_profile(course["run_extraction"])
+    profile, _ = build_resource_profile(resource["run_extraction"])
     claim_ids = set(profile.claims.values_list("id", flat=True))
 
-    assert build_course_profile(course["run_extraction"]) == (profile, False)
+    assert build_resource_profile(resource["run_extraction"]) == (profile, False)
     assert set(profile.claims.values_list("id", flat=True)) == claim_ids
 
-    _, built = build_course_profile(course["run_extraction"], force=True)
+    _, built = build_resource_profile(resource["run_extraction"], force=True)
     assert built is True
     assert not claim_ids & set(profile.claims.values_list("id", flat=True))
 
-    course["run_extraction"].output["summary"] = "New summary."
-    course["run_extraction"].save()
-    _, built = build_course_profile(course["run_extraction"])
+    resource["run_extraction"].output["summary"] = "New summary."
+    resource["run_extraction"].save()
+    _, built = build_resource_profile(resource["run_extraction"])
     assert built is True
     assert profile.statements.get(section="summary").text == "New summary."
-    assert CourseProfile.objects.count() == 1
+    assert RunProfile.objects.count() == 1
 
 
-def test_profile_rebuilt_when_file_recreated(course):
+def test_profile_rebuilt_when_file_recreated(resource):
     """
     A profile whose evidence was deleted with its content file is rebuilt,
     though its extractions are unchanged, when the file is recreated with
     the same text
     """
-    _, first_files, _ = course["files"]
-    profile, _ = build_course_profile(course["run_extraction"])
+    _, first_files, _ = resource["files"]
+    profile, _ = build_resource_profile(resource["run_extraction"])
     assert (
         profile.row_counts["evidence"]
         == ClaimEvidence.objects.filter(claim__profile=profile).count()
@@ -485,7 +528,7 @@ def test_profile_rebuilt_when_file_recreated(course):
     )
     old.delete()
 
-    profile, built = build_course_profile(course["run_extraction"])
+    profile, built = build_resource_profile(resource["run_extraction"])
 
     assert built is True
     assumed = profile.claims.get(display_id="U01:a1")
@@ -493,68 +536,91 @@ def test_profile_rebuilt_when_file_recreated(course):
         first_files[0],
         new,
     ]
-    assert build_course_profile(course["run_extraction"]) == (profile, False)
+    assert build_resource_profile(resource["run_extraction"]) == (profile, False)
 
 
-def test_build_failure_keeps_last_profile(course, mocker):
-    """A failed build leaves the last profile as it was"""
-    profile, _ = build_course_profile(course["run_extraction"])
+def test_build_failure_keeps_last_profile(resource, mocker):
+    """A failed build keeps the last profile's claims and marks it stale"""
+    profile, _ = build_resource_profile(resource["run_extraction"])
     claims = set(profile.claims.values_list("id", flat=True))
-    CourseProfile.objects.filter(id=profile.id).update(
+    RunProfile.objects.filter(id=profile.id).update(
         updated_on=now_in_utc() - timedelta(days=1)
     )
     mocker.patch(
-        "learning_resources.profiles.course_profile._save_statements",
+        "learning_resources.profiles.resource_profile._save_statements",
         side_effect=ValueError("bad"),
     )
 
     with pytest.raises(ValueError, match="bad"):
-        build_course_profile(course["run_extraction"])
+        build_resource_profile(resource["run_extraction"])
 
     profile.refresh_from_db()
-    assert profile.status == CourseProfile.Status.READY
+    assert profile.status == RunProfile.Status.STALE
     assert set(profile.claims.values_list("id", flat=True)) == claims
 
+    mocker.stopall()
+    assert build_resource_profile(resource["run_extraction"]) == (profile, True)
+    profile.refresh_from_db()
+    assert profile.status == RunProfile.Status.READY
 
-def test_build_failure_without_profile(course):
+
+def test_build_failure_without_profile(resource):
     """A run without a profile gets a failed one when building fails"""
-    course["units"][2].delete()
+    resource["units"][2].delete()
 
     with pytest.raises(ProfileBuildError, match="unit"):
-        build_course_profile(course["run_extraction"])
+        build_resource_profile(resource["run_extraction"])
 
-    profile = CourseProfile.objects.get(run=course["run"])
-    assert profile.status == CourseProfile.Status.FAILED
+    profile = RunProfile.objects.get(run=resource["run"])
+    assert profile.status == RunProfile.Status.FAILED
     assert not profile.claims.exists()
 
 
-def test_build_rejects_unit_extraction(course):
+def test_build_rejects_unit_extraction(resource):
     """Only a run-level extraction makes a profile"""
     with pytest.raises(ValueError, match="run-level"):
-        build_course_profile(course["extractions"][1])
+        build_resource_profile(resource["extractions"][1])
 
 
-def test_publish_course_profile(course):
-    """The best run's profile is built and the course's other profiles deleted"""
-    old_run = LearningResourceRunFactory.create(learning_resource=course["resource"])
-    old_profile = CourseProfile.objects.create(run=old_run)
-    other_course = CourseProfile.objects.create(run=LearningResourceRunFactory.create())
+def test_publish_resource_profile(resource):
+    """The best run's profile is built and the resource's other profiles deleted"""
+    old_run = LearningResourceRunFactory.create(learning_resource=resource["resource"])
+    old_profile = RunProfile.objects.create(run=old_run)
+    other_resource = RunProfile.objects.create(run=LearningResourceRunFactory.create())
 
-    assert publish_course_profile(course["resource"], course["run_extraction"]) is True
+    assert (
+        publish_resource_profile(resource["resource"], resource["run_extraction"])
+        is True
+    )
 
-    assert set(CourseProfile.objects.values_list("id", flat=True)) == {
-        CourseProfile.objects.get(run=course["run"]).id,
-        other_course.id,
+    assert set(RunProfile.objects.values_list("id", flat=True)) == {
+        RunProfile.objects.get(run=resource["run"]).id,
+        other_resource.id,
     }
-    assert not CourseProfile.objects.filter(id=old_profile.id).exists()
+    assert not RunProfile.objects.filter(id=old_profile.id).exists()
 
 
-def test_publish_course_profile_without_extraction(course):
-    """A course without a run extraction has no profile"""
-    build_course_profile(course["run_extraction"])
+def test_publish_resource_profile_failure_deletes_other_runs(resource):
+    """A failed build still deletes the profiles of the resource's other runs"""
+    old_run = LearningResourceRunFactory.create(learning_resource=resource["resource"])
+    old_profile = RunProfile.objects.create(run=old_run, status=RunProfile.Status.READY)
+    resource["units"][2].delete()
 
-    assert publish_course_profile(course["resource"], None) is None
+    with pytest.raises(ProfileBuildError, match="unit"):
+        publish_resource_profile(resource["resource"], resource["run_extraction"])
 
-    assert not CourseProfile.objects.exists()
+    assert not RunProfile.objects.filter(id=old_profile.id).exists()
+    profile = RunProfile.objects.get(run__learning_resource=resource["resource"])
+    assert profile.run_id == resource["run"].id
+    assert profile.status == RunProfile.Status.FAILED
+
+
+def test_publish_resource_profile_without_extraction(resource):
+    """A resource without a run extraction has no profile"""
+    build_resource_profile(resource["run_extraction"])
+
+    assert publish_resource_profile(resource["resource"], None) is None
+
+    assert not RunProfile.objects.exists()
     assert not ProfileClaim.objects.exists()
     assert not ClaimEvidence.objects.exists()

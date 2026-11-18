@@ -11,7 +11,7 @@ from learning_resources.tasks import (
 class Command(BaseCommand):
     """
     Generate resource profile claims for resources' best runs, and load them
-    into their course profiles.
+    into their resource profiles.
     """
 
     help = "Generate resource profile claims for resources' best runs"
