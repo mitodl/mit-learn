@@ -515,7 +515,75 @@ def test_load_run_bad_unit_rows_keep_the_units_and_the_files(
     assert loaded == 1
     assert list(run.units.values_list("id", flat=True)) == [old_unit.id]
     run.refresh_from_db()
+    # so the next sync reads the units again
+    assert run.checksum is None
+
+
+def test_load_run_unread_units_keep_the_outline_and_retry(
+    warehouse_owns_content_files,
+):
+    """Units that couldn't be read leave the outline and the fingerprint unset"""
+    run = _run()
+    old_unit = UnitFactory.create(run=run, external_id="old")
+
+    loaded = warehouse_content_files.load_run(
+        run, [_open_edx_row("a")], expected_count=1, units_unread=True
+    )
+
+    assert loaded == 1
+    assert list(run.units.values_list("id", flat=True)) == [old_unit.id]
+    run.refresh_from_db()
+    assert run.checksum is None
+
+
+def test_load_run_no_unit_rows_keep_the_outline_and_the_fingerprint(
+    warehouse_owns_content_files,
+):
+    """An empty units view keeps the outline, and doesn't hold the run for retry"""
+    run = _run()
+    old_unit = UnitFactory.create(run=run, external_id="old")
+
+    warehouse_content_files.load_run(
+        run, [_open_edx_row("a")], expected_count=1, unit_rows=[]
+    )
+
+    assert list(run.units.values_list("id", flat=True)) == [old_unit.id]
+    run.refresh_from_db()
     assert run.checksum is not None
+
+
+def test_load_run_short_read_keeps_the_outline(warehouse_owns_content_files):
+    """A read short of the expected rows doesn't replace the units"""
+    run = _run()
+    old_unit = UnitFactory.create(run=run, external_id="old")
+
+    warehouse_content_files.load_run(
+        run,
+        [_open_edx_row("a")],
+        expected_count=2,
+        unit_rows=[_unit_row(0, "seq1", [["a", "core"], ["b", "core"]])],
+    )
+
+    assert list(run.units.values_list("id", flat=True)) == [old_unit.id]
+
+
+def test_load_run_unsaved_file_keeps_the_outline(mocker, warehouse_owns_content_files):
+    """A file that failed to save doesn't let another file replace the units"""
+    run = _run()
+    old_unit = UnitFactory.create(run=run, external_id="old")
+    _refuse_saving(mocker, "b")
+
+    loaded = warehouse_content_files.load_run(
+        run,
+        [_open_edx_row("a"), _open_edx_row("b")],
+        expected_count=2,
+        unit_rows=[_unit_row(0, "seq1", [["b", "core"]])],
+    )
+
+    assert loaded == 1
+    assert list(run.units.values_list("id", flat=True)) == [old_unit.id]
+    run.refresh_from_db()
+    assert run.checksum is None
 
 
 def test_load_run_ocw_sets_tags_completeness_and_learning_materials(

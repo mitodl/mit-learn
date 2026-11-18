@@ -248,7 +248,7 @@ def transform_unit_rows(rows: list[dict]) -> list[dict]:
     ]
 
 
-def load_run_units(run: LearningResourceRun, unit_rows: list[dict]):
+def load_run_units(run: LearningResourceRun, unit_rows: list[dict]) -> bool:
     """
     Replace a run's units with its rows of the units view. As in
     edx_shared.load_archive_units, a failure is logged rather than raised, so
@@ -260,16 +260,59 @@ def load_run_units(run: LearningResourceRun, unit_rows: list[dict]):
     Args:
         run (LearningResourceRun): the run
         unit_rows (list of dict): the run's rows in its units view
+
+    Returns:
+        bool: whether the rows were read and loaded
     """
     units = []
+    loaded = True
     try:
         units = transform_unit_rows(unit_rows)
     except Exception:
         log.exception("Units not read for run %s", run.run_id)
+        loaded = False
     try:
         loaders.load_course_units(run, units)
     except Exception:
         log.exception("Units not loaded for run %s", run.run_id)
+        return False
+    return loaded
+
+
+def _load_open_edx_units(
+    run: LearningResourceRun,
+    unit_rows: list[dict] | None,
+    *,
+    files_landed: bool,
+    units_unread: bool,
+) -> bool:
+    """
+    Replace an Open edX run's units once all its files have landed, and say
+    whether its fingerprint can be stored.
+
+    Before the files land (a short read, or a file that failed to save), a unit
+    whose new file is missing would lose its links and then the unit itself, so
+    the outline is kept, less its links to unpublished files. It is kept the
+    same way with no unit rows (a source with no units view) and when the units
+    view couldn't be read, which also holds back the fingerprint so the next
+    sync reads the units again. An empty list is the view saying the run has no
+    units, as it does for a run whose units couldn't be built, and keeps the
+    outline too.
+
+    Args:
+        run (LearningResourceRun): the run
+        unit_rows (list of dict | None): the run's rows in its units view
+        files_landed (bool): every expected row was read and every file tried
+            was saved
+        units_unread (bool): the units view was there to read and the read failed
+
+    Returns:
+        bool: False when the units should be read again
+    """
+    if files_landed and unit_rows is not None:
+        return load_run_units(run, unit_rows)
+    loaders.load_course_units(run, [])
+    return not units_unread
 
 
 def _refuse_unpublish_by_key(
@@ -303,6 +346,7 @@ def load_run(  # noqa: PLR0913
     allow_mass_unpublish: bool = False,
     allow_shrink: bool = False,
     unit_rows: list[dict] | None = None,
+    units_unread: bool = False,
 ) -> int:
     """
     Load one run's rows as its content files, and an Open edX run's unit rows as
@@ -311,9 +355,10 @@ def load_run(  # noqa: PLR0913
     The stored fingerprint is cleared first and set only when the whole run
     landed, so a sync reloads a run that was read short, had a file fail to save
     or stopped partway. A run reloaded for having no published files already has
-    the view's fingerprint, so leaving it in place would strand the repair. With
-    no unit rows, the run keeps the units it has, less their links to files this
-    unpublishes.
+    the view's fingerprint, so leaving it in place would strand the repair. An
+    Open edX run's units are replaced only once its files have landed, and its
+    fingerprint waits for them too, so units that couldn't be read or loaded
+    are retried (see _load_open_edx_units).
 
     Args:
         run (LearningResourceRun): the run
@@ -326,6 +371,8 @@ def load_run(  # noqa: PLR0913
             drop from the run's published files to its rows explains. Keys
             that changed beyond that still count, so a renamed run is refused
         unit_rows (list of dict | None): an Open edX run's rows in its units view
+        units_unread (bool): the run's units view couldn't be read, so its
+            fingerprint isn't stored and the next sync tries the units again
 
     Returns:
         int: the number of files loaded
@@ -379,6 +426,8 @@ def load_run(  # noqa: PLR0913
     )
     if not file_ids:
         return 0
+    landed = complete and len(failed_keys) == extraction_failures
+    units_loaded = True
     if is_ocw:
         # from every row, as a failed file still counts toward the score
         if complete:
@@ -390,8 +439,10 @@ def load_run(  # noqa: PLR0913
             run, run.content_files.filter(published=True).values_list("id", flat=True)
         )
     else:
-        load_run_units(run, unit_rows or [])
-    if complete and len(failed_keys) == extraction_failures:
+        units_loaded = _load_open_edx_units(
+            run, unit_rows, files_landed=landed, units_unread=units_unread
+        )
+    if landed and units_loaded:
         run.checksum = _fingerprint(etl_source, _stats_of_rows(etl_source, rows))
         run.save(update_fields=["checksum"])
     return len(file_ids)

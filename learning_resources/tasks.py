@@ -2007,6 +2007,7 @@ def load_warehouse_content_files(  # noqa: PLR0913
                     )
                 )
                 unit_rows = None
+                units_unread = False
                 if etl_source in warehouse_content_files.UNIT_VIEWS:
                     try:
                         unit_rows = list(
@@ -2022,6 +2023,7 @@ def load_warehouse_content_files(  # noqa: PLR0913
                         log.exception(
                             "Units not read for %s run %s", etl_source, run_id
                         )
+                        units_unread = True
             finally:
                 conn.close()
             return warehouse_content_files.load_run(
@@ -2031,6 +2033,7 @@ def load_warehouse_content_files(  # noqa: PLR0913
                 allow_mass_unpublish=allow_mass_unpublish is True,
                 allow_shrink=allow_shrink is True,
                 unit_rows=unit_rows,
+                units_unread=units_unread,
             )
         finally:
             lock.delete(lock_key)

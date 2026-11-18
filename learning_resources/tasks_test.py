@@ -3480,6 +3480,7 @@ def test_load_warehouse_content_files_reads_one_run(mocker, content_file_run):
         allow_mass_unpublish=False,
         allow_shrink=False,
         unit_rows=unit_rows,
+        units_unread=False,
     )
     key = f"warehouse_content_files:{ETLSource.mitxonline.name}:{run.run_id}"
     content_file_run.lock.add.assert_called_once_with(
@@ -3508,6 +3509,7 @@ def test_load_warehouse_content_files_passes_the_unpublish_override(
         "allow_mass_unpublish": override == "allow_mass_unpublish",
         "allow_shrink": override == "allow_shrink",
         "unit_rows": [],
+        "units_unread": False,
     }
 
 
@@ -3533,6 +3535,7 @@ def test_load_warehouse_content_files_loads_files_when_units_fail_to_read(
     )
     assert mock_load.call_args.args[1] == rows
     assert mock_load.call_args.kwargs["unit_rows"] is None
+    assert mock_load.call_args.kwargs["units_unread"] is True
 
 
 def test_load_warehouse_content_files_reads_no_units_for_ocw(mocker, settings):
