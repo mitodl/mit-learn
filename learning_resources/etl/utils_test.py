@@ -1249,6 +1249,7 @@ def test_delete_unlinked_figure_versions(figure_storage):
             "solution",
             "parts",
             "image",
+            "unpublished",
             "unlinked",
         )
     }
@@ -1277,10 +1278,16 @@ def test_delete_unlinked_figure_versions(figure_storage):
     LearningResourceImageFactory.create(
         url="https://cdn.test/figures/file/image/p1_1.png"
     )
+    # an unpublished problem doesn't keep its version
+    PracticeProblemFactory.create(
+        learning_resource__published=False,
+        statement="![a](https://cdn.test/figures/file/unpublished/p1_1.png)",
+    )
     utils._delete_unlinked_figure_versions("figures/file/new")  # noqa: SLF001
     for name in ("new", "linked", "tutor", "statement", "solution", "parts", "image"):
         assert (folders[name] / "p1_1.png").exists(), name
-    assert not (folders["unlinked"] / "p1_1.png").exists()
+    for name in ("unpublished", "unlinked"):
+        assert not (folders[name] / "p1_1.png").exists(), name
 
 
 def test_extract_content_ocr_failure_falls_back_to_tika(

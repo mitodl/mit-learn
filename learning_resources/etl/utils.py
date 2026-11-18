@@ -1498,15 +1498,18 @@ def _store_figures(markdown: str, figures: list, folder: str) -> str:
 def _figure_version_linked(folder: str) -> bool:
     """
     Whether a saved row still links to a folder: a ContentFile or
-    TutorProblemFile, or a promoted PracticeProblem (its text, its parts, or
+    TutorProblemFile, or a published PracticeProblem (its text, its parts, or
     its resource's image). A promotion can fail after its file is converted
-    again, leaving published problems on an older version's figures.
+    again, leaving published problems on an older version's figures. An
+    unpublished problem gets the current version's text if it is published
+    again.
     """
     link = f"{folder}/"
     return (
         ContentFile.objects.filter(content__contains=link).exists()
         or TutorProblemFile.objects.filter(content__contains=link).exists()
-        or PracticeProblem.objects.annotate(parts_text=Cast("parts", TextField()))
+        or PracticeProblem.objects.filter(learning_resource__published=True)
+        .annotate(parts_text=Cast("parts", TextField()))
         .filter(
             Q(statement__contains=link)
             | Q(solution__contains=link)
