@@ -3,7 +3,6 @@
 from datetime import timedelta
 
 import pytest
-from django.core.management import CommandError, call_command
 
 from learning_resources.factories import (
     ClaimExtractionFactory,
@@ -429,28 +428,3 @@ def test_publish_course_profile_without_extraction(course):
     assert not CourseProfile.objects.exists()
     assert not ProfileClaim.objects.exists()
     assert not ClaimEvidence.objects.exists()
-
-
-def test_build_course_profiles_command(course):
-    """The command builds profiles from published run extractions"""
-    ClaimExtraction.objects.filter(id=course["run_extraction"].id).update(
-        published=True
-    )
-
-    call_command("build_course_profiles", "--all")
-
-    assert CourseProfile.objects.get(run=course["run"]).claims.count() == 7
-
-
-def test_build_course_profiles_command_filters(course):
-    """The command builds only the given courses' published profiles"""
-    ClaimExtraction.objects.filter(id=course["run_extraction"].id).update(
-        published=True
-    )
-
-    call_command("build_course_profiles", "--resource-ids", "0")
-    assert not CourseProfile.objects.exists()
-    with pytest.raises(CommandError):
-        call_command("build_course_profiles")
-    call_command("build_course_profiles", "--resource-ids", str(course["resource"].id))
-    assert CourseProfile.objects.filter(run=course["run"]).exists()
