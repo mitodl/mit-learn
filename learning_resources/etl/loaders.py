@@ -1384,7 +1384,7 @@ def load_learning_materials(
             content_file.save()
             update_index(direct_resource, newly_created=False)
 
-    unpublish_stale_practice_problems(course_run, material_ids)
+    unpublish_stale_practice_problems(course_run, content_file_ids, material_ids)
     course_run.learning_resource.resources.set(
         LearningResource.objects.filter(id__in=material_ids).only("id"),
         through_defaults={
@@ -1489,15 +1489,26 @@ def load_practice_problems(
 
 
 def unpublish_stale_practice_problems(
-    course_run: LearningResourceRun, material_ids: list[int]
+    course_run: LearningResourceRun,
+    content_file_ids: list[int],
+    material_ids: list[int],
 ):
     """
     Unpublish the run's practice problems that were not loaded again: their
-    file is gone, was converted again without them, or is no longer promoted
+    file is gone, was converted again without them, or is no longer promoted.
+    A file left out of content_file_ids but still published failed to load,
+    and keeps its problems, as _unpublish_stale_content_files keeps the file.
     """
-    stale = LearningResource.objects.filter(
-        practice_problem__content_file__run=course_run, published=True
-    ).exclude(id__in=material_ids)
+    stale = (
+        LearningResource.objects.filter(
+            practice_problem__content_file__run=course_run, published=True
+        )
+        .exclude(id__in=material_ids)
+        .exclude(
+            Q(practice_problem__content_file__published=True)
+            & ~Q(practice_problem__content_file_id__in=content_file_ids)
+        )
+    )
     for learning_resource in stale:
         learning_resource.published = False
         learning_resource.save()

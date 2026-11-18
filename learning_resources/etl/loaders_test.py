@@ -4500,7 +4500,13 @@ def test_load_learning_materials_practice_problems_reloaded(mocker, settings):
         ids["1"]
     ]
 
-    # the file is no longer loaded with the run
+    # the file failed to load: it stays published, and so do its problems
+    loaders.load_learning_materials(run, [])
+    assert LearningResource.objects.get(id=ids["1"]).published is True
+
+    # the file is gone from the run
+    content_file.published = False
+    content_file.save()
     loaders.load_learning_materials(run, [])
     assert LearningResource.objects.get(id=ids["1"]).published is False
 
