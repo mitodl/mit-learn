@@ -18,6 +18,7 @@ import {
   ORDER_ID_PARAM,
   EnrollmentAlertStatus,
   EnrollmentErrorType,
+  OrderAlertStatus,
 } from "@/common/mitxonline"
 import {
   useConsumeSearchParamsOnce,
@@ -30,6 +31,87 @@ type AlertRequest =
   | { kind: "free"; title: string }
   | { kind: "b2b"; title: string; orgId: number }
   | { kind: "paid"; orderId: number }
+  | { kind: "paymentProcessing" }
+  | { kind: "paymentError"; copy: ErrorAlertCopy }
+
+type ErrorAlertCopy = {
+  label: string
+  message: string
+  /** Whether to follow the message with a "Contact Support" link. */
+  contactSupport: boolean
+}
+
+const GENERIC_ENROLLMENT_ERROR: ErrorAlertCopy = {
+  label: "Enrollment Error - ",
+  message: "Something went wrong processing your enrollment.",
+  contactSupport: true,
+}
+
+/**
+ * Copy for each known `error_type`. Unknown types get GENERIC_ENROLLMENT_ERROR.
+ * The MITx Online types mirror the text MITx Online shows for the same
+ * message on its own pages.
+ */
+const ENROLLMENT_ERROR_COPY: Record<string, ErrorAlertCopy> = {
+  [EnrollmentErrorType.INVALID_ENROLLMENT_CODE]: {
+    label: "Enrollment Error - ",
+    message: "The Enrollment Code is incorrect or no longer available.",
+    contactSupport: true,
+  },
+  [EnrollmentErrorType.ENROLL_FAILED]: GENERIC_ENROLLMENT_ERROR,
+  [EnrollmentErrorType.ENROLL_BLOCKED]: {
+    label: "Enrollment Error - ",
+    message:
+      "We're sorry, your country is currently blocked from enrolling in this course.",
+    contactSupport: false,
+  },
+  [EnrollmentErrorType.ENROLL_DUPLICATED]: {
+    label: "Enrollment Error - ",
+    message: "You are already enrolled in this course.",
+    contactSupport: true,
+  },
+  [EnrollmentErrorType.PAYMENT_ERROR_UNKNOWN]: {
+    label: "Payment Error - ",
+    message: "Something went wrong completing your order.",
+    contactSupport: true,
+  },
+}
+
+/**
+ * Copy for an `order_status` that says the payment did not go through.
+ */
+const PAYMENT_ERROR_COPY: Record<string, ErrorAlertCopy> = {
+  [OrderAlertStatus.DECLINED]: {
+    label: "Payment Error - ",
+    message: "Your payment was declined. Please try again.",
+    contactSupport: false,
+  },
+  [OrderAlertStatus.CANCELED]: {
+    label: "Payment Error - ",
+    message: "Your payment was cancelled.",
+    contactSupport: false,
+  },
+  [OrderAlertStatus.ERRORED]: {
+    label: "Payment Error - ",
+    message: "There was an error processing your payment. Please try again.",
+    contactSupport: true,
+  },
+}
+
+/**
+ * Look up copy by a value read from the URL. Only own keys count, so a param
+ * like `error_type=constructor` can't match an Object.prototype member.
+ */
+const lookupCopy = (
+  table: Record<string, ErrorAlertCopy>,
+  key: string | null,
+): ErrorAlertCopy | undefined =>
+  key !== null && Object.hasOwn(table, key) ? table[key] : undefined
+
+const PAYMENT_PROCESSING_STATUSES: string[] = [
+  OrderAlertStatus.PENDING,
+  OrderAlertStatus.REVIEW,
+]
 
 const BoldTitle = styled.strong(({ theme }) => ({
   fontWeight: theme.typography.fontWeightBold,
@@ -76,6 +158,24 @@ const PaidGenericSuccessCopy: React.FC = () => (
   </>
 )
 
+const ErrorAlert: React.FC<{ copy: ErrorAlertCopy; supportEmail: string }> = ({
+  copy,
+  supportEmail,
+}) => (
+  <Alert severity="error" closable label={copy.label}>
+    {copy.message}
+    {copy.contactSupport ? (
+      <>
+        {" "}
+        <UnderlinedLink color="red" href={`mailto:${supportEmail}`}>
+          Contact Support
+        </UnderlinedLink>{" "}
+        for assistance.
+      </>
+    ) : null}
+  </Alert>
+)
+
 /**
  * Renders a skeleton that matches the height of a single-line Alert.
  * MUI Skeleton with children infers dimensions from the (hidden) child.
@@ -103,7 +203,9 @@ const parseAlertRequest = (
     }
   }
 
-  if (searchParams.get(ORDER_STATUS_PARAM) === "fulfilled") {
+  const orderStatus = searchParams.get(ORDER_STATUS_PARAM)
+
+  if (orderStatus === OrderAlertStatus.FULFILLED) {
     const rawOrderId = searchParams.get(ORDER_ID_PARAM)
     const orderId = rawOrderId ? Number(rawOrderId) : Number.NaN
     if (Number.isFinite(orderId)) {
@@ -120,6 +222,22 @@ const parseAlertRequest = (
       value: undefined,
       keysToRemove: [ORDER_STATUS_PARAM, ORDER_ID_PARAM],
     }
+  }
+
+  if (orderStatus) {
+    const keysToRemove = [ORDER_STATUS_PARAM, ORDER_ID_PARAM] as const
+    if (PAYMENT_PROCESSING_STATUSES.includes(orderStatus)) {
+      return { value: { kind: "paymentProcessing" }, keysToRemove }
+    }
+    const paymentErrorCopy = lookupCopy(PAYMENT_ERROR_COPY, orderStatus)
+    if (paymentErrorCopy) {
+      return {
+        value: { kind: "paymentError", copy: paymentErrorCopy },
+        keysToRemove,
+      }
+    }
+    console.warn("Unrecognized order_status in redirect:", orderStatus)
+    return { value: undefined, keysToRemove }
   }
 
   if (enrollmentStatus === EnrollmentAlertStatus.SUCCESS) {
@@ -209,18 +327,21 @@ const EnrollmentRedirectAlert: React.FC = () => {
   }, [request, paidReceipt.isPending, paidReceipt.data])
 
   if (request?.kind === "error") {
-    const errorMessage =
-      request.errorType === EnrollmentErrorType.INVALID_ENROLLMENT_CODE
-        ? "The Enrollment Code is incorrect or no longer available."
-        : "Something went wrong processing your enrollment."
+    const copy =
+      lookupCopy(ENROLLMENT_ERROR_COPY, request.errorType) ??
+      GENERIC_ENROLLMENT_ERROR
+    return <ErrorAlert copy={copy} supportEmail={supportEmail} />
+  }
 
+  if (request?.kind === "paymentError") {
+    return <ErrorAlert copy={request.copy} supportEmail={supportEmail} />
+  }
+
+  if (request?.kind === "paymentProcessing") {
     return (
-      <Alert severity="error" closable label="Enrollment Error - ">
-        {errorMessage}{" "}
-        <UnderlinedLink color="red" href={`mailto:${supportEmail}`}>
-          Contact Support
-        </UnderlinedLink>{" "}
-        for assistance.
+      <Alert severity="success" label="Thank you!">
+        Your payment is being processed. Your enrollment will be updated once it
+        is complete.
       </Alert>
     )
   }
@@ -244,13 +365,10 @@ const EnrollmentRedirectAlert: React.FC = () => {
 
     if (!orgName) {
       return (
-        <Alert severity="error" closable label="Enrollment Error - ">
-          Something went wrong processing your enrollment.{" "}
-          <UnderlinedLink color="red" href={`mailto:${supportEmail}`}>
-            Contact Support
-          </UnderlinedLink>{" "}
-          for assistance.
-        </Alert>
+        <ErrorAlert
+          copy={GENERIC_ENROLLMENT_ERROR}
+          supportEmail={supportEmail}
+        />
       )
     }
 
