@@ -4554,6 +4554,23 @@ def test_load_learning_materials_no_practice_problems(  # noqa: PLR0913
 
 
 @pytest.mark.django_db
+def test_load_learning_materials_problems_with_solutions(mocker, settings):
+    """A file tagged as a problem set and its solutions has its problems read"""
+    settings.CREATE_HIDDEN_OCW_LEARNING_MATERIALS = True
+    run, content_file = _practice_problem_setup()
+    content_file.content_tags.add(
+        LearningResourceContentTagFactory.create(name="Problem Set Solutions")
+    )
+    mocker.patch("learning_resources.etl.loaders.update_index")
+
+    loaders.load_learning_materials(run, [content_file.id])
+
+    problems = PracticeProblem.objects.filter(content_file=content_file)
+    assert sorted(p.number for p in problems) == ["1", "2"]
+    assert all(p.learning_resource.published for p in problems)
+
+
+@pytest.mark.django_db
 @pytest.mark.parametrize("learning_material_exists", [True, False])
 def test_load_learning_material(mocker, learning_material_exists):
     """

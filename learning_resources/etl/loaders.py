@@ -1325,7 +1325,8 @@ def load_learning_materials(
     becomes none.
     """
     # solutions files restate the problems of their problem set or exam, which
-    # are read from that file instead
+    # are read from that file instead. A file also tagged as the problem set
+    # holds both, and its problems are read from it.
     solution_tags = frozenset({"Exams Solutions", "Problem Set Solutions"})
     material_ids = []
     if settings.CREATE_HIDDEN_OCW_LEARNING_MATERIALS:
@@ -1353,8 +1354,7 @@ def load_learning_materials(
         whole_file_tags = learning_material_tags - practice_problem_tags
         problems = (
             parse_structured_problems(content_file.content)
-            if problem_tags
-            and not problem_tags & solution_tags
+            if problem_tags - solution_tags
             and content_file.content_type != CONTENT_TYPE_PAGE
             and (content_file.file_extension or "").lower() == ".pdf"
             else None
