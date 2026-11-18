@@ -53,10 +53,12 @@ _WATERMARK_SQL_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
 # two webhooks. A run that finds the lock held re-queues itself rather than
 # holding a worker slot, and gives up once the lock would have expired, leaving
 # what it would have read to the sync's next run. A worker killed mid-run holds
-# up the sync until then. The time limit keeps a run inside its lock, and inside
-# the hour after which the broker redelivers an unacknowledged task (kombu's
-# Redis visibility_timeout), so a redelivered copy can't prune beside it. It is
-# hard, so it fires whatever the sync is doing.
+# up the sync until then. The lock is also what keeps a redelivered copy from
+# pruning beside a run: kombu's Redis visibility_timeout counts from when a
+# worker receives the task, prefetch included, so a run that waited in a
+# prefetch buffer can be redelivered while it runs. That costs a second full
+# run, not a bad prune. The time limit keeps a run inside its lock. It is hard,
+# so it fires whatever the sync is doing.
 SYNC_LOCK_CACHE = "redis"
 SYNC_LOCK_SECONDS = 60 * 60
 SYNC_TIME_LIMIT_SECONDS = 55 * 60

@@ -1981,9 +1981,9 @@ def queue_warehouse_syncs(view_names):
 
 
 # Two loads of one run at once could prune on a read that predates the other's
-# upserts. The time limit keeps a load inside the lock, and inside the hour after
-# which the broker redelivers an unacknowledged task, and it is hard because
-# load_content_file swallows a soft limit's exception. A worker killed mid-load
+# upserts. The lock keeps a second load out, a redelivered copy included (see
+# SYNC_LOCK_SECONDS). The time limit keeps a load inside the lock, and it is hard
+# because load_content_file swallows a soft limit's exception. A worker killed mid-load
 # holds up the run until the lock expires. A load that finds it held tries again
 # until the same hour is up, then leaves the run to the next daily sync.
 CONTENT_FILE_LOAD_LOCK_SECONDS = 60 * 60
