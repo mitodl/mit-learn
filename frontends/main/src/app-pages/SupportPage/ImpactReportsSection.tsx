@@ -76,21 +76,23 @@ const FeaturedCover = styled.div(({ theme }) => ({
   },
 }))
 
-const CompactCover = styled.div(({ theme }) => ({
+/**
+ * 350×234 at the design width. Narrower cards shrink the cover rather than
+ * the text, which keeps at least COMPACT_TEXT_MIN_WIDTH.
+ */
+const CompactCover = styled.div({
   position: "relative",
-  flexShrink: 0,
-  width: "350px",
-  height: "234px",
+  flex: "0 1 350px",
+  minWidth: 0,
+  alignSelf: "flex-start",
+  aspectRatio: "350 / 234",
   img: {
     objectFit: "cover",
     objectPosition: "top",
   },
-  [theme.breakpoints.down("sm")]: {
-    width: "45%",
-    height: "auto",
-    aspectRatio: "350 / 234",
-  },
-}))
+})
+
+const COMPACT_TEXT_MIN_WIDTH = "200px"
 
 const FeaturedText = styled.div({
   display: "flex",
@@ -100,7 +102,7 @@ const FeaturedText = styled.div({
 })
 
 const CompactText = styled.div({
-  flex: 1,
+  flex: `1 0 ${COMPACT_TEXT_MIN_WIDTH}`,
   minWidth: 0,
   display: "flex",
   flexDirection: "column",
