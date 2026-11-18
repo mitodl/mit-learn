@@ -16,11 +16,15 @@ import {
   TitleText,
   CourseDateSummary,
   UpgradedBanner,
+  RunsCardShell,
+  CardHeaderContent,
+  MobileAccordionWrapper,
 } from "./CardShared"
 import {
   EnrollmentStatus,
   DashboardType,
   getCertificateLink,
+  getCourseDetailsLink,
   getDashboardEnrollmentStatus,
   pickCertificateEnrollment,
 } from "./model/dashboardViewModel"
@@ -47,7 +51,6 @@ import { SiblingRunsPanel, SiblingRunsToggle } from "./SiblingRunsAccordion"
 import { EnrollmentStatusIcon } from "./EnrollmentStatus"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
-import { coursePageView } from "@/common/urls"
 import { getRunMenuItems } from "./runMenuItems"
 import { useOrderIdForRun } from "@/common/mitxonline/useOrderIdForResource"
 import type { SimpleMenuItem } from "ol-components"
@@ -213,42 +216,6 @@ const UpgradeBanner: React.FC<
     </SubtitleLinkRoot>
   )
 }
-
-const EnrolledCardShell = styled.div(({ theme }) => ({
-  border: `1px solid ${theme.custom.colors.lightGray2}`,
-  borderRadius: "8px",
-  overflow: "hidden",
-  backgroundColor: theme.custom.colors.white,
-  [theme.breakpoints.down("sm")]: {
-    display: "none",
-  },
-  '&[data-layout="compact"]': {
-    border: "none",
-    borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
-    borderRadius: "0px !important",
-    boxShadow: "none",
-    "&:first-of-type": {
-      borderTopLeftRadius: "8px !important",
-      borderTopRightRadius: "8px !important",
-    },
-    "&:last-of-type": {
-      borderBottomLeftRadius: "8px !important",
-      borderBottomRightRadius: "8px !important",
-      borderBottom: "none",
-    },
-  },
-}))
-
-const CardHeaderContent = styled.div({
-  padding: "16px",
-  display: "flex",
-  gap: "8px",
-  alignItems: "center",
-})
-
-const MobileAccordionWrapper = styled.div({
-  width: "100%",
-})
 
 type EnrolledCourseCardProps = {
   enrollment: CourseRunEnrollmentV3
@@ -513,10 +480,9 @@ export const EnrolledCourseCard = ({
     ctaButton
   )
   const menuItems: SimpleMenuItem[] = []
-  const readableId = run?.course.readable_id
-  const detailsUrl = readableId ? coursePageView(readableId) : undefined
+  const detailsUrl = getCourseDetailsLink(course, isContractPageResource)
 
-  if (detailsUrl && !isContractPageResource) {
+  if (detailsUrl) {
     menuItems.push({
       className: "dashboard-card-menu-item",
       key: "view-course-details",
@@ -577,7 +543,7 @@ export const EnrolledCourseCard = ({
   return (
     <>
       {hasMultipleRuns ? (
-        <EnrolledCardShell
+        <RunsCardShell
           data-testid="enrollment-card-desktop"
           data-layout={layout}
           className={className}
@@ -626,7 +592,7 @@ export const EnrolledCourseCard = ({
             labelledBy={desktopRunsToggleId}
             disabled={disabled}
           />
-        </EnrolledCardShell>
+        </RunsCardShell>
       ) : (
         <CardRoot
           screenSize="desktop"

@@ -79,7 +79,16 @@ class WebsiteContentViewSet(viewsets.ModelViewSet):
             .order_by("-publish_date", "-id")
         )
 
-    # Not cached: the response depends on the caller (editors also get drafts).
+    def filter_queryset(self, queryset):
+        # The filters narrow the listing only. Retrieve, update and destroy
+        # also pass through here, and the `status` filter's published default
+        # would hide a draft from the editor opening or saving it.
+        if self.action != "list":
+            return queryset
+        return super().filter_queryset(queryset)
+
+    # Not cached: with `?status=draft` or `?status=both` the response depends
+    # on the caller (only editors get drafts).
     # Django's cache_page can't vary this by user -- it stores the entry before
     # SessionMiddleware adds `Vary: Cookie`, so every caller would share it.
     # See https://github.com/mitodl/hq/issues/13846

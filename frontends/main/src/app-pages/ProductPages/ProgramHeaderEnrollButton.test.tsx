@@ -1,5 +1,11 @@
 import React from "react"
-import { renderWithProviders, screen, act, setMockResponse } from "@/test-utils"
+import {
+  renderWithProviders,
+  screen,
+  act,
+  setMockResponse,
+  setupLocationMock,
+} from "@/test-utils"
 import { factories, urls } from "api/test-utils"
 import {
   factories as mitxFactories,
@@ -7,6 +13,12 @@ import {
 } from "api/mitxonline-test-utils"
 import { programView } from "@/common/urls"
 import ProgramHeaderEnrollButton from "./ProgramHeaderEnrollButton"
+import {
+  DiscountTypeEnum,
+  PaymentTypeEnum,
+} from "@mitodl/mitxonline-api-axios/v0"
+import { makeProgram, setupUserPricing } from "./test-utils/userPricing"
+import { lastAuthRedirect } from "./test-utils/enrollResume"
 
 jest.mock("next-nprogress-bar", () => ({
   useRouter: () => ({ push: jest.fn() }),
@@ -21,11 +33,15 @@ jest.mock("@/common/analytics/gtm", () => ({
   trackProgramEnrolled: jest.fn(),
 }))
 
-const makeProgram = mitxFactories.programs.program
 const makeMode = mitxFactories.courses.enrollmentMode
 const makeProduct = mitxFactories.courses.product
 const makeProgramEnrollment = mitxFactories.enrollment.programEnrollmentV3
 const makeUser = factories.user.user
+const makeUserPricingDiscount = mitxFactories.products.userPricingDiscount
+
+// The price suffix is mobile-only through a CSS media query, which jsdom does
+// not apply, so it is part of the accessible name at every width here.
+const pinnedPrice = { min_price: 899, max_price: 899 }
 
 function setupAuth() {
   setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
@@ -43,35 +59,56 @@ describe("ProgramHeaderEnrollButton", () => {
         makeMode({ requires_payment: true }),
         makeMode({ requires_payment: false }),
       ],
-      products: [makeProduct()],
+      products: [makeProduct({ price: "899.00" })],
+      ...pinnedPrice,
     })
 
     renderWithProviders(<ProgramHeaderEnrollButton program={program} />)
 
     expect(
-      await screen.findByRole("button", { name: "Earn Certificate" }),
+      await screen.findByRole("button", { name: "Earn Certificate – $899" }),
     ).toBeInTheDocument()
   })
 
-  test("(b) paid-only program: header shows 'Enroll in Program'", async () => {
+  test("(b) paid-only program: header shows 'Enroll in Program' and the price", async () => {
     setupAuth()
     const program = makeProgram({
       enrollment_modes: [makeMode({ requires_payment: true })],
-      products: [makeProduct()],
+      products: [makeProduct({ price: "899.00" })],
+      ...pinnedPrice,
     })
 
     renderWithProviders(<ProgramHeaderEnrollButton program={program} />)
 
     expect(
-      await screen.findByRole("button", { name: "Enroll in Program" }),
+      await screen.findByRole("button", { name: "Enroll in Program – $899" }),
     ).toBeInTheDocument()
   })
 
-  test("(c) paid-only displayAsCourse: header shows 'Enroll'", async () => {
+  test("(b2) advertised price range: header shows the range, as the InfoBox does", async () => {
     setupAuth()
     const program = makeProgram({
       enrollment_modes: [makeMode({ requires_payment: true })],
-      products: [makeProduct()],
+      products: [makeProduct({ price: "1000.00" })],
+      min_price: 250,
+      max_price: 1000,
+    })
+
+    renderWithProviders(<ProgramHeaderEnrollButton program={program} />)
+
+    expect(
+      await screen.findByRole("button", {
+        name: "Enroll in Program – $250 - $1,000",
+      }),
+    ).toBeInTheDocument()
+  })
+
+  test("(c) paid-only displayAsCourse: header shows 'Enroll' and the price", async () => {
+    setupAuth()
+    const program = makeProgram({
+      enrollment_modes: [makeMode({ requires_payment: true })],
+      products: [makeProduct({ price: "899.00" })],
+      ...pinnedPrice,
     })
 
     renderWithProviders(
@@ -79,14 +116,83 @@ describe("ProgramHeaderEnrollButton", () => {
     )
 
     expect(
-      await screen.findByRole("button", { name: "Enroll" }),
+      await screen.findByRole("button", { name: "Enroll – $899" }),
     ).toBeInTheDocument()
   })
 
-  test("(d) free-only: header shows 'Start Learning'", async () => {
+  test("(c2) credit: header names the upgrade and today's price, as the InfoBox does", async () => {
+    setupAuth()
+    const program = makeProgram({
+      enrollment_modes: [makeMode({ requires_payment: true })],
+      products: [makeProduct({ price: "899.00" })],
+      ...pinnedPrice,
+    })
+    setupUserPricing(program, {
+      user_price: "599",
+      discount: makeUserPricingDiscount({ amount_off: "300" }),
+    })
+
+    renderWithProviders(<ProgramHeaderEnrollButton program={program} />)
+
+    expect(
+      await screen.findByRole("button", {
+        name: "Upgrade to Full Program – $599",
+      }),
+    ).toBeInTheDocument()
+  })
+
+  test("(c3) credit on displayAsCourse: header keeps the plain label and price", async () => {
+    setupAuth()
+    const program = makeProgram({
+      enrollment_modes: [makeMode({ requires_payment: true })],
+      products: [makeProduct({ price: "899.00" })],
+      ...pinnedPrice,
+    })
+    setupUserPricing(program, {
+      user_price: "599",
+      discount: makeUserPricingDiscount({ amount_off: "300" }),
+    })
+
+    renderWithProviders(
+      <ProgramHeaderEnrollButton program={program} displayAsCourse />,
+    )
+
+    expect(
+      await screen.findByRole("button", { name: "Enroll – $899" }),
+    ).toBeInTheDocument()
+  })
+
+  test("(c4) financial aid: header shows today's price, not the advertised range", async () => {
+    setupAuth()
+    const program = makeProgram({
+      enrollment_modes: [makeMode({ requires_payment: true })],
+      products: [makeProduct({ price: "1000.00" })],
+      min_price: 250,
+      max_price: 1000,
+    })
+    setupUserPricing(program, {
+      user_price: "250",
+      discount: makeUserPricingDiscount({
+        amount_off: "750",
+        // The factory defaults to paid-amount-off, which reads as a credit.
+        discount_type: DiscountTypeEnum.DollarsOff,
+        payment_type: PaymentTypeEnum.FinancialAssistance,
+      }),
+      product_flexible_price: mitxFactories.products.discount(),
+    })
+
+    renderWithProviders(<ProgramHeaderEnrollButton program={program} />)
+
+    expect(
+      await screen.findByRole("button", { name: "Enroll in Program – $250" }),
+    ).toBeInTheDocument()
+  })
+
+  test("(d) free-only: header shows 'Start Learning' without a price", async () => {
     setupAuth()
     const program = makeProgram({
       enrollment_modes: [makeMode({ requires_payment: false })],
+      ...pinnedPrice,
     })
 
     renderWithProviders(<ProgramHeaderEnrollButton program={program} />)
@@ -141,25 +247,30 @@ describe("ProgramHeaderEnrollButton", () => {
     },
   )
 
-  test("unauthenticated click shows the signup popover", async () => {
-    const program = makeProgram({
-      enrollment_modes: [makeMode({ requires_payment: false })],
-    })
-    setMockResponse.get(
-      urls.userMe.get(),
-      makeUser({ is_authenticated: false }),
-    )
+  describe("signed out", () => {
+    setupLocationMock()
 
-    renderWithProviders(<ProgramHeaderEnrollButton program={program} />)
+    test("click goes to login instead of a popover", async () => {
+      const program = makeProgram({
+        enrollment_modes: [makeMode({ requires_payment: false })],
+      })
+      setMockResponse.get(
+        urls.userMe.get(),
+        makeUser({ is_authenticated: false }),
+      )
 
-    const startBtn = await screen.findByRole("button", {
-      name: "Start Learning",
-    })
-    await act(async () => {
-      startBtn.click()
-    })
+      renderWithProviders(<ProgramHeaderEnrollButton program={program} />)
 
-    expect(screen.getByTestId("signup-popover")).toBeInTheDocument()
+      const startBtn = await screen.findByRole("button", {
+        name: "Start Learning",
+      })
+      await act(async () => {
+        startBtn.click()
+      })
+
+      expect(screen.queryByTestId("signup-popover")).toBeNull()
+      expect(lastAuthRedirect().next.searchParams.get("enroll")).toBe("free")
+    })
   })
 
   test("shows an error alert below the button when enrollment fails", async () => {

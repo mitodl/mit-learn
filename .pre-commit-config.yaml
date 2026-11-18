@@ -97,7 +97,7 @@ repos:
         language: node
         types_or: [javascript, jsx, ts, tsx]
         args: []
-        exclude: "(node_modules/|.yarn/|load_testing/)"
+        exclude: "(node_modules/|.yarn/)"
         require_serial: false
         additional_dependencies:
           - eslint@8

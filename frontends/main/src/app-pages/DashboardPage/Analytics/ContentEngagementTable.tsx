@@ -55,7 +55,7 @@ import SectionError from "./SectionError"
  * floor is applied to, so showing it is what makes a suppressed total legible
  * rather than arbitrary.
  *
- * Every metric except `total_enrolled_learners` is nullable under the
+ * Every metric except `actively_enrolled_learners` is nullable under the
  * k-anonymity floor, and each figure in a cell is suppressed on its own, so
  * every one of them goes through `SuppressibleValue`. A suppressed number is
  * never a zero.
@@ -66,7 +66,7 @@ import SectionError from "./SectionError"
  * guessed from the field names — the two families do not share a base:
  *
  *  - `engagement_rate_pct` and `chatbot_adoption_pct` divide by
- *    `total_enrolled_learners`, which is why the engaged cell says
+ *    `actively_enrolled_learners`, which is why the engaged cell says
  *    "of enrolled".
  *  - `avg_videos_per_engaged_learner` and `avg_problems_per_engaged_learner`
  *    divide by `engaged_learners`, so their columns must say "per engaged
@@ -312,7 +312,7 @@ const ContentEngagementTable: React.FC<{
                 </CourseCell>
                 <StackedCell role="cell" $flex={COLUMN_FLEX.enrolled} $numeric>
                   <MobileLabel>Enrolled</MobileLabel>
-                  {formatCount(row.total_enrolled_learners)}
+                  {formatCount(row.actively_enrolled_learners)}
                 </StackedCell>
                 <StackedCell role="cell" $flex={COLUMN_FLEX.engaged} $numeric>
                   <MobileLabel>Engaged</MobileLabel>

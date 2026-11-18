@@ -1,8 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { SimpleMenuItem } from "ol-components"
 import { programCertificateQueries } from "api/hooks/programCertificates/queries"
-import { FeatureFlags } from "@/common/feature_flags"
-import { useFeatureFlag } from "@/common/useFeatureFlag"
 
 /**
  * The "Program Letter" item for a program card's menu, or null when the learner
@@ -14,19 +12,11 @@ import { useFeatureFlag } from "@/common/useFeatureFlag"
  * whose `mitxonline_program_id` is null has no card to attach to and is not
  * reachable from the dashboard. A certificate with no letter (one whose program
  * has no MicroMasters id) has a null `program_letter_share_url` and gets no item.
- *
- * The certificate list is only requested once the flag has resolved to true:
- * reading it mints a shareable uuid for every letter the learner does not have
- * yet, which should not happen for learners who cannot see the link.
  */
 const useProgramLetterMenuItem = (
   mitxonlineProgramId: number,
 ): SimpleMenuItem | null => {
-  const flagEnabled = useFeatureFlag(FeatureFlags.ProgramLetters)
-  const { data: certificates } = useQuery({
-    ...programCertificateQueries.list(),
-    enabled: flagEnabled,
-  })
+  const { data: certificates } = useQuery(programCertificateQueries.list())
 
   const shareUrl = certificates?.find(
     (certificate) => certificate.mitxonline_program_id === mitxonlineProgramId,

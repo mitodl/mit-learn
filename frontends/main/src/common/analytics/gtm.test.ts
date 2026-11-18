@@ -11,7 +11,6 @@ import {
   trackVideoStart,
   trackVideo50Percent,
   trackSiteSearch,
-  trackCatalogFilter,
   trackFilterCourseCatalog,
   trackReturnVisit,
   trackBeginCheckout,
@@ -245,17 +244,6 @@ describe("trackSiteSearch", () => {
     expect(window.dataLayer).toContainEqual({
       event: "site-search",
       "search-query": "machine learning",
-    })
-  })
-})
-
-describe("trackCatalogFilter", () => {
-  it("pushes a catalog-filter event with filter name and value", () => {
-    trackCatalogFilter({ filterName: "topic", filterValue: "data science" })
-    expect(window.dataLayer).toContainEqual({
-      event: "catalog-filter",
-      "filter-name": "topic",
-      "filter-value": "data science",
     })
   })
 })

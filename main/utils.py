@@ -11,7 +11,7 @@ from enum import Flag, auto
 from functools import wraps
 from hashlib import md5
 from itertools import islice
-from urllib.parse import urljoin
+from urllib.parse import unquote, urljoin, urlparse
 
 import markdown2
 import requests
@@ -215,56 +215,70 @@ def _cache_page_ignoring_cookies(  # noqa: C901
     return inner_decorator
 
 
-def call_fastly_purge_api(relative_url, timeout=30, *, soft=False):
+def path_surrogate_key(url: str) -> str:
     """
-    Call the Fastly purge API.
+    Return the `path:` Surrogate-Key tag the Next.js proxy gives the page at
+    `url`: `path:` plus the decoded path, without the query string.
 
-    We aren't using the official Fastly SDK here because it doesn't work for
-    this - the version of it that works with the current API only allows you
-    to purge *everything*, not individual pages.
+    Every cached variant of the page shares this tag, so purging it covers
+    each whitelisted query-param variant and the RSC payload, which a URL
+    purge of the bare page misses.
+    """
+    return f"path:{unquote(urlparse(url).path)}"
+
+
+def call_fastly_purge_surrogate_keys(surrogate_keys, timeout=30):
+    """
+    Hard-purge every Fastly-cached response tagged with any of the keys.
+
+    Uses the bulk purge-by-key API (POST /service/<id>/purge, keys in the
+    Surrogate-Key header, up to 256 per request) rather than the single-key
+    endpoint, which takes the key in its URL path: `path:` keys contain
+    slashes.
 
     Args:
-        - relative_url  The relative URL to purge.
-        - timeout       Timeout in seconds for the request (default: 30)
-        - soft          If True, send a soft purge (Fastly-Soft-Purge: 1) so
-                        Fastly marks the object stale instead of evicting it
+        - surrogate_keys  The surrogate keys to purge
+        - timeout         Timeout in seconds for the request (default: 30)
     Returns:
         - Dict of the response (resp.json)
     Raises:
         - HTTPError if the API returns an error status code
         - RequestException for network/timeout errors
     """
-    # Skip Fastly purge if API key is not configured properly
     if not settings.FASTLY_API_KEY:
-        log.info(f"Skipping Fastly purge for {relative_url} (dev environment)")  # noqa: G004
+        log.info("Skipping Fastly purge for %s (dev environment)", surrogate_keys)
+        return {"status": "ok", "skipped": True}
+    if not settings.FASTLY_SERVICE_ID:
+        # Error, not info: with an API key configured this is a deployed
+        # environment, where a missing service ID means no page is ever purged.
+        log.error(
+            "FASTLY_SERVICE_ID is not set; skipping Fastly purge for %s",
+            surrogate_keys,
+        )
         return {"status": "ok", "skipped": True}
 
-    # Use APP_BASE_URL (https://rc.learn.mit.edu/) directly for purge requests
-    # Fastly intercepts PURGE requests to your domain with the fastly-key header
-    api_url = urljoin(settings.APP_BASE_URL, relative_url)
-
-    log.info(f"Purging relative URL {relative_url}: {api_url}")  # noqa: G004
-
-    headers = {}
-
-    if soft:
-        headers["Fastly-Soft-Purge"] = "1"
-
-    if settings.FASTLY_API_KEY:
-        headers["fastly-key"] = settings.FASTLY_API_KEY
+    api_url = urljoin(
+        settings.FASTLY_URL, f"/service/{settings.FASTLY_SERVICE_ID}/purge"
+    )
+    headers = {
+        "fastly-key": settings.FASTLY_API_KEY,
+        "Surrogate-Key": " ".join(surrogate_keys),
+    }
+    log.info("Purging Fastly surrogate keys %s", surrogate_keys)
 
     try:
-        resp = requests.request("PURGE", api_url, headers=headers, timeout=timeout)
-        # Raise exception for HTTP errors (4xx, 5xx)
+        resp = requests.post(api_url, headers=headers, timeout=timeout)
         resp.raise_for_status()
     except requests.HTTPError:
-        log.exception(f"Fastly API Purge call failed: {resp.status_code} {resp.reason}")  # noqa: G004
+        log.exception(
+            "Fastly surrogate key purge failed: %s %s", resp.status_code, resp.reason
+        )
         raise
     except requests.RequestException:
-        log.exception(f"Fastly API network/timeout error for {api_url}")  # noqa: G004
+        log.exception("Fastly API network/timeout error for %s", api_url)
         raise
 
-    log.info(f"Fastly returned: {resp.text}")  # noqa: G004
+    log.info("Fastly returned: %s", resp.text)
     return resp.json()
 
 

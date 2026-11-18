@@ -70,3 +70,7 @@ export const offeringBoxCount = (
       return 1
   }
 }
+
+/** Whether an offering includes an action of this kind. */
+export const offers = (offering: Offering, kind: EnrollActionKind): boolean =>
+  offering === "both" || offering === kind

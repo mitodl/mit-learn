@@ -15,6 +15,8 @@ import {
   VideoPlaylistsApi,
   PodcastEpisodesApi,
   HubspotApi,
+  CoursesApi,
+  VideosApi,
 } from "./generated/v1/api"
 
 import { UnsubscribeApi } from "@mitodl/mit-learn-api-axios/v1"
@@ -115,6 +117,8 @@ const podcastEpisodesApi = new PodcastEpisodesApi(
   BASE_PATH,
   axiosInstance,
 )
+const coursesApi = new CoursesApi(undefined, BASE_PATH, axiosInstance)
+const videosApi = new VideosApi(undefined, BASE_PATH, axiosInstance)
 const vectorLearningResourcesSearchApi = new VectorLearningResourcesSearchApi(
   undefined,
   BASE_PATH,
@@ -148,6 +152,8 @@ export {
   learningResourcesSearchAdminParamsApi,
   videoPlaylistsApi,
   podcastEpisodesApi,
+  coursesApi,
+  videosApi,
   vectorLearningResourcesSearchApi,
   unsubscribeApi,
 }

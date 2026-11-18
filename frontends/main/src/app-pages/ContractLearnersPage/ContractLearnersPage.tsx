@@ -7,45 +7,23 @@ import {
   useQueryClient,
 } from "@tanstack/react-query"
 import Image from "next/image"
-import { RiCheckLine } from "@remixicon/react"
 import {
   Container,
-  Pagination,
   SearchInput,
   SimpleSelectField,
   Skeleton,
   Stack,
   styled,
-  TabContext,
-  TabPanel,
   Typography,
 } from "ol-components"
-import {
-  Alert,
-  Button,
-  Checkbox,
-  TabButton,
-  TabButtonList,
-  VisuallyHidden,
-} from "@mitodl/smoot-design"
+import { Alert, Button, Checkbox, VisuallyHidden } from "@mitodl/smoot-design"
 import {
   analyticsContractQueries,
-  type LearnerProgress,
+  type LearnerWithEnrollments,
 } from "api/analytics-hooks/organizations"
 import { managerOrganizationQueries } from "api/mitxonline-hooks/organizations"
 import { isAnalyticsConfigured } from "api/runtime"
-import {
-  AriaDisabledButtonWrapper,
-  buildCsvRow,
-  EmptyTableMessage,
-  TableBody,
-  TableCard,
-  TableFooter,
-  TableFootnote,
-  TableHeaderCell,
-  TableHeaderRow,
-  TableRow,
-} from "@/components/B2BTable/B2BTable"
+import { AriaDisabledButtonWrapper } from "@/components/B2BTable/B2BTable"
 import { matchOrganizationBySlug } from "@/common/utils"
 import {
   ForbiddenError,
@@ -54,33 +32,36 @@ import {
 } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
-import { analytics } from "@/common/analytics"
 import { useFeatureFlag } from "@/common/useFeatureFlag"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
 import ContractManagerNav from "@/components/ContractManagerNav/ContractManagerNav"
+import {
+  FACET_MENU_PROPS,
+  facetLabel,
+  MenuBox,
+  MenuRow,
+} from "@/components/FacetMenu/FacetMenu"
 import SectionHeader, {
   SectionFreshness,
 } from "../DashboardPage/Analytics/SectionHeader"
 import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
-import { ConsentNotice, LearnerRow } from "./LearnerRow"
-import { COLUMN_FLEX } from "./columns"
 import {
-  contentProgressPercent,
-  DISPLAY_STATUS_LABEL,
-  getDisplayStatus,
-} from "./statusDisplay"
-import { gridLearnersQuery, ProgressGrid } from "./ProgressGrid"
+  buildGridCsv,
+  gridColumns,
+  gridLearnersQuery,
+  ProgressGrid,
+} from "./ProgressGrid"
+import { ALL_MODULES, completionStatusFilter } from "@/common/urls"
 import {
   ALL,
+  MAX_GRID_MODULES,
   SEARCH_MAX_LENGTH,
-  VIEWS,
   useLearnerFilters,
-  type View,
 } from "./useLearnerFilters"
 
 /**
- * The B2B learner directory: one row per learner per course run under a
- * contract.
+ * The B2B learner directory: one row per learner, one column per course run
+ * under a contract.
  *
  * Routed outside `/dashboard` (see `CONTRACT_LEARNERS_VIEW`) so it gets no
  * sidebar and can use the full width this table needs.
@@ -187,6 +168,14 @@ const FilterField = styled(SimpleSelectField)(({ theme }) => ({
   "& .MuiSelect-root": {
     width: "280px",
   },
+  "& .MuiInputBase-root.MuiInputBase-readOnly": {
+    backgroundColor: theme.custom.colors.lightGray1,
+    color: theme.custom.colors.silverGrayDark,
+    "&:hover:not(.Mui-focused)": {
+      borderColor: theme.custom.colors.silverGrayLight,
+    },
+    ".MuiSelect-select": { cursor: "default" },
+  },
   [theme.breakpoints.down("md")]: {
     width: "100%",
     "& .MuiSelect-root": {
@@ -201,33 +190,98 @@ const SelectedValue = styled.span({
   whiteSpace: "nowrap",
 })
 
-const FilterSelect: React.FC<React.ComponentProps<typeof FilterField>> = ({
-  options,
-  ...props
-}) => (
-  <FilterField
-    options={options}
-    {...props}
-    renderValue={(value) => (
-      <SelectedValue>
-        {options.find((option) => option.value === value)?.label}
-      </SelectedValue>
-    )}
-  />
-)
-
-const OptionLabel = styled.span({
-  display: "flex",
-  alignItems: "center",
-  gap: "8px",
-})
-
-/** Hidden rather than absent on unselected options, so labels stay aligned. */
-const OptionCheck = styled(RiCheckLine)({ flexShrink: 0 })
+const STATUS_OPTIONS: { value: string; label: string }[] = [
+  { value: ALL, label: "All learners" },
+  { value: "not_started", label: "Not started" },
+  { value: "in_progress", label: "In progress" },
+  { value: "passed", label: "Completed" },
+]
+const STATUS_HINT_ID = "learner-status-hint"
+/** The keys MUI's select opens on. */
+const OPEN_KEYS = [" ", "ArrowUp", "ArrowDown", "Enter"]
+/** The value stands in for help text, which would sit below the field and shift the grid when it went away. */
+const STATUS_UNAVAILABLE = {
+  loading: {
+    value: "Loading…",
+    hint: "Status needs this contract's modules, which are loading.",
+  },
+  noModule: {
+    value: "Select a module first",
+    hint: "Select a module to filter by status.",
+  },
+  modulesFailed: {
+    value: "Unavailable",
+    hint: "Status needs this contract's modules, which couldn't load.",
+  },
+}
 
 /**
- * Multi-select, unlike the enrollments view's Module filter. A check marks
- * each selected option, since MUI's selected background alone is color-only.
+ * Unavailable is `readOnly` plus `aria-disabled` rather than `disabled`, which
+ * would drop the field from the tab order and leave a keyboard or screen
+ * reader user no way to reach the reason. MUI skips `preventDefault` while
+ * `readOnly`, so the keys that would open it are stopped here to keep them
+ * from scrolling the page.
+ */
+const StatusSelect: React.FC<{
+  value: string
+  onChange: (value: string) => void
+  unavailable?: keyof typeof STATUS_UNAVAILABLE
+}> = ({ value, onChange, unavailable }) => (
+  <>
+    <FilterField
+      label="Status"
+      size="medium"
+      value={value}
+      options={STATUS_OPTIONS}
+      readOnly={!!unavailable}
+      SelectDisplayProps={
+        unavailable
+          ? {
+              "aria-disabled": "true",
+              "aria-busy": unavailable === "loading" ? "true" : undefined,
+              "aria-describedby": STATUS_HINT_ID,
+              onKeyDown: (event) => {
+                if (OPEN_KEYS.includes(event.key)) event.preventDefault()
+              },
+            }
+          : undefined
+      }
+      renderValue={(selected) => (
+        <SelectedValue>
+          {unavailable
+            ? STATUS_UNAVAILABLE[unavailable].value
+            : STATUS_OPTIONS.find((option) => option.value === selected)?.label}
+        </SelectedValue>
+      )}
+      onChange={(event) => onChange(String(event.target.value))}
+    />
+    {unavailable ? (
+      <VisuallyHidden id={STATUS_HINT_ID}>
+        {STATUS_UNAVAILABLE[unavailable].hint}
+      </VisuallyHidden>
+    ) : null}
+  </>
+)
+
+/**
+ * The control is full-width on small screens and 280px on desktop, so the menu
+ * takes the control's width as its minimum rather than the facet menu's fixed
+ * 270px. Select sets that minimum inline from the control.
+ */
+const MODULES_MENU_PROPS = {
+  ...FACET_MENU_PROPS,
+  PaperProps: {
+    sx: {
+      ...FACET_MENU_PROPS.PaperProps.sx,
+      width: "auto",
+      maxWidth: "calc(100vw - 32px)",
+    },
+  },
+}
+
+/**
+ * The count is said in the field's label, which is what names the combobox,
+ * so the badge drawn inside it stays hidden.
  */
 const ModulesSelect: React.FC<{
   options: { value: string; label: string }[]
@@ -236,38 +290,40 @@ const ModulesSelect: React.FC<{
   error: boolean
 }> = ({ options, value, onChange, error }) => (
   <FilterField
-    label="Modules"
+    label={
+      <>
+        Modules
+        {value.length > 0 ? (
+          <VisuallyHidden>, {value.length} selected</VisuallyHidden>
+        ) : null}
+      </>
+    }
     size="medium"
     multiple
     value={value}
     error={error}
     errorText="Couldn't load modules. Reload to try again."
+    MenuProps={MODULES_MENU_PROPS}
     options={options.map((option) => ({
       value: option.value,
       label: (
-        <OptionLabel>
-          <OptionCheck
-            aria-hidden="true"
-            size={16}
-            style={{
-              visibility: value.includes(option.value) ? "visible" : "hidden",
-            }}
-          />
+        <MenuRow>
+          <MenuBox checked={value.includes(option.value)} aria-hidden />
           {option.label}
-        </OptionLabel>
+        </MenuRow>
       ),
     }))}
     renderValue={(selected) => {
       const ids = selected as string[]
-      return (
-        <SelectedValue>
-          {ids.length === 0
-            ? "All modules"
-            : ids.length === 1
-              ? options.find((option) => option.value === ids[0])?.label
-              : `${ids.length} modules`}
-        </SelectedValue>
-      )
+      if (ids.length === 0) return <SelectedValue>All modules</SelectedValue>
+      if (ids.length === 1) {
+        return (
+          <SelectedValue>
+            {options.find((option) => option.value === ids[0])?.label}
+          </SelectedValue>
+        )
+      }
+      return facetLabel("Selected", ids)
     }}
     onChange={(event) => {
       const next = event.target.value
@@ -285,14 +341,6 @@ const CheckboxField = styled.div(({ theme }) => ({
   },
 }))
 
-const ViewPanel = styled(TabPanel)({
-  padding: 0,
-  display: "flex",
-  flexDirection: "column",
-  gap: "16px",
-  "&[hidden]": { display: "none" },
-})
-
 const ErrorRow = styled.div({
   display: "flex",
   alignItems: "center",
@@ -301,22 +349,14 @@ const ErrorRow = styled.div({
   gap: "16px",
 })
 
-const PAGE_SIZE = 25
-/** Below the API's max_page_size rather than pinned to it — that setting is env-overridable, and this only costs one extra round trip on a large contract. */
-const CSV_EXPORT_PAGE_SIZE = 500
+/** The `/learners` endpoint's maximum page size, in learners. */
+const CSV_EXPORT_PAGE_SIZE = 100
+/** Pages fetched at a time. The analytics API builds each page in memory and shares a small database pool, so this stays low. */
+const CSV_EXPORT_CONCURRENCY = 2
 const UNAVAILABLE_MESSAGE_ID = "learner-analytics-unavailable-message"
 const NOT_LOADED_MESSAGE_ID = "learner-analytics-not-loaded-message"
-
-const STATUS_OPTIONS: { value: string; label: string }[] = [
-  { value: ALL, label: "All learners" },
-  { value: "not_started", label: "Not started" },
-  { value: "in_progress", label: "In progress" },
-  { value: "passed", label: "Completed" },
-  { value: "unknown", label: "Consent withheld" },
-]
-
-const rowIdOf = (row: LearnerProgress) =>
-  `${row.learner_id}:${row.courserun_readable_id}`
+const NO_LEARNERS_MESSAGE_ID = "learner-analytics-no-learners-message"
+const MODULES_FAILED_MESSAGE_ID = "learner-export-modules-failed-message"
 
 type ContractLearnersPageProps = {
   orgSlug: string
@@ -328,8 +368,6 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   contractSlug,
 }) => {
   const {
-    view,
-    setView,
     page,
     setPage,
     searchQuery,
@@ -338,38 +376,25 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     debouncedSearch,
     statusFilter,
     setStatusFilter,
-    completionStatus,
     needsAttentionOnly,
     setNeedsAttentionOnly,
-    moduleFilter,
-    setModuleFilter,
     gridModules,
     setGridModules,
     clearAll,
   } = useLearnerFilters()
   const [isExporting, setIsExporting] = useState(false)
+  const [statusAnnouncement, setStatusAnnouncement] = useState("")
   const [actionResult, setActionResult] = useState<{
     message: string
     severity: "success" | "error"
   } | null>(null)
-  const [announcement, setAnnouncement] = useState("")
   const queryClient = useQueryClient()
 
   const controlsRef = useRef<HTMLDivElement>(null)
   const handleClearAll = () => {
+    setStatusAnnouncement("")
     clearAll()
     controlsRef.current?.querySelector("input")?.focus()
-  }
-
-  const handleViewChange = (_event: React.SyntheticEvent, next: View) => {
-    if (next === view) return
-    analytics.analyticsViewChanged({
-      view: next,
-      previousView: view,
-      orgSlug,
-      contractSlug,
-    })
-    setView(next)
   }
 
   const {
@@ -401,225 +426,151 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
         .sort((a, b) => a.label.localeCompare(b.label)),
     [courseRunsQuery.data],
   )
-  const moduleOptions = useMemo(
-    () => [{ value: ALL, label: "All modules" }, ...courseRunOptions],
-    [courseRunOptions],
-  )
   /** Kept while loading or on error, so its error text can show. */
   const showModuleFilter = !courseRunsQuery.data || courseRunOptions.length > 1
-  const activeGridModules = useMemo(
-    () =>
-      showModuleFilter
-        ? courseRunOptions
-            .filter((option) => gridModules.includes(option.value))
-            .map((option) => option.value)
-        : [],
-    [showModuleFilter, gridModules, courseRunOptions],
+  /**
+   * Every module asks for the same learners as no module filter, so only a
+   * partial selection is held to the API's cap; that keeps a dashboard link on
+   * a contract with more modules than the API accepts from being cut short.
+   */
+  const activeGridModules = useMemo(() => {
+    if (!showModuleFilter) return []
+    const everyModule = gridModules.includes(ALL_MODULES)
+    const selected = courseRunOptions
+      .filter((option) => everyModule || gridModules.includes(option.value))
+      .map((option) => option.value)
+    return selected.length < courseRunOptions.length
+      ? selected.slice(0, MAX_GRID_MODULES)
+      : selected
+  }, [showModuleFilter, gridModules, courseRunOptions])
+
+  /** Status is per module, so it needs one selected, unless the contract has only one. */
+  const statusAvailable = !showModuleFilter || activeGridModules.length > 0
+  const activeStatus = statusAvailable ? statusFilter : ALL
+  const completionStatus = completionStatusFilter(
+    activeStatus === ALL ? undefined : activeStatus,
   )
 
-  const activeModule = useMemo(
-    () =>
-      showModuleFilter &&
-      moduleOptions.some((option) => option.value === moduleFilter)
-        ? moduleFilter
-        : ALL,
-    [showModuleFilter, moduleOptions, moduleFilter],
-  )
+  useEffect(() => {
+    if (courseRunsQuery.isSuccess && !statusAvailable && statusFilter !== ALL) {
+      setStatusFilter(ALL)
+    }
+  }, [
+    courseRunsQuery.isSuccess,
+    statusAvailable,
+    statusFilter,
+    setStatusFilter,
+  ])
+
+  /**
+   * Every module is stored as `ALL_MODULES`, so the URL's 50-module cap can't
+   * drop one. The announcement is emptied on every other change, so a later
+   * reset is announced again.
+   */
+  const handleModulesChange = (values: string[]) => {
+    setStatusAnnouncement(
+      !values.length && activeStatus !== ALL ? "Status filter cleared." : "",
+    )
+    setGridModules(
+      values.length > 0 && values.length === courseRunOptions.length
+        ? [ALL_MODULES]
+        : values,
+    )
+  }
 
   const courseRunsSettled = courseRunsQuery.isSuccess || courseRunsQuery.isError
-  const moduleResolved = moduleFilter === ALL || courseRunsSettled
-  const gridModulesResolved = gridModules.length === 0 || courseRunsSettled
+  /** Whether modules and status in the URL apply depends on the contract's modules. */
+  const filtersResolved =
+    (gridModules.length === 0 && statusFilter === ALL) || courseRunsSettled
 
-  const sharedFilters = useMemo(
-    () => ({
-      ...(debouncedSearch ? { search: debouncedSearch } : {}),
-      ...(completionStatus ? { completion_status: completionStatus } : {}),
-      /**
-       * Only ever sent as `true`. The param also takes `false` — "only the
-       * learners who are fine" — but that is a question no control here asks,
-       * and sending it when the box is unchecked would drop every withheld
-       * row from the default view.
-       */
-      ...(needsAttentionOnly ? { needs_attention: true } : {}),
-    }),
-    [debouncedSearch, completionStatus, needsAttentionOnly],
+  const requestModules = useMemo(
+    () =>
+      activeGridModules.length < courseRunOptions.length
+        ? activeGridModules
+        : [],
+    [activeGridModules, courseRunOptions],
   )
-
-  const listParams = useMemo(
-    () => ({
-      limit: PAGE_SIZE,
-      offset: (page - 1) * PAGE_SIZE,
-      sort: "full_name" as const,
-      ...sharedFilters,
-      ...(activeModule === ALL ? {} : { courserun_readable_id: activeModule }),
-    }),
-    [page, sharedFilters, activeModule],
-  )
-
-  const rowsQuery = useQuery({
-    ...analyticsContractQueries.learnerProgress(
-      orgUuid ?? "",
-      contractId ?? 0,
-      listParams,
-    ),
-    enabled: canQuery && moduleResolved && view === VIEWS.enrollments,
-    placeholderData: keepPreviousData,
-  })
-
-  const totalQuery = useQuery({
-    ...analyticsContractQueries.learnerProgress(
-      orgUuid ?? "",
-      contractId ?? 0,
-      { limit: 1 },
-    ),
-    enabled: canQuery,
-  })
 
   const gridFilters = useMemo(
     () => ({
-      ...sharedFilters,
-      ...(activeGridModules.length
-        ? { courserun_readable_id: activeGridModules }
+      ...(debouncedSearch ? { search: debouncedSearch } : {}),
+      completion_status: completionStatus,
+      /** Only ever sent as `true`: no control here asks for the learners who are fine. */
+      ...(needsAttentionOnly ? { needs_attention: true } : {}),
+      ...(requestModules.length
+        ? { courserun_readable_id: requestModules }
         : {}),
     }),
-    [sharedFilters, activeGridModules],
+    [debouncedSearch, completionStatus, needsAttentionOnly, requestModules],
   )
   const gridQuery = useQuery({
     ...gridLearnersQuery(orgUuid ?? "", contractId ?? 0, gridFilters, page),
-    enabled: canQuery && view === VIEWS.grid && gridModulesResolved,
+    enabled: canQuery && filtersResolved,
     placeholderData: keepPreviousData,
   })
+
+  /** Read for the contract's learner count and freshness date. */
   const learnerTotalQuery = useQuery({
     ...analyticsContractQueries.learners(orgUuid ?? "", contractId ?? 0, {
       limit: 1,
       offset: 0,
+      completion_status: completionStatusFilter(),
     }),
-    enabled: canQuery && view === VIEWS.grid,
+    enabled: canQuery,
   })
   const totalLearners = learnerTotalQuery.data?.total_count ?? null
-
-  const showsLearnerCount =
-    view === VIEWS.enrollments &&
-    needsAttentionOnly &&
-    !debouncedSearch &&
-    statusFilter === ALL &&
-    activeModule === ALL
-  const needsAttentionQuery = useQuery({
-    ...analyticsContractQueries.needsAttention(orgUuid ?? "", contractId ?? 0),
-    enabled: canQuery && showsLearnerCount,
-  })
-  const learnersNeedingAttention = showsLearnerCount
-    ? (needsAttentionQuery.data?.data[0]?.learners_needing_attention ?? null)
-    : null
-
-  const rows = rowsQuery.data?.data ?? []
-  const filteredCount = rowsQuery.data?.total_count ?? 0
-  const withheldCount = rowsQuery.data?.outcomes_withheld_count ?? 0
-  const totalEnrollments = totalQuery.data?.total_count ?? null
-  const contractWithheldCount = totalQuery.data?.outcomes_withheld_count ?? 0
-  const hidesWithheldLearners = needsAttentionOnly && contractWithheldCount > 0
-  const totalPages = Math.ceil(filteredCount / PAGE_SIZE)
-  const isStale = rowsQuery.isPlaceholderData || rowsQuery.isFetching
-  const isBusy = rowsQuery.isPending || isStale
-
-  useEffect(() => {
-    if (
-      view === VIEWS.enrollments &&
-      !isBusy &&
-      totalPages > 0 &&
-      page > totalPages
-    ) {
-      setPage(totalPages)
-    }
-  }, [view, isBusy, page, totalPages, setPage])
+  const noLearners = totalLearners === 0
 
   /**
    * Only 400/401/403 responses throw to an error boundary (see
    * `makeBrowserQueryClient`); a 5xx or network failure just settles into
-   * `isError` with `data` left undefined. Without this check, that failure
-   * reads as "no learners" instead of surfacing the error state below.
+   * `isError` with `data` left undefined. The grid shows its own query's
+   * failure; this covers the page's.
    */
-  const hasLoadError = rowsQuery.isError || totalQuery.isError
+  const hasLoadError = learnerTotalQuery.isError
   /**
    * The contract exists in MITx Online but the warehouse has not loaded it
    * yet. Not an error a retry can fix, so it gets its own message.
    */
-  const notLoaded = [rowsQuery, totalQuery, courseRunsQuery].some((query) =>
-    isAnalyticsNotLoaded(query.error),
+  const notLoaded = [gridQuery, learnerTotalQuery, courseRunsQuery].some(
+    (query) => isAnalyticsNotLoaded(query.error),
   )
 
-  const retryFailedQueries = () => {
-    rowsQuery.refetch()
-    totalQuery.refetch()
-  }
+  const courseRuns = courseRunsQuery.data?.data
+  const courseRunsFailed = courseRunsQuery.isError && !courseRuns
+  const exportUnavailable =
+    !canQuery || notLoaded || noLearners || !filtersResolved || !courseRuns
 
   const handleExport = useCallback(async () => {
-    if (
-      isExporting ||
-      !canQuery ||
-      notLoaded ||
-      !moduleResolved ||
-      !orgUuid ||
-      !contractId
-    )
-      return
+    if (isExporting || exportUnavailable || !orgUuid || !contractId) return
     setIsExporting(true)
     try {
-      const all: LearnerProgress[] = []
-      let offset = 0
-      let total = Number.POSITIVE_INFINITY
-      while (all.length < total) {
-        const data = await queryClient.fetchQuery(
-          analyticsContractQueries.learnerProgress(orgUuid, contractId, {
-            ...listParams,
-            limit: CSV_EXPORT_PAGE_SIZE,
-            offset,
-          }),
+      const fetchPage = (pageNumber: number) =>
+        queryClient.fetchQuery(
+          gridLearnersQuery(
+            orgUuid,
+            contractId,
+            gridFilters,
+            pageNumber,
+            CSV_EXPORT_PAGE_SIZE,
+          ),
         )
-        all.push(...data.data)
-        total = data.total_count
-        if (data.data.length === 0) break
-        offset += CSV_EXPORT_PAGE_SIZE
+      const first = await fetchPage(1)
+      const learners: LearnerWithEnrollments[] = [...first.data]
+      const pageCount = Math.ceil(first.total_count / CSV_EXPORT_PAGE_SIZE)
+      for (let next = 2; next <= pageCount; next += CSV_EXPORT_CONCURRENCY) {
+        const batch = await Promise.all(
+          Array.from(
+            { length: Math.min(CSV_EXPORT_CONCURRENCY, pageCount - next + 1) },
+            (_, index) => fetchPage(next + index),
+          ),
+        )
+        learners.push(...batch.flatMap((response) => response.data))
       }
-      const header = buildCsvRow([
-        "Name",
-        "Email",
-        "Course",
-        "Course ID",
-        "Status",
-        "Progress",
-        "Enrolled on",
-        "Last activity",
-        "Not started or inactive 30+ days",
-        "Days active",
-        "Videos watched",
-        "Problems attempted",
-        "Chatbot interactions",
-      ])
-      const body = all.map((row) => {
-        const status = getDisplayStatus(row)
-        const progress = contentProgressPercent(row, status)
-        return buildCsvRow([
-          row.full_name,
-          row.email,
-          row.courserun_title,
-          row.courserun_readable_id,
-          DISPLAY_STATUS_LABEL[status],
-          progress === null ? "" : `${progress}%`,
-          row.enrolled_on,
-          row.last_active_on,
-          typeof row.needs_attention === "boolean"
-            ? row.needs_attention
-              ? "Yes"
-              : "No"
-            : "",
-          row.days_active?.toString(),
-          row.videos_watched?.toString(),
-          row.problems_attempted?.toString(),
-          row.chatbot_interactions?.toString(),
-        ])
-      })
-      const csv = [header, ...body].join("\n")
+      const csv = buildGridCsv(
+        learners,
+        gridColumns(courseRuns, activeGridModules),
+      )
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
       const url = URL.createObjectURL(blob)
       const anchor = document.createElement("a")
@@ -643,43 +594,14 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     }
   }, [
     isExporting,
-    canQuery,
-    notLoaded,
-    moduleResolved,
+    exportUnavailable,
     orgUuid,
     contractId,
     contractSlug,
     queryClient,
-    listParams,
-  ])
-
-  const lastAnnounced = useRef<string | null>(null)
-  useEffect(() => {
-    if (view !== VIEWS.enrollments || isBusy || !rowsQuery.data) return
-    const key = `${statusFilter}:${activeModule}:${needsAttentionOnly}:${debouncedSearch}`
-    if (lastAnnounced.current === null) {
-      lastAnnounced.current = key
-      return
-    }
-    if (lastAnnounced.current === key) return
-    lastAnnounced.current = key
-    setAnnouncement(
-      `${filteredCount} ${filteredCount === 1 ? "result" : "results"}${
-        hidesWithheldLearners
-          ? ". Learners who have not agreed to share their progress are hidden."
-          : ""
-      }`,
-    )
-  }, [
-    view,
-    isBusy,
-    rowsQuery.data,
-    statusFilter,
-    activeModule,
-    needsAttentionOnly,
-    hidesWithheldLearners,
-    debouncedSearch,
-    filteredCount,
+    gridFilters,
+    courseRuns,
+    activeGridModules,
   ])
 
   if (isLoadingOrgs) {
@@ -725,20 +647,17 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     )
   }
 
-  const hasModuleFilter =
-    view === VIEWS.enrollments
-      ? activeModule !== ALL
-      : activeGridModules.length > 0
+  const hasModuleFilter = activeGridModules.length > 0
 
   const hasActiveFilters =
     !!searchQuery ||
-    statusFilter !== ALL ||
+    activeStatus !== ALL ||
     hasModuleFilter ||
     needsAttentionOnly
 
   const emptyMessage = debouncedSearch
     ? "No learners match your search."
-    : statusFilter !== ALL || hasModuleFilter || needsAttentionOnly
+    : activeStatus !== ALL || hasModuleFilter || needsAttentionOnly
       ? "No learners match this filter."
       : "No learners found."
 
@@ -762,27 +681,38 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
               </PageSubtitle>
             </div>
           </OrgDetailsContainer>
-          {view === VIEWS.enrollments ? (
-            <ExportWrapper>
-              <Button
-                variant="bordered"
-                aria-disabled={
-                  isExporting || !canQuery || notLoaded || !moduleResolved
-                }
-                aria-describedby={
-                  !canQuery
-                    ? UNAVAILABLE_MESSAGE_ID
-                    : notLoaded
-                      ? NOT_LOADED_MESSAGE_ID
-                      : undefined
-                }
-                aria-busy={isExporting || (canQuery && !moduleResolved)}
-                onClick={handleExport}
-              >
-                {isExporting ? "Exporting…" : "Export learners"}
-              </Button>
-            </ExportWrapper>
-          ) : null}
+          <ExportWrapper>
+            <Button
+              variant="bordered"
+              aria-disabled={isExporting || exportUnavailable}
+              aria-describedby={
+                !canQuery
+                  ? UNAVAILABLE_MESSAGE_ID
+                  : notLoaded
+                    ? NOT_LOADED_MESSAGE_ID
+                    : noLearners
+                      ? NO_LEARNERS_MESSAGE_ID
+                      : courseRunsFailed
+                        ? MODULES_FAILED_MESSAGE_ID
+                        : undefined
+              }
+              aria-busy={
+                isExporting ||
+                (canQuery &&
+                  !notLoaded &&
+                  (!filtersResolved || courseRunsQuery.isPending))
+              }
+              onClick={handleExport}
+            >
+              {isExporting ? "Exporting…" : "Export learners"}
+            </Button>
+            {courseRunsFailed ? (
+              <VisuallyHidden id={MODULES_FAILED_MESSAGE_ID}>
+                Export needs this contract&apos;s modules, which couldn&apos;t
+                load.
+              </VisuallyHidden>
+            ) : null}
+          </ExportWrapper>
         </HeaderSection>
 
         <ContractManagerNav
@@ -807,265 +737,119 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
               <Button
                 size="small"
                 variant="bordered"
-                onClick={retryFailedQueries}
+                onClick={() => learnerTotalQuery.refetch()}
               >
                 Try again
               </Button>
             </ErrorRow>
           </Alert>
+        ) : noLearners ? (
+          <Typography id={NO_LEARNERS_MESSAGE_ID} variant="body1">
+            No learners are enrolled in {contract.name} yet. They&apos;ll appear
+            here once they enroll.
+          </Typography>
         ) : (
           <ResultsSection>
             <AsOfRow>
               <SectionFreshness
-                asOf={totalQuery.data?.as_of}
-                isLoading={totalQuery.isPending}
-                isError={totalQuery.isError}
+                asOf={learnerTotalQuery.data?.as_of}
+                isLoading={learnerTotalQuery.isPending}
+                isError={learnerTotalQuery.isError}
               />
             </AsOfRow>
-            <TabContext value={view}>
-              <TabButtonList
-                aria-label="Learner views"
-                onChange={handleViewChange}
-              >
-                <TabButton label="By enrollment" value={VIEWS.enrollments} />
-                <TabButton label="Progress grid" value={VIEWS.grid} />
-              </TabButtonList>
-              <ControlsRow>
-                <SectionHeader
-                  component="h2"
-                  title="Learner results"
-                  description={
-                    view === VIEWS.grid
-                      ? gridQuery.isError || learnerTotalQuery.isError
-                        ? undefined
-                        : gridQuery.data && totalLearners !== null
-                          ? `${gridQuery.data.total_count} of ${totalLearners} enrolled learners`
-                          : "Loading…"
-                      : totalEnrollments === null
-                        ? "Loading…"
-                        : `${filteredCount} of ${totalEnrollments} enrollments${
-                            learnersNeedingAttention === null
-                              ? ""
-                              : ` (${learnersNeedingAttention} ${
-                                  learnersNeedingAttention === 1
-                                    ? "learner"
-                                    : "learners"
-                                })`
-                          }`
+            <ControlsRow>
+              <SectionHeader
+                component="h2"
+                title="Learner results"
+                description={
+                  gridQuery.isError || learnerTotalQuery.isError
+                    ? undefined
+                    : gridQuery.data && totalLearners !== null
+                      ? `${gridQuery.data.total_count} of ${totalLearners} enrolled learners`
+                      : "Loading…"
+                }
+                asOfPlacement="external"
+              />
+              <ControlsRight ref={controlsRef}>
+                <StyledSearchInput
+                  placeholder="Search name or email"
+                  value={searchQuery}
+                  size="medium"
+                  onChange={(event) =>
+                    setSearchQuery(
+                      event.target.value.slice(0, SEARCH_MAX_LENGTH),
+                    )
                   }
-                  asOfPlacement="external"
+                  onClear={clearSearch}
+                  onSubmit={() => {}}
                 />
-                <ControlsRight ref={controlsRef}>
-                  <StyledSearchInput
-                    placeholder="Search name or email"
-                    value={searchQuery}
-                    size="medium"
-                    onChange={(event) =>
-                      setSearchQuery(
-                        event.target.value.slice(0, SEARCH_MAX_LENGTH),
-                      )
-                    }
-                    onClear={clearSearch}
-                    onSubmit={() => {}}
+                {showModuleFilter ? (
+                  <ModulesSelect
+                    options={courseRunOptions}
+                    value={activeGridModules}
+                    onChange={handleModulesChange}
+                    error={courseRunsFailed}
                   />
-                  <FilterSelect
-                    label="Status"
-                    size="medium"
-                    value={statusFilter}
-                    options={STATUS_OPTIONS}
+                ) : null}
+                <StatusSelect
+                  value={activeStatus}
+                  onChange={setStatusFilter}
+                  unavailable={
+                    statusAvailable
+                      ? undefined
+                      : courseRunsQuery.isPending
+                        ? "loading"
+                        : courseRunsFailed
+                          ? "modulesFailed"
+                          : "noModule"
+                  }
+                />
+                <VisuallyHidden role="status" aria-atomic="true">
+                  {statusAnnouncement}
+                </VisuallyHidden>
+                <CheckboxField>
+                  <Checkbox
+                    label="Not started or inactive 30+ days"
+                    checked={needsAttentionOnly}
                     onChange={(event) =>
-                      setStatusFilter(String(event.target.value))
+                      setNeedsAttentionOnly(event.target.checked)
                     }
                   />
-                  {!showModuleFilter ? null : view === VIEWS.enrollments ? (
-                    <FilterSelect
-                      label="Module"
-                      size="medium"
-                      value={activeModule}
-                      options={moduleOptions}
-                      error={courseRunsQuery.isError && !courseRunsQuery.data}
-                      errorText="Couldn't load modules. Reload to try again."
-                      onChange={(event) =>
-                        setModuleFilter(String(event.target.value))
-                      }
-                    />
-                  ) : (
-                    <ModulesSelect
-                      options={courseRunOptions}
-                      value={activeGridModules}
-                      onChange={setGridModules}
-                      error={courseRunsQuery.isError && !courseRunsQuery.data}
-                    />
-                  )}
-                  <CheckboxField>
-                    <Checkbox
-                      label="Not started or inactive 30+ days"
-                      checked={needsAttentionOnly}
-                      onChange={(event) =>
-                        setNeedsAttentionOnly(event.target.checked)
-                      }
-                    />
-                  </CheckboxField>
-                  <Button
-                    variant="tertiary"
-                    size="medium"
-                    onClick={handleClearAll}
-                    style={{
-                      visibility: hasActiveFilters ? "visible" : "hidden",
-                    }}
-                  >
-                    Clear filters
-                  </Button>
-                </ControlsRight>
-              </ControlsRow>
-
-              {actionResult ? (
-                <Alert
-                  severity={actionResult.severity}
-                  closable
-                  onClose={() => setActionResult(null)}
+                </CheckboxField>
+                <Button
+                  variant="tertiary"
+                  size="medium"
+                  onClick={handleClearAll}
+                  style={{
+                    visibility: hasActiveFilters ? "visible" : "hidden",
+                  }}
                 >
-                  {actionResult.message}
-                </Alert>
-              ) : null}
+                  Clear filters
+                </Button>
+              </ControlsRight>
+            </ControlsRow>
 
-              <VisuallyHidden aria-live="assertive" aria-atomic="true">
-                {announcement}
-              </VisuallyHidden>
+            {actionResult ? (
+              <Alert
+                severity={actionResult.severity}
+                closable
+                onClose={() => setActionResult(null)}
+              >
+                {actionResult.message}
+              </Alert>
+            ) : null}
 
-              {/*
-              The API matches withheld rows against neither `true` nor `false`,
-              so this filter hides them outright rather than listing them as
-              not needing attention. Said here because nothing else on the page
-              would show it: each view's withheld notice reads a filtered
-              count, which is zero for that same reason.
-              */}
-              {hidesWithheldLearners ? (
-                <ConsentNotice component="p">
-                  Learners who have not agreed to share their progress are
-                  hidden while this filter is on, because their activity is not
-                  shared. Clear this filter, then adjust any other active
-                  filters or search terms as needed to see them.
-                </ConsentNotice>
-              ) : null}
-
-              <ViewPanel value={VIEWS.enrollments}>
-                {withheldCount > 0 ? (
-                  <ConsentNotice component="p">
-                    {withheldCount} of these {filteredCount} enrollments belong
-                    to learners who have not agreed to share their progress.
-                    Their status, grade and activity read “Declined” or “Consent
-                    not recorded”.
-                  </ConsentNotice>
-                ) : null}
-
-                <TableCard>
-                  <VisuallyHidden role="status" aria-atomic="true">
-                    {rowsQuery.isPending
-                      ? "Loading learners"
-                      : filteredCount === 0
-                        ? emptyMessage
-                        : `Showing page ${page} of ${Math.max(totalPages, 1)}`}
-                  </VisuallyHidden>
-                  <div
-                    role="table"
-                    aria-label="Learner progress"
-                    aria-busy={isBusy}
-                  >
-                    <div role="rowgroup">
-                      <TableHeaderRow role="row">
-                        <TableHeaderCell
-                          role="columnheader"
-                          $flex={COLUMN_FLEX.learner}
-                        >
-                          Learner
-                        </TableHeaderCell>
-                        <TableHeaderCell
-                          role="columnheader"
-                          $flex={COLUMN_FLEX.status}
-                        >
-                          Status
-                        </TableHeaderCell>
-                        <TableHeaderCell
-                          role="columnheader"
-                          $flex={COLUMN_FLEX.progress}
-                        >
-                          Progress
-                        </TableHeaderCell>
-                        <TableHeaderCell
-                          role="columnheader"
-                          $flex={COLUMN_FLEX.lastActivity}
-                        >
-                          Last activity
-                        </TableHeaderCell>
-                      </TableHeaderRow>
-                    </div>
-                    <TableBody role="rowgroup" $stale={isStale}>
-                      {rowsQuery.isPending ? (
-                        [1, 2, 3].map((key) => (
-                          <TableRow key={key} role="row">
-                            <div role="cell" style={{ width: "100%" }}>
-                              <Skeleton width="100%" height="48px" />
-                            </div>
-                          </TableRow>
-                        ))
-                      ) : rows.length === 0 ? (
-                        <TableRow role="row">
-                          <EmptyTableMessage
-                            component="div"
-                            role="cell"
-                            aria-colspan={4}
-                            style={{ width: "100%" }}
-                          >
-                            {emptyMessage}
-                          </EmptyTableMessage>
-                        </TableRow>
-                      ) : (
-                        rows.map((row) => (
-                          <LearnerRow key={rowIdOf(row)} row={row} />
-                        ))
-                      )}
-                    </TableBody>
-                  </div>
-                  <TableFooter>
-                    <TableFootnote component="p">
-                      {filteredCount > 0
-                        ? `Page ${page} of ${Math.max(totalPages, 1)}`
-                        : ""}
-                    </TableFootnote>
-                    {totalPages > 1 ? (
-                      <Pagination
-                        count={totalPages}
-                        page={page}
-                        shape="rounded"
-                        size="small"
-                        onChange={(_event, value) => setPage(value)}
-                      />
-                    ) : null}
-                  </TableFooter>
-                </TableCard>
-              </ViewPanel>
-
-              <ViewPanel value={VIEWS.grid}>
-                {orgUuid && contractId ? (
-                  <ProgressGrid
-                    orgUuid={orgUuid}
-                    contractId={contractId}
-                    filters={gridFilters}
-                    query={gridQuery}
-                    courseRuns={courseRunsQuery.data?.data}
-                    courseRunsFailed={
-                      courseRunsQuery.isError && !courseRunsQuery.data
-                    }
-                    courseRunsFetching={courseRunsQuery.isFetching}
-                    onRetryCourseRuns={() => courseRunsQuery.refetch()}
-                    page={page}
-                    onPageChange={setPage}
-                    emptyMessage={emptyMessage}
-                  />
-                ) : null}
-              </ViewPanel>
-            </TabContext>
+            <ProgressGrid
+              filters={gridFilters}
+              query={gridQuery}
+              courseRuns={courseRuns}
+              courseRunsFailed={courseRunsFailed}
+              courseRunsFetching={courseRunsQuery.isFetching}
+              onRetryCourseRuns={() => courseRunsQuery.refetch()}
+              page={page}
+              onPageChange={setPage}
+              emptyMessage={emptyMessage}
+            />
           </ResultsSection>
         )}
       </Stack>
@@ -1075,11 +859,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
 
 const ContractLearnersPage: React.FC<ContractLearnersPageProps> = (props) => {
   const flagsLoaded = useFeatureFlagsLoaded()
-  const analyticsEnabled = useFeatureFlag(FeatureFlags.B2BAnalyticsDashboard)
-  const learnerAnalyticsEnabled = useFeatureFlag(
-    FeatureFlags.B2BLearnerAnalytics,
-  )
-  const enabled = analyticsEnabled && learnerAnalyticsEnabled
+  const enabled = useFeatureFlag(FeatureFlags.B2BLearnerAnalytics)
 
   if (!flagsLoaded) {
     return (

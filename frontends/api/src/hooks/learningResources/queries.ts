@@ -8,6 +8,8 @@ import {
   featuredApi,
   videoPlaylistsApi,
   podcastEpisodesApi,
+  coursesApi,
+  videosApi,
   vectorLearningResourcesSearchApi,
 } from "../../clients"
 
@@ -24,6 +26,9 @@ import type {
   VideoPlaylistResource,
   PodcastEpisodeTranscript,
   LearningResourcesApiLearningResourcesVectorSimilarListRequest,
+  CoursesApiCoursesListRequest,
+  VideosApiVideosListRequest,
+  PodcastEpisodesApiPodcastEpisodesListRequest,
 } from "../../generated/v1"
 import type { VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest as VectorLearningResourcesSearchRetrieveRequest } from "../../generated/v0"
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query"
@@ -291,14 +296,59 @@ const videoPlaylistQueries = {
     }),
 }
 
+const courseKeys = {
+  root: ["courses"],
+  listRoot: () => [...courseKeys.root, "list"],
+  list: (params: CoursesApiCoursesListRequest) => [
+    ...courseKeys.listRoot(),
+    params,
+  ],
+}
+
+const courseQueries = {
+  list: (params: CoursesApiCoursesListRequest) =>
+    queryOptions({
+      queryKey: courseKeys.list(params),
+      queryFn: () => coursesApi.coursesList(params).then((res) => res.data),
+    }),
+}
+
+const videoKeys = {
+  root: ["videos"],
+  listRoot: () => [...videoKeys.root, "list"],
+  list: (params: VideosApiVideosListRequest) => [
+    ...videoKeys.listRoot(),
+    params,
+  ],
+}
+
+const videoQueries = {
+  list: (params: VideosApiVideosListRequest) =>
+    queryOptions({
+      queryKey: videoKeys.list(params),
+      queryFn: () => videosApi.videosList(params).then((res) => res.data),
+    }),
+}
+
 const podcastEpisodeKeys = {
   root: ["podcast_episodes"],
+  listRoot: () => [...podcastEpisodeKeys.root, "list"],
+  list: (params: PodcastEpisodesApiPodcastEpisodesListRequest) => [
+    ...podcastEpisodeKeys.listRoot(),
+    params,
+  ],
   detailRoot: () => [...podcastEpisodeKeys.root, "detail"],
   detail: (id: number) => [...podcastEpisodeKeys.detailRoot(), id],
   transcript: (id: number) => [...podcastEpisodeKeys.detail(id), "transcript"],
 }
 
 const podcastEpisodeQueries = {
+  list: (params: PodcastEpisodesApiPodcastEpisodesListRequest) =>
+    queryOptions({
+      queryKey: podcastEpisodeKeys.list(params),
+      queryFn: () =>
+        podcastEpisodesApi.podcastEpisodesList(params).then((res) => res.data),
+    }),
   /**
    * An episode's transcript, served separately from the episode payload
    * because the text runs tens of kilobytes. Gate this on
@@ -323,6 +373,8 @@ export {
   schoolQueries,
   offerorQueries,
   videoPlaylistQueries,
+  courseQueries,
+  videoQueries,
   podcastEpisodeKeys,
   podcastEpisodeQueries,
 }

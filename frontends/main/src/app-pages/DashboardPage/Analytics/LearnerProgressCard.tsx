@@ -12,22 +12,20 @@ import { formatCount, formatPercent } from "./format"
 import SectionError from "./SectionError"
 
 /**
- * KPI tiles and status-bucket distribution from the `learner-progress`
- * endpoint. Contract-scoped only — there's no org-wide equivalent, so
- * `AnalyticsContent` renders this section only when a contract is in view.
+ * KPI tiles and an enrollment distribution for one contract. Contract-scoped
+ * only — there's no org-wide equivalent, so `AnalyticsContent` renders this
+ * section only when a contract is in view.
  *
- * `total_count` and `completion_status_counts` aren't k-anonymity-floored
- * like every other section on this page (waived for this endpoint per
- * mitodl/ol-analytics-api#58), so nothing here uses `SuppressibleValue`.
+ * The tiles count learners, from the same `/learners` request each tile's link
+ * opens, so a tile always matches the learner directory it leads to. A
+ * learner with modules in several statuses counts under each, so the status
+ * tiles can add up to more than "Learners enrolled".
  *
- * A consent-withheld learner has no `completion_status` and so lands in none
- * of the three buckets. The distribution therefore divides by `total_count`
- * minus `outcomes_withheld_count`: against `total_count` the rows would stop
- * summing to 100% the moment anyone withholds. The "Enrolled" tile still
- * shows the true `total_count` — a learner who withholds outcomes is still
- * enrolled, and netting them out there would disagree with the learner
- * directory and with every seat figure on this page — so a footnote names
- * the gap whenever there is one.
+ * The distribution counts enrollments, from `learner-progress`, so its rows
+ * sum to 100%. Neither endpoint is k-anonymity-floored like every other
+ * section on this page (waived per mitodl/ol-analytics-api#58), so nothing
+ * here uses `SuppressibleValue`. Both leave out learners who haven't
+ * consented to share their progress.
  */
 
 const BUCKETS = [
@@ -44,7 +42,7 @@ type BucketKey = (typeof BUCKETS)[number]["key"]
 
 /** Folds `passed`+`certified` into "Completed", matching the learner
  * directory's Status filter (`STATUS_FILTER_COMPLETION_STATUS` in
- * `ContractLearnersPage.tsx`). */
+ * `common/urls.ts`). */
 const bucketCounts = (
   counts: CompletionStatusCounts,
 ): Record<BucketKey, number> => ({
@@ -220,15 +218,15 @@ const RowPercent = styled(Typography)(({ theme }) => ({
   fontVariantNumeric: "tabular-nums",
 })) as typeof Typography
 
-const DistributionNote = styled(Typography)(({ theme }) => ({
-  ...theme.typography.body3,
-  color: theme.custom.colors.silverGrayDark,
-  marginTop: "12px",
+const DistributionTitle = styled(Typography)(({ theme }) => ({
+  ...theme.typography.subtitle2,
+  color: theme.custom.colors.darkGray2,
 })) as typeof Typography
 
 const LearnerProgressCard: React.FC<{
+  /** Learners on the contract (`all`), or with at least one enrollment in each status. */
+  learnerCounts: Record<ContractLearnersStatus | "all", number>
   totalCount: number | undefined
-  withheldCount: number | undefined
   statusCounts: CompletionStatusCounts | undefined
   isLoading: boolean
   isError?: boolean
@@ -236,8 +234,8 @@ const LearnerProgressCard: React.FC<{
   /** Rendered beside the distribution, stacking below it on narrow screens. */
   aside?: React.ReactNode
 }> = ({
+  learnerCounts,
   totalCount,
-  withheldCount,
   statusCounts,
   isLoading,
   isError,
@@ -245,6 +243,7 @@ const LearnerProgressCard: React.FC<{
   aside,
 }) => {
   const statusColors = progressStatusColors(useTheme())
+  const distributionTitleId = React.useId()
 
   if (isError) {
     return (
@@ -281,15 +280,14 @@ const LearnerProgressCard: React.FC<{
   }
 
   const buckets = bucketCounts(statusCounts)
-  const withheld = Math.min(withheldCount ?? 0, totalCount)
-  const reportedCount = totalCount - withheld
-  const percentOf = (count: number) =>
-    reportedCount > 0 ? (count / reportedCount) * 100 : 0
-  const percentBasis = withheld > 0 ? " of learners who consented" : " of total"
+  const percentOf = (count: number) => (count / totalCount) * 100
 
   const distribution = (
     <TableCard>
-      <DistributionList role="list" aria-label="Learner progress distribution">
+      <DistributionTitle component="h3" id={distributionTitleId}>
+        Enrollments by status
+      </DistributionTitle>
+      <DistributionList role="list" aria-labelledby={distributionTitleId}>
         {BUCKETS.map((bucket) => {
           const count = buckets[bucket.key]
           const percent = percentOf(count)
@@ -308,24 +306,17 @@ const LearnerProgressCard: React.FC<{
               <RowStats>
                 <RowCount>
                   {formatCount(count)}
-                  <VisuallyHidden> learners,</VisuallyHidden>
+                  <VisuallyHidden> enrollments,</VisuallyHidden>
                 </RowCount>
                 <RowPercent>
                   {formatPercent(percent)}
-                  <VisuallyHidden>{percentBasis}</VisuallyHidden>
+                  <VisuallyHidden> of total</VisuallyHidden>
                 </RowPercent>
               </RowStats>
             </DistributionRow>
           )
         })}
       </DistributionList>
-      {withheld > 0 ? (
-        <DistributionNote>
-          Percentages exclude {formatCount(withheld)}{" "}
-          {withheld === 1 ? "learner who has" : "learners who have"} not agreed
-          to share their progress.
-        </DistributionNote>
-      ) : null}
     </TableCard>
   )
 
@@ -333,8 +324,8 @@ const LearnerProgressCard: React.FC<{
     <Root>
       <TileRow>
         <Tile
-          label="Enrolled"
-          value={totalCount}
+          label="Learners enrolled"
+          value={learnerCounts.all}
           learnersHref={learnersHref()}
           linkText="View all learners"
           linkLabel="View all learners"
@@ -343,7 +334,7 @@ const LearnerProgressCard: React.FC<{
           <Tile
             key={bucket.key}
             label={bucket.label}
-            value={buckets[bucket.key]}
+            value={learnerCounts[bucket.status]}
             learnersHref={learnersHref(bucket.status)}
             linkText="View learners"
             linkLabel={`View learners (${bucket.label})`}
