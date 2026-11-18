@@ -3381,6 +3381,21 @@ def test_queue_warehouse_syncs_chains_a_sources_programs_after_its_courses(mocke
     assert mock_chain.return_value.delay.call_count == 2
 
 
+def test_queue_warehouse_syncs_reruns_xpro_programs_after_a_course_rebuild(mocker):
+    """
+    An xPRO program drops a course Learn doesn't have yet, so a rebuilt course
+    view reruns the programs after the courses, to add the courses it dropped
+    """
+    mock_chain = mocker.patch("learning_resources.tasks.celery.chain")
+
+    queued, _ = tasks.queue_warehouse_syncs(["integrations__learn__xpro_courses"])
+
+    assert queued == [tasks.SyncXproCoursesTask.name, tasks.SyncXproProgramsTask.name]
+    mock_chain.assert_called_once_with(
+        tasks.SyncXproCoursesTask.si(), tasks.SyncXproProgramsTask.si()
+    )
+
+
 def test_queue_warehouse_syncs_queues_nothing_for_unknown_views(mocker):
     """A batch of names no sync reads queues nothing"""
     mock_chain = mocker.patch("learning_resources.tasks.celery.chain")

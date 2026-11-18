@@ -1925,16 +1925,21 @@ class SyncOCWCoursesTask(BaseWarehouseETLTask):
 SyncOCWCoursesTask = app.register_task(SyncOCWCoursesTask())
 
 
-# The catalog syncs, each with the views it reads, in the order a batch naming
-# several queues them: programs look their courses up, so a source's programs
-# follow its courses.
+# The catalog syncs, each with the views whose rebuild reruns it, in the order a
+# batch naming several queues them: programs look their courses up, so a
+# source's programs follow its courses. A program's course view reruns it too:
+# the xPRO programs sync drops a course Learn doesn't have yet, so a course
+# rebuild reruns it to add the course, and the MITx Online one reads that view.
 WAREHOUSE_VIEW_SYNCS = (
     (SyncOCWCoursesTask, {"integrations__learn__ocw_courses"}),
     (
         SyncXproCoursesTask,
         {"integrations__learn__xpro_courses", "integrations__learn__xpro_runs"},
     ),
-    (SyncXproProgramsTask, {"integrations__learn__xpro_programs"}),
+    (
+        SyncXproProgramsTask,
+        {"integrations__learn__xpro_programs", "integrations__learn__xpro_courses"},
+    ),
     (
         SyncMITxOnlineCoursesTask,
         {
@@ -1955,7 +1960,8 @@ WAREHOUSE_VIEW_SYNCS = (
 
 def queue_warehouse_syncs(view_names):
     """
-    Queue a full run of each catalog sync that reads one of the named views.
+    Queue a full run of each catalog sync that one of the named views reruns
+    (see WAREHOUSE_VIEW_SYNCS).
 
     A source's syncs are chained in WAREHOUSE_VIEW_SYNCS order, and the sources
     run side by side. Each sync checks ownership when it runs, so this queues
