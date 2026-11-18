@@ -1,39 +1,48 @@
 import React from "react"
 import Image from "next/image"
-import { styled } from "ol-components"
+import { Skeleton, styled } from "ol-components"
 import { ButtonLink } from "@mitodl/smoot-design"
 import { RiArrowRightLine, RiExternalLinkLine } from "@remixicon/react"
+import { useTestimonialList } from "api/hooks/testimonials"
+import type { Attestation } from "api/v0"
 import { getSupportShareStoryUrl } from "@/common/config"
+import { env } from "@/env"
 import { Section, SectionInner, SectionTitle } from "./SectionLayout"
 import { FREESIA_STORY_URL } from "./links"
 
-type Testimonial = {
-  quote: string
-  name: string
+/** The featured testimonial is the first published one at this position. */
+export const TESTIMONIAL_POSITION = 1
+
+type TestimonialExtras = {
   location: string
   summary: string
-  image: string
   imageAlt: string
   storyLabel: string
   storyUrl: string
 }
 
 /**
- * The featured learner. The quote is expected to change over time while the
- * layout stays, so swapping it means editing only this object.
+ * Details the design shows that the Attestation model doesn't have yet,
+ * keyed by attestant name so they never appear beside someone else's quote.
+ * TODO: move these onto the model and delete this map.
  */
-export const TESTIMONIAL: Testimonial = {
-  quote:
-    "The free courses gave me a solid foundation of knowledge and problem-solving abilities. Without these, it wouldn’t be possible to do what I’m doing now.",
-  name: "Freesia Gaul",
-  location: "Australia",
-  summary:
-    "Freesia taught herself circuits with free MIT courses, then built a low-cost haptic VR glove that won the People’s Choice award at SXSW Sydney 2025.",
-  image: "/images/support/freesia-gaul.jpg",
-  imageAlt: "Freesia Gaul wearing her haptic VR glove",
-  storyLabel: "Read Freesia’s story",
-  storyUrl: FREESIA_STORY_URL,
+export const TESTIMONIAL_EXTRAS: Record<string, TestimonialExtras> = {
+  "Freesia Gaul": {
+    location: "Australia",
+    summary:
+      "Freesia taught herself circuits with free MIT courses, then built a low-cost haptic VR glove that won the People’s Choice award at SXSW Sydney 2025.",
+    imageAlt: "Freesia Gaul wearing her haptic VR glove",
+    storyLabel: "Read Freesia’s story",
+    storyUrl: FREESIA_STORY_URL,
+  },
 }
+
+/**
+ * Locally, media URLs are paths on the API host ("/media/..."); with S3 they
+ * are already absolute. Resolve both against the API.
+ */
+const mediaUrl = (url: string) =>
+  new URL(url, env("NEXT_PUBLIC_MITOL_API_BASE_URL")).toString()
 
 const Inner = styled(SectionInner)({
   display: "flex",
@@ -159,9 +168,64 @@ const Prompt = styled.p(({ theme }) => ({
 
 const newTab = { target: "_blank", rel: "noopener noreferrer" }
 
+const TestimonialCard: React.FC<{
+  attestation: Attestation
+  shareStoryUrl?: string
+}> = ({ attestation, shareStoryUrl }) => {
+  const extras = TESTIMONIAL_EXTRAS[attestation.attestant_name]
+  return (
+    <Card>
+      {attestation.cover ? (
+        <Photo>
+          <Image
+            src={mediaUrl(attestation.cover)}
+            alt={extras?.imageAlt ?? ""}
+            fill
+            sizes="(max-width: 900px) 100vw, 702px"
+          />
+        </Photo>
+      ) : null}
+      <Details>
+        <Story>
+          <Quote>“{attestation.quote}”</Quote>
+          <Attribution>
+            <strong>{attestation.attestant_name}</strong>
+            {extras ? ` · ${extras.location}` : null}
+          </Attribution>
+          {extras ? <Summary>{extras.summary}</Summary> : null}
+        </Story>
+        {extras ? (
+          <div>
+            <TextLink href={extras.storyUrl} {...newTab}>
+              {extras.storyLabel}
+              <RiExternalLinkLine aria-hidden />
+            </TextLink>
+          </div>
+        ) : null}
+        {shareStoryUrl ? (
+          <Prompt>
+            Has MIT helped you learn?
+            <TextLink href={shareStoryUrl} {...newTab}>
+              Share your story
+              <RiArrowRightLine aria-hidden />
+            </TextLink>
+          </Prompt>
+        ) : null}
+      </Details>
+    </Card>
+  )
+}
+
 const TestimonialSection: React.FC = () => {
   const shareStoryUrl = getSupportShareStoryUrl()
-  const t = TESTIMONIAL
+  const { data, isLoading } = useTestimonialList({
+    position: TESTIMONIAL_POSITION,
+  })
+  const attestation = data?.results[0]
+
+  // Nothing to feature: leave the section out rather than show an empty card.
+  if (!isLoading && !attestation) return null
+
   return (
     <Section shade="gray">
       <Inner>
@@ -185,40 +249,18 @@ const TestimonialSection: React.FC = () => {
             </ButtonLink>
           ) : null}
         </Header>
-        <Card>
-          <Photo>
-            <Image
-              src={t.image}
-              alt={t.imageAlt}
-              fill
-              sizes="(max-width: 900px) 100vw, 702px"
-            />
-          </Photo>
-          <Details>
-            <Story>
-              <Quote>“{t.quote}”</Quote>
-              <Attribution>
-                <strong>{t.name}</strong> · {t.location}
-              </Attribution>
-              <Summary>{t.summary}</Summary>
-            </Story>
-            <div>
-              <TextLink href={t.storyUrl} {...newTab}>
-                {t.storyLabel}
-                <RiExternalLinkLine aria-hidden />
-              </TextLink>
-            </div>
-            {shareStoryUrl ? (
-              <Prompt>
-                Has MIT helped you learn?
-                <TextLink href={shareStoryUrl} {...newTab}>
-                  Share your story
-                  <RiArrowRightLine aria-hidden />
-                </TextLink>
-              </Prompt>
-            ) : null}
-          </Details>
-        </Card>
+        {attestation ? (
+          <TestimonialCard
+            attestation={attestation}
+            shareStoryUrl={shareStoryUrl}
+          />
+        ) : (
+          <Skeleton
+            variant="rectangular"
+            height={503}
+            data-testid="testimonial-skeleton"
+          />
+        )}
       </Inner>
     </Section>
   )

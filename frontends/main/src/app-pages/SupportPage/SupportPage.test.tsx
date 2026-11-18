@@ -1,7 +1,10 @@
 import React from "react"
-import { renderWithProviders, screen, within } from "@/test-utils"
+import { renderWithProviders, screen, waitFor, within } from "@/test-utils"
+import { makeRequest, setMockResponse, urls } from "api/test-utils"
+import { testimonials as factories } from "api/test-utils/factories"
+import type { Attestation } from "api/v0"
 import SupportPage from "./SupportPage"
-import { TESTIMONIAL } from "./TestimonialSection"
+import { TESTIMONIAL_EXTRAS, TESTIMONIAL_POSITION } from "./TestimonialSection"
 import {
   FREESIA_STORY_URL,
   IMPACT_REPORT_URLS,
@@ -10,6 +13,22 @@ import {
 } from "./links"
 
 const SHARE_STORY_URL = "https://forms.example.com/share-your-story"
+
+const FREESIA = factories.testimonial({
+  attestant_name: "Freesia Gaul",
+  quote: "The free courses gave me a solid foundation.",
+  cover: "/media/testimonial/freesia-cover.jpg",
+})
+const FREESIA_EXTRAS = TESTIMONIAL_EXTRAS["Freesia Gaul"]
+
+const mockTestimonials = (results: Attestation[]) =>
+  setMockResponse.get(
+    urls.testimonials.list({ position: TESTIMONIAL_POSITION }),
+    { count: results.length, next: null, previous: null, results },
+  )
+
+/** Waits for the testimonial card, which renders once the API responds. */
+const findQuote = (quote = FREESIA.quote) => screen.findByText(`“${quote}”`)
 
 const expectNewTab = (link: HTMLElement) => {
   expect(link).toHaveAttribute("target", "_blank")
@@ -44,6 +63,10 @@ const INITIATIVES = [
 ] as const
 
 describe("SupportPage", () => {
+  beforeEach(() => {
+    mockTestimonials([FREESIA])
+  })
+
   afterEach(() => {
     delete process.env.NEXT_PUBLIC_SUPPORT_SHARE_STORY_URL
   })
@@ -216,28 +239,113 @@ describe("SupportPage", () => {
   })
 
   describe("testimonial", () => {
-    test("shows the quote, attribution and summary", () => {
+    test("fetches the testimonial at the featured position", async () => {
+      renderWithProviders(<SupportPage />)
+      await findQuote()
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "get",
+          url: urls.testimonials.list({ position: TESTIMONIAL_POSITION }),
+        }),
+      )
+    })
+
+    test("shows a placeholder while the testimonial loads", async () => {
       renderWithProviders(<SupportPage />)
       const section = sectionOf(SECTION_TITLES.testimonial)
-      const quote = within(section).getByText(`“${TESTIMONIAL.quote}”`)
+      within(section).getByTestId("testimonial-skeleton")
+      await findQuote()
+      expect(
+        within(section).queryByTestId("testimonial-skeleton"),
+      ).not.toBeInTheDocument()
+    })
+
+    test("shows the quote and name from the API", async () => {
+      renderWithProviders(<SupportPage />)
+      const quote = await findQuote()
       expect(quote.tagName).toBe("BLOCKQUOTE")
-      within(section).getByText(TESTIMONIAL.name)
-      within(section).getByText(new RegExp(TESTIMONIAL.location))
-      within(section).getByText(TESTIMONIAL.summary)
+      within(sectionOf(SECTION_TITLES.testimonial)).getByText(
+        FREESIA.attestant_name,
+      )
     })
 
-    test("shows the learner's photo with alt text", () => {
+    test("features the first testimonial the API returns", async () => {
+      const other = factories.testimonial({ quote: "Another quote." })
+      mockTestimonials([FREESIA, other])
       renderWithProviders(<SupportPage />)
+      await findQuote()
+      expect(screen.queryByText("“Another quote.”")).not.toBeInTheDocument()
+    })
+
+    test("shows the hardcoded details for a known attestant", async () => {
+      renderWithProviders(<SupportPage />)
+      await findQuote()
       const section = sectionOf(SECTION_TITLES.testimonial)
-      within(section).getByRole("img", { name: TESTIMONIAL.imageAlt })
+      within(section).getByText(new RegExp(`· ${FREESIA_EXTRAS.location}`))
+      within(section).getByText(FREESIA_EXTRAS.summary)
+      const link = within(section).getByRole("link", {
+        name: FREESIA_EXTRAS.storyLabel,
+      })
+      expect(link).toHaveAttribute("href", FREESIA_STORY_URL)
+      expectNewTab(link)
     })
 
-    test("links to the full story in a new tab", () => {
+    test("shows the cover photo, resolved against the API, with alt text", async () => {
       renderWithProviders(<SupportPage />)
-      const link = screen.getByRole("link", { name: TESTIMONIAL.storyLabel })
-      expect(link).toHaveAttribute("href", FREESIA_STORY_URL)
-      expect(TESTIMONIAL.storyUrl).toBe(FREESIA_STORY_URL)
-      expectNewTab(link)
+      await findQuote()
+      const photo = within(sectionOf(SECTION_TITLES.testimonial)).getByRole(
+        "img",
+        { name: FREESIA_EXTRAS.imageAlt },
+      )
+      const apiBase = process.env.NEXT_PUBLIC_MITOL_API_BASE_URL!
+      expect(decodeURIComponent(photo.getAttribute("src")!)).toContain(
+        new URL(FREESIA.cover!, apiBase).toString(),
+      )
+    })
+
+    test("leaves out the hardcoded details for any other attestant", async () => {
+      const other = factories.testimonial({
+        attestant_name: "Someone Else",
+        quote: "Someone else's quote.",
+      })
+      mockTestimonials([other])
+      renderWithProviders(<SupportPage />)
+      await findQuote(other.quote)
+      const section = sectionOf(SECTION_TITLES.testimonial)
+      within(section).getByText("Someone Else")
+      expect(within(section).queryByText(/·/)).not.toBeInTheDocument()
+      expect(
+        within(section).queryByText(FREESIA_EXTRAS.summary),
+      ).not.toBeInTheDocument()
+      expect(
+        within(section).queryByRole("link", {
+          name: FREESIA_EXTRAS.storyLabel,
+        }),
+      ).not.toBeInTheDocument()
+      // Without a known description, the photo is decorative.
+      expect(section.querySelector("img")).toHaveAttribute("alt", "")
+    })
+
+    test("leaves out the photo when the testimonial has no cover", async () => {
+      mockTestimonials([{ ...FREESIA, cover: null }])
+      renderWithProviders(<SupportPage />)
+      await findQuote()
+      expect(
+        sectionOf(SECTION_TITLES.testimonial).querySelector("img"),
+      ).toBeNull()
+    })
+
+    test("leaves out the section when there is no testimonial", async () => {
+      mockTestimonials([])
+      renderWithProviders(<SupportPage />)
+      await waitFor(() =>
+        expect(
+          screen.queryByRole("heading", { name: SECTION_TITLES.testimonial }),
+        ).not.toBeInTheDocument(),
+      )
+      // The sections around it still render.
+      sectionOf(SECTION_TITLES.letter)
+      sectionOf(SECTION_TITLES.metrics)
     })
   })
 
@@ -312,9 +420,10 @@ describe("SupportPage", () => {
   })
 
   describe("Share your story", () => {
-    test("every CTA links to the configured form in a new tab", () => {
+    test("every CTA links to the configured form in a new tab", async () => {
       process.env.NEXT_PUBLIC_SUPPORT_SHARE_STORY_URL = SHARE_STORY_URL
       renderWithProviders(<SupportPage />)
+      await findQuote()
       screen.getByRole("heading", { name: "Share your story" })
       const links = screen.getAllByRole("link", { name: "Share your story" })
       // Hero option, testimonial header, and the "Has MIT helped you learn?" prompt.
@@ -325,9 +434,10 @@ describe("SupportPage", () => {
       })
     })
 
-    test("the testimonial shows the header button and the prompt", () => {
+    test("the testimonial shows the header button and the prompt", async () => {
       process.env.NEXT_PUBLIC_SUPPORT_SHARE_STORY_URL = SHARE_STORY_URL
       renderWithProviders(<SupportPage />)
+      await findQuote()
       const section = sectionOf(SECTION_TITLES.testimonial)
       expect(
         within(section).getAllByRole("link", { name: "Share your story" }),
@@ -335,9 +445,10 @@ describe("SupportPage", () => {
       within(section).getByText("Has MIT helped you learn?")
     })
 
-    test("uses the configured URL with surrounding whitespace trimmed", () => {
+    test("uses the configured URL with surrounding whitespace trimmed", async () => {
       process.env.NEXT_PUBLIC_SUPPORT_SHARE_STORY_URL = `  ${SHARE_STORY_URL}\n`
       renderWithProviders(<SupportPage />)
+      await findQuote()
       screen
         .getAllByRole("link", { name: "Share your story" })
         .forEach((link) =>
@@ -349,11 +460,12 @@ describe("SupportPage", () => {
       ["unset", undefined],
       ["empty", ""],
       ["whitespace", "   "],
-    ])("is not rendered when the form URL is %s", (_label, value) => {
+    ])("is not rendered when the form URL is %s", async (_label, value) => {
       if (value !== undefined) {
         process.env.NEXT_PUBLIC_SUPPORT_SHARE_STORY_URL = value
       }
       renderWithProviders(<SupportPage />)
+      await findQuote()
       expect(
         screen.queryByRole("heading", { name: "Share your story" }),
       ).not.toBeInTheDocument()
@@ -365,7 +477,7 @@ describe("SupportPage", () => {
       ).not.toBeInTheDocument()
       // The rest of the page still renders.
       screen.getByRole("heading", { level: 2, name: "Donate" })
-      screen.getByRole("link", { name: TESTIMONIAL.storyLabel })
+      screen.getByRole("link", { name: FREESIA_EXTRAS.storyLabel })
     })
   })
 })

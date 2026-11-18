@@ -1,5 +1,6 @@
 import React from "react"
 import { renderWithProviders, screen } from "@/test-utils"
+import { setMockResponse, urls } from "api/test-utils"
 import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import Page, { metadata } from "./page"
@@ -10,6 +11,15 @@ jest.mock("@/common/useFeatureFlagsLoaded", () => ({
 jest.mock("@/common/useFeatureFlag")
 
 describe("support page.tsx", () => {
+  beforeEach(() => {
+    setMockResponse.get(urls.testimonials.list({ position: 1 }), {
+      count: 0,
+      next: null,
+      previous: null,
+      results: [],
+    })
+  })
+
   test("renders the Support page when the flag is on", () => {
     jest.mocked(useFeatureFlagsLoaded).mockReturnValue(true)
     jest.mocked(useFeatureFlag).mockReturnValue(true)
