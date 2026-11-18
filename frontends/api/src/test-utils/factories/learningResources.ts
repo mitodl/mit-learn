@@ -641,6 +641,7 @@ const practiceProblem: PartialFactory<PracticeProblem> = (overrides = {}) => {
     {
       number: String(faker.number.int({ min: 1, max: 10 })),
       document_title: `Problem Set ${faker.number.int({ min: 1, max: 10 })}`,
+      context: "",
       statement: `${faker.lorem.sentence()} $x^2 + y^2 = r^2$`,
       parts: [
         { label: "a", body: faker.lorem.sentence() },

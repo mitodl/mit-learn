@@ -16170,6 +16170,11 @@ components:
           type: string
           readOnly: true
           description: The title of the PDF the problem is from
+        context:
+          type: string
+          readOnly: true
+          description: Material outside the problem that it cites (shared setup, constants,
+            an earlier problem) as markdown
         statement:
           type: string
           readOnly: true
@@ -16200,6 +16205,7 @@ components:
           - $ref: '#/components/schemas/PracticeProblemSource'
           readOnly: true
       required:
+      - context
       - document_title
       - number
       - pages

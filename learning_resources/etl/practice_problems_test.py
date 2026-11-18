@@ -161,6 +161,27 @@ def test_parse_structured_problems_split_node():
     assert problem.solution == "Answer."
 
 
+def test_parse_structured_problems_context():
+    """A problem keeps the material outside it that it or its parts cite"""
+    markdown = (
+        _header()
+        + _node("n0", "instructions")
+        + "Take $g = 9.8\\,m/s^2$.\n"
+        + _node("n1", "problem", problem="1", number="1")
+        + "## Problem 1\n\nDrop a ball.\n"
+        + _node("n2", "solution", "n1", problem="1")
+        + "It falls.\n"
+        + _node("n3", "problem", problem="2", number="2", depends_on=["n3", "n1"])
+        + "## Problem 2\n\nDrop it again.\n"
+        + _node("n4", "part", "n3", problem="2", part="a", depends_on=["n0", "n2"])
+        + "(a) How long does it take?\n"
+    )
+    first, second = parse_structured_problems(markdown).problems
+    assert first.context == ""
+    # in source order; not its own text or another problem's solution
+    assert second.context == ("Take $g = 9.8\\,m/s^2$.\n\n## Problem 1\n\nDrop a ball.")
+
+
 def test_clean_display_markdown_region_without_image():
     """A region whose image was not saved shows its transcription"""
     markdown = (

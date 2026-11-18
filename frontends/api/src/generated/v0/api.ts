@@ -1684,6 +1684,10 @@ export interface PracticeProblem {
    */
   document_title: string
   /**
+   * Material outside the problem that it cites (shared setup, constants, an earlier problem) as markdown
+   */
+  context: string
+  /**
    * The problem\'s stem as markdown
    */
   statement: string

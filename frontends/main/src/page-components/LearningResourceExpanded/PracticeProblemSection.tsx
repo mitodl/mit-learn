@@ -53,6 +53,16 @@ const Card = styled.div(({ theme }) => ({
   },
 }))
 
+const ContextCard = styled(Card)(({ theme }) => ({
+  backgroundColor: theme.custom.colors.lightGray1,
+}))
+
+const ContextLabel = styled.h3(({ theme }) => ({
+  ...theme.typography.subtitle3,
+  color: theme.custom.colors.silverGrayDark,
+  margin: "0 0 8px",
+}))
+
 const Parts = styled.ol({
   listStyle: "none",
   margin: 0,
@@ -121,8 +131,9 @@ const partsLabel = (count: number) => {
 }
 
 /**
- * The drawer's view of a practice problem: its statement and parts rendered
- * from the markdown read from its PDF, and the course and file it is from.
+ * The drawer's view of a practice problem: the material it cites from
+ * elsewhere in its PDF, its statement and parts rendered from the markdown
+ * read from that PDF, and the course and file it is from.
  */
 const PracticeProblemSection: React.FC<PracticeProblemSectionProps> = ({
   resource,
@@ -160,6 +171,12 @@ const PracticeProblemSection: React.FC<PracticeProblemSectionProps> = ({
           ))}
         </Meta>
       </Header>
+      {problem.context ? (
+        <ContextCard data-testid="practice-problem-context">
+          <ContextLabel>Context from the problem set</ContextLabel>
+          <ProblemMarkdown>{problem.context}</ProblemMarkdown>
+        </ContextCard>
+      ) : null}
       <Card data-testid="practice-problem-statement">
         {problem.statement ? (
           <ProblemMarkdown>{problem.statement}</ProblemMarkdown>

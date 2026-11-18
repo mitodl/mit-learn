@@ -89,8 +89,29 @@ describe("PracticeProblemSection", () => {
       ),
     )
     expect(screen.getByText(/Transcribed by AI/)).toBeInTheDocument()
+    // a problem citing nothing outside it has no context
+    expect(
+      screen.queryByTestId("practice-problem-context"),
+    ).not.toBeInTheDocument()
     // the default drawer content is not shown
     expect(screen.queryByTestId("drawer-cta")).not.toBeInTheDocument()
+  })
+
+  test("Renders the material the problem cites from its problem set", () => {
+    setup(
+      factories.learningResources.practiceProblem({
+        context: "Take $g = 9.8$ for every problem.",
+      }),
+    )
+    const context = screen.getByTestId("practice-problem-context")
+    expect(
+      within(context).getByRole("heading", {
+        name: "Context from the problem set",
+      }),
+    ).toBeInTheDocument()
+    expect(
+      within(context).getByText("Take $g = 9.8$ for every problem."),
+    ).toBeInTheDocument()
   })
 
   test.each([

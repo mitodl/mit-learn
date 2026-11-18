@@ -1246,6 +1246,7 @@ def test_delete_unlinked_figure_versions(figure_storage):
             "linked",
             "tutor",
             "statement",
+            "context",
             "solution",
             "parts",
             "image",
@@ -1268,6 +1269,9 @@ def test_delete_unlinked_figure_versions(figure_storage):
         statement="![a](https://cdn.test/figures/file/statement/p1_1.png)"
     )
     PracticeProblemFactory.create(
+        context="![a](https://cdn.test/figures/file/context/p1_1.png)"
+    )
+    PracticeProblemFactory.create(
         solution="![a](https://cdn.test/figures/file/solution/p1_1.png)"
     )
     PracticeProblemFactory.create(
@@ -1284,7 +1288,16 @@ def test_delete_unlinked_figure_versions(figure_storage):
         statement="![a](https://cdn.test/figures/file/unpublished/p1_1.png)",
     )
     utils._delete_unlinked_figure_versions("figures/file/new")  # noqa: SLF001
-    for name in ("new", "linked", "tutor", "statement", "solution", "parts", "image"):
+    for name in (
+        "new",
+        "linked",
+        "tutor",
+        "statement",
+        "context",
+        "solution",
+        "parts",
+        "image",
+    ):
         assert (folders[name] / "p1_1.png").exists(), name
     for name in ("unpublished", "unlinked"):
         assert not (folders[name] / "p1_1.png").exists(), name

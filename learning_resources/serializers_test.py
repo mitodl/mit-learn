@@ -245,7 +245,9 @@ def test_serialize_document_resource_with_content_files():
 
 def test_serialize_practice_problem_resource():
     """A practice problem is serialized with its source, without its solution"""
-    problem = factories.PracticeProblemFactory.create(pages=[2, 3])
+    problem = factories.PracticeProblemFactory.create(
+        pages=[2, 3], context="Take $g = 9.8$."
+    )
     problem.refresh_from_db()
     run = problem.content_file.run
     resource = LearningResource.objects.for_serialization().get(
@@ -256,6 +258,7 @@ def test_serialize_practice_problem_resource():
     assert data["practice_problem"] == {
         "number": problem.number,
         "document_title": "Problem Set 1",
+        "context": "Take $g = 9.8$.",
         "statement": problem.statement,
         "parts": [{"label": "a", "body": "Find $v(t)$."}],
         "pages": [2, 3],

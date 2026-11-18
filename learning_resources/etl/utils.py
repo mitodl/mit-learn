@@ -1512,6 +1512,7 @@ def _figure_version_linked(folder: str) -> bool:
         .annotate(parts_text=Cast("parts", TextField()))
         .filter(
             Q(statement__contains=link)
+            | Q(context__contains=link)
             | Q(solution__contains=link)
             | Q(parts_text__contains=link)
         )

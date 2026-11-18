@@ -1459,6 +1459,7 @@ def load_practice_problems(
                         :256
                     ],
                     "statement": problem.statement,
+                    "context": problem.context,
                     "parts": parts,
                     "solution": problem.solution,
                     "pages": problem.pages,

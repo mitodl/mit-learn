@@ -45,6 +45,7 @@ class ParsedProblem:
     friendly_title: str
     statement: str
     parts: list[ProblemPart] = field(default_factory=list)
+    context: str = ""
     solution: str = ""
     pages: list[int] = field(default_factory=list)
     topics: list[str] = field(default_factory=list)
@@ -186,9 +187,13 @@ def _problem(problem: _Node, nodes: list[_Node]) -> ParsedProblem | None:
     labels: dict[str, str] = {}
     solutions: list[str] = []
     pages = set(problem.meta.get("pages") or [])
+    own = {problem.id}
+    cited = set(problem.meta.get("depends_on") or [])
     for node in nodes:
         if node.id == problem.id or (container := owner(node)) is None:
             continue
+        own.add(node.id)
+        cited.update(node.meta.get("depends_on") or [])
         pages.update(node.meta.get("pages") or [])
         if node.role == SOLUTION_ROLE:
             label = _part_label(node.meta)
@@ -207,6 +212,17 @@ def _problem(problem: _Node, nodes: list[_Node]) -> ParsedProblem | None:
             labels.setdefault(container.id, _part_label(container.meta))
 
     statement = clean_display_markdown("\n\n".join(stem))
+    # what the problem and its parts cite from outside it (shared setup,
+    # constants, an earlier problem), in source order
+    context = clean_display_markdown(
+        "\n\n".join(
+            node.text
+            for node in nodes
+            if node.id in cited
+            and node.id not in own
+            and node.role not in {SOLUTION_ROLE, "boilerplate"}
+        )
+    )
     problem_parts = [
         ProblemPart(label=labels[node_id], body=body)
         for node_id, texts in parts.items()
@@ -224,6 +240,7 @@ def _problem(problem: _Node, nodes: list[_Node]) -> ParsedProblem | None:
         friendly_title=str(problem.meta.get("friendly_title") or ""),
         statement=statement,
         parts=problem_parts,
+        context=context,
         solution=clean_display_markdown("\n\n".join(solutions)),
         pages=sorted(p for p in pages if isinstance(p, int)),
         topics=[str(t) for t in topics] if isinstance(topics, list) else [],

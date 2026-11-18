@@ -1844,6 +1844,14 @@ class PracticeProblem(LearningResourceDetailModel):
     statement = models.TextField(
         blank=True, default="", help_text="The problem's stem as markdown"
     )
+    context = models.TextField(
+        blank=True,
+        default="",
+        help_text=(
+            "Material outside the problem that it cites (shared setup, "
+            "constants, an earlier problem) as markdown"
+        ),
+    )
     parts = models.JSONField(
         default=list,
         blank=True,

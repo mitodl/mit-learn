@@ -628,6 +628,7 @@ class PracticeProblemSerializer(serializers.ModelSerializer):
         fields = (
             "number",
             "document_title",
+            "context",
             "statement",
             "parts",
             "pages",
