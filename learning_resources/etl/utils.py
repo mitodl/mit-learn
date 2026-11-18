@@ -18,6 +18,7 @@ from hashlib import md5, sha256
 from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from urllib.parse import urljoin, urlparse
 
 import boto3
 import pypdfium2 as pdfium
@@ -1470,6 +1471,19 @@ def _pdf_to_markdown(pdf_path, figure_folder: str | None = None):
         )
 
 
+def _absolute_storage_url(name: str) -> str:
+    """
+    Return the url of a file in the default storage, made absolute against the
+    API when the storage gives a path (FileSystemStorage, i.e. local
+    development), so it loads from the frontend's origin and reads as an image
+    url.
+    """
+    url = default_storage.url(name)
+    if urlparse(url).netloc or not settings.MITOL_API_BASE_URL:
+        return url
+    return urljoin(settings.MITOL_API_BASE_URL, url)
+
+
 def _store_figures(markdown: str, figures: list, folder: str) -> str:
     """
     Save each figure crop the converter wrote to the default storage and link it
@@ -1487,7 +1501,7 @@ def _store_figures(markdown: str, figures: list, folder: str) -> str:
                 default_storage.delete(name)
             with figure.path.open("rb") as image:
                 name = default_storage.save(name, File(image))
-            stored = figure.image_markdown(default_storage.url(name))
+            stored = figure.image_markdown(_absolute_storage_url(name))
         except Exception:
             log.exception("Saving figure %s failed", figure.figure_id)
             stored = figure.placeholder()
