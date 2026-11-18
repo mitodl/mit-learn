@@ -479,6 +479,20 @@ AWS_ACCESS_KEY_ID = get_string("AWS_ACCESS_KEY_ID", False)  # noqa: FBT003
 AWS_SECRET_ACCESS_KEY = get_string("AWS_SECRET_ACCESS_KEY", False)  # noqa: FBT003
 AWS_STORAGE_BUCKET_NAME = get_string("AWS_STORAGE_BUCKET_NAME", False)  # noqa: FBT003
 AWS_QUERYSTRING_AUTH = get_string("AWS_QUERYSTRING_AUTH", False)  # noqa: FBT003
+# Optional django-storages settings for an S3-compatible endpoint other than
+# AWS (local development runs RustFS). The storage-specific keys let the
+# default storage use that endpoint's credentials while every other boto3
+# client keeps AWS_ACCESS_KEY_ID. Each is defined only when set, because
+# django-storages falls back to AWS_ACCESS_KEY_ID only when
+# AWS_S3_ACCESS_KEY_ID is absent, not when it is None.
+for _storage_setting in (
+    "AWS_S3_ENDPOINT_URL",
+    "AWS_S3_ACCESS_KEY_ID",
+    "AWS_S3_SECRET_ACCESS_KEY",
+    "AWS_S3_ADDRESSING_STYLE",
+):
+    if _storage_value := get_string(_storage_setting, None):
+        globals()[_storage_setting] = _storage_value
 # Provide nice validation of the configuration
 if MITOL_USE_S3 and (
     not AWS_ACCESS_KEY_ID or not AWS_SECRET_ACCESS_KEY or not AWS_STORAGE_BUCKET_NAME
