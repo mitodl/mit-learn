@@ -1597,7 +1597,7 @@ def _publish_profile(
     its last profile.
     """
     # deferred, like the claim modules
-    from learning_resources.profiles.resource_profile import publish_resource_profile
+    from learning_resources.profiles.run_profile import publish_resource_profile
 
     try:
         built = publish_resource_profile(resource, run_extraction)
@@ -1658,6 +1658,63 @@ def generate_all_claims(resource_ids: list[int], *, overwrite: bool = False) -> 
             generate_claims_for_resource.si(resource_id, overwrite=overwrite)
             for resource_id in resource_ids
         ]
+    ).apply_async()
+    return len(resource_ids)
+
+
+@app.task(acks_late=True)
+def rebuild_resource_profile(resource_id: int) -> bool | None:
+    """
+    Rebuild a resource's profile from its published run extraction: step 3
+    only.
+
+    No claims are generated, so it makes no model calls. It rebuilds even when
+    the profile is current, to apply a change to the code that builds
+    profiles, which the freshness check doesn't see.
+
+    Args:
+        resource_id (int): the LearningResource id
+
+    Returns:
+        bool | None: True when the profile was rebuilt, or None when the
+            resource has no published run extraction
+
+    Raises:
+        ProfileBuildError: when the extraction refers to units or extractions
+            that are gone
+    """
+    # deferred, like the claim modules
+    from learning_resources.profiles.run_profile import build_resource_profile
+
+    # publish_claim_extractions publishes at most one run extraction: the
+    # best run's, as of the resource's last successful sweep
+    extraction = ClaimExtraction.objects.filter(
+        run__learning_resource_id=resource_id,
+        level=ClaimExtraction.Level.RUN,
+        published=True,
+    ).first()
+    if extraction is None:
+        log.info(
+            "No published run claims to rebuild a profile from for %s", resource_id
+        )
+        return None
+    _, built = build_resource_profile(extraction, force=True)
+    return built
+
+
+@app.task(acks_late=True)
+def rebuild_resource_profiles(resource_ids: list[int]) -> int:
+    """
+    Queue a profile rebuild for each resource, without generating claims.
+
+    Args:
+        resource_ids (list of int): the LearningResource ids
+
+    Returns:
+        int: how many resources were queued
+    """
+    celery.group(
+        [rebuild_resource_profile.si(resource_id) for resource_id in resource_ids]
     ).apply_async()
     return len(resource_ids)
 

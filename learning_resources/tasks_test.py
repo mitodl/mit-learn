@@ -3831,7 +3831,7 @@ def test_generate_claims_for_resource(mocker, overwrite):
         return_value=run_extraction,
     )
     publish_profile = mocker.patch(
-        "learning_resources.profiles.resource_profile.publish_resource_profile",
+        "learning_resources.profiles.run_profile.publish_resource_profile",
         return_value=True,
     )
 
@@ -4142,7 +4142,7 @@ def test_generate_claims_for_resource_builds_profile(mocker, built, stat):
         return_value=run_extraction,
     )
     publish_profile = mocker.patch(
-        "learning_resources.profiles.resource_profile.publish_resource_profile",
+        "learning_resources.profiles.run_profile.publish_resource_profile",
         return_value=built,
     )
 
@@ -4173,7 +4173,7 @@ def test_generate_claims_for_resource_profile_failure(mocker):
         return_value=None,
     )
     mocker.patch(
-        "learning_resources.profiles.resource_profile.publish_resource_profile",
+        "learning_resources.profiles.run_profile.publish_resource_profile",
         side_effect=ValueError("bad"),
     )
 
@@ -4205,7 +4205,7 @@ def test_generate_claims_for_resource_failure_keeps_profile(mocker, failing):
         side_effect=ValueError("bad"),
     )
     publish_profile = mocker.patch(
-        "learning_resources.profiles.resource_profile.publish_resource_profile"
+        "learning_resources.profiles.run_profile.publish_resource_profile"
     )
 
     tasks.generate_claims_for_resource(unit.run.learning_resource.id)
@@ -4220,7 +4220,7 @@ def test_generate_claims_for_resource_no_units_deletes_profile(mocker):
         LearningResource, "best_run", new_callable=mocker.PropertyMock, return_value=run
     )
     publish_profile = mocker.patch(
-        "learning_resources.profiles.resource_profile.publish_resource_profile"
+        "learning_resources.profiles.run_profile.publish_resource_profile"
     )
 
     assert tasks.generate_claims_for_resource(run.learning_resource.id) is None
@@ -4237,4 +4237,50 @@ def test_generate_all_claims(mocker):
         mocker.call(1, overwrite=True),
         mocker.call(2, overwrite=True),
     ]
+    group.return_value.apply_async.assert_called_once()
+
+
+def test_rebuild_resource_profile(mocker):
+    """The profile is force-rebuilt from the published run extraction only"""
+    run = factories.LearningResourceRunFactory.create()
+    factories.ClaimExtractionFactory.create(
+        unit=None, run=run, level=ClaimExtraction.Level.RUN, published=False
+    )
+    published = factories.ClaimExtractionFactory.create(
+        unit=None, run=run, level=ClaimExtraction.Level.RUN, published=True
+    )
+    build = mocker.patch(
+        "learning_resources.profiles.run_profile.build_resource_profile",
+        return_value=(mocker.Mock(), True),
+    )
+    generate_run_claims = mocker.patch(
+        "learning_resources.profiles.run_claims.generate_run_claims"
+    )
+
+    assert tasks.rebuild_resource_profile(run.learning_resource.id) is True
+    build.assert_called_once_with(published, force=True)
+    generate_run_claims.assert_not_called()
+
+
+def test_rebuild_resource_profile_no_extraction(mocker):
+    """A resource without published run claims has nothing to rebuild"""
+    run = factories.LearningResourceRunFactory.create()
+    factories.ClaimExtractionFactory.create(
+        unit=None, run=run, level=ClaimExtraction.Level.RUN, published=False
+    )
+    build = mocker.patch(
+        "learning_resources.profiles.run_profile.build_resource_profile"
+    )
+
+    assert tasks.rebuild_resource_profile(run.learning_resource.id) is None
+    build.assert_not_called()
+
+
+def test_rebuild_resource_profiles(mocker):
+    """One rebuild task is queued per resource"""
+    group = mocker.patch("learning_resources.tasks.celery.group")
+    task = mocker.patch("learning_resources.tasks.rebuild_resource_profile")
+
+    assert tasks.rebuild_resource_profiles([1, 2]) == 2
+    assert task.si.call_args_list == [mocker.call(1), mocker.call(2)]
     group.return_value.apply_async.assert_called_once()

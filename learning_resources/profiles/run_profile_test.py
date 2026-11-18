@@ -21,7 +21,7 @@ from learning_resources.models import (
     Unit,
     UnitContentFile,
 )
-from learning_resources.profiles.resource_profile import (
+from learning_resources.profiles.run_profile import (
     ProfileBuildError,
     build_resource_profile,
     publish_resource_profile,
@@ -547,7 +547,7 @@ def test_build_failure_keeps_last_profile(resource, mocker):
         updated_on=now_in_utc() - timedelta(days=1)
     )
     mocker.patch(
-        "learning_resources.profiles.resource_profile._save_statements",
+        "learning_resources.profiles.run_profile._save_statements",
         side_effect=ValueError("bad"),
     )
 
