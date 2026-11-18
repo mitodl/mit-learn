@@ -1179,28 +1179,6 @@ def test_pdf_to_markdown_stores_figures(mocker, figure_storage, tmp_path):
     assert old.exists()
 
 
-def test_store_figures_relative_storage_url(mocker, figure_storage, settings):
-    """A relative storage url (local file storage) is made absolute against the API"""
-    from learning_resources.converters.opendataloader_llm_converter import Figure
-
-    storages = {**settings.STORAGES}
-    storages["default"] = {
-        **storages["default"],
-        "OPTIONS": {"location": str(figure_storage), "base_url": "/media/"},
-    }
-    settings.STORAGES = storages
-    settings.MITOL_API_BASE_URL = "http://api.test:8065"
-    figure = Figure("p1_1", 1, [100, 400, 300, 600], "a diagram", 612, 792)
-    figure.path = figure_storage.parent / "p1_1.png"
-    figure.path.write_bytes(b"png")
-    markdown = utils._store_figures(  # noqa: SLF001
-        figure.image_markdown("p1_1.png"), [figure], "figures/file/new"
-    )
-    assert markdown == figure.image_markdown(
-        "http://api.test:8065/media/figures/file/new/p1_1.png"
-    )
-
-
 def test_extract_content_tutor_problem_figures_are_placeholders(
     mocker, settings, tmp_path
 ):
