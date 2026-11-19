@@ -21,14 +21,18 @@ import {
   allowConsoleErrors,
 } from "ol-test-utilities"
 import { act } from "@testing-library/react"
-import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { PostHogEvents } from "@/common/constants"
 import { FeatureFlags } from "@/common/feature_flags"
 import { capturePostHog } from "@/common/analytics/posthog"
 
-jest.mock("posthog-js/react", () => ({
-  ...jest.requireActual("posthog-js/react"),
-  useFeatureFlagEnabled: jest.fn(),
+jest.mock("@/common/useFeatureFlag")
+
+// Covered by AiSearchOverview.test.tsx. Stubbed here because it requests an AI
+// summary for every search that has a query.
+jest.mock("@/page-components/SearchDisplay/AiSearchOverview", () => ({
+  __esModule: true,
+  default: () => null,
 }))
 
 jest.mock("@/common/analytics/posthog", () => ({
@@ -36,22 +40,16 @@ jest.mock("@/common/analytics/posthog", () => ({
   initPostHog: jest.fn(),
 }))
 
-const mockedUseFeatureFlagEnabled = jest.mocked(
-  useFeatureFlagEnabled as (flag: string) => boolean | undefined,
-)
+const mockedUseFeatureFlag = jest.mocked(useFeatureFlag)
 
 /**
- * Mock the named flags, leaving every other flag `undefined`—PostHog's value
- * for "not loaded / not set". Set flags by name rather than with a blanket
- * `mockReturnValue`: several unrelated features read flags on this page, and
- * the `disable-hybrid-search` kill switch in particular changes which search
- * endpoint
- * is called.
+ * Mock the named flags, leaving every other flag off. Set flags by name rather
+ * than with a blanket `mockReturnValue`: several unrelated features read flags
+ * on this page, and the `disable-hybrid-search` kill switch in particular
+ * changes which search endpoint is called.
  */
 const mockFeatureFlags = (flags: Partial<Record<FeatureFlags, boolean>>) => {
-  mockedUseFeatureFlagEnabled.mockImplementation(
-    (flag) => flags[flag as FeatureFlags],
-  )
+  mockedUseFeatureFlag.mockImplementation((flag) => flags[flag] ?? false)
 }
 
 // jest clears calls between tests but not implementations, so reset flags to

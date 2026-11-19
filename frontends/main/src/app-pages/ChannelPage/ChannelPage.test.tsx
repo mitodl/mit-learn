@@ -13,23 +13,20 @@ import ChannelSearch from "./ChannelSearch"
 import { assertHeadings, getByImageSrc } from "ol-test-utilities"
 import invariant from "tiny-invariant"
 import ChannelPage from "./ChannelPage"
-import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { FeatureFlags } from "@/common/feature_flags"
 import { DEPARTMENTS_LABEL, TOPICS_LABEL } from "./ChannelPageTemplate"
 
-jest.mock("posthog-js/react", () => ({
-  ...jest.requireActual("posthog-js/react"),
-  useFeatureFlagEnabled: jest.fn(),
-}))
+jest.mock("@/common/useFeatureFlag")
 jest.mock("@/common/useFeatureFlagsLoaded")
 
 /* Every flag off. The topic cases below are the redesigned page, which is no
    longer behind one; the department cases turn theirs on for themselves. */
 beforeEach(() => {
-  jest.mocked(useFeatureFlagEnabled).mockImplementation(() => false)
-  /* The page holds a spinner until the flags are in rather than render on a
-     bootstrapped value, so without this every case here waits on one. Loaded
+  jest.mocked(useFeatureFlag).mockImplementation(() => false)
+  /* The page holds a spinner until the flags are in rather than render on an
+     env default, so without this every case here waits on one. Loaded
      is the state these tests are about; the waiting is its own case below. */
   jest.mocked(useFeatureFlagsLoaded).mockReturnValue(true)
 })
@@ -393,9 +390,9 @@ describe("while the feature flags are still loading", () => {
   })
 
   /**
-   * The page is behind a flag, and a flag that has not loaded reads `false`
-   * from the bootstrapped value -- which is the same thing it reads when the
-   * page is genuinely off. Waiting is what stops a user who is entitled to
+   * The page is behind a flag, and a flag that has not loaded reads its env
+   * default, `false` here -- which is the same thing it reads when the page is
+   * genuinely off. Waiting is what stops a user who is entitled to
    * the page being shown the one for someone who is not.
    */
   test("holds a spinner on a page a flag decides", async () => {
@@ -467,7 +464,7 @@ describe("Channel Pages, Department only", () => {
   /* The department page is the topic page's, behind a flag of its own. */
   beforeEach(() => {
     jest
-      .mocked(useFeatureFlagEnabled)
+      .mocked(useFeatureFlag)
       .mockImplementation(
         (flag) => flag === FeatureFlags.DepartmentPageRedesign,
       )
@@ -564,7 +561,7 @@ describe("Channel Pages, Department only", () => {
   }, 10000)
 
   test("draws the old page with the flag off", async () => {
-    jest.mocked(useFeatureFlagEnabled).mockImplementation(() => false)
+    jest.mocked(useFeatureFlag).mockImplementation(() => false)
     const { channel } = setupApis({
       search_filter: "department=Theater+Arts",
       channel_type: ChannelTypeEnum.Department,

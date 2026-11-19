@@ -57,6 +57,8 @@ const contractUtilization = (
   seat_limit: 100,
   b2b_contract_membership_type: "fixed",
   seats_consumed: 62,
+  actively_enrolled_learners: 48,
+  // Deprecated alias the API still sends, always equal to actively_enrolled_learners.
   active_learners: 48,
   certified_learners: 20,
   // Deprecated alias the API still sends, always equal to certified_learners.
@@ -86,9 +88,12 @@ const enrollmentCompletionFunnel = (
   courserun_readable_id: `course-v1:MITx+${faker.string.alphanumeric(5)}+2026`,
   courserun_title: faker.commerce.productName(),
   enrolled_learners: 40,
+  actively_enrolled_learners: 31,
+  // Deprecated aliases the API still sends, always equal to the actively_enrolled_* fields.
   active_learners: 31,
   passing_learners: 18,
   certified_learners: 16,
+  actively_enrolled_rate_pct: 77.5,
   active_rate_pct: 77.5,
   completion_rate_pct: 40,
   ...overrides,
@@ -124,8 +129,10 @@ const contentEngagementDepth = (
   courserun_readable_id: `course-v1:MITx+${faker.string.alphanumeric(5)}+2026`,
   courserun_title: faker.commerce.productName(),
   // Internally consistent with the view's arithmetic: the rates divide by
-  // total_enrolled_learners, the averages by engaged_learners (800/28, 1000/28),
+  // actively_enrolled_learners, the averages by engaged_learners (800/28, 1000/28),
   // and every activity cohort is a subset of engaged_learners.
+  actively_enrolled_learners: 40,
+  // Deprecated alias the API still sends, always equal to actively_enrolled_learners.
   total_enrolled_learners: 40,
   engaged_learners: 28,
   engagement_rate_pct: 70,
@@ -205,31 +212,12 @@ const learnerProgress = (
   certificate_is_revoked: null,
   last_active_on: null,
   needs_attention: false,
+  days_active: faker.number.int({ min: 0, max: 30 }),
+  videos_watched: faker.number.int({ min: 0, max: 60 }),
+  problems_attempted: faker.number.int({ min: 0, max: 40 }),
+  chatbot_interactions: faker.number.int({ min: 0, max: 20 }),
   ...overrides,
 })
-
-/**
- * A learner who has not consented. The API nulls every outcome field server
- * side, so this factory does too — a fixture that left them populated would
- * let a component pass its test while rendering data the API never sends.
- */
-const withheldLearnerProgress = (
-  overrides: Partial<LearnerProgress> = {},
-): LearnerProgress =>
-  learnerProgress({
-    outcomes_consent_status: "declined",
-    outcomes_shared: false,
-    completion_status: null,
-    is_passing: null,
-    grade: null,
-    letter_grade: null,
-    content_progress: null,
-    certificate_issued_on: null,
-    certificate_is_revoked: null,
-    last_active_on: null,
-    needs_attention: null,
-    ...overrides,
-  })
 
 /**
  * `courserun_id` holds a readable id, matching the API's own alias — see
@@ -321,6 +309,9 @@ const learnersEnvelope = (
   organization_id: organizationId(),
   as_of: "2026-07-01T04:00:00Z",
   total_count: data.length,
+  outcomes_withheld_count: data.filter((learner) =>
+    learner.enrollments.some((enrollment) => !enrollment.outcomes_shared),
+  ).length,
   data,
   ...overrides,
 })
@@ -341,5 +332,4 @@ export {
   learnersFromRows,
   monthlyEngagementTrend,
   organizationId,
-  withheldLearnerProgress,
 }

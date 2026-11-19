@@ -1,5 +1,4 @@
 export {
-  analyticsOrganizationQueries,
   analyticsOrganizationKeys,
   analyticsContractQueries,
   analyticsContractKeys,

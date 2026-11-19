@@ -9,6 +9,7 @@ import {
 import {
   CourseWithCourseRunsSerializerV2,
   DisplayModeEnum,
+  V2ProgramDetail,
   V2ProgramDisplayModeEnum,
   V2ProgramRequirement,
 } from "@mitodl/mitxonline-api-axios/v2"
@@ -37,16 +38,17 @@ import {
   buildCourseEntry,
   courseIsCompleted,
   getProgramAsCourseModuleIds,
+  getProgramDetailsLink,
+  v2ProgramHasLiveProductPage,
 } from "./model/dashboardViewModel"
 import {
-  isVerifiedEnrollmentMode,
+  isPaidProgramEnrollmentMode,
   mitxonlineLegacyUrl,
 } from "@/common/mitxonline"
 import { RiAwardFill, RiMore2Line } from "@remixicon/react"
 import NiceModal from "@ebay/nice-modal-react"
 import { UnenrollProgramDialog } from "./DashboardDialogs"
 import { ProgramCertificateButton } from "./ProgramEnrollmentDisplay"
-import { programPageView } from "@/common/urls"
 
 const ProgramCardRoot = styled.div(({ theme }) => ({
   display: "flex",
@@ -160,10 +162,10 @@ const getContextMenuItems = (
   additionalItems: SimpleMenuItem[] = [],
 ) => {
   const menuItems = []
-  const detailsUrl = programPageView({
-    readable_id: resource.readable_id,
-    display_mode: resource.display_mode,
-  })
+  const detailsUrl = getProgramDetailsLink(
+    { readable_id: resource.readable_id, display_mode: resource.display_mode },
+    v2ProgramHasLiveProductPage(resource),
+  )
 
   const courseMenuItems = []
 
@@ -183,7 +185,7 @@ const getContextMenuItems = (
     href: mitxonlineLegacyUrl(`/records/${resource.id}/`),
   })
 
-  if (enrollmentMode && !isVerifiedEnrollmentMode(enrollmentMode)) {
+  if (enrollmentMode && !isPaidProgramEnrollmentMode(enrollmentMode)) {
     courseMenuItems.push({
       className: "dashboard-card-menu-item",
       key: "unenroll",
@@ -227,6 +229,8 @@ interface ProgramAsCourse {
   courses?: number[]
   req_tree?: V2ProgramRequirement[]
   display_mode?: V2ProgramDisplayModeEnum | null
+  live?: V2ProgramDetail["live"]
+  page: V2ProgramDetail["page"]
 }
 
 interface ProgramAsCourseCardProps {
@@ -357,7 +361,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
   const trimmedProgramChain = [...programChain]
   while (
     trimmedProgramChain.length > 0 &&
-    !isVerifiedEnrollmentMode(trimmedProgramChain.at(-1)?.enrollmentMode)
+    !isPaidProgramEnrollmentMode(trimmedProgramChain.at(-1)?.enrollmentMode)
   ) {
     trimmedProgramChain.pop()
   }
@@ -365,7 +369,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
   const useVerifiedEnrollment = [
     courseProgramEnrollment?.enrollment_mode,
     ancestorProgramEnrollment?.enrollment_mode,
-  ].some(isVerifiedEnrollmentMode)
+  ].some(isPaidProgramEnrollmentMode)
 
   const programCertificateUrl = getCertificateLink(
     courseProgramEnrollment?.certificate?.link,

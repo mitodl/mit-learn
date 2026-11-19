@@ -1,7 +1,6 @@
 import React from "react"
 import { Alert, Button, styled } from "@mitodl/smoot-design"
 import { Stack } from "ol-components"
-import { SignupPopover } from "@/page-components/SignupPopover/SignupPopover"
 import { EnrollButton } from "./EnrollAreaParts"
 import EnrolledLink from "./EnrolledLink"
 import { badRequestDetail } from "api/mutation-errors"
@@ -18,6 +17,15 @@ export const HeaderButtonSlot = styled.div(({ theme }) => ({
   display: "contents",
   "& button:not(:disabled), & a": {
     color: theme.custom.colors.darkGray2,
+  },
+  // A price range can outgrow one line on mobile; wrap rather than overflow.
+  [theme.breakpoints.down("sm")]: {
+    "& button": {
+      height: "auto",
+      minHeight: "48px",
+      whiteSpace: "normal",
+      textWrap: "balance",
+    },
   },
 }))
 
@@ -36,15 +44,17 @@ const HeaderAlertSizer = styled.div(({ theme }) => ({
   },
 }))
 
+const MobilePrice = styled.span(({ theme }) => ({
+  [theme.breakpoints.up("sm")]: { display: "none" },
+}))
+
 type HeaderEnrollButtonProps = {
   state: EnrollAreaState
+  price?: string | null
   isStatusLoading: boolean
   isPending: boolean
   /** The failed enroll action's error, or null when there was none. */
   error: unknown
-  /** SignupPopover anchor owned by the caller (set via the hook's onRequireSignup). */
-  anchor: HTMLButtonElement | null
-  onAnchorClose: () => void
 }
 
 /**
@@ -54,11 +64,10 @@ type HeaderEnrollButtonProps = {
  */
 const HeaderEnrollButton: React.FC<HeaderEnrollButtonProps> = ({
   state,
+  price,
   isStatusLoading,
   isPending,
   error,
-  anchor,
-  onAnchorClose,
 }) => {
   if (state.status === "enrolled") {
     return (
@@ -69,16 +78,22 @@ const HeaderEnrollButton: React.FC<HeaderEnrollButtonProps> = ({
   }
 
   if (state.status === "options") {
+    const action = state.options[0]
+    const buttonPrice =
+      action.kind === "paid" && price ? price.replace(" – ", " - ") : null
     return (
       <HeaderButtonSlot>
         <Stack gap="12px" alignItems="flex-start">
           <EnrollButton
-            action={state.options[0]}
+            action={action}
             size="large"
             loading={isStatusLoading}
             pending={isPending}
             variant="bordered"
             announceStatus={false}
+            labelSuffix={
+              buttonPrice ? <MobilePrice> – {buttonPrice}</MobilePrice> : null
+            }
           />
           {/* This hook instance's mutations are local to the header button, so
               failures must surface here — the InfoBox alert observes its own
@@ -93,7 +108,6 @@ const HeaderEnrollButton: React.FC<HeaderEnrollButtonProps> = ({
             </HeaderAlertSizer>
           )}
         </Stack>
-        <SignupPopover anchorEl={anchor} onClose={onAnchorClose} />
       </HeaderButtonSlot>
     )
   }

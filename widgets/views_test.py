@@ -65,28 +65,6 @@ EXPECTED_AVAILABLE_WIDGETS = [
         "widget_type": "URL",
         "description": "Embedded URL",
     },
-    {
-        "description": "People",
-        "form_spec": [
-            {
-                "default": [],
-                "field_name": "people",
-                "input_type": "people",
-                "label": "Add members to widget",
-                "under_text": None,
-                "props": {"placeholder": "Enter widget text"},
-            },
-            {
-                "default": False,
-                "field_name": "show_all_members_link",
-                "input_type": "checkbox",
-                "label": "Show all members link",
-                "under_text": None,
-                "props": {},
-            },
-        ],
-        "widget_type": "People",
-    },
 ]
 
 
@@ -109,6 +87,21 @@ def test_widget_list_get(client, widget_list):
         "widgets": [],
         "available_widgets": EXPECTED_AVAILABLE_WIDGETS,
     }
+
+
+def test_widget_list_get_omits_people_widget(client, widget_list):
+    """A stored People widget, which listed usernames, isn't returned anonymously"""
+    WidgetInstanceFactory.create(
+        widget_list=widget_list,
+        widget_type="People",
+        configuration={"people": ["someone@example.com"]},
+    )
+    url = reverse("widgets:v0:widget_list-detail", kwargs={"pk": widget_list.id})
+    resp = client.get(url)
+
+    assert resp.status_code == status.HTTP_200_OK
+    assert resp.json()["widgets"] == []
+    assert "someone@example.com" not in resp.content.decode()
 
 
 def test_widget_list_add_widget(widget_list, user_client):

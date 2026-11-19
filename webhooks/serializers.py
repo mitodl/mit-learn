@@ -94,9 +94,12 @@ class OVSVideoWebhookRequestSerializer(serializers.Serializer):
         The payload is attacker-controlled input, and its urls are fetched
         server-side (subtitles) or served to browsers (thumbnails, streams), so
         an unrecognized host is refused rather than silently dropped.
+
+        cta_link is not checked: it is only stored as the resource url, never
+        fetched, and the loader falls back to the OVS page url when its host is
+        not allowlisted.
         """
         candidates = [
-            ("cta_link", self.initial_data.get("cta_link")),
             *[("sources", src.get("src")) for src in self._nested_objects("sources")],
             *[
                 ("videothumbnail_set", thumbnail.get("cloudfront_url"))
@@ -261,3 +264,21 @@ class LearningResourceWebhookRequestSerializer(serializers.Serializer):
                 )
                 raise serializers.ValidationError(msg)
         return resources
+
+
+class WarehouseViewsWebhookRequestSerializer(serializers.Serializer):
+    """
+    Serializer for the ``/api/v1/webhooks/warehouse_views_rebuilt/`` endpoint.
+
+    ``views`` are plain strings, not choices: a view no sync reads is logged
+    and skipped, rather than rejecting the batch it came in.
+    """
+
+    views = serializers.ListField(
+        child=serializers.CharField(allow_blank=True),
+        allow_empty=False,
+        help_text=(
+            "Bare names of the warehouse views the data platform rebuilt, e.g. "
+            "integrations__learn__ocw_courses"
+        ),
+    )

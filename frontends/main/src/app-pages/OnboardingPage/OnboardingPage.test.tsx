@@ -20,7 +20,6 @@ import {
 } from "api/v0"
 import OnboardingPage from "./OnboardingPage"
 import { PostHogEvents } from "@/common/constants"
-import { trackAccountCreated } from "@/common/analytics/gtm"
 import { capturePostHog } from "@/common/analytics/posthog"
 
 jest.mock("@/common/analytics/posthog", () => ({
@@ -28,10 +27,6 @@ jest.mock("@/common/analytics/posthog", () => ({
   initPostHog: jest.fn(),
 }))
 const mockCapturePostHog = jest.mocked(capturePostHog)
-
-jest.mock("@/common/analytics/gtm", () => ({
-  trackAccountCreated: jest.fn(),
-}))
 
 jest.mock("next/navigation", () =>
   jest.requireActual("next-router-mock/navigation"),
@@ -208,33 +203,6 @@ describe("OnboardingPage", () => {
         PostHogEvents.CallToActionClicked,
         { label: "Finish", step: STEPS_DATA.length, location: "onboarding" },
       )
-    })
-  })
-
-  describe("GTM account-created tracking", () => {
-    beforeEach(() => {
-      jest.mocked(trackAccountCreated).mockClear()
-      sessionStorage.clear()
-    })
-
-    it("fires trackAccountCreated once the profile loads for a new user", async () => {
-      await setupAndProgressToStep(0, "/onboarding?is_new_user=1")
-      await waitFor(() => {
-        expect(trackAccountCreated).toHaveBeenCalledTimes(1)
-      })
-    })
-
-    it("does not fire trackAccountCreated when the new param is absent", async () => {
-      await setupAndProgressToStep(0)
-      await findNextButton()
-      expect(trackAccountCreated).not.toHaveBeenCalled()
-    })
-
-    it("does not fire trackAccountCreated again within the same session", async () => {
-      sessionStorage.setItem("gtm_account_created_tracked", "1")
-      await setupAndProgressToStep(0, "/onboarding?is_new_user=1")
-      await findNextButton()
-      expect(trackAccountCreated).not.toHaveBeenCalled()
     })
   })
 })

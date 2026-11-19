@@ -78,6 +78,14 @@ const nextConfig = {
         destination: "/c/department/music",
         permanent: true,
       },
+      {
+        /* The org-wide analytics page was removed in favor of the
+         * contract-scoped one, which needs a contract this URL doesn't carry.
+         */
+        source: "/dashboard/organization/:orgSlug/analytics",
+        destination: "/dashboard",
+        permanent: true,
+      },
     ]
   },
 

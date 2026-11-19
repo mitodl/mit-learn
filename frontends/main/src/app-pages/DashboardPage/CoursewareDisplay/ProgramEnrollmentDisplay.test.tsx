@@ -28,8 +28,11 @@ import {
 import { ProgramEnrollmentDisplay } from "./ProgramEnrollmentDisplay"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { makeRequest } from "api/test-utils"
-import { setupOrderHistory, setupCoursePricing } from "./test-utils"
-import { useFeatureFlagEnabled } from "posthog-js/react"
+import {
+  PAID_PROGRAM_ENROLLMENT_MODES,
+  setupOrderHistory,
+  setupCoursePricing,
+} from "./test-utils"
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
 
@@ -42,11 +45,6 @@ beforeEach(() => {
 beforeEach(() => {
   setupOrderHistory()
 })
-
-jest.mock("posthog-js/react")
-const mockedUseFeatureFlagEnabled = jest
-  .mocked(useFeatureFlagEnabled)
-  .mockImplementation(() => false)
 
 describe("ProgramEnrollmentDisplay", () => {
   setupLocationMock()
@@ -61,7 +59,6 @@ describe("ProgramEnrollmentDisplay", () => {
     })
     const courses = mitxonline.factories.courses.courses({ count: 3 })
 
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
@@ -126,7 +123,6 @@ describe("ProgramEnrollmentDisplay", () => {
       ],
     }
 
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
@@ -365,7 +361,6 @@ describe("ProgramEnrollmentDisplay", () => {
       ],
     }
 
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
@@ -484,7 +479,6 @@ describe("ProgramEnrollmentDisplay", () => {
       ],
     }
 
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
@@ -610,7 +604,6 @@ describe("ProgramEnrollmentDisplay", () => {
       ],
     }
 
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
@@ -735,7 +728,6 @@ describe("ProgramEnrollmentDisplay", () => {
       ],
     }
 
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
@@ -873,7 +865,6 @@ describe("ProgramEnrollmentDisplay", () => {
       results: [moduleCourse],
     }
 
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [
       mitxonline.factories.enrollment.courseEnrollment({
         run: { ...moduleRun, course: moduleCourse },
@@ -986,7 +977,6 @@ describe("ProgramEnrollmentDisplay", () => {
       ],
     }
 
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
@@ -1095,7 +1085,6 @@ describe("ProgramEnrollmentDisplay", () => {
       grades: [], // Enrolled but not completed
     })
 
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [
       enrollment,
     ])
@@ -1206,7 +1195,6 @@ describe("ProgramEnrollmentDisplay", () => {
     }
 
     setupCoursePricing(...courses.results)
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), []) // No enrollments
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
@@ -1305,7 +1293,6 @@ describe("ProgramEnrollmentDisplay", () => {
         ],
       }
 
-      mockedUseFeatureFlagEnabled.mockReturnValue(true)
       setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
       setMockResponse.get(
         mitxonline.urls.programEnrollments.enrollmentsListV3(),
@@ -1433,7 +1420,6 @@ describe("ProgramEnrollmentDisplay", () => {
       }),
     ]
 
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
     setMockResponse.get(
       mitxonline.urls.enrollment.enrollmentsListV3(),
       enrollments,
@@ -1538,7 +1524,6 @@ describe("ProgramEnrollmentDisplay", () => {
       }),
     ]
 
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
     setMockResponse.get(
       mitxonline.urls.enrollment.enrollmentsListV3(),
       enrollments,
@@ -1597,7 +1582,6 @@ describe("ProgramEnrollmentDisplay", () => {
       req_tree: reqTree.serialize(),
     })
 
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
     // User is not enrolled in any programs
     setMockResponse.get(
@@ -1624,7 +1608,9 @@ describe("ProgramEnrollmentDisplay", () => {
    * Mocks all API responses. Does not render — callers handle rendering
    * and assertions.
    */
-  const setupProgramDashboardVerifiedEnrollmentScenario = () => {
+  const setupProgramDashboardVerifiedEnrollmentScenario = (
+    enrollmentMode: (typeof PAID_PROGRAM_ENROLLMENT_MODES)[number],
+  ) => {
     const mitxOnlineUser = mitxonline.factories.user.user()
     setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
 
@@ -1686,7 +1672,7 @@ describe("ProgramEnrollmentDisplay", () => {
 
     const parentProgramEnrollment =
       mitxonline.factories.enrollment.programEnrollmentV3({
-        enrollment_mode: "verified",
+        enrollment_mode: enrollmentMode,
         program: {
           id: parentProgram.id,
           title: parentProgram.title,
@@ -1696,7 +1682,6 @@ describe("ProgramEnrollmentDisplay", () => {
         },
       })
 
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
@@ -1757,94 +1742,103 @@ describe("ProgramEnrollmentDisplay", () => {
     }
   }
 
-  test("Clicking 'Start' on a regular course in a verified program does one-click enrollment", async () => {
-    const {
-      parentProgram,
-      parentProgramEnrollment,
-      childCourse,
-      childCourseEnrollmentEndpoint,
-    } = setupProgramDashboardVerifiedEnrollmentScenario()
+  test.each(PAID_PROGRAM_ENROLLMENT_MODES)(
+    "Clicking 'Start' on a regular course in a %s program does one-click enrollment",
+    async (enrollmentMode) => {
+      const {
+        parentProgram,
+        parentProgramEnrollment,
+        childCourse,
+        childCourseEnrollmentEndpoint,
+      } = setupProgramDashboardVerifiedEnrollmentScenario(enrollmentMode)
 
-    renderWithProviders(
-      <ProgramEnrollmentDisplay programId={parentProgram.id} />,
-    )
-
-    await screen.findByText("Program Requirements")
-    await waitFor(
-      () => {
-        const skeletons = screen.queryAllByTestId("skeleton")
-        expect(skeletons).toHaveLength(0)
-      },
-      { timeout: 3000 },
-    )
-
-    const cards = screen.getAllByTestId("enrollment-card-desktop")
-    const card = cards.find((c) => within(c).queryByText(childCourse.title))
-    invariant(card, `Expected to find a card containing "${childCourse.title}"`)
-
-    const startButton = within(card).getByTestId("courseware-button")
-    await user.click(startButton)
-
-    await waitFor(() => {
-      expect(makeRequest).toHaveBeenCalledWith(
-        expect.objectContaining({
-          method: "post",
-          url: childCourseEnrollmentEndpoint,
-          body: [parentProgramEnrollment.program.readable_id],
-        }),
+      renderWithProviders(
+        <ProgramEnrollmentDisplay programId={parentProgram.id} />,
       )
-    })
 
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
-  })
-
-  test("Clicking 'Start' on a module in a program-as-course sends both parent and grandparent program IDs", async () => {
-    const {
-      parentProgram,
-      parentProgramEnrollment,
-      programAsCourse,
-      moduleCourse,
-      moduleCourseEnrollmentEndpoint,
-    } = setupProgramDashboardVerifiedEnrollmentScenario()
-
-    renderWithProviders(
-      <ProgramEnrollmentDisplay programId={parentProgram.id} />,
-    )
-
-    await screen.findByText("Program Requirements")
-    await waitFor(
-      () => {
-        const skeletons = screen.queryAllByTestId("skeleton")
-        expect(skeletons).toHaveLength(0)
-      },
-      { timeout: 3000 },
-    )
-
-    const cards = screen.getAllByTestId("enrollment-card-desktop")
-    const card = cards.find((c) => within(c).queryByText(moduleCourse.title))
-    invariant(
-      card,
-      `Expected to find a card containing "${moduleCourse.title}"`,
-    )
-
-    const startButton = within(card).getByTestId("courseware-button")
-    await user.click(startButton)
-
-    await waitFor(() => {
-      expect(makeRequest).toHaveBeenCalledWith(
-        expect.objectContaining({
-          method: "post",
-          url: moduleCourseEnrollmentEndpoint,
-          body: [
-            programAsCourse.readable_id,
-            parentProgramEnrollment.program.readable_id,
-          ],
-        }),
+      await screen.findByText("Program Requirements")
+      await waitFor(
+        () => {
+          const skeletons = screen.queryAllByTestId("skeleton")
+          expect(skeletons).toHaveLength(0)
+        },
+        { timeout: 3000 },
       )
-    })
 
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
-  })
+      const cards = screen.getAllByTestId("enrollment-card-desktop")
+      const card = cards.find((c) => within(c).queryByText(childCourse.title))
+      invariant(
+        card,
+        `Expected to find a card containing "${childCourse.title}"`,
+      )
+
+      const startButton = within(card).getByTestId("courseware-button")
+      await user.click(startButton)
+
+      await waitFor(() => {
+        expect(makeRequest).toHaveBeenCalledWith(
+          expect.objectContaining({
+            method: "post",
+            url: childCourseEnrollmentEndpoint,
+            body: [parentProgramEnrollment.program.readable_id],
+          }),
+        )
+      })
+
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    },
+  )
+
+  test.each(PAID_PROGRAM_ENROLLMENT_MODES)(
+    "Clicking 'Start' on a module in a program-as-course sends both parent and grandparent program IDs (%s)",
+    async (enrollmentMode) => {
+      const {
+        parentProgram,
+        parentProgramEnrollment,
+        programAsCourse,
+        moduleCourse,
+        moduleCourseEnrollmentEndpoint,
+      } = setupProgramDashboardVerifiedEnrollmentScenario(enrollmentMode)
+
+      renderWithProviders(
+        <ProgramEnrollmentDisplay programId={parentProgram.id} />,
+      )
+
+      await screen.findByText("Program Requirements")
+      await waitFor(
+        () => {
+          const skeletons = screen.queryAllByTestId("skeleton")
+          expect(skeletons).toHaveLength(0)
+        },
+        { timeout: 3000 },
+      )
+
+      const cards = screen.getAllByTestId("enrollment-card-desktop")
+      const card = cards.find((c) => within(c).queryByText(moduleCourse.title))
+      invariant(
+        card,
+        `Expected to find a card containing "${moduleCourse.title}"`,
+      )
+
+      const startButton = within(card).getByTestId("courseware-button")
+      await user.click(startButton)
+
+      await waitFor(() => {
+        expect(makeRequest).toHaveBeenCalledWith(
+          expect.objectContaining({
+            method: "post",
+            url: moduleCourseEnrollmentEndpoint,
+            body: [
+              programAsCourse.readable_id,
+              parentProgramEnrollment.program.readable_id,
+            ],
+          }),
+        )
+      })
+
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    },
+  )
 
   test("Upgrading a module course omits an unverified root program from the request body", async () => {
     // Regression test for a nested-program (e.g. SDS-style track) scenario:
@@ -1948,7 +1942,6 @@ describe("ProgramEnrollmentDisplay", () => {
         },
       })
 
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [
       moduleCourseEnrollment,
     ])
@@ -2093,7 +2086,6 @@ describe("ProgramEnrollmentDisplay", () => {
       },
     })
 
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [
       courseEnrollment,
     ])
@@ -2209,7 +2201,6 @@ describe("ProgramEnrollmentDisplay", () => {
       req_tree: reqTree.serialize(),
     })
 
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
@@ -2281,7 +2272,6 @@ describe("ProgramEnrollmentDisplay", () => {
       })
     const courses = mitxonline.factories.courses.courses({ count: 2 })
 
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
@@ -2328,7 +2318,6 @@ describe("ProgramEnrollmentDisplay", () => {
       })
     const courses = mitxonline.factories.courses.courses({ count: 2 })
 
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),

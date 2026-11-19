@@ -3,7 +3,6 @@
 import React, { useEffect, useRef } from "react"
 import Link from "next/link"
 import { useQuery } from "@tanstack/react-query"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { styled } from "ol-components"
 import { FeatureFlags } from "@/common/feature_flags"
@@ -14,6 +13,7 @@ import {
   contractLearnersView,
   contractView,
 } from "@/common/urls"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 
 type ContractManagerSection = "overview" | "analytics" | "learners" | "seats"
 
@@ -89,14 +89,8 @@ const ContractManagerNav: React.FC<ContractManagerNavProps> = ({
   contractSlug,
   current,
 }) => {
-  const analyticsEnabled = useFeatureFlagEnabled(
-    FeatureFlags.B2BAnalyticsDashboard,
-  )
-  const learnerAnalyticsEnabled = useFeatureFlagEnabled(
+  const learnerAnalyticsEnabled = useFeatureFlag(
     FeatureFlags.B2BLearnerAnalytics,
-  )
-  const managerDashboardEnabled = useFeatureFlagEnabled(
-    FeatureFlags.B2BContractManagerDashboard,
   )
 
   const { data: mitxOnlineUser } = useQuery(mitxUserQueries.me())
@@ -121,35 +115,31 @@ const ContractManagerNav: React.FC<ContractManagerNavProps> = ({
       key: "analytics",
       label: "Analytics",
       href: contractAnalyticsView(orgSlug, contractSlug),
-      enabled: analyticsEnabled,
+      enabled: true,
     },
     {
       key: "learners",
       label: "Learners",
       href: contractLearnersView(orgSlug, contractSlug),
-      enabled: analyticsEnabled && learnerAnalyticsEnabled,
+      enabled: learnerAnalyticsEnabled,
     },
     {
       key: "seats",
       label: "Manage seats",
       href: contractAdminView(orgSlug, contractSlug),
-      enabled: managerDashboardEnabled,
+      enabled: true,
     },
   ]
   const visible = sections.filter((section) => section.enabled)
-  const showNav = visible.length >= 2
 
   const navRef = useRef<HTMLElement>(null)
   useEffect(() => {
-    if (!showNav) return
     const key = takeFocusTarget()
     if (document.activeElement !== document.body) return
     navRef.current
       ?.querySelector<HTMLAnchorElement>(`a[data-section="${key}"]`)
       ?.focus()
-  }, [showNav])
-
-  if (!showNav) return null
+  }, [])
 
   return (
     <nav aria-label="Contract" ref={navRef}>

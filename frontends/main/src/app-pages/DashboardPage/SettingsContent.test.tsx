@@ -4,21 +4,7 @@ import { renderWithProviders, screen, within, user } from "@/test-utils"
 import { urls, setMockResponse, factories, makeRequest } from "api/test-utils"
 import { urls as mitxonlineUrls } from "api/mitxonline-test-utils"
 import type { LearningResourcesUserSubscriptionApiLearningResourcesUserSubscriptionCheckListRequest as CheckSubscriptionRequest } from "api"
-import { useFeatureFlagEnabled } from "posthog-js/react"
-import { FeatureFlags } from "@/common/feature_flags"
 import { AccountAction, accountAction } from "@/common/urls"
-
-jest.mock("posthog-js/react", () => ({
-  ...jest.requireActual("posthog-js/react"),
-  useFeatureFlagEnabled: jest.fn(),
-}))
-const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
-
-const enableAccountManagement = (enabled: boolean) => {
-  mockedUseFeatureFlagEnabled.mockImplementation((flag) =>
-    flag === FeatureFlags.AccountManagement ? enabled : false,
-  )
-}
 
 type SetupApisOptions = {
   isAuthenticated?: boolean
@@ -186,7 +172,6 @@ describe("SettingsPage email & password", () => {
   const CHANGE_PASSWORD = /change password/i
 
   test("Links hand the user off to Django, which redirects to Keycloak", async () => {
-    enableAccountManagement(true)
     setupApis({ isAuthenticated: true, email: "learner@mit.edu" })
     renderWithProviders(<SettingsContent />)
 
@@ -209,24 +194,7 @@ describe("SettingsPage email & password", () => {
     expect(await screen.findByText("learner@mit.edu")).toBeInTheDocument()
   })
 
-  test("Section is hidden when the feature flag is off", async () => {
-    enableAccountManagement(false)
-    setupApis({ isAuthenticated: true })
-    renderWithProviders(<SettingsContent />)
-
-    await screen.findByRole("checkbox", {
-      name: /receive emails from mit learn/i,
-    })
-    expect(
-      screen.queryByRole("link", { name: CHANGE_EMAIL }),
-    ).not.toBeInTheDocument()
-    expect(
-      screen.queryByRole("link", { name: CHANGE_PASSWORD }),
-    ).not.toBeInTheDocument()
-  })
-
   test("Section is hidden for SSO users, whose credentials we don't own", async () => {
-    enableAccountManagement(true)
     setupApis({ isAuthenticated: true, isSsoUser: true })
     renderWithProviders(<SettingsContent />)
 

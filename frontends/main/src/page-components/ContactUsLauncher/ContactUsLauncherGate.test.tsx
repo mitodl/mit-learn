@@ -1,7 +1,7 @@
 import React from "react"
 import { factories } from "api/test-utils"
 import { renderWithProviders, screen } from "@/test-utils"
-import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { ContactUsLauncher } from "@mitodl/smoot-design/contact-us"
 import ContactUsLauncherGate from "./ContactUsLauncherGate"
@@ -9,14 +9,12 @@ import ContactUsLauncherGate from "./ContactUsLauncherGate"
 jest.mock("@/common/useFeatureFlagsLoaded", () => ({
   useFeatureFlagsLoaded: jest.fn(),
 }))
-jest.mock("posthog-js/react")
+jest.mock("@/common/useFeatureFlag")
 jest.mock("@mitodl/smoot-design/contact-us", () => ({
   ContactUsLauncher: jest.fn(() => <div data-testid="launcher" />),
 }))
 
-const mockEnabled = jest.mocked(
-  useFeatureFlagEnabled as (flag: string) => boolean | undefined,
-)
+const mockEnabled = jest.mocked(useFeatureFlag)
 const mockLoaded = jest.mocked(useFeatureFlagsLoaded)
 const mockLauncher = jest.mocked(ContactUsLauncher)
 
@@ -86,7 +84,7 @@ describe("ContactUsLauncherGate", () => {
 
   test("renders nothing while flags have not loaded", () => {
     mockLoaded.mockReturnValue(false)
-    mockEnabled.mockReturnValue(undefined)
+    mockEnabled.mockReturnValue(false)
     renderWithProviders(<ContactUsLauncherGate />, {
       user: { is_authenticated: false },
     })

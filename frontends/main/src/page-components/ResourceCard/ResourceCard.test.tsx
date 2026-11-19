@@ -5,11 +5,12 @@ import {
   user,
   screen,
   expectProps,
-  waitFor,
   expectWindowNavigation,
 } from "@/test-utils"
 import type { User } from "api/hooks/user"
+import { RiMenuAddLine } from "@remixicon/react"
 import { ResourceCard } from "./ResourceCard"
+import { MenuCheckIcon } from "./MenuCheckIcon"
 import { MicroUserListRelationship } from "api"
 import {
   AddToLearningPathDialog,
@@ -17,23 +18,15 @@ import {
 } from "../Dialogs/AddToListDialog"
 import type { ResourceCardProps } from "./ResourceCard"
 import { urls, factories, setMockResponse } from "api/test-utils"
+import type { LearningResource } from "api"
 import { RESOURCE_DRAWER_PARAMS } from "@/common/urls"
 import { slugify } from "@/common/slugs"
 import invariant from "tiny-invariant"
-import { LearningResourceCard } from "ol-components"
-import { useFeatureFlagEnabled } from "posthog-js/react"
-import { FeatureFlags } from "@/common/feature_flags"
 import { learningResourceQueries } from "api/hooks/learningResources"
-import type { LearningResource } from "api"
 import {
   ResourceCardSkeleton,
   ResourceCardView,
 } from "../ResourceCardView/ResourceCardView"
-
-jest.mock("posthog-js/react", () => ({
-  ...jest.requireActual("posthog-js/react"),
-  useFeatureFlagEnabled: jest.fn(),
-}))
 
 jest.mock("../ResourceCardView/ResourceCardView", () => {
   const actual = jest.requireActual("../ResourceCardView/ResourceCardView")
@@ -42,15 +35,6 @@ jest.mock("../ResourceCardView/ResourceCardView", () => {
     ...actual,
     ResourceCardView: jest.fn(actual.ResourceCardView),
     ResourceCardSkeleton: jest.fn(actual.ResourceCardSkeleton),
-  }
-})
-
-jest.mock("ol-components", () => {
-  const actual = jest.requireActual("ol-components")
-  return {
-    __esModule: true,
-    ...actual,
-    LearningResourceCard: jest.fn(actual.LearningResourceCard),
   }
 })
 
@@ -106,18 +90,6 @@ const setupCard = ({
   return { resource, view, location, queryClient }
 }
 
-/**
- * Off is the unresolved `undefined` PostHog returns before flags load, which
- * must render the legacy card just as an explicit `false` does.
- */
-const setRedesignFlag = (enabled: boolean) => {
-  jest
-    .mocked(useFeatureFlagEnabled as (flag: string) => boolean | undefined)
-    .mockImplementation((flag) =>
-      enabled && flag === FeatureFlags.ResourceCardRedesign ? true : undefined,
-    )
-}
-
 beforeEach(() => {
   jest.clearAllMocks()
 })
@@ -133,45 +105,21 @@ beforeEach(() => {
 const HOST_URL = "/c/topic/data-science?sortby=new"
 const HOST_PATHNAME = "/c/[channelType]/[name]"
 
-const LEGACY = {
-  card: "legacy",
-  flag: false,
-  bookmarkName: (resource: LearningResource) =>
-    `Bookmark ${resource.resource_category}`,
-  learningPathName: "Add to Learning Path",
-}
-const REDESIGNED = {
-  card: "redesigned",
-  flag: true,
-  bookmarkName: (resource: LearningResource) => `Bookmark: ${resource.title}`,
-}
-
-/**
- * Behaviour both cards share. The redesigned card runs only with
- * `isList: false`: its `list` only picks its layout, which the redesigned-only
- * block covers.
- */
-describe.each([
-  { ...LEGACY, isList: false },
-  { ...LEGACY, isList: true },
-  { ...REDESIGNED, isList: false },
-])("ResourceCard ($card, isList=$isList)", ({ flag, isList, bookmarkName }) => {
-  beforeEach(() => {
-    setRedesignFlag(flag)
-  })
-
-  const setup = (options: SetupOptions = {}) =>
-    setupCard({ ...options, isList })
+describe("ResourceCard", () => {
+  const bookmarkName = (resource: LearningResource) =>
+    `Bookmark: ${resource.title}`
+  const learningPathName = (resource: LearningResource) =>
+    `Add to learning path: ${resource.title}`
 
   test("Applies className to the resource card", () => {
-    const { view } = setup({ props: { className: "test-class" } })
+    const { view } = setupCard({ props: { className: "test-class" } })
     expect(view.container.firstChild).toHaveClass("test-class")
   })
 
   test("Clicking the bookmark opens AddToUserListDialog when authenticated", async () => {
     const showModal = jest.mocked(NiceModal.show)
 
-    const { resource } = setup({ user: { is_authenticated: true } })
+    const { resource } = setupCard({ user: { is_authenticated: true } })
     const addToUserListButton = await screen.findByRole("button", {
       name: bookmarkName(resource),
     })
@@ -184,7 +132,7 @@ describe.each([
   })
 
   test("Clicking 'Add to User List' opens signup popover if not authenticated", async () => {
-    const { resource } = setup({
+    const { resource } = setupCard({
       user: { is_authenticated: false },
     })
     const addToUserListButton = await screen.findByRole("button", {
@@ -196,8 +144,48 @@ describe.each([
     expect(dialog).toHaveTextContent("Sign Up")
   })
 
+  test.each([
+    {
+      user: { is_authenticated: true, is_learning_path_editor: false },
+      expectAddToLearningPathButton: false,
+    },
+    {
+      user: { is_authenticated: true, is_learning_path_editor: true },
+      expectAddToLearningPathButton: true,
+    },
+    {
+      user: { is_authenticated: false },
+      expectAddToLearningPathButton: false,
+    },
+  ])(
+    "Shows 'Add to Learning Path' only to a learning path editor",
+    async ({ user, expectAddToLearningPathButton }) => {
+      const { resource } = setupCard({ user })
+      await screen.findByRole("button", { name: bookmarkName(resource) })
+
+      const addToLearningPathButton = screen.queryByRole("button", {
+        name: learningPathName(resource),
+      })
+      expect(!!addToLearningPathButton).toBe(expectAddToLearningPathButton)
+    },
+  )
+
+  test("Clicking 'Add to Learning Path' opens AddToLearningPathDialog", async () => {
+    const showModal = jest.mocked(NiceModal.show)
+    const { resource } = setupCard({
+      user: { is_learning_path_editor: true, is_authenticated: true },
+    })
+
+    await user.click(
+      await screen.findByRole("button", { name: learningPathName(resource) }),
+    )
+    expect(showModal).toHaveBeenLastCalledWith(AddToLearningPathDialog, {
+      resourceId: resource.id,
+    })
+  })
+
   test("Card links to the resource's learn_url regardless of host page", () => {
-    const { resource } = setup({ url: HOST_URL })
+    const { resource } = setupCard({ url: HOST_URL })
 
     const link = screen.getByRole("link", {
       name: new RegExp(resource.title),
@@ -210,7 +198,7 @@ describe.each([
 
   test("Clicking the title opens the drawer in place and caches the resource", async () => {
     const onCardClick = jest.fn()
-    const { resource, location, queryClient } = setup({
+    const { resource, location, queryClient } = setupCard({
       url: HOST_URL,
       props: { onCardClick },
     })
@@ -242,7 +230,7 @@ describe.each([
    * LinkAdapter still delivers the modifier state, so one key is enough.
    */
   test("Meta-click on the title is left to the browser, so no URL is pushed", async () => {
-    const { resource, location } = setup({ url: HOST_URL })
+    const { resource, location } = setupCard({ url: HOST_URL })
     const u = user.setup()
     await u.keyboard("{Meta>}")
 
@@ -253,133 +241,6 @@ describe.each([
     expect(
       location.current.searchParams.has(RESOURCE_DRAWER_PARAMS.resource),
     ).toBe(false)
-  })
-})
-
-/**
- * Cases that depend on the legacy card's props or its body click handler. The
- * redesigned card's body clicks land on the title link's overlay, which jsdom
- * can't exercise.
- */
-describe("ResourceCard (legacy only)", () => {
-  beforeEach(() => {
-    setRedesignFlag(false)
-  })
-
-  describe.each([{ isList: false }, { isList: true }])(
-    "isList=$isList",
-    ({ isList }) => {
-      test.each([
-        {
-          user: { is_authenticated: true, is_learning_path_editor: false },
-          expectAddToLearningPathButton: false,
-        },
-        {
-          user: { is_authenticated: true, is_learning_path_editor: true },
-          expectAddToLearningPathButton: true,
-        },
-        {
-          user: { is_authenticated: false },
-          expectAddToLearningPathButton: false,
-        },
-      ])(
-        "Shows 'Add to Learning Path' only to a learning path editor",
-        async ({ user, expectAddToLearningPathButton }) => {
-          const { resource } = setupCard({ user, isList })
-          await screen.findByRole("button", {
-            name: LEGACY.bookmarkName(resource),
-          })
-
-          const addToLearningPathButton = screen.queryByRole("button", {
-            name: LEGACY.learningPathName,
-          })
-          expect(!!addToLearningPathButton).toBe(expectAddToLearningPathButton)
-        },
-      )
-
-      test("Clicking 'Add to Learning Path' opens AddToLearningPathDialog", async () => {
-        const showModal = jest.mocked(NiceModal.show)
-        const { resource } = setupCard({
-          user: { is_learning_path_editor: true, is_authenticated: true },
-          isList,
-        })
-
-        await user.click(
-          await screen.findByRole("button", { name: LEGACY.learningPathName }),
-        )
-        expect(showModal).toHaveBeenLastCalledWith(AddToLearningPathDialog, {
-          resourceId: resource.id,
-        })
-      })
-    },
-  )
-
-  test.each([{ isList: false }, { isList: true }])(
-    "Clicking the card body pushes the same URL as the title (isList=$isList)",
-    async ({ isList }) => {
-      const { resource, location, view } = setupCard({
-        url: HOST_URL,
-        isList,
-      })
-      const card = view.container.firstElementChild
-      invariant(card instanceof HTMLElement)
-
-      await user.click(card)
-
-      expect(location.current.pathname).toBe(HOST_PATHNAME)
-      expect(location.current.searchParams.get("sortby")).toBe("new")
-      expect(
-        location.current.searchParams.get(RESOURCE_DRAWER_PARAMS.resource),
-      ).toBe(String(resource.id))
-    },
-  )
-
-  test.each([
-    {
-      userList: { inList: true },
-      learningPath: { inList: true },
-    },
-    {
-      userList: { inList: false },
-      learningPath: { inList: true },
-    },
-    {
-      userList: { inList: true },
-      learningPath: { inList: false },
-    },
-    {
-      userList: { inList: false },
-      learningPath: { inList: false },
-    },
-  ])(
-    "'Add to ...' buttons are filled based on membership in list",
-    async ({ userList, learningPath }) => {
-      const resource = makeResource()
-
-      setupCard({
-        user: { is_authenticated: true, is_learning_path_editor: true },
-        props: { resource },
-        userListMemberships: userList.inList
-          ? [{ id: 1, parent: 123, child: resource.id }]
-          : [],
-        learningPathMemberships: learningPath.inList
-          ? [{ id: 2, parent: 456, child: resource.id }]
-          : [],
-      })
-
-      await waitFor(() => {
-        expectProps(LearningResourceCard, {
-          inLearningPath: learningPath.inList,
-          inUserList: userList.inList,
-        })
-      })
-    },
-  )
-})
-
-describe("ResourceCard (redesigned only)", () => {
-  beforeEach(() => {
-    setRedesignFlag(true)
   })
 
   const lastViewProps = () => {
@@ -421,9 +282,12 @@ describe("ResourceCard (redesigned only)", () => {
     expect(onCardClick).not.toHaveBeenCalled()
   })
 
-  test.each([{ inUserList: true }, { inUserList: false }])(
-    "The bookmark is the only action, even for an editor, and its label follows membership (inUserList=$inUserList)",
-    async ({ inUserList }) => {
+  test.each([
+    { inUserList: true, inLearningPath: false },
+    { inUserList: false, inLearningPath: true },
+  ])(
+    "An editor gets the learning path action, then the bookmark, each labelled and drawn by its own membership (inUserList=$inUserList, inLearningPath=$inLearningPath)",
+    async ({ inUserList, inLearningPath }) => {
       const resource = makeResource()
       setupCard({
         user: { is_authenticated: true, is_learning_path_editor: true },
@@ -431,18 +295,29 @@ describe("ResourceCard (redesigned only)", () => {
         userListMemberships: inUserList
           ? [{ id: 1, parent: 123, child: resource.id }]
           : [],
+        learningPathMemberships: inLearningPath
+          ? [{ id: 2, parent: 456, child: resource.id }]
+          : [],
       })
 
+      const learningPathLabel = inLearningPath
+        ? `In a learning path: ${resource.title}`
+        : `Add to learning path: ${resource.title}`
       const bookmarkLabel = inUserList
         ? `Bookmarked: ${resource.title}`
         : `Bookmark: ${resource.title}`
 
+      await screen.findByRole("button", { name: learningPathLabel })
       await screen.findByRole("button", { name: bookmarkLabel })
       expect(
         screen
           .getAllByRole("button")
           .map((button) => button.getAttribute("aria-label")),
-      ).toEqual([bookmarkLabel])
+      ).toEqual([learningPathLabel, bookmarkLabel])
+      // The learning path states differ in shape, not only in color.
+      expect(lastViewProps().actions?.[0].icon).toMatchObject({
+        type: inLearningPath ? MenuCheckIcon : RiMenuAddLine,
+      })
     },
   )
 

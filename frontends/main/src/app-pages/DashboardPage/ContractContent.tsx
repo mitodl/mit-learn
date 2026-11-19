@@ -27,10 +27,8 @@ import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { managerOrganizationQueries } from "api/mitxonline-hooks/organizations"
 import { ButtonLink } from "@mitodl/smoot-design"
 import { RiAwardFill } from "@remixicon/react"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
 import { matchOrganizationBySlug, stripOrgPrefix } from "@/common/utils"
-import { FeatureFlags } from "@/common/feature_flags"
 import { DASHBOARD_HOME } from "@/common/urls"
 import ContractManagerNav from "@/components/ContractManagerNav/ContractManagerNav"
 import { ResourceType, getKey } from "./CoursewareDisplay/helpers"
@@ -413,16 +411,9 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
     collections,
   } = useContractDashboardData(org, contract)
 
-  const managerDashboardFlag = useFeatureFlagEnabled(
-    FeatureFlags.B2BContractManagerDashboard,
+  const { data: managerOrgs } = useQuery(
+    managerOrganizationQueries.managerOrganizationsList(),
   )
-  const analyticsEnabled = useFeatureFlagEnabled(
-    FeatureFlags.B2BAnalyticsDashboard,
-  )
-  const { data: managerOrgs } = useQuery({
-    ...managerOrganizationQueries.managerOrganizationsList(),
-    enabled: managerDashboardFlag === true || analyticsEnabled === true,
-  })
   const isManager =
     managerOrgs?.some(matchOrganizationBySlug(stripOrgPrefix(org.slug))) ??
     false
@@ -554,11 +545,8 @@ const ContractContent: React.FC<ContractContentProps> = ({
     (contract) => contract.slug === contractSlug,
   )
 
-  const consentFlag = useFeatureFlagEnabled(FeatureFlags.B2BDataConsent)
   const consentRequired =
-    consentFlag === true &&
-    !!b2bContract &&
-    b2bContract.consented_to_data_sharing !== true
+    !!b2bContract && b2bContract.consented_to_data_sharing !== true
   const router = useRouter()
   const announce = useDashboardAnnounce()
 
@@ -600,10 +588,7 @@ const ContractContent: React.FC<ContractContentProps> = ({
         open={consentRequired}
         contract={b2bContract}
         onAccepted={() => announce("Consent recorded.")}
-        onDeclined={() => {
-          announce("Response recorded.")
-          router.push(DASHBOARD_HOME)
-        }}
+        onCancelled={() => router.push(DASHBOARD_HOME)}
       />
     </>
   )

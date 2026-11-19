@@ -27,6 +27,8 @@ import {
   platformsQueries,
   learningResourceKeys,
   videoPlaylistQueries,
+  courseQueries,
+  videoQueries,
   podcastEpisodeQueries,
 } from "./queries"
 import { userlistKeys } from "../userLists/queries"
@@ -72,25 +74,19 @@ const useLearningResourceByReadableId = (
     ...opts,
   })
 
-const useLearningResourcesBulkList = (ids: number[]) => {
-  const queryClient = useQueryClient()
+const selectResults = (data: { results: LearningResource[] }) => data.results
 
+const useLearningResourcesBulkList = (
+  ids: number[],
+  opts?: { placeholderData?: typeof keepPreviousData },
+) => {
   return useQuery({
     ...learningResourceQueries.list({ resource_id: ids }),
     enabled: ids.length > 0,
-
-    select: (data) => {
-      const resources = data.results
-
-      resources.forEach((resource) => {
-        queryClient.setQueryData(
-          learningResourceKeys.detail(resource.id),
-          resource,
-        )
-      })
-
-      return resources
-    },
+    // `select` runs during render, so it must not write to the cache: writing
+    // here re-renders every subscriber, which runs `select` again.
+    select: selectResults,
+    ...opts,
   })
 }
 
@@ -242,6 +238,8 @@ export {
   topicQueries,
   learningResourceKeys,
   videoPlaylistQueries,
+  courseQueries,
+  videoQueries,
   podcastEpisodeQueries,
   LearningResource,
 }

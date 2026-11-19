@@ -38,6 +38,9 @@ const BannerSkeleton = styled(Skeleton)(({ theme }) => ({
 const TopicHero = styled.section(({ theme }) => ({
   position: "relative",
   backgroundColor: theme.custom.colors.white,
+  /* So the words can be measured against the photograph, which is placed in
+     shares of the hero's width -- see `BannerArea`. */
+  containerType: "inline-size",
 }))
 
 /**
@@ -101,6 +104,16 @@ const HERO_PHOTO_ART = {
  */
 const CONTENT_WIDTH = 1272
 
+/** The shared `Container`'s gutter either side of that column. */
+const CONTENT_GUTTER = 24
+
+/**
+ * How far left of the hero's centre the photograph stands once the column is
+ * centred: half the column, less the 522px the design keeps between the two.
+ */
+const PHOTO_CENTRE_OFFSET =
+  CONTENT_WIDTH / 2 - (HERO_PHOTO_ART.left - HERO_PHOTO_ART.contentLeft)
+
 /** A length in the design's hero, as the share of any hero it stands for. */
 const heroShare = (px: number) => `${(px / HERO_PHOTO_ART.heroWidth) * 100}%`
 
@@ -136,9 +149,7 @@ const HeroPhoto = styled.div<{ backgroundUrl: string }>(
      * for the column to be centred anyway, and above it the column is capped
      * and the second reading is the one with anything to say.
      */
-    left: `max(${heroShare(HERO_PHOTO_ART.left)}, calc(50% - ${
-      CONTENT_WIDTH / 2 - (HERO_PHOTO_ART.left - HERO_PHOTO_ART.contentLeft)
-    }px))`,
+    left: `max(${heroShare(HERO_PHOTO_ART.left)}, calc(50% - ${PHOTO_CENTRE_OFFSET}px))`,
     /**
      * The design's share of the hero until the file is drawn life-size, and no
      * wider.
@@ -296,8 +307,29 @@ const HERO_TEXT_PANEL = {
 } as const
 
 /**
- * Held to 736px, as the design has it: the description is a paragraph to read,
- * and the full container width would run it to an uncomfortable measure.
+ * The widest the words may run over a photograph: from the column's left edge
+ * to the photograph's, less a gap, so neither the title nor the Follow pill
+ * crosses onto the picture.
+ *
+ * Both edges are placed in shares of the hero, which this sits inside a
+ * Container of, so they are measured in `cqw` against the hero -- `TopicHero`
+ * is the size container -- with the same `max()`es that place them: the
+ * photograph's in `HeroPhoto`, and the column's as the Container's gutter or,
+ * once the column is capped, half of what is left either side of it.
+ *
+ * The photograph's top-left corner is the nearest it comes to the words: its
+ * diagonal runs away to the right as it goes down.
+ */
+const OVER_PHOTO_MAX_WIDTH = `calc(max(${
+  (HERO_PHOTO_ART.left / HERO_PHOTO_ART.heroWidth) * 100
+}cqw, 50cqw - ${PHOTO_CENTRE_OFFSET}px) - max(${CONTENT_GUTTER}px, 50cqw - ${
+  CONTENT_WIDTH / 2
+}px) - ${CONTENT_GUTTER}px)`
+
+/**
+ * Full width on plain white. Over a photograph, held clear of it on a wide
+ * screen -- see `OVER_PHOTO_MAX_WIDTH`. Below `md` the words run across the
+ * photograph by design, on the panels `HERO_TEXT_PANEL` gives them on a phone.
  */
 const BannerArea = styled("div", {
   shouldForwardProp: (prop) =>
@@ -312,6 +344,9 @@ const BannerArea = styled("div", {
      The updated one settles it at 24px either way. */
     gap: updatedSpacing ? "24px" : "32px",
     maxWidth: "100%",
+    ...(overPhoto
+      ? { [theme.breakpoints.up("md")]: { maxWidth: OVER_PHOTO_MAX_WIDTH } }
+      : {}),
     /* The shared Breadcrumbs carries its own 16px bottom padding, which would
      stack with that gap and push the title further from the trail than any
      of the design's spacings. */

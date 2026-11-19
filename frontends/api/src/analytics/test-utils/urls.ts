@@ -18,36 +18,16 @@ const B2B_DASHBOARD_ROOT = "/api/v1/analytics"
 // origin — same reasoning as the mitxonline URL builders.
 const getApiBaseUrl = () => analyticsAxios.defaults.baseURL
 
-const orgResource = (
-  organizationId: string,
-  resource: string,
-  params?: AnalyticsPageParams,
-) =>
-  // queryify supplies its own leading "?" (and "" when there are no params).
-  `${getApiBaseUrl()}${B2B_DASHBOARD_ROOT}/organizations/${encodeURIComponent(
-    organizationId,
-  )}/${resource}${queryify(params)}`
-
 const contractResource = (
   organizationId: string,
   contractId: number,
   resource: string,
   params?: AnalyticsPageParams | LearnerProgressParams,
 ) =>
+  // queryify supplies its own leading "?" (and "" when there are no params).
   `${getApiBaseUrl()}${B2B_DASHBOARD_ROOT}/organizations/${encodeURIComponent(
     organizationId,
   )}/contracts/${contractId}/${resource}${queryify(params)}`
-
-const organizations = {
-  contractUtilization: (organizationId: string, params?: AnalyticsPageParams) =>
-    orgResource(organizationId, "contract-utilization", params),
-  enrollmentFunnel: (organizationId: string, params?: AnalyticsPageParams) =>
-    orgResource(organizationId, "enrollment-funnel", params),
-  engagementTrend: (organizationId: string, params?: AnalyticsPageParams) =>
-    orgResource(organizationId, "engagement-trend", params),
-  contentEngagement: (organizationId: string, params?: AnalyticsPageParams) =>
-    orgResource(organizationId, "content-engagement", params),
-}
 
 const contracts = {
   contractUtilization: (
@@ -102,4 +82,4 @@ const contracts = {
   ) => contractResource(organizationId, contractId, "needs-attention", params),
 }
 
-export { organizations, contracts }
+export { contracts }

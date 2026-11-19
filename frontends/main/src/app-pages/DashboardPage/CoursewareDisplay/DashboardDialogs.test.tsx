@@ -10,6 +10,7 @@ import {
 import { HomeEnrollmentsDisplay } from "./HomeEnrollmentsDisplay"
 import { CoursewareCard } from "./CoursewareCard"
 import {
+  PAID_PROGRAM_ENROLLMENT_MODES,
   setupEnrollments,
   setupOrderHistory,
   setupProgramCertificates,
@@ -17,29 +18,25 @@ import {
 import { formatRunIdentifier } from "./courseDateUtils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { makeRequest } from "api/test-utils"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
+import type { ProgramEnrollmentModeEnum } from "@mitodl/mitxonline-api-axios/v3"
 import {
   trackCourseUnenrolled,
   trackProgramUnenrolled,
 } from "@/common/analytics/gtm"
 
-// Verified cards look up their order; default to none, tests override.
+// Cards look up their order and the learner's program certificates; default to
+// none, tests override.
 beforeEach(() => {
   setupOrderHistory()
   setupProgramCertificates()
 })
 
-jest.mock("posthog-js/react")
 jest.mock("@/common/analytics/gtm", () => ({
   trackCourseUnenrolled: jest.fn(),
   trackProgramUnenrolled: jest.fn(),
 }))
-
-const mockedUseFeatureFlagEnabled = jest
-  .mocked(useFeatureFlagEnabled)
-  .mockImplementation(() => false)
 
 describe("DashboardDialogs", () => {
   const setupApis = (includeExpired: boolean = true) => {
@@ -48,7 +45,6 @@ describe("DashboardDialogs", () => {
     const { enrollments, completed, expired, started, notStarted } =
       setupEnrollments(includeExpired)
 
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
     setMockResponse.get(
       mitxonline.urls.enrollment.enrollmentsListV3(),
       enrollments,
@@ -299,7 +295,7 @@ describe("DashboardDialogs", () => {
 
 describe("UnenrollProgramDialog", () => {
   const setupProgramCard = (
-    enrollmentMode: string | null = "audit",
+    enrollmentMode: ProgramEnrollmentModeEnum | null = "audit",
     displayMode: string | null = null,
   ) => {
     const mitxOnlineUser = mitxonline.factories.user.user()
@@ -333,24 +329,28 @@ describe("UnenrollProgramDialog", () => {
     ).toBeInTheDocument()
   })
 
-  test("Does not show unenroll option for paid (verified) program enrollments", async () => {
-    const { programEnrollment } = setupProgramCard("verified", null)
+  test.each(PAID_PROGRAM_ENROLLMENT_MODES)(
+    "Does not show unenroll option for paid (%s) program enrollments",
+    async (enrollmentMode) => {
+      const { programEnrollment } = setupProgramCard(enrollmentMode, null)
 
-    renderWithProviders(
-      <CoursewareCard
-        kind="program-enrollment"
-        programEnrollment={programEnrollment}
-      />,
-    )
+      renderWithProviders(
+        <CoursewareCard
+          kind="program-enrollment"
+          programEnrollment={programEnrollment}
+        />,
+      )
 
-    const desktopCard = await screen.findByTestId("enrollment-card-desktop")
-    const contextMenuButton = within(desktopCard).getByLabelText("More options")
-    await user.click(contextMenuButton)
+      const desktopCard = await screen.findByTestId("enrollment-card-desktop")
+      const contextMenuButton =
+        within(desktopCard).getByLabelText("More options")
+      await user.click(contextMenuButton)
 
-    expect(
-      screen.queryByRole("menuitem", { name: "Unenroll" }),
-    ).not.toBeInTheDocument()
-  })
+      expect(
+        screen.queryByRole("menuitem", { name: "Unenroll" }),
+      ).not.toBeInTheDocument()
+    },
+  )
 
   test("Does not show unenroll option for program-as-course display_mode programs", async () => {
     const { programEnrollment } = setupProgramCard("audit", "course")

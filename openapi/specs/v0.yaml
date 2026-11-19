@@ -5469,9 +5469,11 @@ components:
           readOnly: true
         program_letter_generate_url:
           type: string
+          nullable: true
           readOnly: true
         program_letter_share_url:
           type: string
+          nullable: true
           readOnly: true
         program_title:
           type: string
@@ -7030,13 +7032,10 @@ components:
       enum:
       - Markdown
       - URL
-      - People
       type: string
       description: |-
         * `Markdown` - Markdown
         * `URL` - URL
-        * `People` - People
       x-enum-descriptions:
       - Markdown
       - URL
-      - People

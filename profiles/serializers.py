@@ -345,7 +345,9 @@ class ProgramCertificateSerializer(BaseSerializer):
     program_letter_generate_url = serializers.SerializerMethodField()
     program_letter_share_url = serializers.SerializerMethodField()
 
-    def get_program_letter_generate_url(self, instance) -> str:
+    def get_program_letter_generate_url(self, instance) -> str | None:
+        if not instance.has_program_letter:
+            return None
         request = self.context.get("request")
         letter_url = reverse(
             "profile:program-letter-intercept",
@@ -355,9 +357,12 @@ class ProgramCertificateSerializer(BaseSerializer):
             return request.build_absolute_uri(letter_url)
         return letter_url
 
-    def get_program_letter_share_url(self, instance) -> str:
-        # Callers attach user_letter, creating the letter if needed, so this is
-        # always a real URL -- same contract as when the get_or_create lived here.
+    def get_program_letter_share_url(self, instance) -> str | None:
+        if not instance.has_program_letter:
+            return None
+        # Callers attach user_letter to every certificate with a letter,
+        # creating it if needed -- same contract as when the get_or_create
+        # lived here.
         letter_url = instance.user_letter.get_absolute_url()
         request = self.context.get("request")
         if request:

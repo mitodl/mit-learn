@@ -3,755 +3,799 @@ PDF to Markdown converter using OpenDataLoader JSON output and LLM-based OCR.
 
 Strategy:
 1. Parse PDF structure.
-2. Calculate a "Math Density Score" for each page .
-3. Decision Logic:
-   - High Score (> Threshold): OCR the entire page (preserves complex layout/formulas).
-   - Low Score: Use standard parsed text and only OCR specific embedded images.
+2. Decide each page's strategy. A page is OCR'd in full when its parsed text
+   can't stand for it: a high "math density" score, a scanned page, glyphs
+   with no Unicode meaning, equation-editor bracket pieces, or a text layer the
+   parser lost or that is scrambled or letter-spaced. Otherwise its parsed text
+   is used, and only its candidate figures are OCR'd.
+3. Figures: candidates come from the PDF's own objects (images, form XObjects,
+   clusters of vector paths). The OCR model decides whether each is a graphic
+   (kept as a placeholder comment, or a markdown image when figure_output is
+   given), text to transcribe, or a region shown as both.
+4. Clean up: running headers, footers and page numbers are removed, text the
+   parser split into fragments is rejoined, and figure transcriptions that
+   repeat parsed text are dropped. Each page starts with <!-- page: N -->.
+5. Optionally (structure()), the markdown is split into problems, parts and
+   solutions by source ranges the model labels; it never rewrites the text.
+
+The figure helpers live in figures.py, the other helpers in utils.py and the
+structuring pass in structure.py.
 """
 
-import base64
-import gc
+import itertools
 import json
 import logging
 import re
 import tempfile
 import uuid
-from collections import OrderedDict, defaultdict
-from collections.abc import Iterator
-from dataclasses import dataclass, field
-from io import BytesIO
+from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
-import cv2
-import litellm
-import numpy as np
 import opendataloader_pdf
-import pdf2image
+import pypdfium2 as pdfium
 from django.conf import settings
-from litellm import batch_completion
 from PIL import Image
+
+from learning_resources.converters.figures import (
+    BLANK,
+    FIGURE_MARK,
+    FIGURE_PADDING,
+    FROM_OCR,
+    GRAPHIC,
+    MIXED,
+    REGION,
+    REGION_MARK,
+    REGION_MARKED,
+    REGION_PROMPT,
+    REGION_START,
+    TRANSCRIBED,
+    UNDECIDED,
+    Figure,
+    FigureOutput,
+    display_box,
+    find_figure_boxes,
+    fraction_box,
+    is_blank,
+    is_box,
+    page_prompt,
+    parse_figure_mark,
+    parse_region_ocr,
+    region_decisions,
+    share_inside,
+    snap_to_ink,
+)
+from learning_resources.converters.structure import (
+    MAX_LOGGED_STRUCTURE_ERRORS,
+    export_structure_markdown,
+    structure_document,
+)
+from learning_resources.converters.utils import (
+    DEFAULT_PAGE_SIZE,
+    PARSED_LINE_MIN_WORDS,
+    PDFIUM_LOCK,
+    TABLE_BOX_GAP,
+    TABLE_BOX_SHARE,
+    TABLE_WORD_SHARE,
+    BlockType,
+    ContentBlock,
+    ImageForOCR,
+    MarkdownAssembler,
+    OCRProcessor,
+    PageMath,
+    PDFPageRenderer,
+    Usage,
+    document_math,
+    flatten_lists,
+    has_equation_pieces,
+    has_unmappable_text,
+    is_scanned_page,
+    iter_text,
+    optimize_image,
+    page_math_score,
+    parse_content_block,
+    plain_words,
+    strip_running_lines,
+    text_lost_reason,
+    turn_on_litellm_debug,
+    unwrap_header_footer,
+)
 
 log = logging.getLogger(__name__)
 
-# drop unsupported model params
-litellm.drop_params = True
-
-# --- Configuration ---
-MIN_IMAGE_DIMENSION = 32
-MIN_IMAGE_RATIO = 12
-IMAGE_BATCH_SIZE = 10
-PDF_POINTS_PER_INCH = 72
-UNIQUE_COLOR_THRESHOLD = 200
-# Number of rendered pages kept in memory at once
-PAGE_CACHE_SIZE = 4
-OCR_FAILED_PLACEHOLDER = "<!-- OCR failed for this region -->"
-
-# Score > 5 triggers full page OCR.
-
-
-MATH_FONTS = {"cmmi", "cmsy", "cmex", "msbm", "msam", "eufm", "dsrom", "wasy", "stmary"}
-
-
-BASIC_MATH_SYMBOLS = re.compile(r"[+=<>≤≥≠±\-]")
-# Regex for "Complex" math (Integrals, Sums, Keywords)
-COMPLEX_MATH_REGEX = re.compile(
-    r"([∑∏∫∂∇√∞∀∃∈⊂∪→⇒⇔αβγδεθλμπστφωΩΓΛΨ]|\b(lim|sin|cos|tan|log|ln|det|mod)\b)"  # noqa: RUF001
-)
-# Private Use Area glyphs that Symbol/Wingdings fonts commonly use for list
-# bullets (e.g. U+F0B7 in Word PDFs). They're harmless, so they don't count.
-PRIVATE_USE_BULLETS = "\uf06c\uf06e\uf071\uf076\uf0a7\uf0a8\uf0b7\uf0d8\uf0e0\uf0fc"
-# Private Use Area glyphs (e.g. old equation-editor / Symbol font pieces) and the
-# replacement character carry no meaning as text, so the page needs full OCR
-UNMAPPABLE_GLYPH_REGEX = re.compile(f"(?![{PRIVATE_USE_BULLETS}])[\ue000-\uf8ff\ufffd]")
-# List item text that already starts with its own label, e.g. "1.", "(a)", "iv)"
-LIST_LABEL_REGEX = re.compile(r"^\s*\(?(\d+|[a-zA-Z]|[ivxlcdmIVXLCDM]+)[.)](\s|$)")
-
-
-# --- Content Block Types (from JsonName.java) ---
-class BlockType:
-    IMAGE = "image"
-    LIST_ITEM = "list item"
-    LINE = "line"
-    TABLE = "table"
-    TEXT_BLOCK = "text block"
-    LIST = "list"
-    TABLE_CELL = "table cell"
-    TABLE_ROW = "table row"
-    PARAGRAPH = "paragraph"
-    HEADING = "heading"
-    TEXT_CHUNK = "text chunk"
-    FULL_PAGE_OCR = "full_page_ocr"
-
-
-# Block types whose text can take a list item's marker
-LIST_MARKER_BLOCK_TYPES = {
-    BlockType.PARAGRAPH,
-    BlockType.TEXT_CHUNK,
-    BlockType.TEXT_BLOCK,
-    BlockType.LINE,
-}
-
-
-@dataclass
-class TableCell:
-    """Represents a cell in a table."""
-
-    content: str | None = None
-    column_number: int = 0
-    row_number: int = 0
-    column_span: int = 1
-    row_span: int = 1
-    kids: list[Any] = field(default_factory=list)
-
-
-@dataclass
-class TableRow:
-    """Represents a row in a table."""
-
-    row_number: int = 0
-    cells: list[TableCell] = field(default_factory=list)
-
-
-@dataclass
-class ListItem:
-    """Represents an item in a list."""
-
-    content: str | None = None
-    kids: list[Any] = field(default_factory=list)
-    block_id: int = 0
-    page_number: int | None = None
-    bounding_box: list[float] = field(default_factory=list)
-    font: str | None = None
-
-
-@dataclass
-class ContentBlock:
-    block_type: str
-    block_id: int
-    page_number: int
-    bounding_box: list[float]
-    content: str | None = None
-    heading_level: int | None = None
-    font: str | None = None
-    # Table-specific fields
-    rows: list[TableRow] = field(default_factory=list)
-    number_of_rows: int = 0
-    number_of_columns: int = 0
-    # List-specific fields
-    list_items: list[ListItem] = field(default_factory=list)
-    numbering_style: str | None = None
-    # Nested content (for complex structures)
-    kids: list[Any] = field(default_factory=list)
-    # "1." / "-" marker of the list item this block came from. Kept apart from
-    # content so it isn't scored as math.
-    list_marker: str | None = None
-    # For full-page OCR: the page's parsed blocks, used if the OCR request fails
-    fallback_blocks: list["ContentBlock"] = field(default_factory=list)
-
-
-@dataclass
-class ImageForOCR:
-    block_id: int
-    image_uri: str
-    is_full_page: bool
-
-    @classmethod
-    def from_pil_image(
-        cls, block_id: int, pil_image: Image.Image, *, is_full_page: bool
-    ) -> "ImageForOCR":
-        """Encode the image up front so the bitmap doesn't need to be kept around"""
-        return cls(block_id, _image_to_base64_uri(pil_image), is_full_page)
-
-
-def _image_to_base64_uri(pil_image: Image.Image) -> str:
-    buffer = BytesIO()
-    pil_image.save(buffer, format="JPEG", optimize=True)
-    image_b64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
-    return f"data:image/jpeg;base64,{image_b64}"
-
-
-def _build_ocr_message(image_uri: str, prompt: str) -> list[dict]:
-    return [
-        {
-            "role": "user",
-            "content": [
-                {"type": "text", "text": prompt},
-                {"type": "image_url", "image_url": {"url": image_uri}},
-            ],
-        }
-    ]
-
-
-def _is_valid_image_dimensions(width: int, height: int) -> bool:
-    """Check if image dimensions are valid for processing."""
-    if width < MIN_IMAGE_DIMENSION or height < MIN_IMAGE_DIMENSION:
-        return False
-
-    # Avoid extremely thin strips (often separator lines)
-    if height > 0:
-        aspect_ratio = width / height
-        if aspect_ratio > MIN_IMAGE_RATIO or aspect_ratio < (1 / MIN_IMAGE_RATIO):
-            return False
-
-    return True
-
-
-def _optimize_image(pil_image: Image.Image) -> Image.Image:
-    if pil_image.mode != "RGB":
-        pil_image = pil_image.convert("RGB")
-    np_image = np.array(pil_image)
-    # getcolors returns None when there are more than the given number of colors
-    if pil_image.getcolors(UNIQUE_COLOR_THRESHOLD) is None:
-        processed = cv2.cvtColor(np_image, cv2.COLOR_RGB2GRAY)
-        processed = cv2.GaussianBlur(processed, (3, 3), 0)
-        return Image.fromarray(processed)
-    else:
-        gray = cv2.cvtColor(np_image, cv2.COLOR_RGB2GRAY)
-        _, processed = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        return Image.fromarray(processed)
-
-
-class PDFPageRenderer:
-    def __init__(self, document_path: Path, dpi: int = 150):
-        self.document_path = document_path
-        self.dpi = dpi
-        self._page_cache: OrderedDict[int, Image.Image] = OrderedDict()
-        self._scale = dpi / PDF_POINTS_PER_INCH
-
-    def _get_cached_page(self, page_number: int) -> Image.Image:
-        """
-        Render a page, keeping only the most recently used pages in memory
-        """
-        if page_number in self._page_cache:
-            self._page_cache.move_to_end(page_number)
-            return self._page_cache[page_number]
-        images = pdf2image.convert_from_path(
-            self.document_path,
-            dpi=self.dpi,
-            first_page=page_number,
-            last_page=page_number,
-        )
-        self._page_cache[page_number] = images[0]
-        while len(self._page_cache) > PAGE_CACHE_SIZE:
-            _, evicted = self._page_cache.popitem(last=False)
-            evicted.close()
-        return images[0]
-
-    def get_page_image(self, page_number: int) -> Image.Image:
-        """
-        Get a specific page from the pdf as an image
-        """
-        return self._get_cached_page(page_number).copy()
-
-    def extract_region(self, page_number: int, bbox: list[float]) -> Image.Image | None:
-        """
-        Clip a specific region on a page as an image
-        """
-        page_image = self._get_cached_page(page_number)
-        page_width, page_height = page_image.size
-
-        pdf_x1, pdf_y1, pdf_x2, pdf_y2 = bbox
-        pil_x1 = int(pdf_x1 * self._scale)
-        pil_x2 = int(pdf_x2 * self._scale)
-        pil_y1 = int(page_height - (pdf_y2 * self._scale))
-        pil_y2 = int(page_height - (pdf_y1 * self._scale))
-
-        # Clamp
-        left, right = min(pil_x1, pil_x2), max(pil_x1, pil_x2)
-        upper, lower = min(pil_y1, pil_y2), max(pil_y1, pil_y2)
-
-        left = max(0, min(left, page_width))
-        right = max(0, min(right, page_width))
-        upper = max(0, min(upper, page_height))
-        lower = max(0, min(lower, page_height))
-
-        width = right - left
-        height = lower - upper
-
-        # validate dimensions before cropping
-        if not _is_valid_image_dimensions(width, height):
-            log.debug("Skipping image with invalid dimensions: %dx%d", width, height)
-            return None
-
-        return page_image.crop((left, upper, right, lower))
-
-    def cleanup(self) -> None:
-        """
-        Clean up processed images
-        """
-        for page_image in self._page_cache.values():
-            page_image.close()
-        self._page_cache.clear()
-
-
-class OCRProcessor:
-    def __init__(self, batch_size: int = IMAGE_BATCH_SIZE):
-        self.batch_size = batch_size
-
-    def process_images(self, images: list[ImageForOCR]) -> dict[int, str | None]:
-        """
-        Batch OCR images. A failed request's result is None.
-        """
-        if not images:
-            return {}
-        block_ids = [img.block_id for img in images]
-        messages = self._prepare_messages(images)
-        ocr_texts = self._execute_batch_ocr(messages)
-        return dict(zip(block_ids, ocr_texts, strict=True))
-
-    def _prepare_messages(self, images: list[ImageForOCR]) -> list[list[dict]]:
-        return [
-            _build_ocr_message(img.image_uri, settings.OCR_PROMPT) for img in images
-        ]
-
-    def _completion_kwargs(self) -> dict[str, Any]:
-        return {
-            "custom_llm_provider": settings.LITELLM_CUSTOM_PROVIDER,
-            "api_base": settings.LITELLM_API_BASE,
-            "model": settings.OCR_MODEL,
-            "timeout": settings.OCR_REQUEST_TIMEOUT,
-            "num_retries": settings.OCR_REQUEST_NUM_RETRIES,
-        }
-
-    def _execute_batch_ocr(self, messages_list: list[list[dict]]) -> list[str | None]:
-        all_texts = []
-        for i in range(0, len(messages_list), self.batch_size):
-            batch = messages_list[i : i + self.batch_size]
-            responses = batch_completion(messages=batch, **self._completion_kwargs())
-            all_texts.extend(self._response_text(resp) for resp in responses)
-            gc.collect()
-        return all_texts
-
-    def _response_text(self, response: Any) -> str | None:
-        """
-        Get the text of an OCR response, or None if the request failed.
-        batch_completion returns the exception in place of a response for a
-        request that failed after num_retries, so it isn't retried again here.
-        """
-        if isinstance(response, Exception):
-            log.warning("OCR request failed: %s", response)
-            return None
-        return response.choices[0].message.content or ""
-
-
-def parse_content_block(block_data: dict[str, Any]) -> ContentBlock:
-    """
-    Parse a content block from JSON data.
-
-    Handles all content types including nested structures for tables and lists.
-    """
-    block_type = block_data.get("type", "unknown")
-
-    # Parse table rows if present
-    rows = []
-    if block_type == BlockType.TABLE and "rows" in block_data:
-        rows = _parse_table_rows(block_data["rows"])
-
-    # Parse list items if present
-    list_items = []
-    if block_type == BlockType.LIST and "list items" in block_data:
-        list_items = _parse_list_items(block_data["list items"])
-
-    return ContentBlock(
-        block_type=block_type,
-        block_id=block_data.get("id", 0),
-        page_number=block_data.get("page number", 1),
-        bounding_box=block_data.get("bounding box", [0, 0, 0, 0]),
-        content=block_data.get("content"),
-        heading_level=block_data.get("heading level"),
-        font=block_data.get("font"),
-        rows=rows,
-        number_of_rows=block_data.get("number of rows", 0),
-        number_of_columns=block_data.get("number of columns", 0),
-        list_items=list_items,
-        numbering_style=block_data.get("numbering style"),
-        kids=block_data.get("kids", []),
-    )
-
-
-def _parse_table_rows(rows_data: list[dict]) -> list[TableRow]:
-    """Parse table rows from JSON data."""
-    rows = []
-    for row_data in rows_data:
-        cells = [
-            TableCell(
-                content=cell_data.get("content"),
-                column_number=cell_data.get("column number", 0),
-                row_number=cell_data.get("row number", 0),
-                column_span=cell_data.get("column span", 1),
-                row_span=cell_data.get("row span", 1),
-                kids=cell_data.get("kids", []),
-            )
-            for cell_data in row_data.get("cells", [])
-        ]
-
-        rows.append(
-            TableRow(
-                row_number=row_data.get("row number", 0),
-                cells=cells,
-            )
-        )
-    return rows
-
-
-def _parse_list_items(items_data: list[Any]) -> list[ListItem]:
-    """Parse list items from JSON data."""
-    return [
-        ListItem(
-            content=item_data.get("content"),
-            kids=item_data.get("kids", []),
-            block_id=item_data.get("id", 0),
-            page_number=item_data.get("page number"),
-            bounding_box=item_data.get("bounding box", []),
-            font=item_data.get("font"),
-        )
-        for item_data in items_data
-        if isinstance(item_data, dict)
-    ]
-
-
-def _is_ordered_list(numbering_style: str | None) -> bool:
-    """Determine if list should be ordered based on numbering style."""
-    if not numbering_style:
-        return False
-    # Common ordered list indicators
-    ordered_indicators = ["decimal", "number", "alpha", "roman", "1", "a", "i"]
-    return any(ind in numbering_style.lower() for ind in ordered_indicators)
-
-
-def flatten_lists(blocks: list[ContentBlock]) -> list[ContentBlock]:
-    """
-    Replace each list block with its items, each followed by the blocks nested
-    under it (sub-lists, follow-on paragraphs, images), keeping their own
-    page numbers and positions.
-    """
-    flat = []
-    for block in blocks:
-        if block.block_type != BlockType.LIST:
-            flat.append(block)
-            continue
-        items = block.list_items or _parse_list_items(
-            [
-                kid
-                for kid in block.kids
-                if isinstance(kid, dict) and kid.get("type") == BlockType.LIST_ITEM
-            ]
-        )
-        is_ordered = _is_ordered_list(block.numbering_style)
-        for idx, item in enumerate(items, start=1):
-            item_blocks = []
-            if item.content and item.content.strip():
-                item_blocks.append(
-                    ContentBlock(
-                        block_type=BlockType.PARAGRAPH,
-                        block_id=item.block_id,
-                        page_number=item.page_number or block.page_number,
-                        bounding_box=item.bounding_box or block.bounding_box,
-                        content=item.content,
-                        font=item.font,
-                    )
-                )
-            item_blocks.extend(
-                flatten_lists(
-                    [parse_content_block(k) for k in item.kids if isinstance(k, dict)]
-                )
-            )
-            # The marker goes on the item's first text, which is in its kids
-            # when the item has no content of its own
-            first_text = next(
-                (b for b in item_blocks if b.content and b.content.strip()), None
-            )
-            if (
-                first_text
-                and first_text.block_type in LIST_MARKER_BLOCK_TYPES
-                and first_text.list_marker is None
-                # The item already has its own label, don't add another
-                and not LIST_LABEL_REGEX.match(first_text.content)
-            ):
-                first_text.list_marker = f"{idx}." if is_ordered else "-"
-            flat.extend(item_blocks)
-    return flat
-
-
-def _iter_nested_text(nodes: list[Any]) -> Iterator[tuple[str | None, str | None]]:
-    """Yield (font, content) for raw JSON nodes and everything nested in them"""
-    for node in nodes:
-        if not isinstance(node, dict):
-            continue
-        yield node.get("font"), node.get("content")
-        for key in ("kids", "list items", "rows", "cells"):
-            yield from _iter_nested_text(node.get(key) or [])
-
-
-def _iter_block_text(block: ContentBlock) -> Iterator[tuple[str | None, str | None]]:
-    """Yield (font, content) for a block and all text nested inside it"""
-    yield block.font, block.content
-    for item in block.list_items:
-        yield item.font, item.content
-        yield from _iter_nested_text(item.kids)
-    for row in block.rows:
-        for cell in row.cells:
-            yield None, cell.content
-            yield from _iter_nested_text(cell.kids)
-    yield from _iter_nested_text(block.kids)
-
-
-class MarkdownAssembler:
-    """
-    Assembles markdown from parsed content blocks.
-
-    Handles all content types from OpenDataLoader JSON output:
-    - heading: Section headings with levels
-    - paragraph: Text paragraphs
-    - image: Embedded images (processed via OCR)
-    - table: Tables with rows and cells
-    - list: Flattened into its items and their nested blocks
-    - text chunk / text block: Raw text content
-    - line: Single lines of text
-    - list item: Individual list items (when standalone)
-    """
-
-    def assemble(
-        self, blocks: list[ContentBlock], ocr_results: dict[int, str | None]
-    ) -> str:
-        formatted_parts = []
-        for block in flatten_lists(blocks):
-            # Full Page OCR overrides all individual blocks on that page
-            if block.block_type == BlockType.FULL_PAGE_OCR:
-                page_text = ocr_results.get(block.block_id, "")
-                if page_text is not None:
-                    formatted_parts.append(page_text)
-                    continue
-                # OCR failed, so use the page's parsed text instead
-                log.warning(
-                    "Page %d: full-page OCR failed, using parsed text",
-                    block.page_number,
-                )
-                formatted_parts.extend(
-                    filter(
-                        None,
-                        (
-                            self._format_block(b, ocr_results)
-                            for b in block.fallback_blocks
-                        ),
-                    )
-                )
-                continue
-
-            # Standard formatting
-            text = self._format_block(block, ocr_results)
-            if text:
-                formatted_parts.append(text)
-        return "\n\n".join(formatted_parts)
-
-    def _format_block(
-        self, block: ContentBlock, ocr_results: dict[int, str | None]
-    ) -> str | None:
-        """
-        Format a content block to markdown.
-
-        Supports all content types from OpenDataLoader:
-        - heading: Markdown headings with # prefix
-        - paragraph: Plain text paragraphs
-        - image: OCR results or placeholder
-        - table: Markdown tables with | separators
-        - text chunk / text block / line: Plain text
-        - list item: Single list item (when standalone)
-        """
-        block_type = block.block_type
-        block_content = None
-        # Heading
-        if block_type == BlockType.HEADING and block.content:
-            level = min(block.heading_level or 1, 6)
-            block_content = f"{'#' * level} {block.content}"
-
-        # Paragraph
-        if block_type == BlockType.PARAGRAPH and block.content:
-            block_content = block.content
-
-        # Image - use OCR result
-        if block_type == BlockType.IMAGE:
-            block_content = self._format_image(block, ocr_results)
-
-        # Table
-        if block_type == BlockType.TABLE:
-            block_content = self._format_table(block)
-
-        # Text chunk / text block / line - plain text content
-        if block_type in (BlockType.TEXT_CHUNK, BlockType.TEXT_BLOCK, BlockType.LINE):
-            block_content = block.content if block.content else None
-
-        # Standalone list item
-        if block_type == BlockType.LIST_ITEM and block.content:
-            block_content = f"- {block.content}"
-
-        # Table cell (standalone, unusual but possible)
-        if block_type == BlockType.TABLE_CELL and block.content:
-            block_content = block.content
-
-        # Table row (standalone, unusual but possible)
-        if block_type == BlockType.TABLE_ROW:
-            block_content = self._format_table_row_standalone(block)
-
-        if block_content and block.list_marker:
-            block_content = f"{block.list_marker} {block_content}"
-
-        return block_content
-
-    def _format_image(
-        self, block: ContentBlock, ocr_results: dict[int, str | None]
-    ) -> str | None:
-        """Format an image's OCR result. A result of None means OCR failed."""
-        if block.block_id not in ocr_results:
-            return None
-        text = ocr_results[block.block_id]
-        return OCR_FAILED_PLACEHOLDER if text is None else text
-
-    def _format_table(self, block: ContentBlock) -> str | None:
-        """
-        Format a table block to markdown table syntax.
-        """
-        if not block.rows:
-            # Try to extract table from nested kids structure
-            return self._format_table_from_kids(block)
-
-        lines = []
-        num_cols = block.number_of_columns or self._detect_column_count(block.rows)
-
-        for row_idx, row in enumerate(block.rows):
-            # Build row content
-            cells_content = []
-            for cell in row.cells:
-                cell_text = self._get_cell_content(cell)
-                # Replace newlines with HTML breaks for table cells
-                cell_text = cell_text.replace("\n", "<br>") if cell_text else ""
-                cells_content.append(cell_text)
-
-            # Pad if fewer cells than expected
-            while len(cells_content) < num_cols:
-                cells_content.append("")
-
-            row_line = "| " + " | ".join(cells_content) + " |"
-            lines.append(row_line)
-
-            # Add header separator after first row
-            if row_idx == 0:
-                separator = "| " + " | ".join(["---"] * num_cols) + " |"
-                lines.append(separator)
-
-        return "\n".join(lines) if lines else None
-
-    def _format_table_from_kids(self, block: ContentBlock) -> str | None:
-        """
-        Format table when structure is in 'kids' field rather than 'rows'.
-        """
-        if not block.kids:
-            return None
-
-        lines = []
-        num_cols = block.number_of_columns or 0
-        row_idx = 0
-
-        for kid in block.kids:
-            if isinstance(kid, dict) and kid.get("type") == BlockType.TABLE_ROW:
-                cells = kid.get("cells", [])
-                cells_content = []
-
-                for cell_data in cells:
-                    if isinstance(cell_data, dict):
-                        cell_text = cell_data.get("content", "")
-                        # Handle nested kids in cell
-                        if not cell_text and "kids" in cell_data:
-                            cell_text = self._extract_text_from_kids(cell_data["kids"])
-                    else:
-                        cell_text = str(cell_data) if cell_data else ""
-
-                    cell_text = cell_text.replace("\n", "<br>") if cell_text else ""
-                    cells_content.append(cell_text)
-
-                if not num_cols:
-                    num_cols = len(cells_content)
-
-                while len(cells_content) < num_cols:
-                    cells_content.append("")
-
-                row_line = "| " + " | ".join(cells_content) + " |"
-                lines.append(row_line)
-
-                if row_idx == 0:
-                    separator = "| " + " | ".join(["---"] * num_cols) + " |"
-                    lines.append(separator)
-
-                row_idx += 1
-
-        return "\n".join(lines) if lines else None
-
-    def _format_table_row_standalone(self, block: ContentBlock) -> str | None:
-        """Format a standalone table row (unusual case)."""
-        if not hasattr(block, "kids") or not block.kids:
-            return block.content
-
-        cells_content = []
-        for cell in block.kids:
-            if isinstance(cell, dict):
-                cell_text = cell.get("content", "")
-            else:
-                cell_text = str(cell) if cell else ""
-            cells_content.append(cell_text.replace("\n", "<br>") if cell_text else "")
-
-        return "| " + " | ".join(cells_content) + " |" if cells_content else None
-
-    def _get_cell_content(self, cell: TableCell) -> str:
-        """Extract text content from a table cell."""
-        if cell.content:
-            return cell.content
-
-        # Check nested kids for content
-        if cell.kids:
-            return self._extract_text_from_kids(cell.kids)
-
-        return ""
-
-    def _extract_text_from_kids(self, kids: list[Any]) -> str:
-        """Recursively extract text from nested kids structure."""
-        texts = []
-        for kid in kids:
-            if isinstance(kid, dict):
-                if "content" in kid:
-                    texts.append(kid["content"])
-                if "kids" in kid:
-                    texts.append(self._extract_text_from_kids(kid["kids"]))
-            elif isinstance(kid, str):
-                texts.append(kid)
-        return " ".join(filter(None, texts))
-
-    def _detect_column_count(self, rows: list[TableRow]) -> int:
-        """Detect number of columns from rows."""
-        if not rows:
-            return 0
-        return max(len(row.cells) for row in rows)
-
 
 class OpenDataLoaderLLMConverter:
+    """
+    Convert a PDF to markdown: its parsed text where that stands for a page,
+    and LLM OCR for the rest and for its figures.
+    """
+
     def __init__(
         self,
         document_path: Path,
-        output_dir: Path | None = None,
-        pdf_dpi: int = 150,
         *,
-        debug_mode=False,
+        figure_output: FigureOutput | None = None,
+        json_path: Path | None = None,
+        pdf_dpi: int = 150,
+        debug_mode: bool = False,
     ):
+        """
+        With figure_output, graphics are cropped and saved there and embedded in
+        the markdown as images; otherwise they appear as placeholder comments.
+        json_path is opendataloader's JSON for this PDF, when it was parsed in a
+        batch of PDFs (one JVM for many files); otherwise it is parsed here.
+        """
         self.document_path = Path(document_path)
+        self.figure_output = figure_output
+        self.json_path = Path(json_path) if json_path else None
         self.debug_mode = debug_mode
-        self._tempdir = tempfile.TemporaryDirectory()
-        self.output_dir = output_dir or Path(self._tempdir.name)
         self._page_renderer = PDFPageRenderer(self.document_path, dpi=pdf_dpi)
         self._ocr_processor = OCRProcessor()
         self._markdown_assembler = MarkdownAssembler()
-
+        self.figures: list[Figure] = []
+        self._page_sizes: dict[int, tuple[float, float]] = {}
+        # each page's text layer as the PDF has it, and whether it draws anything
+        self._layer_text: dict[int, str] = {}
+        self._has_content: dict[int, bool] = {}
+        self._page_math: dict[int, PageMath] | None = None
+        # ids for the blocks added here (full-page OCR and figure candidates),
+        # started past the parsed blocks' ids in _prepare
+        self._new_block_ids = itertools.count(1)
         if debug_mode:
-            litellm._turn_on_debug()  # noqa: SLF001
+            turn_on_litellm_debug()
+
+    # --- Public API -------------------------------------------------------------
+
+    def convert_to_markdown(self) -> str:
+        """Convert the PDF to markdown."""
+        try:
+            final_blocks, images_for_ocr = self._prepare()
+            ocr_results = self._ocr_processor.process_images(images_for_ocr)
+            return self._finish(final_blocks, ocr_results)
+        finally:
+            self._page_renderer.cleanup()
+
+    def structure(self, markdown: str, metadata: dict | None = None) -> dict:
+        """
+        Split this document's converted markdown into problems, parts and
+        solutions (structure_document), counting the requests' usage here.
+        """
+        return structure_document(markdown, self.usage, metadata=metadata)
+
+    def convert_to_structured_markdown(self, metadata: dict | None = None) -> str:
+        """
+        Convert the PDF to markdown tagged with its problems, parts and solutions.
+        If structuring fails its checks, the untagged markdown is returned.
+        """
+        markdown = self.convert_to_markdown()
+        if not markdown.strip():
+            return markdown
+        try:
+            result = self.structure(markdown, metadata=metadata)
+        except Exception:
+            log.exception("Structuring %s failed", self.document_path.name)
+            return markdown
+        if result["status"] != "validated":
+            log.warning(
+                "Structure of %s needs review, keeping it untagged: %s",
+                self.document_path.name,
+                result["check"]["errors"][:MAX_LOGGED_STRUCTURE_ERRORS],
+            )
+            return markdown
+        return export_structure_markdown(markdown, result)
+
+    @property
+    def usage(self) -> Usage:
+        """Tokens used by this converter's OCR and structure requests."""
+        return self._ocr_processor.usage
+
+    @property
+    def graphics(self) -> list[Figure]:
+        """Figures shown as crops: graphics and regions."""
+        return [f for f in self.figures if f.kind in (GRAPHIC, REGION)]
+
+    # --- Parsing and page strategy ----------------------------------------------
+
+    def _prepare(self) -> tuple[list[ContentBlock], list[ImageForOCR]]:
+        """Parse the PDF, find figures and decide each page's strategy."""
+        # Lists are flattened first so that their nested blocks are grouped
+        # under their own pages and nested images get OCR'd
+        kids = unwrap_header_footer(self._convert_pdf_to_json().get("kids", []))
+        raw_blocks = flatten_lists([parse_content_block(k) for k in kids])
+        self._new_block_ids = itertools.count(
+            max((b.block_id for b in raw_blocks), default=0) + 1
+        )
+        self._turn_blocks(raw_blocks)
+        pages = defaultdict(list)
+        for b in raw_blocks:
+            pages[b.page_number].append(b)
+        self._find_figures(pages)
+
+        final_blocks, images_for_ocr = [], []
+        for page_num in sorted(pages):
+            page_blocks = pages[page_num]
+            math_score = page_math_score(page_blocks)
+            if math_score > settings.OCR_MATH_DENSITY_THRESHOLD:
+                reason = f"High Math Score ({math_score})"
+            else:
+                reason = self._text_layer_problem(
+                    page_num, page_blocks
+                ) or self._inline_math_problem(page_num)
+            if reason:
+                log.info("Page %d: %s. Strategy: Full Page OCR.", page_num, reason)
+                block, image = self._full_page_ocr(page_num, page_blocks)
+                final_blocks.append(block)
+                images_for_ocr.append(image)
+                continue
+            log.info(
+                "Page %d: Low Math Score (%d). Strategy: Standard Parse.",
+                page_num,
+                math_score,
+            )
+            for block in self._with_figure_blocks(page_num, page_blocks):
+                final_blocks.append(block)
+                if block.block_type == BlockType.IMAGE and (
+                    image := self._block_image(block)
+                ):
+                    images_for_ocr.append(image)
+        return final_blocks, images_for_ocr
+
+    def _convert_pdf_to_json(self) -> dict[str, Any]:
+        if self.json_path:
+            return json.loads(self.json_path.read_text())
+        with tempfile.TemporaryDirectory() as tempdir:
+            output_dir = Path(tempdir)
+            opendataloader_pdf.convert(
+                input_path=[str(self.document_path)],
+                output_dir=str(output_dir),
+                format="json",
+                use_struct_tree=True,
+                keep_line_breaks=True,
+                # headers and footers are kept for unwrap_header_footer to sort
+                include_header_footer=True,
+            )
+            return json.loads(
+                (output_dir / f"{self.document_path.stem}.json").read_text()
+            )
+
+    def _turn_blocks(self, blocks: list[ContentBlock]) -> None:
+        """
+        Put the parser's boxes, which are in each page's unrotated space, on
+        the page as shown (display_box): that is how pages are rendered and
+        cropped, and how figure boxes are found.
+        """
+        turns = {}
+        with PDFIUM_LOCK:
+            pdf = pdfium.PdfDocument(self.document_path)
+            try:
+                for i in range(len(pdf)):
+                    page = pdf[i]
+                    if page.get_rotation():
+                        turns[i + 1] = (
+                            page.get_rotation(),
+                            page.get_width(),
+                            page.get_height(),
+                        )
+                    page.close()
+            finally:
+                pdf.close()
+        for b in blocks:
+            if b.page_number in turns and is_box(b.bounding_box):
+                b.bounding_box = display_box(b.bounding_box, *turns[b.page_number])
+
+    def _find_figures(self, pages: dict[int, list[ContentBlock]]) -> None:
+        """
+        Find each page's candidate figures, numbered top to bottom (p<page>_<n>),
+        and note each page's own text layer. Every page of the PDF gets an
+        entry in pages, also one the parser returned nothing for.
+        """
+        with PDFIUM_LOCK:
+            pdf = pdfium.PdfDocument(self.document_path)
+            try:
+                for page_num in range(1, len(pdf) + 1):
+                    pages.setdefault(page_num, [])
+                    page = pdf[page_num - 1]
+                    textpage = page.get_textpage()
+                    self._layer_text[page_num] = textpage.get_text_range()
+                    textpage.close()
+                    self._has_content[page_num] = any(
+                        True for _ in page.get_objects(max_depth=0)
+                    )
+                    text_blocks = [
+                        (b.bounding_box, b.content or "")
+                        for b in pages[page_num]
+                        if b.block_type != BlockType.IMAGE
+                    ]
+                    boxes = find_figure_boxes(page, text_blocks)
+                    width, height = page.get_width(), page.get_height()
+                    self._page_sizes[page_num] = (width, height)
+                    page.close()
+                    self.figures += [
+                        Figure(
+                            f"p{page_num}_{index}",
+                            page_num,
+                            box,
+                            page_width=width,
+                            page_height=height,
+                            side_by_side=side_by_side,
+                        )
+                        for index, (box, side_by_side) in enumerate(boxes, start=1)
+                    ]
+            finally:
+                pdf.close()
+
+    def _text_layer_problem(
+        self, page_num: int, blocks: list[ContentBlock]
+    ) -> str | None:
+        """Why the page's parsed text can't stand for it, if it can't."""
+        page_size = self._page_sizes.get(page_num, DEFAULT_PAGE_SIZE)
+        # a scanned page has no text layer to parse
+        if is_scanned_page(blocks, page_size):
+            return "Scanned page"
+        # nor does one whose text uses glyphs with no Unicode meaning
+        if has_unmappable_text(blocks):
+            return "Unmappable glyphs in text layer"
+        # or that draws matrices from bracket pieces
+        if has_equation_pieces(blocks):
+            return "Bracket pieces in text layer"
+        # or whose text the parser couldn't read
+        return text_lost_reason(
+            self._layer_text.get(page_num, ""),
+            blocks,
+            has_content=bool(self._has_content.get(page_num)),
+        )
+
+    def _inline_math_problem(self, page_num: int) -> str | None:
+        """Describe the page's inline math, if the parsed text would flatten it."""
+        if not settings.OCR_INLINE_MATH:
+            return None
+        if self._page_math is None:
+            try:
+                self._page_math = document_math(self.document_path)
+            except Exception:
+                log.warning(
+                    "Couldn't read the text layer's fonts in %s",
+                    self.document_path,
+                    exc_info=True,
+                )
+                self._page_math = {}
+        math = self._page_math.get(page_num)
+        if math and math.flattened:
+            return f"Inline math in the text layer ({math})"
+        return None
+
+    def _full_page_ocr(
+        self, page_num: int, page_blocks: list[ContentBlock]
+    ) -> tuple[ContentBlock, ImageForOCR]:
+        """Return the block standing for a page OCR'd in full, and its image."""
+        block_id = next(self._new_block_ids)
+        page_image = self._page_renderer.get_page_image(page_num)
+        optimized = optimize_image(page_image)
+        page_image.close()
+        if self.debug_mode:
+            self._save_debug_image(optimized, prefix=f"FULLPAGE_{page_num}_")
+        image = ImageForOCR.from_pil_image(
+            block_id,
+            optimized,
+            is_full_page=True,
+            prompt=page_prompt(settings.OCR_PROMPT, self._page_figures(page_num)),
+        )
+        optimized.close()
+        block = ContentBlock(
+            block_type=BlockType.FULL_PAGE_OCR,
+            block_id=block_id,
+            page_number=page_num,
+            bounding_box=[],
+            fallback_blocks=page_blocks,
+        )
+        return block, image
+
+    def _block_image(self, block: ContentBlock) -> ImageForOCR | None:
+        """Return the image of an image block or figure candidate, to OCR."""
+        crop = self._page_renderer.extract_region(block.page_number, block.bounding_box)
+        if not crop:
+            return None
+        is_figure = block.figure is not None
+        # figure regions stay in colour so a photo is described as it is
+        optimized = crop.convert("RGB") if is_figure else optimize_image(crop)
+        if self.debug_mode:
+            self._save_debug_image(optimized, prefix=f"IMG_{block.block_id}_")
+        image = ImageForOCR.from_pil_image(
+            block.block_id,
+            optimized,
+            is_full_page=False,
+            prompt=REGION_PROMPT if is_figure else None,
+        )
+        optimized.close()
+        crop.close()
+        return image
+
+    # --- Figures ----------------------------------------------------------------
+
+    def _page_figures(self, page_num: int) -> list[Figure]:
+        return [f for f in self.figures if f.page_number == page_num]
+
+    def _figure_text(self, figure: Figure) -> str:
+        """How a graphic appears in the markdown."""
+        if self.figure_output:
+            return figure.image_markdown(self.figure_output.link(figure))
+        return figure.placeholder()
+
+    def _region_text(self, figure: Figure, transcription: str) -> str:
+        """How a region appears in the markdown: its crop, then its transcription."""
+        return figure.region_markdown(self._figure_text(figure), transcription)
+
+    def _with_figure_blocks(
+        self, page_num: int, blocks: list[ContentBlock]
+    ) -> list[ContentBlock]:
+        """
+        For a standard-parse page: one IMAGE block per candidate figure (vector
+        drawings included), in reading order, in place of the image blocks and
+        label text inside it. Its OCR decides whether it is a graphic.
+        """
+        figures = self._page_figures(page_num)
+        if not figures:
+            return blocks
+
+        def inside(block: ContentBlock, figure: Figure) -> bool:
+            if not is_box(block.bounding_box):
+                return False
+            x1, y1, x2, y2 = block.bounding_box
+            fx1, fy1, fx2, fy2 = figure.bounding_box
+            gap = FIGURE_PADDING
+            return (
+                x1 >= fx1 - gap
+                and x2 <= fx2 + gap
+                and y1 >= fy1 - gap
+                and y2 <= fy2 + gap
+            )
+
+        kept = [b for b in blocks if not any(inside(b, f) for f in figures)]
+        for i, figure in enumerate(figures):
+            figure_block = ContentBlock(
+                block_type=BlockType.IMAGE,
+                block_id=next(self._new_block_ids),
+                page_number=page_num,
+                bounding_box=figure.bounding_box,
+                figure=figure,
+                # the parsed text it replaces, written after it if its OCR fails
+                fallback_blocks=[
+                    b
+                    for b in blocks
+                    if b.block_type != BlockType.IMAGE
+                    and inside(b, figure)
+                    and not any(inside(b, f) for f in figures[:i])
+                ],
+            )
+            # before the first block that starts below the figure's top
+            top = figure.bounding_box[3]
+            index = next(
+                (
+                    j
+                    for j, b in enumerate(kept)
+                    if is_box(b.bounding_box)
+                    and b.bounding_box[3] < top
+                    and b.block_type != BlockType.IMAGE
+                ),
+                len(kept),
+            )
+            kept.insert(index, figure_block)
+        return kept
+
+    def _new_figure(
+        self, page_num: int, description: str, box: str | None, kind: str = GRAPHIC
+    ) -> Figure | None:
+        """
+        Add a graphic (or region) the full-page OCR found that the PDF didn't show.
+        """
+        fractions = fraction_box(box) if box else None
+        if not fractions:
+            return None
+        fx0, fy0, fx1, fy1 = fractions
+        if fx1 <= fx0 or fy1 <= fy0:
+            return None
+        page_image = self._page_renderer.get_page_image(page_num)
+        w, h = page_image.size
+        left, top, right, bottom = snap_to_ink(
+            page_image, [fx0 * w, fy0 * h, fx1 * w, fy1 * h]
+        )
+        page_image.close()
+        scale = self._page_renderer.scale
+        page_width, page_height = w / scale, h / scale
+        existing = [
+            int(f.figure_id.split("_")[1]) for f in self._page_figures(page_num)
+        ]
+        figure = Figure(
+            f"p{page_num}_{max(existing, default=0) + 1}",
+            page_num,
+            [
+                left / scale,
+                page_height - bottom / scale,
+                right / scale,
+                page_height - top / scale,
+            ],
+            page_width=page_width,
+            page_height=page_height,
+            kind=kind,
+            source=FROM_OCR,
+            description=description,
+        )
+        self.figures.append(figure)
+        return figure
+
+    def _split_mixed_region(self, region: Figure, text: str) -> str:
+        """
+        Split a region of text with drawings inside: keep the transcription and turn
+        each drawing (positioned as fractions of the region) into a graphic of
+        its own, snapped to the ink on the page.
+        """
+        x0, y0, x1, y1 = region.bbox  # PDF points from the page's top-left
+        w, h = region.page_width or 1, region.page_height or 1
+
+        def expand(match: re.Match) -> str:
+            _, description, region_box = parse_figure_mark(match["mark"])
+            fractions = fraction_box(region_box)
+            if not fractions:
+                return ""
+            rx0, ry0, rx1, ry1 = fractions
+            box = ",".join(
+                f"{v:.4f}"
+                for v in (
+                    (x0 + rx0 * (x1 - x0)) / w,
+                    (y0 + ry0 * (y1 - y0)) / h,
+                    (x0 + rx1 * (x1 - x0)) / w,
+                    (y0 + ry1 * (y1 - y0)) / h,
+                )
+            )
+            figure = self._new_figure(region.page_number, description, box)
+            return self._figure_text(figure) if figure else ""
+
+        return REGION_MARK.sub(expand, text)
+
+    def _resolve_full_page(self, page_num: int, text: str) -> str:
+        """Turn the model's figure marks into graphics; the rest was transcribed."""
+        text, decisions = region_decisions(text)
+        by_id = {f.figure_id: f for f in self._page_figures(page_num)}
+        placed: set[str] = set()
+        text = REGION_MARKED.sub(
+            lambda match: self._place_region(match, page_num, by_id, placed), text
+        )
+        text = FIGURE_MARK.sub(
+            lambda match: self._place_graphic(match, page_num, by_id, placed), text
+        )
+        missing = []
+        for figure_id, figure in by_id.items():
+            if figure_id in placed:
+                continue
+            if decisions.get(figure_id) in (TRANSCRIBED, REGION):
+                # (a region the model didn't wrap is still transcribed)
+                figure.kind = TRANSCRIBED
+                continue
+            # a graphic the model didn't place (or didn't decide): keep it
+            if figure_id not in decisions:
+                log.info(
+                    "Page %d: %s undecided, kept as a graphic", page_num, figure_id
+                )
+            figure.kind = GRAPHIC
+            missing.append(self._figure_text(figure))
+        return "\n\n".join([text, *missing])
+
+    def _place_region(
+        self,
+        match: re.Match,
+        page_num: int,
+        by_id: dict[str, Figure],
+        placed: set[str],
+    ) -> str:
+        """Write a region the full-page OCR marked (REGION_MARKED)."""
+        description = (match["description"] or "").strip()
+        body = match["body"].strip()
+        if match["id"] == "new":
+            figure = self._new_figure(page_num, description, match["box"], kind=REGION)
+        else:
+            figure = by_id.get(match["id"])
+        if figure is None or figure.figure_id in placed:
+            # nowhere to crop from: the transcription alone
+            return body
+        figure.kind = REGION
+        figure.description = description
+        placed.add(figure.figure_id)
+        return self._region_text(figure, body)
+
+    def _place_graphic(
+        self,
+        match: re.Match,
+        page_num: int,
+        by_id: dict[str, Figure],
+        placed: set[str],
+    ) -> str:
+        """Write a graphic the full-page OCR marked (FIGURE_MARK)."""
+        figure_id, description, box = parse_figure_mark(match["mark"])
+        description = description or (match["after"] or "").strip()
+        if figure_id == "new":
+            figure = self._new_figure(page_num, description, box)
+        else:
+            figure = by_id.get(figure_id)
+            if figure is not None:
+                figure.kind = GRAPHIC
+                figure.description = description
+        if figure is None or figure.figure_id in placed:
+            return ""
+        placed.add(figure.figure_id)
+        return self._figure_text(figure)
+
+    def _resolve_figures(
+        self, blocks: list[ContentBlock], ocr_results: dict[int, str | None]
+    ) -> None:
+        """
+        Decide each candidate (graphic or transcribed) and write it into the OCR text.
+        """
+        for block in blocks:
+            if block.block_type == BlockType.FULL_PAGE_OCR:
+                text = ocr_results.get(block.block_id, "")
+                if text is not None:
+                    ocr_results[block.block_id] = self._resolve_full_page(
+                        block.page_number, text
+                    )
+            elif block.figure is not None:
+                ocr_results[block.block_id] = self._resolve_candidate(
+                    block.figure,
+                    block,
+                    blocks,
+                    ocr_results.get(block.block_id),
+                )
+        for figure in self.figures:
+            if figure.kind == UNDECIDED:
+                figure.kind = GRAPHIC
+
+    def _resolve_candidate(
+        self,
+        figure: Figure,
+        block: ContentBlock,
+        blocks: list[ContentBlock],
+        text: str | None,
+    ) -> str:
+        """Decide a candidate from its OCR text (None if it failed); return its text."""
+        if text is None:
+            figure.kind = GRAPHIC
+            return self._figure_text(figure)
+        # its OCR stands for the parsed text inside it
+        block.fallback_blocks = []
+        kind, content = parse_region_ocr(text)
+        content = self._without_parsed_lines(figure, content, blocks)
+        figure.kind = TRANSCRIBED if kind == MIXED else kind
+        if kind == REGION:
+            match = REGION_START.match(content)
+            figure.description = match["description"]
+            return self._region_text(figure, match["body"])
+        if kind == GRAPHIC:
+            figure.description = content
+            return self._figure_text(figure)
+        if kind == MIXED:
+            return self._split_mixed_region(figure, content)
+        if self._in_parsed_table(figure, content, blocks):
+            # the candidate was the table's cell borders: the table is already there
+            return ""
+        return content
+
+    def _without_parsed_lines(
+        self, figure: Figure, text: str, blocks: list[ContentBlock]
+    ) -> str:
+        """
+        Drop transcription paragraphs the parser already read from a text block
+        crossing the candidate's edge (the crop often cuts them mid-word).
+        """
+        if not text:
+            return text
+        crossing = [
+            " ".join(plain_words(c) for _, c in iter_text([b]) if c)
+            for b in blocks
+            if b.page_number == figure.page_number
+            and b.block_type != BlockType.IMAGE
+            and is_box(b.bounding_box)
+            and share_inside(b.bounding_box, figure.bounding_box, 0) > 0
+        ]
+        if not crossing:
+            return text
+
+        def repeated(paragraph: str) -> bool:
+            words = plain_words(paragraph)
+            return len(words.split()) >= PARSED_LINE_MIN_WORDS and any(
+                words in native for native in crossing
+            )
+
+        paragraphs = re.split(r"\n\s*\n", text)
+        kept = [
+            p
+            for p in paragraphs
+            if p.lstrip().startswith(("<!--", "![")) or not repeated(p)
+        ]
+        return "\n\n".join(kept) if len(kept) < len(paragraphs) else text
+
+    def _in_parsed_table(
+        self, figure: Figure, text: str, blocks: list[ContentBlock]
+    ) -> bool:
+        """
+        Whether a candidate transcribed as text lies in a parsed table that already
+        has nearly all its words (the drawing was the table's ruling).
+        """
+        words = set(plain_words(text).split())
+        if not words:
+            return False
+        for b in blocks:
+            if (
+                b.block_type != BlockType.TABLE
+                or b.page_number != figure.page_number
+                or not is_box(b.bounding_box)
+                or share_inside(figure.bounding_box, b.bounding_box, TABLE_BOX_GAP)
+                < TABLE_BOX_SHARE
+            ):
+                continue
+            table = set(
+                plain_words(" ".join(c or "" for _, c in iter_text([b]))).split()
+            )
+            # (a word or so may differ: the OCR fixes the table's typos)
+            missing = len(words - table)
+            if (
+                missing <= max(1, (1 - TABLE_WORD_SHARE) * len(words))
+                and missing < len(words) / 2
+            ):
+                return True
+        return False
+
+    # --- Output -----------------------------------------------------------------
+
+    def _finish(
+        self, final_blocks: list[ContentBlock], ocr_results: dict[int, str | None]
+    ) -> str:
+        """Decide figures, save graphics and assemble the markdown."""
+        self._resolve_figures(final_blocks, ocr_results)
+        written = {f.figure_id: self._figure_text(f) for f in self.graphics}
+        self._save_graphics()
+        # graphics whose crop came out blank leave the markdown; ones with no
+        # saved crop (rejected by extract_region) fall back to their placeholder
+        for figure in self.figures:
+            if figure.kind == BLANK:
+                replacement = ""
+            elif self.figure_output and figure.figure_id in written and not figure.path:
+                replacement = figure.placeholder()
+            else:
+                continue
+            for block_id, text in ocr_results.items():
+                if isinstance(text, str) and written[figure.figure_id] in text:
+                    ocr_results[block_id] = text.replace(
+                        written[figure.figure_id], replacement
+                    )
+        markdown = strip_running_lines(
+            self._markdown_assembler.assemble(final_blocks, ocr_results)
+        )
+        if self.debug_mode:
+            self._save_debug_markdown(markdown)
+        return markdown
+
+    def _save_graphics(self) -> None:
+        """Crop each graphic and region, in colour, from the page render."""
+        if self.figure_output:
+            self.figure_output.directory.mkdir(parents=True, exist_ok=True)
+        for figure in self.graphics:
+            x1, y1, x2, y2 = figure.bounding_box
+            padded = [
+                x1 - FIGURE_PADDING,
+                y1 - FIGURE_PADDING,
+                x2 + FIGURE_PADDING,
+                y2 + FIGURE_PADDING,
+            ]
+            image = self._page_renderer.extract_region(figure.page_number, padded)
+            if image is None:
+                continue
+            if figure.kind == GRAPHIC and is_blank(image):
+                figure.kind = BLANK
+            elif self.figure_output:
+                figure.path = self.figure_output.directory / (
+                    self.figure_output.filename(figure)
+                )
+                image.convert("RGB").save(figure.path, optimize=True)
+            image.close()
 
     @property
     def _debug_dir(self) -> Path:
@@ -768,157 +812,3 @@ class OpenDataLoaderLLMConverter:
         fp = self._debug_dir / f"{self.document_path.name}.md"
         fp.write_text(markdown_content)
         return str(fp)
-
-    def _convert_pdf_to_json(self) -> dict[str, Any]:
-        self.output_dir.mkdir(parents=True, exist_ok=True)
-        opendataloader_pdf.convert(
-            input_path=[str(self.document_path)],
-            output_dir=str(self.output_dir),
-            format="json",
-            use_struct_tree=True,
-            keep_line_breaks=True,
-        )
-        return json.loads(
-            (self.output_dir / f"{self.document_path.stem}.json").read_text()
-        )
-
-    def _parse_content_block(self, block_data: dict[str, Any]) -> ContentBlock:
-        return parse_content_block(block_data)
-
-    def _calculate_page_math_score(self, blocks: list[ContentBlock]) -> int:
-        """
-        Calculate a score representing 'math density' for a page.
-        """
-        score = 0
-        for b in blocks:
-            for font, content in _iter_block_text(b):
-                if font:
-                    font_base = "".join([c for c in font.lower() if c.isalpha()])
-                    if any(mf in font_base for mf in MATH_FONTS):
-                        score += 1
-
-                if content:
-                    text = content.strip()
-                    if COMPLEX_MATH_REGEX.search(text):
-                        score += 3
-                    elif BASIC_MATH_SYMBOLS.search(text):
-                        score += 1
-        return score
-
-    def _has_unmappable_glyphs(self, blocks: list[ContentBlock]) -> bool:
-        """
-        Check whether a page's text layer contains glyphs that can't be decoded
-        """
-        return any(
-            content and UNMAPPABLE_GLYPH_REGEX.search(content)
-            for b in blocks
-            for _, content in _iter_block_text(b)
-        )
-
-    def convert_to_markdown(self) -> str:
-        try:
-            # get document elements and structure as json
-            json_data = self._convert_pdf_to_json()
-            # Lists are flattened first so that their nested blocks are grouped
-            # under their own pages and nested images get OCR'd
-            raw_blocks = flatten_lists(
-                [self._parse_content_block(k) for k in json_data.get("kids", [])]
-            )
-
-            # Group by Page
-            pages = defaultdict(list)
-            for b in raw_blocks:
-                pages[b.page_number].append(b)
-
-            final_blocks = []
-            images_for_ocr = []
-
-            # Process Per Page
-            for page_num in sorted(pages.keys()):
-                page_blocks = pages[page_num]
-
-                math_score = self._calculate_page_math_score(page_blocks)
-                has_unmappable_glyphs = self._has_unmappable_glyphs(page_blocks)
-                should_full_ocr = (
-                    math_score > settings.OCR_MATH_DENSITY_THRESHOLD
-                    or has_unmappable_glyphs
-                )
-
-                if should_full_ocr:
-                    log.info(
-                        "Page %d: Math Score %d, unmappable glyphs: %s. "
-                        "Strategy: Full Page OCR.",
-                        page_num,
-                        math_score,
-                        has_unmappable_glyphs,
-                    )
-
-                    page_block_id = 888000 + page_num
-
-                    full_page_img = self._page_renderer.get_page_image(page_num)
-                    optimized_img = _optimize_image(full_page_img)
-                    full_page_img.close()
-
-                    images_for_ocr.append(
-                        ImageForOCR.from_pil_image(
-                            page_block_id, optimized_img, is_full_page=True
-                        )
-                    )
-
-                    final_blocks.append(
-                        ContentBlock(
-                            block_type=BlockType.FULL_PAGE_OCR,
-                            block_id=page_block_id,
-                            page_number=page_num,
-                            bounding_box=[],
-                            fallback_blocks=page_blocks,
-                        )
-                    )
-
-                    if self.debug_mode:
-                        self._save_debug_image(
-                            optimized_img, prefix=f"FULLPAGE_{page_num}_"
-                        )
-                    optimized_img.close()
-
-                else:
-                    log.info(
-                        "Page %d: Low Math Score (%d). Strategy: Standard Parse.",
-                        page_num,
-                        math_score,
-                    )
-
-                    for block in page_blocks:
-                        final_blocks.append(block)
-
-                        if block.block_type == BlockType.IMAGE:
-                            img = self._page_renderer.extract_region(
-                                block.page_number, block.bounding_box
-                            )
-                            if img:
-                                opt = _optimize_image(img)
-                                img.close()
-                                images_for_ocr.append(
-                                    ImageForOCR.from_pil_image(
-                                        block.block_id, opt, is_full_page=False
-                                    )
-                                )
-                                if self.debug_mode:
-                                    self._save_debug_image(
-                                        opt, prefix=f"IMG_{block.block_id}_"
-                                    )
-                                opt.close()
-
-            # Batch OCR
-            ocr_results = self._ocr_processor.process_images(images_for_ocr)
-
-            # Assemble
-            final_md = self._markdown_assembler.assemble(final_blocks, ocr_results)
-
-            if self.debug_mode:
-                self._save_debug_markdown(final_md)
-
-            return final_md
-
-        finally:
-            self._page_renderer.cleanup()

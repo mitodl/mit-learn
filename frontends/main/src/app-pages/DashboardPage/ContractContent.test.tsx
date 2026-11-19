@@ -21,8 +21,6 @@ import { LanguageEnum } from "@mitodl/mitxonline-api-axios/v0"
 import { CourseWithCourseRunsSerializerV2 } from "@mitodl/mitxonline-api-axios/v2"
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
-import { useFeatureFlagEnabled } from "posthog-js/react"
-import { FeatureFlags } from "@/common/feature_flags"
 import { contractAdminView, DASHBOARD_HOME } from "@/common/urls"
 import mockRouter from "next-router-mock"
 
@@ -30,14 +28,6 @@ import mockRouter from "next-router-mock"
 beforeEach(() => {
   setupOrderHistory()
 })
-
-jest.mock("posthog-js/react", () => ({
-  ...jest.requireActual("posthog-js/react"),
-  useFeatureFlagEnabled: jest.fn(),
-}))
-const mockedUseFeatureFlagEnabled = jest.mocked(
-  useFeatureFlagEnabled as (flag: string) => boolean | undefined,
-)
 
 const mockB2bEnrollMutate = jest.fn()
 jest.mock("api/mitxonline-hooks/enrollment", () => ({
@@ -89,7 +79,12 @@ describe("ContractContent", () => {
   beforeEach(() => {
     setMockResponse.get(urls.enrollment.enrollmentsListV3(), [])
     setMockResponse.get(urls.programEnrollments.enrollmentsListV3(), [])
-    mockedUseFeatureFlagEnabled.mockReturnValue(undefined)
+    setMockResponse.get(managerOrganizationsUrl, {
+      count: 0,
+      next: null,
+      previous: null,
+      results: [],
+    })
   })
 
   it("displays a header for each program returned and cards for courses in program", async () => {
@@ -191,6 +186,7 @@ describe("ContractContent", () => {
     const contract = factories.contracts.contract({
       organization: orgX.id,
       name: "Org X Contract",
+      consented_to_data_sharing: true,
       programs: [programB.id, programA.id],
     })
 
@@ -1427,34 +1423,7 @@ describe("ContractContent", () => {
     await screen.findByRole("heading", { name: "Contract not found" })
   })
 
-  test("does not render the contract nav when the manager flags are off", async () => {
-    mockedUseFeatureFlagEnabled.mockImplementation(() => false)
-    const { orgX } = setupProgramsAndCourses()
-
-    setMockResponse.get(managerOrganizationsUrl, {
-      count: 1,
-      next: null,
-      previous: null,
-      results: [orgX],
-    })
-
-    renderWithProviders(
-      <ContractContent
-        orgSlug={orgX.slug}
-        contractSlug={orgX.contracts[0].slug}
-      />,
-    )
-
-    await screen.findByRole("heading", { name: orgX.name })
-    expect(
-      screen.queryByRole("navigation", { name: "Contract" }),
-    ).not.toBeInTheDocument()
-  })
-
   test("does not render the contract nav when the user is not a manager for this org", async () => {
-    mockedUseFeatureFlagEnabled.mockImplementation(
-      (flag) => flag !== FeatureFlags.B2BDataConsent,
-    )
     const { orgX } = setupProgramsAndCourses()
 
     const otherOrg = factories.organizations.organization({})
@@ -1479,9 +1448,6 @@ describe("ContractContent", () => {
   })
 
   test("renders the contract nav for a manager, with Overview as the current page", async () => {
-    mockedUseFeatureFlagEnabled.mockImplementation(
-      (flag) => flag !== FeatureFlags.B2BDataConsent,
-    )
     const { orgX } = setupProgramsAndCourses()
 
     setMockResponse.get(managerOrganizationsUrl, {
@@ -1514,9 +1480,6 @@ describe("ContractContent", () => {
   })
 
   test("renders the contract nav while programs are still loading", async () => {
-    mockedUseFeatureFlagEnabled.mockImplementation(
-      (flag) => flag !== FeatureFlags.B2BDataConsent,
-    )
     const { orgX } = setupProgramsAndCourses()
     const { promise, resolve } = Promise.withResolvers<{ results: [] }>()
     setMockResponse.get(
@@ -2545,9 +2508,12 @@ describe("ContractContent data consent", () => {
   beforeEach(() => {
     setMockResponse.get(urls.enrollment.enrollmentsListV3(), [])
     setMockResponse.get(urls.programEnrollments.enrollmentsListV3(), [])
-    mockedUseFeatureFlagEnabled.mockImplementation(
-      (flag) => flag === FeatureFlags.B2BDataConsent,
-    )
+    setMockResponse.get(managerOrganizationsUrl, {
+      count: 0,
+      next: null,
+      previous: null,
+      results: [],
+    })
   })
 
   const setupConsent = (consented: boolean | null) => {
@@ -2608,36 +2574,11 @@ describe("ContractContent data consent", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
   })
 
-  test("shows no dialog and leaves cards enabled when the flag is off", async () => {
-    mockedUseFeatureFlagEnabled.mockReturnValue(false)
+  test("Cancel redirects to dashboard home without recording a response", async () => {
     const { org, contract } = setupConsent(null)
-    renderContract(org, contract.slug)
-
-    const buttons = await startButtons()
-    expect(buttons.some((button) => !button.hasAttribute("disabled"))).toBe(
-      true,
-    )
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
-  })
-
-  test("Cancel records false and redirects to dashboard home", async () => {
-    const { org, contract, mitxOnlineUser } = setupConsent(null)
-    setMockResponse.post(urls.b2b.dataConsent(contract.id), undefined, {
-      code: 204,
-    })
     renderContract(org, contract.slug)
     await screen.findByRole("dialog")
 
-    // What users/me returns after the POST.
-    setMockResponse.get(urls.userMe.get(), {
-      ...mitxOnlineUser,
-      b2b_organizations: [
-        {
-          ...org,
-          contracts: [{ ...contract, consented_to_data_sharing: false }],
-        },
-      ],
-    })
     await user.click(screen.getByRole("button", { name: "Cancel" }))
 
     await waitFor(() => {
@@ -2650,12 +2591,8 @@ describe("ContractContent data consent", () => {
     expect(
       screen.getByRole("button", { name: "Agree and continue" }),
     ).toHaveAttribute("aria-disabled", "true")
-    expect(makeRequest).toHaveBeenCalledWith(
-      expect.objectContaining({
-        method: "post",
-        url: urls.b2b.dataConsent(contract.id),
-        body: { consented: false },
-      }),
+    expect(makeRequest).not.toHaveBeenCalledWith(
+      expect.objectContaining({ method: "post" }),
     )
   })
 
@@ -2703,7 +2640,8 @@ describe("ContractContent data consent", () => {
     renderContract(org, contract.slug)
     await screen.findByRole("dialog")
 
-    await user.click(screen.getByRole("button", { name: "Cancel" }))
+    await user.click(consentCheckbox())
+    await user.click(screen.getByRole("button", { name: "Agree and continue" }))
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "We couldn't save your response. Please try again.",

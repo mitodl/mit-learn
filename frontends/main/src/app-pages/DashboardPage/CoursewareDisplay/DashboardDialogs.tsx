@@ -20,28 +20,10 @@ import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
 import { CourseRunEnrollmentV3 } from "@mitodl/mitxonline-api-axios/v3"
 import { analytics } from "@/common/analytics"
 import { formatRunIdentifier } from "./courseDateUtils"
-import { useFeatureFlagEnabled } from "posthog-js/react"
-import { FeatureFlags } from "@/common/feature_flags"
 
 const BoldText = styled.span(({ theme }) => ({
   ...theme.typography.subtitle1,
 }))
-
-/**
- * The run being acted on, or null when it should not be named. A learner
- * enrolled in several runs of one course reaches these dialogs from a specific
- * row, and the course title alone can't tell them whether the row they clicked
- * was the one they meant.
- *
- * Behind the same flag as the per-run row menus, so turning the flag off
- * restores the previous dialogs exactly rather than leaving new copy behind.
- * Null only for that case: `formatRunIdentifier` names a run with no dates by
- * its tag, so every run gets confirmed by something.
- */
-const useRunIdentifier = (enrollment: CourseRunEnrollmentV3): string | null => {
-  const enabled = useFeatureFlagEnabled(FeatureFlags.MultipleRunContextMenus)
-  return enabled ? formatRunIdentifier(enrollment.run) : null
-}
 
 /**
  * Names the run in the dialog body, and is pulled into the dialog's accessible
@@ -70,7 +52,9 @@ const EmailSettingsDialogInner: React.FC<DashboardDialogProps> = ({
   enrollment,
 }) => {
   const modal = NiceModal.useModal()
-  const runIdentifier = useRunIdentifier(enrollment)
+  // A learner in several runs of one course reaches this from a specific row;
+  // the course title alone can't confirm it was the run they meant.
+  const runIdentifier = formatRunIdentifier(enrollment.run)
   const runLabelId = React.useId()
   const formik = useFormik({
     enableReinitialize: true,
@@ -98,7 +82,7 @@ const EmailSettingsDialogInner: React.FC<DashboardDialogProps> = ({
     <FormDialog
       title="Email Settings"
       fullWidth
-      additionalLabelledBy={runIdentifier ? runLabelId : undefined}
+      additionalLabelledBy={runLabelId}
       onReset={formik.resetForm}
       onSubmit={formik.handleSubmit}
       {...muiDialogV5(modal)}
@@ -131,9 +115,7 @@ const EmailSettingsDialogInner: React.FC<DashboardDialogProps> = ({
         <Typography variant="body1">
           Update your email preferences for <BoldText>{title}.</BoldText>
         </Typography>
-        {runIdentifier && (
-          <RunLabel id={runLabelId} runIdentifier={runIdentifier} />
-        )}
+        <RunLabel id={runLabelId} runIdentifier={runIdentifier} />
         <Alert severity="warning">
           Unchecking the box will prevent you from receiving important course
           updates and emails.
@@ -160,7 +142,7 @@ const UnenrollDialogInner: React.FC<DashboardDialogProps> = ({
   enrollment,
 }) => {
   const modal = NiceModal.useModal()
-  const runIdentifier = useRunIdentifier(enrollment)
+  const runIdentifier = formatRunIdentifier(enrollment.run)
   const runLabelId = React.useId()
   // Renders its own inline error below (destroyEnrollment.isError), so suppress
   // the global error toast.
@@ -183,7 +165,7 @@ const UnenrollDialogInner: React.FC<DashboardDialogProps> = ({
     <FormDialog
       title={`Unenroll from ${title}`}
       fullWidth
-      additionalLabelledBy={runIdentifier ? runLabelId : undefined}
+      additionalLabelledBy={runLabelId}
       onReset={formik.resetForm}
       onSubmit={formik.handleSubmit}
       {...muiDialogV5(modal)}
@@ -216,9 +198,7 @@ const UnenrollDialogInner: React.FC<DashboardDialogProps> = ({
         <Typography variant="body1">
           Are you sure you want to unenroll from {title}?
         </Typography>
-        {runIdentifier && (
-          <RunLabel id={runLabelId} runIdentifier={runIdentifier} />
-        )}
+        <RunLabel id={runLabelId} runIdentifier={runIdentifier} />
         {destroyEnrollment.isError && (
           <Alert severity="error">
             There was a problem unenrolling you from this course. Please try

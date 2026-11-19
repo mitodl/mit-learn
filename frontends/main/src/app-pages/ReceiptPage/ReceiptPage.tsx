@@ -7,7 +7,6 @@ import { useQuery } from "@tanstack/react-query"
 import { RiArrowLeftLine, RiPrinterLine } from "@remixicon/react"
 import { Container, Skeleton, Typography, styled } from "ol-components"
 import NiceModal from "@ebay/nice-modal-react"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import { Alert, Button, ButtonLink, VisuallyHidden } from "@mitodl/smoot-design"
 import { FeatureFlags } from "@/common/feature_flags"
 import { orderQueries } from "api/mitxonline-hooks/orders"
@@ -19,6 +18,7 @@ import NotFoundPage from "@/app-pages/ErrorPage/NotFoundPage"
 import mitLearnLogo from "@/public/images/mit-learn-logo-black.svg"
 import { env } from "@/env"
 import * as urls from "@/common/urls"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { ReceiptCard, ReceiptCardStack } from "./ReceiptCard"
 import { ReceiptDetailList, populatedRows } from "./ReceiptDetailList"
 import type { ReceiptDetail } from "./ReceiptDetailList"
@@ -214,10 +214,11 @@ const ReceiptPage: React.FC<{ orderId: number }> = ({ orderId }) => {
   const router = useRouter()
   const orderQuery = useQuery(orderQueries.receipt(orderId))
   /**
-   * Undefined until the flags arrive, so the card stays hidden rather than
-   * appearing and then vanishing for learners who should not see it.
+   * On a first visit this reads the env default until PostHog answers. With
+   * that default off, the card stays hidden rather than appearing and then
+   * vanishing for learners who should not see it.
    */
-  const refundsEnabled = useFeatureFlagEnabled(FeatureFlags.SelfServiceRefunds)
+  const refundsEnabled = useFeatureFlag(FeatureFlags.SelfServiceRefunds)
   const [submitted, setSubmitted] = React.useState(false)
   /**
    * `Order.purchaser` has no name field. The endpoint only returns the requester's

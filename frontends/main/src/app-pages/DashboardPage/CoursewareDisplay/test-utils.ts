@@ -19,6 +19,7 @@ import {
 } from "@mitodl/mitxonline-api-axios/v2"
 import {
   CourseRunEnrollmentV3,
+  ProgramEnrollmentModeEnum,
   V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v3"
 import { getIdsFromReqTree } from "@/common/mitxonline"
@@ -124,10 +125,9 @@ const setupOrderHistory = ({
 
 /**
  * Mock the program certificates a program card fetches to decide whether to show
- * a "Program Letter" item. Only requested when the `program-letters` flag is on,
- * so this is required in any suite that renders a program card with feature
- * flags mocked true. Defaults to no certificates (no letter link); pass
- * `mitxonlineProgramIds` to give those programs one.
+ * a "Program Letter" item. Every program card requests it, so this is required
+ * in any suite that renders one. Defaults to no certificates (no letter link);
+ * pass `mitxonlineProgramIds` to give those programs one.
  */
 const setupProgramCertificates = ({
   mitxonlineProgramIds = [],
@@ -234,6 +234,7 @@ const setupProgramsAndCourses = () => {
   const contract = makeContract({
     organization: orgX.id,
     name: "Org X Contract",
+    consented_to_data_sharing: true,
     programs: [], // Will be set after creating programs
   })
 
@@ -468,7 +469,11 @@ const createTestContracts = (
   programs: number[] = [],
 ): UserContractPage[] =>
   Array.from({ length: count }, () =>
-    makeContract({ organization: orgId, programs }),
+    makeContract({
+      organization: orgId,
+      programs,
+      consented_to_data_sharing: true,
+    }),
   )
 
 /**
@@ -670,7 +675,18 @@ const buildProgramScenario = (
   return { entities, mockAll }
 }
 
+/**
+ * Program enrollment modes that mean the learner paid for the program. The
+ * dashboard must treat both alike until no "verified" program enrollments
+ * remain (mitxonline hq#14063).
+ */
+const PAID_PROGRAM_ENROLLMENT_MODES = [
+  ProgramEnrollmentModeEnum.Verified,
+  ProgramEnrollmentModeEnum.Upgrade,
+]
+
 export {
+  PAID_PROGRAM_ENROLLMENT_MODES,
   setupCoursePricing,
   dashboardCourse,
   dashboardProgram,

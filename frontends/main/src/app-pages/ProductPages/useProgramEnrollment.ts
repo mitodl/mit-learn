@@ -10,8 +10,10 @@ import { useRouter } from "next-nprogress-bar"
 import { analytics } from "@/common/analytics"
 import { programView } from "@/common/urls"
 import { type EnrollCtaPlacement } from "./enrollAnalytics"
+import { signupToEnrollUrl, useResumeEnrollment } from "./enrollResume"
 import { getProgramOffering, type ProgramOffering } from "./programOffering"
 import { useProgramIsEnrolled } from "./useProgramIsEnrolled"
+import { offers } from "./enrollTypes"
 import type {
   EnrollAction,
   EnrollActionKind,
@@ -38,8 +40,11 @@ type UseProgramEnrollmentOptions = {
    * own wording. Off by default, so the page-header CTA keeps that wording too.
    */
   upgradeLabel?: boolean
-  /** Behavioral: called when an unauthenticated user clicks an enroll action. */
-  onRequireSignup?: (anchor: HTMLButtonElement) => void
+  /**
+   * Finish an enrollment started before sign-up. Set on one instance per page,
+   * so the enrollment runs once.
+   */
+  resume?: boolean
 }
 
 export const useProgramEnrollment = (
@@ -52,8 +57,11 @@ export const useProgramEnrollment = (
   })
   const isAuthenticated = !!me.data?.is_authenticated
 
-  const { isEnrolled, isLoading: enrollmentsIsLoading } =
-    useProgramIsEnrolled(program)
+  const {
+    isEnrolled,
+    isLoading: enrollmentsIsLoading,
+    isError: enrollmentsIsError,
+  } = useProgramIsEnrolled(program)
 
   // This area renders its own inline enrollment-failure alert (see
   // EnrollOfferingBoxes `error`), so suppress the global error toast.
@@ -76,9 +84,36 @@ export const useProgramEnrollment = (
     replaceBasketItem.isPending || createProgramEnrollment.isPending
   const error = replaceBasketItem.error ?? createProgramEnrollment.error
 
+  const startEnrollment = async (kind: EnrollActionKind) => {
+    if (kind === "paid") {
+      const product = program.products[0]
+      if (product) {
+        replaceBasketItem.mutate(product.id, {
+          type: "program",
+          id: program.id,
+        })
+      }
+    } else if (kind === "free") {
+      await mutateWithCompliance(
+        createProgramEnrollment,
+        { V3ProgramEnrollmentRequestRequest: { program_id: program.id } },
+        {
+          onSuccess: () => {
+            analytics.programEnrolled(program.title)
+            router.push(
+              enrollmentAlertSuccessUrl({
+                title: program.title ?? "your enrollment",
+              }),
+            )
+          },
+        },
+      )
+    }
+  }
+
   const makeOnClick =
     (kind: EnrollActionKind, label: string): EnrollAction["onClick"] =>
-    async (e) => {
+    async () => {
       // Same event as the course hook; `resourceType: "program"` distinguishes
       // program CTA clicks (including program-as-course display).
       analytics.enrollCtaClicked({
@@ -89,34 +124,23 @@ export const useProgramEnrollment = (
         label,
       })
       if (!me.data?.is_authenticated) {
-        opts?.onRequireSignup?.(e.currentTarget)
+        window.location.assign(signupToEnrollUrl(kind))
         return
       }
-      if (kind === "paid") {
-        const product = program.products[0]
-        if (product) {
-          replaceBasketItem.mutate(product.id, {
-            type: "program",
-            id: program.id,
-          })
-        }
-      } else if (kind === "free") {
-        await mutateWithCompliance(
-          createProgramEnrollment,
-          { V3ProgramEnrollmentRequestRequest: { program_id: program.id } },
-          {
-            onSuccess: () => {
-              analytics.programEnrolled(program.title)
-              router.push(
-                enrollmentAlertSuccessUrl({
-                  title: program.title ?? "your enrollment",
-                }),
-              )
-            },
-          },
-        )
-      }
+      await startEnrollment(kind)
     }
+
+  useResumeEnrollment({
+    enabled: !!opts?.resume,
+    // Only once both checks have succeeded: a failed enrollments lookup can't
+    // rule out that the learner is already enrolled.
+    ready: me.isSuccess && !enrollmentsIsLoading && !enrollmentsIsError,
+    onResume: (kind) => {
+      // Only an offer the program still makes.
+      if (!isAuthenticated || isEnrolled) return
+      if (offers(offering, kind)) startEnrollment(kind)
+    },
+  })
 
   // Enrolled — supersedes everything. Same target as today's program button
   // (programView), NOT the course hook's DASHBOARD_HOME — deliberate, UX-confirmed.

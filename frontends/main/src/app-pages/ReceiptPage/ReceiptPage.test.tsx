@@ -7,15 +7,15 @@ import {
   within,
 } from "@/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
-import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { RefundStatusEnum } from "@mitodl/mitxonline-api-axios/v0"
 import ReceiptPage from "./ReceiptPage"
 import * as urls from "@/common/urls"
 import { FeatureFlags } from "@/common/feature_flags"
 
-jest.mock("posthog-js/react")
-const mockedUseFeatureFlagEnabled = jest
-  .mocked(useFeatureFlagEnabled)
+jest.mock("@/common/useFeatureFlag")
+const mockedUseFeatureFlag = jest
+  .mocked(useFeatureFlag)
   .mockImplementation(() => false)
 
 const ORDER_ID = 4242
@@ -569,7 +569,7 @@ describe("ReceiptPage refund flag", () => {
     })
 
   test("hides the refund card when the flag is off", async () => {
-    mockedUseFeatureFlagEnabled.mockImplementation(() => false)
+    mockedUseFeatureFlag.mockImplementation(() => false)
     setupApis({ order: eligibleOrder() })
 
     renderWithProviders(<ReceiptPage orderId={ORDER_ID} />)
@@ -584,7 +584,7 @@ describe("ReceiptPage refund flag", () => {
   })
 
   test("shows the refund card when the flag is on", async () => {
-    mockedUseFeatureFlagEnabled.mockImplementation(
+    mockedUseFeatureFlag.mockImplementation(
       (flag) => flag === FeatureFlags.SelfServiceRefunds,
     )
     setupApis({ order: eligibleOrder() })
@@ -596,7 +596,7 @@ describe("ReceiptPage refund flag", () => {
   })
 
   test("confirms the submission after a request goes through", async () => {
-    mockedUseFeatureFlagEnabled.mockImplementation(
+    mockedUseFeatureFlag.mockImplementation(
       (flag) => flag === FeatureFlags.SelfServiceRefunds,
     )
     setupApis({ order: eligibleOrder() })
@@ -625,7 +625,7 @@ describe("ReceiptPage refund flag", () => {
   })
 
   test("the flag alone does not decide it: an ineligible order shows no card", async () => {
-    mockedUseFeatureFlagEnabled.mockImplementation(
+    mockedUseFeatureFlag.mockImplementation(
       (flag) => flag === FeatureFlags.SelfServiceRefunds,
     )
     setupApis({

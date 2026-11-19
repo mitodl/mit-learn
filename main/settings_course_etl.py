@@ -60,21 +60,37 @@ OCR_PROMPT = get_string(
     "tables, and code into markdown format. "
     "Write every mathematical expression, inline ones included, in LaTeX "
     "($...$ inline, $$...$$ display), even when it is printed as plain text. "
+    "Keep the page's lines: an expression on the same line as text, such as a "
+    "label followed by '= ...', stays inline on that line; use $$...$$ only for "
+    "an expression set on a line of its own. "
     "Include a markdown comment for elements that cannot be transcribed such as "
     "photos and other visual elements. "
+    "Leave out running headers, footers and page numbers printed on every page. "
     "Do not include any indications your output is the result of a transcription. "
     "Do not include extra commentary - "
     "ONLY include the resulting transcribed markdown.",
 )
-# Do not OCR if the PDF has exceeds this many pages
+# Do not OCR if the PDF has more than this many pages (0: no page limit)
 OCR_PDF_MAX_PAGE_THRESHOLD = get_int(name="OCR_PDF_MAX_PAGE_THRESHOLD", default=10)
 
 # OCR the entire page if the density of math formulas exceeds this threshold
 OCR_MATH_DENSITY_THRESHOLD = get_int(name="OCR_MATH_DENSITY_THRESHOLD", default=5)
+# OCR pages whose text layer sets math inline
+OCR_INLINE_MATH = get_bool(name="OCR_INLINE_MATH", default=True)
 OCR_DEBUG_DIRECTORY = get_string(name="OCR_DEBUG_DIRECTORY", default="ocr_debug")
 # Timeout in seconds and number of retries for each OCR request
 OCR_REQUEST_TIMEOUT = get_int(name="OCR_REQUEST_TIMEOUT", default=180)
 OCR_REQUEST_NUM_RETRIES = get_int(name="OCR_REQUEST_NUM_RETRIES", default=2)
+# Model that splits converted markdown into problems, parts and solutions
+# (defaults to OCR_MODEL)
+STRUCTURE_MODEL = get_string(name="STRUCTURE_MODEL", default=None)
+# Save the figures cropped from OCR'd PDFs to the default storage, linked from
+# the content as public images (otherwise they are placeholder comments)
+OCR_SAVE_FIGURES = get_bool(name="OCR_SAVE_FIGURES", default=True)
+# Storage folder the figures go in, one folder per file and version
+OCR_FIGURES_STORAGE_PREFIX = get_string(
+    name="OCR_FIGURES_STORAGE_PREFIX", default="content_file_figures"
+)
 
 
 # More MIT URLs

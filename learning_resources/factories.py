@@ -777,6 +777,20 @@ class UnitFactory(DjangoModelFactory):
         model = models.Unit
 
 
+class ClaimExtractionFactory(DjangoModelFactory):
+    """Factory for ClaimExtractions"""
+
+    key = factory.Sequence(lambda n: f"{n:064x}")
+    level = models.ClaimExtraction.Level.UNIT
+    extractor_version = "unit:1"
+    model = "openai/gpt-4o"
+    output = factory.LazyFunction(dict)
+    unit = factory.SubFactory(UnitFactory)
+
+    class Meta:
+        model = models.ClaimExtraction
+
+
 class UnitContentFileFactory(DjangoModelFactory):
     """Factory for UnitContentFiles"""
 

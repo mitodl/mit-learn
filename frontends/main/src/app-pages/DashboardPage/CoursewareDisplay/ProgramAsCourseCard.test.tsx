@@ -9,7 +9,11 @@ import {
 } from "@/test-utils"
 import { makeRequest } from "api/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
-import { setupOrderHistory, setupCoursePricing } from "./test-utils"
+import {
+  PAID_PROGRAM_ENROLLMENT_MODES,
+  setupOrderHistory,
+  setupCoursePricing,
+} from "./test-utils"
 import { ProgramAsCourseCard } from "./ProgramAsCourseCard"
 import { waitFor } from "@testing-library/react"
 import invariant from "tiny-invariant"
@@ -37,11 +41,13 @@ describe("ProgramAsCourseCard", () => {
     // Most tests here exercise the program-as-course presentation, which requires
     // display_mode "course" — pinned because the card's labels read it.
     displayMode = "course",
+    hasLiveProductPage = true,
   }: {
     includeProgramEnrollment?: boolean
     startDate?: string | null
     endDate?: string | null
     displayMode?: "course" | null
+    hasLiveProductPage?: boolean
   } = {}) => {
     const moduleOne = mitxonline.factories.courses.course({
       courseruns: [mitxonline.factories.courses.courseRun()],
@@ -65,6 +71,11 @@ describe("ProgramAsCourseCard", () => {
       start_date: startDate ?? null,
       end_date: endDate ?? null,
       display_mode: displayMode,
+      live: true,
+      page: {
+        live: hasLiveProductPage,
+        include_in_learn_catalog: hasLiveProductPage,
+      },
     })
 
     const moduleEnrollment = mitxonline.factories.enrollment.courseEnrollment({
@@ -469,56 +480,59 @@ describe("ProgramAsCourseCard", () => {
     expect(rows[1]).toHaveTextContent(moduleTwo.title)
   })
 
-  test("clicking 'Start Course' on an unenrolled module uses verified enrollment when ancestor has verified mode", async () => {
-    const cardData = setupCardData()
-    const [moduleOne] = cardData.moduleCourses
+  test.each(PAID_PROGRAM_ENROLLMENT_MODES)(
+    "clicking 'Start Course' on an unenrolled module uses verified enrollment when ancestor has %s mode",
+    async (enrollmentMode) => {
+      const cardData = setupCardData()
+      const [moduleOne] = cardData.moduleCourses
 
-    // Create a run we control for the first module
-    const run = mitxonline.factories.courses.courseRun({
-      is_enrollable: true,
-      courseware_url: "https://courses.example.com/run1",
-    })
-    const moduleWithRun = mitxonline.factories.courses.course({
-      id: moduleOne.id,
-      courseruns: [run],
-      next_run_id: run.id,
-    })
+      // Create a run we control for the first module
+      const run = mitxonline.factories.courses.courseRun({
+        is_enrollable: true,
+        courseware_url: "https://courses.example.com/run1",
+      })
+      const moduleWithRun = mitxonline.factories.courses.course({
+        id: moduleOne.id,
+        courseruns: [run],
+        next_run_id: run.id,
+      })
 
-    const enrollmentEndpoint =
-      mitxonline.urls.verifiedProgramEnrollments.create(run.courseware_id)
-    setMockResponse.post(enrollmentEndpoint, {})
+      const enrollmentEndpoint =
+        mitxonline.urls.verifiedProgramEnrollments.create(run.courseware_id)
+      setMockResponse.post(enrollmentEndpoint, {})
 
-    renderWithProviders(
-      <ProgramAsCourseCard
-        courseProgram={cardData.courseProgram}
-        moduleCourses={[moduleWithRun, cardData.moduleCourses[1]]}
-        moduleEnrollmentsByCourseId={{}}
-        ancestorProgramEnrollment={{
-          readable_id: "grandparent-program",
-          enrollment_mode: "verified",
-        }}
-      />,
-    )
-
-    const cards = await screen.findAllByTestId("enrollment-card-desktop")
-    const card = cards.find((c) => within(c).queryByText(moduleWithRun.title))
-    invariant(
-      card,
-      `Expected to find a card containing "${moduleWithRun.title}"`,
-    )
-    const startButton = within(card).getByTestId("courseware-button")
-    await user.click(startButton)
-
-    await waitFor(() => {
-      expect(makeRequest).toHaveBeenCalledWith(
-        expect.objectContaining({
-          method: "post",
-          url: enrollmentEndpoint,
-          body: [cardData.courseProgram.readable_id, "grandparent-program"],
-        }),
+      renderWithProviders(
+        <ProgramAsCourseCard
+          courseProgram={cardData.courseProgram}
+          moduleCourses={[moduleWithRun, cardData.moduleCourses[1]]}
+          moduleEnrollmentsByCourseId={{}}
+          ancestorProgramEnrollment={{
+            readable_id: "grandparent-program",
+            enrollment_mode: enrollmentMode,
+          }}
+        />,
       )
-    })
-  })
+
+      const cards = await screen.findAllByTestId("enrollment-card-desktop")
+      const card = cards.find((c) => within(c).queryByText(moduleWithRun.title))
+      invariant(
+        card,
+        `Expected to find a card containing "${moduleWithRun.title}"`,
+      )
+      const startButton = within(card).getByTestId("courseware-button")
+      await user.click(startButton)
+
+      await waitFor(() => {
+        expect(makeRequest).toHaveBeenCalledWith(
+          expect.objectContaining({
+            method: "post",
+            url: enrollmentEndpoint,
+            body: [cardData.courseProgram.readable_id, "grandparent-program"],
+          }),
+        )
+      })
+    },
+  )
 
   test("clicking 'Start Course' on an unenrolled module opens enrollment dialog when no ancestor is verified", async () => {
     const cardData = setupCardData()
@@ -717,34 +731,37 @@ describe("ProgramAsCourseCard", () => {
     expect(certButton).not.toBeInTheDocument()
   })
 
-  test("shows 'Certificate track' for verified program enrollment without a certificate", async () => {
-    const cardData = setupCardData({ includeProgramEnrollment: true })
-    invariant(cardData.courseProgramEnrollment)
-    const programEnrollment = {
-      ...cardData.courseProgramEnrollment,
-      enrollment_mode: "verified",
-      certificate: null,
-    }
+  test.each(PAID_PROGRAM_ENROLLMENT_MODES)(
+    "shows 'Certificate track' for %s program enrollment without a certificate",
+    async (enrollmentMode) => {
+      const cardData = setupCardData({ includeProgramEnrollment: true })
+      invariant(cardData.courseProgramEnrollment)
+      const programEnrollment = {
+        ...cardData.courseProgramEnrollment,
+        enrollment_mode: enrollmentMode,
+        certificate: null,
+      }
 
-    renderWithProviders(
-      <ProgramAsCourseCard
-        courseProgram={cardData.courseProgram}
-        moduleCourses={cardData.moduleCourses}
-        moduleEnrollmentsByCourseId={cardData.moduleEnrollmentsByCourseId}
-        courseProgramEnrollment={programEnrollment}
-      />,
-    )
+      renderWithProviders(
+        <ProgramAsCourseCard
+          courseProgram={cardData.courseProgram}
+          moduleCourses={cardData.moduleCourses}
+          moduleEnrollmentsByCourseId={cardData.moduleEnrollmentsByCourseId}
+          courseProgramEnrollment={programEnrollment}
+        />,
+      )
 
-    await screen.findAllByText(cardData.courseProgram.title)
-    // Rendered once in the desktop header, once in the mobile header.
-    expect(screen.getAllByTestId("upgraded-banner")).toHaveLength(2)
-    expect(screen.getAllByTestId("upgraded-banner")[0]).toHaveTextContent(
-      "Certificate track",
-    )
-    expect(
-      screen.queryByRole("link", { name: "Certificate" }),
-    ).not.toBeInTheDocument()
-  })
+      await screen.findAllByText(cardData.courseProgram.title)
+      // Rendered once in the desktop header, once in the mobile header.
+      expect(screen.getAllByTestId("upgraded-banner")).toHaveLength(2)
+      expect(screen.getAllByTestId("upgraded-banner")[0]).toHaveTextContent(
+        "Certificate track",
+      )
+      expect(
+        screen.queryByRole("link", { name: "Certificate" }),
+      ).not.toBeInTheDocument()
+    },
+  )
 
   test("does not show 'Certificate track' when verified program enrollment has a certificate", async () => {
     const cardData = setupCardData({ includeProgramEnrollment: true })
@@ -752,7 +769,7 @@ describe("ProgramAsCourseCard", () => {
     const certUuid = "cert-uuid"
     const programEnrollment = {
       ...cardData.courseProgramEnrollment,
-      enrollment_mode: "verified",
+      enrollment_mode: "verified" as const,
       certificate: { uuid: certUuid, link: `/certificate/${certUuid}/` },
     }
 
@@ -776,7 +793,7 @@ describe("ProgramAsCourseCard", () => {
     invariant(cardData.courseProgramEnrollment)
     const programEnrollment = {
       ...cardData.courseProgramEnrollment,
-      enrollment_mode: "audit",
+      enrollment_mode: "audit" as const,
       certificate: null,
     }
 
@@ -792,6 +809,37 @@ describe("ProgramAsCourseCard", () => {
     await screen.findAllByText(cardData.courseProgram.title)
     expect(screen.queryByTestId("upgraded-banner")).not.toBeInTheDocument()
   })
+
+  test.each([
+    { includeProgramEnrollment: true },
+    { includeProgramEnrollment: false },
+  ])(
+    "hides the details link when the product page is not live (includeProgramEnrollment=$includeProgramEnrollment)",
+    async ({ includeProgramEnrollment }) => {
+      const cardData = setupCardData({
+        includeProgramEnrollment,
+        hasLiveProductPage: false,
+      })
+
+      renderWithProviders(
+        <ProgramAsCourseCard
+          courseProgram={cardData.courseProgram}
+          moduleCourses={cardData.moduleCourses}
+          moduleEnrollmentsByCourseId={cardData.moduleEnrollmentsByCourseId}
+          courseProgramEnrollment={cardData.courseProgramEnrollment}
+        />,
+      )
+
+      await screen.findAllByText(cardData.courseProgram.title)
+      const programCard = screen.getByTestId("program-as-course-card")
+      await user.click(within(programCard).getAllByLabelText("More options")[0])
+
+      await screen.findByRole("menuitem", { name: "Program Record" })
+      expect(
+        screen.queryByRole("menuitem", { name: "View Course Details" }),
+      ).not.toBeInTheDocument()
+    },
+  )
 
   test("shows product-page details link in context menu", async () => {
     const cardData = setupCardData({ includeProgramEnrollment: true })
@@ -852,26 +900,29 @@ describe("ProgramAsCourseCard", () => {
     modalShowSpy.mockRestore()
   })
 
-  test("does not show Unenroll option in context menu for verified enrollment", async () => {
-    const cardData = setupCardData({ includeProgramEnrollment: true })
-    invariant(cardData.courseProgramEnrollment)
-    cardData.courseProgramEnrollment.enrollment_mode = "verified"
+  test.each(PAID_PROGRAM_ENROLLMENT_MODES)(
+    "does not show Unenroll option in context menu for %s enrollment",
+    async (enrollmentMode) => {
+      const cardData = setupCardData({ includeProgramEnrollment: true })
+      invariant(cardData.courseProgramEnrollment)
+      cardData.courseProgramEnrollment.enrollment_mode = enrollmentMode
 
-    renderWithProviders(
-      <ProgramAsCourseCard
-        courseProgram={cardData.courseProgram}
-        moduleCourses={cardData.moduleCourses}
-        moduleEnrollmentsByCourseId={cardData.moduleEnrollmentsByCourseId}
-        courseProgramEnrollment={cardData.courseProgramEnrollment}
-      />,
-    )
+      renderWithProviders(
+        <ProgramAsCourseCard
+          courseProgram={cardData.courseProgram}
+          moduleCourses={cardData.moduleCourses}
+          moduleEnrollmentsByCourseId={cardData.moduleEnrollmentsByCourseId}
+          courseProgramEnrollment={cardData.courseProgramEnrollment}
+        />,
+      )
 
-    await screen.findAllByText(cardData.courseProgram.title)
-    const programCard = screen.getByTestId("program-as-course-card")
-    await user.click(within(programCard).getAllByLabelText("More options")[0])
+      await screen.findAllByText(cardData.courseProgram.title)
+      const programCard = screen.getByTestId("program-as-course-card")
+      await user.click(within(programCard).getAllByLabelText("More options")[0])
 
-    expect(
-      screen.queryByRole("menuitem", { name: "Unenroll" }),
-    ).not.toBeInTheDocument()
-  })
+      expect(
+        screen.queryByRole("menuitem", { name: "Unenroll" }),
+      ).not.toBeInTheDocument()
+    },
+  )
 })

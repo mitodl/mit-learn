@@ -98,10 +98,6 @@ ProgramLoaderConfig = namedtuple(  # noqa: PYI024
 class ETLSource(ExtendedEnum):
     """Enum of ETL sources"""
 
-    # retired: nothing ingests it, but ol-data-platform still sends mit_edx
-    # content file webhooks, which this keeps a no-op instead of a 400. Remove
-    # once they stop.
-    mit_edx = "mit_edx"
     mitpe = "mitpe"
     mitxonline = "mitxonline"
     oll = "oll"

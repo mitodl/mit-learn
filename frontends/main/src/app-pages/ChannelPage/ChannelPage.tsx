@@ -66,14 +66,14 @@ const ChannelPage: React.FC = () => {
   const flagsLoaded = useFeatureFlagsLoaded()
 
   /**
-   * The whole page is behind the flag, so wait for the real value rather than
-   * deciding on a bootstrapped `false` — which reads the same as the page
-   * being switched off. Same reasoning as ContractAdminPage.
+   * The whole page is behind the flag, so wait until flags are final rather
+   * than deciding on what the flag reads before then: a value PostHog stored on
+   * an earlier visit, or the env default (see useFeatureFlagsLoaded's USE CASE).
    *
    * Only where there is something to wait for: only the department page is
-   * still behind a flag. Every other one draws the
-   * page it has always drawn whatever the flags come back saying, so waiting
-   * on them buys a topic, unit or pathway page nothing but the spinner.
+   * still behind a flag. Every other one draws the page it has always drawn
+   * whatever the flags come back saying, so waiting on them buys a topic, unit
+   * or pathway page nothing but the spinner.
    */
   const awaitingFlags =
     channelTypeUsesRedesignFlag(String(channelType)) && !flagsLoaded

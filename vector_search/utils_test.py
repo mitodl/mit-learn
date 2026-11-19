@@ -586,20 +586,20 @@ def test_force_create_qdrant_collections(mocker):
     mock_qdrant.collection_exists.return_value = True
     create_qdrant_collections(force_recreate=True)
     assert (
-        mock_qdrant.recreate_collection.mock_calls[0].kwargs["collection_name"]
+        mock_qdrant.create_collection.mock_calls[0].kwargs["collection_name"]
         == RESOURCES_COLLECTION_NAME
     )
     assert (
-        mock_qdrant.recreate_collection.mock_calls[1].kwargs["collection_name"]
+        mock_qdrant.create_collection.mock_calls[1].kwargs["collection_name"]
         == CONTENT_FILES_COLLECTION_NAME
     )
     assert (
         "dummy-embedding"
-        in mock_qdrant.recreate_collection.mock_calls[0].kwargs["vectors_config"]
+        in mock_qdrant.create_collection.mock_calls[0].kwargs["vectors_config"]
     )
     assert (
         "dummy-embedding"
-        in mock_qdrant.recreate_collection.mock_calls[1].kwargs["vectors_config"]
+        in mock_qdrant.create_collection.mock_calls[1].kwargs["vectors_config"]
     )
 
 
@@ -616,20 +616,20 @@ def test_auto_create_qdrant_collections(mocker):
     mock_qdrant.collection_exists.return_value = False
     create_qdrant_collections(force_recreate=False)
     assert (
-        mock_qdrant.recreate_collection.mock_calls[0].kwargs["collection_name"]
+        mock_qdrant.create_collection.mock_calls[0].kwargs["collection_name"]
         == RESOURCES_COLLECTION_NAME
     )
     assert (
-        mock_qdrant.recreate_collection.mock_calls[1].kwargs["collection_name"]
+        mock_qdrant.create_collection.mock_calls[1].kwargs["collection_name"]
         == CONTENT_FILES_COLLECTION_NAME
     )
     assert (
         "dummy-embedding"
-        in mock_qdrant.recreate_collection.mock_calls[0].kwargs["vectors_config"]
+        in mock_qdrant.create_collection.mock_calls[0].kwargs["vectors_config"]
     )
     assert (
         "dummy-embedding"
-        in mock_qdrant.recreate_collection.mock_calls[1].kwargs["vectors_config"]
+        in mock_qdrant.create_collection.mock_calls[1].kwargs["vectors_config"]
     )
 
 
@@ -646,20 +646,20 @@ def test_skip_creating_qdrand_collections(mocker):
     mock_qdrant.collection_exists.return_value = False
     create_qdrant_collections(force_recreate=False)
     assert (
-        mock_qdrant.recreate_collection.mock_calls[0].kwargs["collection_name"]
+        mock_qdrant.create_collection.mock_calls[0].kwargs["collection_name"]
         == RESOURCES_COLLECTION_NAME
     )
     assert (
-        mock_qdrant.recreate_collection.mock_calls[1].kwargs["collection_name"]
+        mock_qdrant.create_collection.mock_calls[1].kwargs["collection_name"]
         == CONTENT_FILES_COLLECTION_NAME
     )
     assert (
         "dummy-embedding"
-        in mock_qdrant.recreate_collection.mock_calls[0].kwargs["vectors_config"]
+        in mock_qdrant.create_collection.mock_calls[0].kwargs["vectors_config"]
     )
     assert (
         "dummy-embedding"
-        in mock_qdrant.recreate_collection.mock_calls[1].kwargs["vectors_config"]
+        in mock_qdrant.create_collection.mock_calls[1].kwargs["vectors_config"]
     )
 
 
@@ -671,7 +671,7 @@ def test_create_qdrant_collections_enables_sparse_idf(mocker):
 
     create_qdrant_collections(force_recreate=False)
 
-    for call in mock_qdrant.recreate_collection.mock_calls:
+    for call in mock_qdrant.create_collection.mock_calls:
         sparse_vectors_config = call.kwargs.get("sparse_vectors_config")
         if sparse_vectors_config is None:
             continue
@@ -680,6 +680,23 @@ def test_create_qdrant_collections_enables_sparse_idf(mocker):
             assert params.modifier == models.Modifier.IDF
             # and the index config it is set alongside is unchanged
             assert params.index.on_disk is True
+
+
+def test_create_qdrant_collections_keeps_payload_on_disk(mocker):
+    """New collections keep their payload on disk, not preloaded into RAM."""
+    mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
+    mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
+    mock_qdrant.collection_exists.return_value = False
+
+    create_qdrant_collections(force_recreate=False)
+
+    assert mock_qdrant.create_collection.mock_calls
+    for call in mock_qdrant.create_collection.mock_calls:
+        assert "on_disk_payload" not in call.kwargs
+        assert call.kwargs["payload"] == models.PayloadStorageParams(
+            memory=models.Memory.COLD
+        )
+    mock_qdrant.recreate_collection.assert_not_called()
 
 
 def test_score_formula_query_without_penalties(mocker, settings):
@@ -714,6 +731,33 @@ def test_score_formula_query_without_penalties_or_boosts(mocker, settings):
     assert (
         score_formula_query(RESOURCES_COLLECTION_NAME, include_penalties=False) is None
     )
+
+
+@pytest.mark.parametrize(
+    "collection_name", [RESOURCES_COLLECTION_NAME, CONTENT_FILES_COLLECTION_NAME]
+)
+def test_remove_points_matching_params(mocker, collection_name):
+    """Points are deleted by platform in either collection"""
+    client = mocker.patch("vector_search.utils.qdrant_client").return_value
+
+    vs_utils.remove_points_matching_params(
+        {"platform": PlatformType.edx.name}, collection_name=collection_name
+    )
+
+    call = client.delete.call_args.kwargs
+    assert call["collection_name"] == collection_name
+    assert call["points_selector"].filter.must == [
+        models.FieldCondition(key="platform.code", match=models.MatchValue(value="edx"))
+    ]
+
+
+def test_remove_points_matching_params_no_params(mocker):
+    """No params means no delete, rather than deleting every point"""
+    client = mocker.patch("vector_search.utils.qdrant_client").return_value
+
+    vs_utils.remove_points_matching_params({})
+
+    client.delete.assert_not_called()
 
 
 def test_qdrant_query_conditions(mocker):

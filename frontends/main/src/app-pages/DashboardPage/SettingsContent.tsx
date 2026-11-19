@@ -11,7 +11,6 @@ import {
   Skeleton,
 } from "ol-components"
 import { Button, ButtonLink, Checkbox } from "@mitodl/smoot-design"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import { useUserMe } from "api/hooks/user"
 import { useProfileMeMutation, useProfileMeQuery } from "api/hooks/profile"
 import {
@@ -19,7 +18,6 @@ import {
   useSearchSubscriptionList,
 } from "api/hooks/searchSubscription"
 import * as NiceModal from "@ebay/nice-modal-react"
-import { FeatureFlags } from "@/common/feature_flags"
 import { AccountAction, SETTINGS, accountAction } from "@/common/urls"
 import AccountActionAlert from "./AccountActionAlert"
 import NotificationPreferences from "./NotificationPreferences"
@@ -249,10 +247,6 @@ const SettingsContent: React.FC = () => {
   const { data: profile } = useProfileMeQuery()
   const { mutateAsync: updateProfile } = useProfileMeMutation()
 
-  const accountManagementEnabled = useFeatureFlagEnabled(
-    FeatureFlags.AccountManagement,
-  )
-
   const subscriptionList = useSearchSubscriptionList({
     enabled: !!user?.is_authenticated,
   })
@@ -261,8 +255,7 @@ const SettingsContent: React.FC = () => {
     return <Skeleton variant="text" width={128} height={32} />
   }
 
-  const showAccountManagement =
-    accountManagementEnabled && user.is_authenticated && !user.is_sso_user
+  const showAccountManagement = user.is_authenticated && !user.is_sso_user
 
   return (
     <div id="user-settings">

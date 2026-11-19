@@ -22,11 +22,6 @@ paths:
 
           * `news` - News
           * `article` - Article
-      - in: query
-        name: draft
-        schema:
-          type: boolean
-        description: Filter to show only draft (unpublished) items
       - name: limit
         required: false
         in: query
@@ -39,6 +34,20 @@ paths:
         description: The initial index from which to return the results.
         schema:
           type: integer
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - both
+          - draft
+          - published
+        description: |-
+          Filter by publish status. Defaults to published. Drafts are only returned to users who may edit website content; for anyone else, draft is always empty and both is the same as published.
+
+          * `published` - Published
+          * `draft` - Draft
+          * `both` - Both
       tags:
       - articles
       responses:
@@ -9939,7 +9948,6 @@ paths:
         name: source
         schema:
           enum:
-          - mit_edx
           - mitpe
           - mitxonline
           - oll
@@ -9954,7 +9962,6 @@ paths:
           type: string
           minLength: 1
         description: |-
-          * `mit_edx` - mit_edx
           * `mitpe` - mitpe
           * `mitxonline` - mitxonline
           * `oll` - oll
@@ -10110,6 +10117,33 @@ paths:
               schema:
                 $ref: '#/components/schemas/WebhookResponse'
           description: ''
+  /api/v1/webhooks/warehouse_views_rebuilt/:
+    post:
+      operationId: webhooks_warehouse_views_rebuilt_create
+      description: |-
+        Webhook handler for the OL Data Platform's "these views were rebuilt"
+        message. It queues a full run of each catalog sync that reads one of them,
+        so a change reaches MIT Learn without waiting for the sync's daily run.
+
+        A 200 says the syncs were queued, not that anything was loaded: each sync
+        checks ownership when it runs, and does nothing until the warehouse owns its
+        source. A view no sync reads is skipped and named in the response, so that
+        one bad name can't reject the rest of a batch.
+      tags:
+      - webhooks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WarehouseViewsWebhookRequestRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookResponse'
+          description: ''
   /api/v1/website_content/:
     get:
       operationId: website_content_list
@@ -10128,11 +10162,6 @@ paths:
 
           * `news` - News
           * `article` - Article
-      - in: query
-        name: draft
-        schema:
-          type: boolean
-        description: Filter to show only draft (unpublished) items
       - name: limit
         required: false
         in: query
@@ -10145,6 +10174,20 @@ paths:
         description: The initial index from which to return the results.
         schema:
           type: integer
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - both
+          - draft
+          - published
+        description: |-
+          Filter by publish status. Defaults to published. Drafts are only returned to users who may edit website content; for anyone else, draft is always empty and both is the same as published.
+
+          * `published` - Published
+          * `draft` - Draft
+          * `both` - Both
       tags:
       - website_content
       responses:
@@ -16914,7 +16957,6 @@ components:
       - Next start date ascending
     SourceEnum:
       enum:
-      - mit_edx
       - mitpe
       - mitxonline
       - oll
@@ -16928,7 +16970,6 @@ components:
       - ovs
       type: string
       description: |-
-        * `mit_edx` - mit_edx
         * `mitpe` - mitpe
         * `mitxonline` - mitxonline
         * `oll` - oll
@@ -16941,7 +16982,6 @@ components:
         * `canvas` - canvas
         * `ovs` - ovs
       x-enum-descriptions:
-      - mit_edx
       - mitpe
       - mitxonline
       - oll
@@ -18018,6 +18058,22 @@ components:
       type: string
       enum:
       - video
+    WarehouseViewsWebhookRequestRequest:
+      type: object
+      description: |-
+        Serializer for the ``/api/v1/webhooks/warehouse_views_rebuilt/`` endpoint.
+
+        ``views`` are plain strings, not choices: a view no sync reads is logged
+        and skipped, rather than rejecting the batch it came in.
+      properties:
+        views:
+          type: array
+          items:
+            type: string
+          description: Bare names of the warehouse views the data platform rebuilt,
+            e.g. integrations__learn__ocw_courses
+      required:
+      - views
     WebhookResponse:
       type: object
       description: Serializer for webhook responses.

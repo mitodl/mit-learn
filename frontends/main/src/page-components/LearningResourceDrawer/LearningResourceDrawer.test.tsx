@@ -15,7 +15,7 @@ import { RESOURCE_DRAWER_PARAMS } from "@/common/urls"
 import { LearningResource, ResourceTypeEnum } from "api"
 import { makeUserSettings } from "@/test-utils/factories"
 import type { User } from "api/hooks/user"
-import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { capturePostHog } from "@/common/analytics/posthog"
 
 jest.mock("../LearningResourceExpanded/LearningResourceExpanded", () => {
@@ -28,14 +28,14 @@ jest.mock("../LearningResourceExpanded/LearningResourceExpanded", () => {
   }
 })
 
-jest.mock("posthog-js/react")
+jest.mock("@/common/useFeatureFlag")
 jest.mock("@/common/analytics/posthog", () => ({
   capturePostHog: jest.fn(),
   initPostHog: jest.fn(),
 }))
 const mockedPostHogCapture = jest.mocked(capturePostHog)
-const mockedUseFeatureFlagEnabled = jest
-  .mocked(useFeatureFlagEnabled)
+const mockedUseFeatureFlag = jest
+  .mocked(useFeatureFlag)
   .mockImplementation(() => false)
 
 describe("LearningResourceDrawer", () => {
@@ -244,7 +244,7 @@ describe("LearningResourceDrawer", () => {
   ])(
     "Renders drawer with chatExpanded based on URL",
     async ({ extraQueryParams, expectChat }) => {
-      mockedUseFeatureFlagEnabled.mockReturnValue(true)
+      mockedUseFeatureFlag.mockReturnValue(true)
       const { resource } = setupApis({
         resource: {
           // Chat is only enabled for courses or programs
@@ -267,7 +267,7 @@ describe("LearningResourceDrawer", () => {
   )
 
   test("If chat is not supported, 'syllabus' param removed from URL", async () => {
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
     const { resource } = setupApis({
       resource: {
         // Chat is only enabled for courses and programs; NOT enabled here
@@ -290,7 +290,7 @@ describe("LearningResourceDrawer", () => {
   })
 
   test("Clicking 'Ask Tim' toggles chat query param", async () => {
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
     const { resource } = setupApis({
       resource: {
         // Chat is only enabled for courses
@@ -314,7 +314,7 @@ describe("LearningResourceDrawer", () => {
   it.each([{ syllabusOnly: false }, { syllabusOnly: true }])(
     "Derives syllabusOnlyMode from the syllabus_only URL param (=$syllabusOnly)",
     async ({ syllabusOnly }) => {
-      mockedUseFeatureFlagEnabled.mockReturnValue(true)
+      mockedUseFeatureFlag.mockReturnValue(true)
       const { resource } = setupApis({
         resource: {
           // Chat is only enabled for courses or programs
@@ -345,7 +345,7 @@ describe("LearningResourceDrawer", () => {
   )
 
   test("Closing in syllabus-only mode strips all drawer params from the URL", async () => {
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
     const { resource } = setupApis({
       resource: {
         resource_type: ResourceTypeEnum.Course,

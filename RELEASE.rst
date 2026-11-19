@@ -1,6 +1,143 @@
 Release Notes
 =============
 
+Version 0.88.1
+--------------
+
+- Remove the external-schema write guard left over from Hightouch (#4302)
+- Hide dashboard details links to product pages that don't load (#4325)
+- Write profile notes to the learner's shared memory (#4326)
+- refactor and reduce complexity of learning_resources/converters/opendataloader_llm_converter.py (#4306)
+- Export the B2B Learners CSV in 100-learner pages (#4336)
+- Add the Cyber Sale banner on MIT Learn (#4332)
+- Find the option by text in the 51-module ContractLearnersPage test (#4337)
+- Bump smoot-design to 6.41.0 for the Contact Us escalation button (#4333)
+
+Version 0.88.0
+--------------
+
+- handle large units (#4297)
+- Put Modules before Status on the B2B Learners page, and disable Status until a module is selected (#4318)
+- Remove the search-ai-overview feature flag (#4321)
+- Remove the account-management and program-letters PostHog flags (#4324)
+- Remove brotli uv exclude-newer override (#4314)
+- Replace the website content draft filter with ?status (#4313)
+- Remove the arithmix and hacksnack feature flags (#4322)
+- Remove the b2b-contract-manager-dashboard, b2b-analytics-dashboard and b2b-data-consent flags (#4323)
+- Expect the /switch-session redirect in the sign-up-return checkout test (#4327)
+- Clamp the card's parent course name at two lines (#4317)
+- fix: send checkout through MITx Online's /switch-session (#4311)
+- Add the Educator page (#4260)
+- Do not reject OVS webhook videos with a non-allowlisted cta_link (#4315)
+- Drop the By enrollment view and hide unconsented learners (#4266)
+
+Version 0.87.3
+--------------
+
+- Purge website content pages by path surrogate key (#4263)
+- Send signed-out enroll clicks to sign-up and finish the enrollment after (#4277)
+- Move the load tests to mitodl/load-testing (#4307)
+- Clear channel caches when a channel is saved in admin (#4261)
+- Drop the custom enum template; hardcode the profile choice labels (#4308)
+- fix(widgets): remove the People widget type (#4310)
+- Remove dead catalog-filter event emission (#4309)
+- Update gtm docs (#4305)
+- chore(deps): remove unused safety to unblock filelock 4 (#4303)
+- Log in SCIM-provisioned users by their external id and prefer linked rows (#4248)
+- feat(b2b-learner-analytics): Match the Progress grid's Modules filter to the topic page's facet controls (#4246)
+- Keep Celery workers on the structlog logging configuration (#4289)
+- Read actively_enrolled_* on the B2B analytics dashboard (#4298)
+- Offer Start on a program course whose enrolled runs have all ended (#4257)
+- Show the price in the mobile enroll button (#4276)
+
+Version 0.87.2
+--------------
+
+- Remove the resource-card-redesign flag (#4295)
+- Put cards' actions beside the metadata, off the image (#4294)
+- run level claims (#4270)
+- Management command for running pdf to markdown for arbitrary courses (#4281)
+- Remove Sloan news/events ETL (#4274)
+- upgrade qdrant (#4267)
+- Read OLX blocks whose url_name has a colon (#4264)
+- Remove the unused org-wide analytics page (#4273)
+
+Version 0.87.0
+--------------
+
+- Show "Free", not "Free to audit", on redesigned cards (#4275)
+- Fix ProgramAsCoursePage enroll-button test timeouts (#4286)
+- Backport PDF processing fixes and a structuring pass to the converter (#4235)
+- Delete mit_edx resources and remove ETLSource.mit_edx (#4254)
+- Treat program enrollment mode "upgrade" as paid alongside "verified" (#4195)
+- Prefer an upcoming run over an ended one on dashboard cards (#4256)
+
+Version 0.86.5
+--------------
+
+- Fix render loop on news and article pages with resource cards (#4269)
+- Keep the department title and Follow pill clear of the hero photo (#4243)
+- Show run-specific actions only in run rows on multi-run dashboard cards (#4240)
+- Don't record a decline when a learner cancels the data consent dialog (#4265)
+- feat(b2b-learner-analytics): learner summary panel with activity counts (#4226)
+- Upgrade posthog-js to 1.442 and use env vars as flag fallbacks instead of bootstrapping (#4236)
+- Say analytics are on their way for an org or contract not loaded yet (#4247)
+- Update dependency syncpack to v14.3.1 (#3851)
+- Update dependency pypdf to v6.21.4 [SECURITY] (#4249)
+- Anchor the login and logout URL patterns (#4181)
+- Expire cached views by TTL instead of an hourly clear (#4253)
+- Speed up CI: drop coverage, split out Python checks, unchain the container build (#4259)
+- context and unit claim extraction tasks (#4178)
+- Add an Openly Licensed Content section to the Terms of Service (#4207)
+- Resource card redesign: two-line titles, inline actions, wider search spacing (#4238)
+- Stop the program certificates 500 and give certificates without a MicroMasters id no letter (#4198)
+
+Version 0.86.4
+--------------
+
+- Fix render loop on news and article pages with resource cards (#4269)
+
+Version 0.86.3
+--------------
+
+- Redesign certificate web view and PDF to the new Figma layout (#4228)
+- Add warehouse-pull sync tasks for content files (#4222)
+- Read only the content file columns a YouTube shadow compares (#4245)
+- Fix flaky ResourceCardView test with duplicate metadata labels (#4244)
+- Fix order-dependent learning path bad-data test (#4242)
+- Bump smoot-design to 6.40.0 (#4232)
+- Fold the two YouTube ownership checks into one (#4221)
+- Refuse a learning_resources webhook batch that would mass-unpublish (#4220)
+- Update dependency prek to v0.5.6 (#4217)
+- Gtm cleanup architecture refactor (#4062)
+- feat(b2b-learner-analytics): show content progress, filter the grid by module, and match the enrollment view's counts (#4129)
+- Update dependency pypdf to v6.21.4 [SECURITY] (#4231)
+
+Version 0.86.2
+--------------
+
+- Pin posthog-js to 1.297.2 to restore feature flags on RC (#4230)
+- feat: placement of department's images in hero banners (#4172)
+- Open one letter per program from the letter link (#4218)
+- fix(scim): require the scim OAuth2 scope on SCIM requests (#4191)
+- Remove python-social-auth, unused since the APISIX cutover (#4215)
+- Lock file maintenance (#4213)
+- Load YouTube playlists inline in a shadow run (#4058)
+- Resource card redesign: centre price lines beside the bookmark, "Certificate of Completion" reads "Certificate" (#4211)
+- Run a webhook batch as a shadow when the webhook shadows its pairs (#4057)
+- chore(deps): update prettier to 3.9 and eslint-plugin-styled-components-a11y to 2.2 (#4214)
+- fix(vector_search): retrieve payloads for the final hits only (#4208)
+- Add a shadow run for an ETL source's new pipeline (#4056)
+- chore(load_testing): refresh lockfile (#4209)
+- Remove mit_edx ingestion and the course blocklist (#4193)
+- Gate the course outline section on the CMS show_course_outline toggle (#4043)
+- Show the 404 page for missing or revoked program letters (#4196)
+- Refuse program letters for revoked certificates (#4182)
+- Update dependency pypdf to v6.21.2 [SECURITY] (#4192)
+- Use the generated ol-analytics-api client for the B2B dashboard (#4127)
+- refactor(b2b): read certified_learners from contract utilization (#4116)
+- Remove the Unified Ecommerce cart page and EcommerceFeature (#4205)
+
 Version 0.85.5
 --------------
 

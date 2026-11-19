@@ -1476,6 +1476,10 @@ class ResourceProfileConfiguration(TimestampedModel):
         CONTEXT = "context", "Context"
         # claims about one unit or bin
         UNIT = "unit", "Unit"
+        # claims about a unit that was split into parts, from its parts' claims
+        UNIT_MERGE = "unit_merge", "Unit merge"
+        # claims about the course as a whole, from its units' and context's claims
+        RUN = "run", "Run"
 
     stage = models.CharField(max_length=16, choices=Stage.choices, unique=True)
     llm_model = models.CharField(
@@ -1514,7 +1518,17 @@ class ResourceProfileConfiguration(TimestampedModel):
     )
     input_token_budget = models.PositiveIntegerField(
         default=100000,
-        help_text="Most file text one call may read. A unit over it is skipped.",
+        help_text="Most file text one call may read. A unit over it is split"
+        " into parts that are extracted separately and then merged; a context"
+        " unit over it is skipped. For the unit merge stage, the most tokens a"
+        " merge call may take; a unit whose merge call is over it fails, and"
+        " its run's claims wait for it.",
+    )
+    max_parts = models.PositiveIntegerField(
+        default=10,
+        help_text="Most parts a unit over the input budget may be split into;"
+        " each part is a call of its own. A unit that would need more is"
+        " skipped. 1 turns splitting off. Only the unit stage uses it.",
     )
 
     def __str__(self):
@@ -1524,18 +1538,16 @@ class ResourceProfileConfiguration(TimestampedModel):
 class ClaimExtraction(TimestampedModel):
     """
     The validated output of one resource profile LLM call, keyed by its inputs.
-
-    Rows are a cache: before a call, its key is computed from the text of the
-    files it reads, and a row with that key is used instead of calling again.
-    The prompt and model aren't in the key, so changing them leaves rows as
-    they are until they are regenerated with overwrite.
-    Units with identical files in different runs share a row, so `unit` is the
-    unit the row was first produced for.
     """
 
     class Level(models.TextChoices):
         # a unit, bin or context unit
         UNIT = "unit", "Unit"
+        # one part of a unit too large for one call; the unit's own row merges
+        # its parts
+        UNIT_PART = "unit_part", "Unit part"
+        # a run, from its units' and context unit's extractions
+        RUN = "run", "Run"
 
     # sha256 of the stage's inputs
     key = models.CharField(max_length=64, unique=True)
@@ -1553,6 +1565,17 @@ class ClaimExtraction(TimestampedModel):
         on_delete=models.SET_NULL,
         related_name="claim_extractions",
     )
+    # unit_part level: the part's index within the unit, from 1
+    part = models.PositiveIntegerField(null=True, blank=True)
+    # what a run-level extraction was produced for; unit-level ones use `unit`
+    run = models.ForeignKey(
+        LearningResourceRun,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="claim_extractions",
+    )
+    published = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.level} {self.extractor_version} {self.key[:12]}"

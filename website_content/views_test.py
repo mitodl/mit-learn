@@ -187,13 +187,67 @@ def test_listing_is_what_the_caller_may_see(staff_client):
     draft = WebsiteContent.objects.create(
         title="Draft Article", content={}, is_published=False, content_type="news"
     )
-    url = reverse("website_content:v1:website_content-list")
+    url = reverse("website_content:v1:website_content-list") + "?status=both"
 
     editor_ids = {item["id"] for item in staff_client.get(url).json()["results"]}
     assert editor_ids == {published.id, draft.id}
 
-    anonymous_ids = {item["id"] for item in APIClient().get(url).json()["results"]}
-    assert anonymous_ids == {published.id}
+    assert APIClient().get(url).status_code == 403
+
+
+@pytest.mark.parametrize(
+    ("is_editor", "query", "expected"),
+    [
+        # Published unless asked otherwise, editor or not.
+        (True, "", {"published"}),
+        (False, "", {"published"}),
+        (True, "?status=published", {"published"}),
+        (False, "?status=published", {"published"}),
+        (True, "?status=draft", {"draft"}),
+        (True, "?status=both", {"published", "draft"}),
+    ],
+)
+def test_status_filter(staff_client, is_editor, query, expected):
+    """`status` picks the publish states listed, within what the caller may see"""
+    ids = {
+        "published": _make_content(None, is_published=True).id,
+        "draft": _make_content(None, is_published=False).id,
+    }
+    client = staff_client if is_editor else APIClient()
+    url = reverse("website_content:v1:website_content-list") + query
+
+    resp = client.get(url)
+
+    assert resp.status_code == 200
+    assert {item["id"] for item in resp.json()["results"]} == {
+        ids[key] for key in expected
+    }
+
+
+@pytest.mark.parametrize("status", ["draft", "both"])
+def test_status_filter_drafts_are_editor_only(status):
+    """Asking for drafts without permission to edit is a 403, not an empty list"""
+    url = reverse("website_content:v1:website_content-list") + f"?status={status}"
+
+    assert APIClient().get(url).status_code == 403
+
+
+def test_status_filter_rejects_unknown_values(client):
+    """An unknown status is a 400, not a silently unfiltered listing"""
+    url = reverse("website_content:v1:website_content-list") + "?status=archived"
+
+    assert client.get(url).status_code == 400
+
+
+def test_editor_retrieves_a_draft_by_id(staff_client):
+    """The published default narrows the listing, not a lookup of one item"""
+    draft = _make_content(None, is_published=False)
+    url = reverse("website_content:v1:website_content-detail", args=[draft.id])
+
+    resp = staff_client.get(url)
+
+    assert resp.status_code == 200
+    assert resp.json()["id"] == draft.id
 
 
 @pytest.fixture

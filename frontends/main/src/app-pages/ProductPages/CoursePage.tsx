@@ -7,7 +7,6 @@ import { pagesQueries } from "api/mitxonline-hooks/pages"
 import { useQuery } from "@tanstack/react-query"
 import { styled } from "@mitodl/smoot-design"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { notFound } from "next/navigation"
 import { getOutlineCoursewareId, HeadingIds } from "./util"
@@ -23,8 +22,11 @@ import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
 import CourseInfoBox from "./InfoBoxCourse"
 import CourseOutlineSection from "./CourseOutlineSection"
 import { analytics } from "@/common/analytics"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import HeaderEnrollButton from "./HeaderEnrollButton"
 import { useCourseEnrollment } from "./useCourseEnrollment"
+import { useCertificatePricing } from "./useCertificatePricing"
+import { canPurchaseRun } from "@/common/mitxonline"
 import { getSelectedRun } from "./courseRun"
 import type {
   CourseRunV2,
@@ -45,25 +47,26 @@ const CourseHeaderEnrollButton: React.FC<{
   course: CourseWithCourseRunsSerializerV2
   selectedRun: CourseRunV2 | undefined
 }> = ({ course, selectedRun }) => {
-  const [anchor, setAnchor] = React.useState<null | HTMLButtonElement>(null)
-
   const { state, isStatusLoading, isPending, error } = useCourseEnrollment(
     course,
     selectedRun,
     {
       tracking: { placement: "header" },
-      onRequireSignup: setAnchor,
     },
+  )
+  const { price, breakdown } = useCertificatePricing(
+    course,
+    selectedRun?.products?.[0],
+    { purchasable: selectedRun ? canPurchaseRun(selectedRun) : false },
   )
 
   return (
     <HeaderEnrollButton
       state={state}
+      price={breakdown?.todaysPrice ?? price}
       isStatusLoading={isStatusLoading}
       isPending={isPending}
       error={error}
-      anchor={anchor}
-      onAnchorClose={() => setAnchor(null)}
     />
   )
 }
@@ -78,9 +81,7 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
   const effectiveOutlineCoursewareId = course
     ? getOutlineCoursewareId(course)
     : undefined
-  const outlineFlagEnabled = useFeatureFlagEnabled(
-    FeatureFlags.CourseOutlineSection,
-  )
+  const outlineFlagEnabled = useFeatureFlag(FeatureFlags.CourseOutlineSection)
   const showCourseOutline = outlineFlagEnabled && page?.show_course_outline
   const outline = useQuery({
     ...coursesQueries.courseOutline(effectiveOutlineCoursewareId ?? ""),

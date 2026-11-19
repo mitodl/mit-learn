@@ -9,9 +9,8 @@ class Command(BaseCommand):
     """
     Clear cached view responses.
 
-    Cached responses are otherwise dropped on a schedule by
-    main.tasks.clear_views_cache (CLEAR_VIEWS_CACHE_SCHEDULE_SECONDS). Run this
-    to publish a manual change without waiting for the next scheduled clear.
+    Cached responses otherwise expire after REDIS_VIEW_CACHE_DURATION. Run
+    this to publish a manual change without waiting for them to expire.
     """
 
     help = "Command to clear the cache"

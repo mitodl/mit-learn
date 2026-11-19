@@ -1,66 +1,30 @@
-import { INTERNAL_BOOTSTRAPPING_FLAG } from "@/common/feature_flags"
-import { env } from "@/env"
-import {
-  PostHogContext,
-  useFeatureFlagEnabled,
-  usePostHog,
-} from "posthog-js/react"
-import { useContext, useEffect, useState } from "react"
+import { createContext, useContext } from "react"
 
 /**
- * Returns `true` if feature flags have been loaded via posthog API, else `false`.
+ * Whether PostHog's flags are final for the visitor this page ends up
+ * identified as. ConfiguredPostHogProvider sets it.
+ *
+ * `true` by default: without a PostHog api key, and outside the provider, the
+ * env defaults are the final values.
+ */
+const FeatureFlagsLoadedContext = createContext(true)
+
+/**
+ * Returns `true` once PostHog's feature flags are final for this visitor, or
+ * once loading them has failed or timed out; `false` until then.
  *
  * NOTES:
  * 1. Avoid using this! Really!:
- *   - This can delay feature flag availability for users who have been to the
- *     site before. Their flags will be bootstrapped from localStorage, and should
- *     have the correct values immediately, before contacting the PostHog server.
- *   - We generally shouldn't care if a flag is "false" or
- *     "not loaded yet".
+ *   - A page that waits on this shows its loading state until PostHog answers.
+ *     `useFeatureFlag` meanwhile reads the flags PostHog stored on an earlier
+ *     visit, or the env default, which is right for almost every flag.
  *
- *     USE CASE: One case where this distinction matters is when an entire page
- *     is behind a feature flag, and we don't want to 404 until the flags are
- *     loaded.
- * 2. Unlike posthog's `onFeatureFlags` callback, this hook enables you to
- *   distinguish between bootstrapped flags and flags loaded from PostHog server.
- *
- * IMPLEMENTATION:
- * Posthog does not make detecting "flags have loaded from server" easy.
- * This approach relies on the fact that bootstrapped flags are completely
- * discarded after flags are loaded from server, so `useFlagEnabled` will
- * return `undefined` for any flag that was only bootstrapped locally.
- *
- * Without a PostHog api key nothing loads from a server, and
- * ConfiguredPostHogProvider puts the env flags in the context's bootstrap as
- * final values, so the flags count as loaded once that bootstrap is set.
+ *     USE CASE: an entire page is behind a feature flag. It shouldn't 404 or
+ *     403 until the flag is final: once a page throws `notFound()`, Next keeps
+ *     showing the 404 until the visitor navigates, even if the flag turns on.
+ * 2. It never goes back to `false`. Later flag updates (another tab's load,
+ *    an identity change) change flag values, not this.
  */
-const useFeatureFlagsLoaded = () => {
-  const posthog = usePostHog()
-  const [hasBootstrapped, setHasBootstrapped] = useState(false)
-  useEffect(() => {
-    /**
-     * NOTE: this does not indicate flags have loaded from server, so they might
-     * be incomplete. It does at least indicate that localstorage/bootstrapped
-     * flags are ready
-     *
-     * If this event listener is added after posthog has fully loaded flags,
-     * the callback is still fired.
-     */
-    return posthog.onFeatureFlags(() => {
-      setHasBootstrapped(true)
-    })
-  }, [posthog])
-  const bootstrapFlag = useFeatureFlagEnabled(INTERNAL_BOOTSTRAPPING_FLAG)
-  const { bootstrap } = useContext(PostHogContext)
-  if (!env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
-    return bootstrap !== undefined
-  }
-  /**
-   * bootstrapFlag will be undefined:
-   *  1. BEFORE posthog has initialized (nothing bootstrapped yet)
-   *  2. AFTER posthog has loaded flags from its server.
-   */
-  return hasBootstrapped && bootstrapFlag === undefined
-}
+const useFeatureFlagsLoaded = () => useContext(FeatureFlagsLoadedContext)
 
-export { useFeatureFlagsLoaded }
+export { useFeatureFlagsLoaded, FeatureFlagsLoadedContext }

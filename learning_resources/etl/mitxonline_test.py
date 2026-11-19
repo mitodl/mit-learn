@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from urllib.parse import parse_qs, urlparse
 
 import pytest
+import requests
 from responses import matchers as responses_matchers
 
 from learning_resources.constants import (
@@ -1643,6 +1644,30 @@ def test_fetch_data_rejects_cross_host_next_url(mocker, settings):
     with pytest.raises(
         ValueError,
         match="MITx Online pagination attempted to leave the configured host",
+    ):
+        list(_fetch_data("https://mitxonline.example.com/api/courses"))
+
+    assert mock_get.call_count == 1
+
+
+def test_fetch_data_non_json_response(mocker, settings):
+    """_fetch_data should raise a clear error when the API returns non-JSON"""
+    settings.REQUESTS_TIMEOUT = 5
+    mock_get = mocker.patch(
+        "learning_resources.etl.mitxonline.requests.get",
+        return_value=mocker.Mock(
+            status_code=502,
+            headers={"Content-Type": "text/html"},
+            json=mocker.Mock(
+                side_effect=requests.exceptions.JSONDecodeError(
+                    "Expecting value", "", 0
+                )
+            ),
+        ),
+    )
+
+    with pytest.raises(
+        ValueError, match="MITx Online API returned a non-JSON response"
     ):
         list(_fetch_data("https://mitxonline.example.com/api/courses"))
 

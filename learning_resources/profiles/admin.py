@@ -18,6 +18,7 @@ class ResourceProfileConfigurationAdmin(admin.ModelAdmin):
         "temperature",
         "max_file_tokens",
         "input_token_budget",
+        "max_parts",
         "updated_on",
     )
 
@@ -26,10 +27,20 @@ class ClaimExtractionAdmin(admin.ModelAdmin):
     """ClaimExtraction Admin"""
 
     model = ClaimExtraction
-    list_display = ("key", "level", "extractor_version", "model", "unit", "created_on")
-    list_filter = ("level", "model", "extractor_version")
-    search_fields = ("key", "unit__external_id", "unit__run__run_id")
-    raw_id_fields = ("unit",)
+    list_display = (
+        "key",
+        "level",
+        "extractor_version",
+        "model",
+        "unit",
+        "part",
+        "run",
+        "published",
+        "created_on",
+    )
+    list_filter = ("published", "level", "model", "extractor_version")
+    search_fields = ("key", "unit__external_id", "unit__run__run_id", "run__run_id")
+    raw_id_fields = ("unit", "run")
     show_full_result_count = False
 
     def get_queryset(self, request):

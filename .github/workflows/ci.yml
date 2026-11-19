@@ -5,8 +5,94 @@ permissions:
   contents: read
 
 jobs:
+  # Project-wide checks that don't depend on the test run. They run in their
+  # own job so they don't add to python-tests' wall-clock time.
+  python-checks:
+    runs-on: ubuntu-24.04
+
+    env: &django-env-vars
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres # pragma: allowlist secret
+      MITOL_SECURE_SSL_REDIRECT: "False"
+      MITOL_DB_DISABLE_SSL: "True"
+      MITOL_FEATURES_DEFAULT: "True"
+      OPENSEARCH_URL: localhost:9200
+      CELERY_TASK_ALWAYS_EAGER: "True"
+      REDIS_URL: redis://localhost:6379/4
+      CELERY_BROKER_URL: redis://localhost:6379/4
+      CELERY_RESULT_BACKEND: redis://localhost:6379/4
+      TIKA_CLIENT_ONLY: "True"
+      MITOL_APP_BASE_URL: http://localhost:8062/
+      MAILGUN_KEY: fake_mailgun_key
+      MAILGUN_SENDER_DOMAIN: other.fake.site
+      OPENSEARCH_INDEX: testindex
+      INDEXING_API_USERNAME: mitodl
+      STARROCKS_HOST: localhost
+      STARROCKS_PORT: "9030"
+      STARROCKS_USER: root
+      MITOL_COOKIE_DOMAIN: localhost
+      MITOL_COOKIE_NAME: cookie_monster
+      UNSUBSCRIBE_SECRET_KEY: fake_unsubscribe_secret
+      WEBHOOK_SECRET: fake_webhook_secret
+
+    services:
+      db:
+        image: postgres:15
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres # pragma: allowlist secret
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: update apt
+        run: sudo apt-get update -y
+
+      - name: Apt install
+        run: sudo apt-get install -y pkg-config libffi-dev libpq-dev libxmlsec1-dev
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+
+      - name: Install Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: Create test local state
+        run: ./scripts/test/stub-data.sh
+
+      - name: Django system checks
+        run: uv run ./manage.py check --fail-level WARNING
+
+      - name: No missing migrations
+        run: ./scripts/test/detect_missing_migrations.sh
+
+      - name: No auto-named migrations
+        run: ./scripts/test/no_auto_migrations.sh
+
+      - name: OpenAPI spec is up to date
+        run: uv run ./scripts/test/openapi_spec_check.sh
+
   python-tests:
     runs-on: ubuntu-24.04
+
+    env:
+      # pytest.ini's addopts turn coverage on for local runs. Nothing in CI
+      # reads the report, and the instrumentation slows the suite down.
+      PYTEST_ADDOPTS: "--no-cov"
 
     services:
       # Label used to access the service container
@@ -70,40 +156,15 @@ jobs:
       - name: Create test local state
         run: ./scripts/test/stub-data.sh
 
+      - name: Collect static files
+        run: uv run ./manage.py collectstatic --noinput --clear
+        env: *django-env-vars
+
       - name: Tests
         run: |
-          uv run ./manage.py collectstatic --noinput --clear
-          uv run ./manage.py check --fail-level WARNING
           export MEDIA_ROOT="$(mktemp -d)"
-          ./scripts/test/python_tests.sh
-        env:
-          DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres # pragma: allowlist secret
-          MITOL_SECURE_SSL_REDIRECT: "False"
-          MITOL_DB_DISABLE_SSL: "True"
-          MITOL_FEATURES_DEFAULT: "True"
-          OPENSEARCH_URL: localhost:9200
-          CELERY_TASK_ALWAYS_EAGER: "True"
-          REDIS_URL: redis://localhost:6379/4
-          CELERY_BROKER_URL: redis://localhost:6379/4
-          CELERY_RESULT_BACKEND: redis://localhost:6379/4
-          TIKA_CLIENT_ONLY: "True"
-          MITOL_APP_BASE_URL: http://localhost:8062/
-          MAILGUN_KEY: fake_mailgun_key
-          MAILGUN_SENDER_DOMAIN: other.fake.site
-          OPENSEARCH_INDEX: testindex
-          INDEXING_API_USERNAME: mitodl
-          STARROCKS_HOST: localhost
-          STARROCKS_PORT: "9030"
-          STARROCKS_USER: root
-          MITOL_COOKIE_DOMAIN: localhost
-          MITOL_COOKIE_NAME: cookie_monster
-          UNSUBSCRIBE_SECRET_KEY: fake_unsubscribe_secret
-          WEBHOOK_SECRET: fake_webhook_secret
-
-      - name: Upload coverage to CodeCov
-        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
-        with:
-          file: ./coverage.xml
+          uv run pytest -n logical
+        env: *django-env-vars
 
   javascript-tests:
     runs-on: ubuntu-24.04
@@ -143,19 +204,14 @@ jobs:
         uses: SimenB/github-actions-cpu-cores@97330871fe1b7d3529392ea000e3d2c4b357e403 # v3
 
       - name: Tests
-        run: yarn test --max-workers ${STEPS_CPU_CORES_OUTPUTS_COUNT}
+        # frontends/jest.config.ts turns coverage on for local runs; nothing in
+        # CI reads the report.
+        run: yarn test --coverage=false --max-workers ${STEPS_CPU_CORES_OUTPUTS_COUNT}
         env:
-          CODECOV: true
           NODE_ENV: test
           STEPS_CPU_CORES_OUTPUTS_COUNT: ${{ steps.cpu-cores.outputs.count }}
 
-      - name: Upload coverage to CodeCov
-        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
-        with:
-          file: coverage/lcov.info
-
   build-nextjs-container:
-    needs: javascript-tests
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
@@ -277,8 +333,8 @@ jobs:
   # ONE required status check standing for this whole workflow.
   #
   # GitHub's required status checks take an exact list of context names -- no
-  # wildcards, no "all checks must pass" option -- so requiring these six jobs
-  # directly means restating all six names in mitodl/ol-infrastructure, where the
+  # wildcards, no "all checks must pass" option -- so requiring these jobs
+  # directly means restating every name in mitodl/ol-infrastructure, where the
   # ruleset lives. That list then goes stale in two ways:
   #
   #   A renamed job keeps being required under its old name, which GitHub will never
@@ -301,6 +357,7 @@ jobs:
   # exists to solve.
   ci-gate:
     needs:
+      - python-checks
       - python-tests
       - javascript-tests
       - build-nextjs-container

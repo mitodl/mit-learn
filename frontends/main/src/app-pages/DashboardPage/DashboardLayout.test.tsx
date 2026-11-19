@@ -24,12 +24,7 @@ import {
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
 import { UserOrganizationPage } from "@mitodl/mitxonline-api-axios/v0"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import mockRouter from "next-router-mock"
-import { FeatureFlags } from "@/common/feature_flags"
-
-jest.mock("posthog-js/react")
-const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
 
 describe("DashboardLayout", () => {
   type SetupOptions = {
@@ -148,9 +143,6 @@ describe("DashboardLayout", () => {
   })
 
   test("A contract tab asks for data consent first, and declining goes to dashboard home", async () => {
-    mockedUseFeatureFlagEnabled.mockImplementation(
-      (flag) => flag === FeatureFlags.B2BDataConsent,
-    )
     const contract = mitxOnlineFactories.contracts.contract({
       name: "Consent Contract",
       consented_to_data_sharing: null,
@@ -165,14 +157,6 @@ describe("DashboardLayout", () => {
         }),
       ],
     })
-    setMockResponse.post(
-      mitxOnlineUrls.b2b.dataConsent(contract.id),
-      undefined,
-      {
-        code: 204,
-      },
-    )
-
     const desktopNav = await screen.findByTestId("desktop-nav")
     const tab = await within(desktopNav).findByRole("tab", {
       name: /Consent Contract/,
@@ -187,6 +171,5 @@ describe("DashboardLayout", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Cancel" }))
 
     await waitFor(() => expect(mockRouter.asPath).toBe(DASHBOARD_HOME))
-    expect(screen.getByText("Response recorded.")).toBeInTheDocument()
   })
 })

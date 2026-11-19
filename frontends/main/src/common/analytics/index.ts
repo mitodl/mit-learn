@@ -93,13 +93,6 @@ type VideoShortsClosedParams = {
   totalVideosViewed: number
 }
 
-type AnalyticsViewChangedParams = {
-  view: string
-  previousView: string
-  orgSlug: string
-  contractSlug: string
-}
-
 const analytics = {
   // Session / arrival
   landingPageArrived: (params?: UtmParams) => trackLandingPageArrival(params),
@@ -243,10 +236,6 @@ const analytics = {
 
   // Hero (PostHog)
   heroBrowseTopicsClicked: () => capturePostHog(PostHogEvents.HeroBrowseTopics),
-
-  // B2B analytics (PostHog)
-  analyticsViewChanged: (params: AnalyticsViewChangedParams) =>
-    capturePostHog(PostHogEvents.AnalyticsViewChanged, params),
 }
 
 export { analytics, initPostHog }
@@ -266,5 +255,4 @@ export type {
   VideoShortOpenedParams,
   VideoShortViewedParams,
   VideoShortsClosedParams,
-  AnalyticsViewChangedParams,
 }

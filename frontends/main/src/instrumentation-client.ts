@@ -8,6 +8,7 @@ import { env } from "./env"
 
 import * as Sentry from "@sentry/nextjs"
 import { bootstrapApiClients } from "./bootstrap/api"
+import { bootstrapPostHog } from "./bootstrap/posthog"
 import { parseSampleRate } from "./sentry-utils"
 
 // This module evaluates before React hydration. A throw here aborts the
@@ -42,6 +43,14 @@ try {
   bootstrapApiClients()
 } catch (error) {
   console.error("Client bootstrap failed:", error)
+  Sentry.captureException(error)
+}
+
+// Its own try, so a failure in either bootstrap doesn't skip the other.
+try {
+  bootstrapPostHog()
+} catch (error) {
+  console.error("PostHog bootstrap failed:", error)
   Sentry.captureException(error)
 }
 

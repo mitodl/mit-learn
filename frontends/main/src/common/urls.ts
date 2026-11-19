@@ -2,6 +2,7 @@ import { env, requiredEnv } from "@/env"
 import type { V2ProgramDisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { slugify } from "@/common/slugs"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
+import type { CompletionStatusFilter } from "api/analytics-hooks/organizations"
 
 // matches ! $ & ' ( ) * + , ; = : @ ~
 const SAFE_IN_PATH_SEGMENT =
@@ -104,15 +105,6 @@ export const CONTRACT_ADMIN_VIEW =
   "/organization/[orgSlug]/contract/[contractSlug]/admin"
 export const contractAdminView = (orgSlug: string, contractSlug: string) =>
   generatePath(CONTRACT_ADMIN_VIEW, { orgSlug, contractSlug })
-/**
- * B2B analytics comes at two scopes. The org view aggregates every contract;
- * the contract view narrows to one, mirroring how MITx Online's manager
- * dashboard is addressed. Both are backed by their own materialized views.
- */
-export const ORGANIZATION_ANALYTICS_VIEW =
-  "/dashboard/organization/[orgSlug]/analytics"
-export const organizationAnalyticsView = (orgSlug: string) =>
-  generatePath(ORGANIZATION_ANALYTICS_VIEW, { orgSlug })
 export const CONTRACT_ANALYTICS_VIEW =
   "/dashboard/organization/[orgSlug]/contract/[contractSlug]/analytics"
 export const contractAnalyticsView = (orgSlug: string, contractSlug: string) =>
@@ -135,13 +127,52 @@ export const CONTRACT_LEARNERS_STATUSES = [
   "not_started",
   "in_progress",
   "passed",
-  "unknown",
 ] as const
 export type ContractLearnersStatus = (typeof CONTRACT_LEARNERS_STATUSES)[number]
+
+/**
+ * "Completed" queries both `passed` and `certified`, matching the count
+ * tile above it: a learner who passed but hasn't certified yet is still
+ * "Completed" to a manager, and a standalone "Certificate" filter option
+ * previously returned fewer rows than the tile it was supposed to explain.
+ * The row-level status pill (`getDisplayStatus`) still distinguishes the
+ * two outcomes; only the filter groups them.
+ */
+export const STATUS_FILTER_COMPLETION_STATUS: Record<
+  ContractLearnersStatus,
+  CompletionStatusFilter[]
+> = {
+  not_started: ["not_started"],
+  in_progress: ["in_progress"],
+  passed: ["passed", "certified"],
+}
+
+/**
+ * Every status a learner who shared their progress can have. The API reports
+ * withheld outcomes as `unknown`, so asking for these leaves those learners out
+ * of rows and counts alike. A learner with no recorded decision is withheld
+ * unless the API's `consent_fail_open` setting is on, which no deployment sets.
+ */
+export const SHARED_COMPLETION_STATUSES: CompletionStatusFilter[] = [
+  "not_started",
+  "in_progress",
+  "passed",
+  "certified",
+]
+
+/** The `completion_status` filter for a Status option, or for all learners who shared their progress. */
+export const completionStatusFilter = (status?: ContractLearnersStatus) =>
+  status ? STATUS_FILTER_COMPLETION_STATUS[status] : SHARED_COMPLETION_STATUSES
+
+/** The `modules` value that selects every module on the Learners page. */
+export const ALL_MODULES = "all"
+
 export type ContractLearnersFilters = {
+  /**
+   * Also selects every module: on a contract with more than one, the page
+   * ignores `status` unless a module is selected.
+   */
   status?: ContractLearnersStatus
-  /** A course run's readable id. */
-  module?: string
   needsAttention?: boolean
   page?: number
 }
@@ -152,8 +183,10 @@ export const contractLearnersView = (
 ) => {
   const path = generatePath(CONTRACT_LEARNERS_VIEW, { orgSlug, contractSlug })
   const params = new URLSearchParams()
-  if (filters.status) params.set("status", filters.status)
-  if (filters.module) params.set("module", filters.module)
+  if (filters.status) {
+    params.set("modules", ALL_MODULES)
+    params.set("status", filters.status)
+  }
   if (filters.needsAttention) params.set("needs_attention", "true")
   if (filters.page && filters.page > 1) params.set("page", String(filters.page))
   const search = params.toString()

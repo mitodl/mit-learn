@@ -204,7 +204,7 @@ class ProgramCertificate(models.Model):
     NON-NULLABLE FIELDS
     """
 
-    # external hash that hightouch uses for the sync
+    # For synced rows, the certificate id the data platform's view assigns
     record_hash = models.CharField(
         unique=True,
         primary_key=True,
@@ -221,8 +221,8 @@ class ProgramCertificate(models.Model):
     user_email = models.CharField(max_length=256, blank=False)
 
     # Revoked rows are kept so their letters come back if the revocation is
-    # reversed. Any read that exposes a certificate or its letter has to filter
-    # on this itself; the default manager returns revoked rows.
+    # reversed. Any read that exposes a certificate has to filter on this
+    # itself, since the default manager returns revoked rows.
     is_revoked = models.BooleanField(default=False, db_default=False)
 
     # NULLABLE FIELDS
@@ -262,16 +262,27 @@ class ProgramCertificate(models.Model):
     program_completion_timestamp = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        # Managed as of the warehouse-pull cutover (mitodl/hq#12954): Django
-        # is now the writer of this table, not Hightouch, so schema changes
-        # belong in migrations rather than in an external tool's config. The
-        # table stays in the `external` schema — other consumers still read it
-        # by that name.
+        # Django writes this table (profiles.tasks.SyncProgramCertificatesTask,
+        # mitodl/hq#12954), so schema changes belong in migrations. It keeps
+        # the `external` schema name it was created under.
         managed = True
         db_table = '"external"."programcertificate"'
 
     def __str__(self):
         return f"program certificate: {self.user_full_name} - {self.program_title}"
+
+    @property
+    def has_program_letter(self) -> bool:
+        """
+        Whether this certificate gets a program letter.
+
+        A revoked certificate gets none. The letter's content comes from the
+        MicroMasters CMS page for the program, looked up by
+        micromasters_program_id. Programs that only ran on MITx Online (e.g. the
+        DEDP Public Policy track) have no such page, and looking one up without
+        an id returns another program's letter.
+        """
+        return self.micromasters_program_id is not None and not self.is_revoked
 
 
 class ProgramLetter(models.Model):

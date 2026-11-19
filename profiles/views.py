@@ -21,6 +21,7 @@ from main.permissions import (
     IsStaffPermission,
 )
 from profiles.api import ensure_profile
+from profiles.memory import NOTE_FIELDS, sync_profile_notes
 from profiles.models import Profile, ProgramCertificate, ProgramLetter
 from profiles.permissions import HasEditPermission
 from profiles.serializers import (
@@ -98,6 +99,14 @@ class ProfileViewSet(
         else:
             return super().get_object()
 
+    def perform_update(self, serializer):
+        """Save the profile, then write its notes to the learner's memory"""
+        # Read before saving: ProfileSerializer.update pops topic_interests.
+        # Onboarding saves through this same update.
+        note_fields = set(NOTE_FIELDS) & serializer.validated_data.keys()
+        super().perform_update(serializer)
+        sync_profile_notes(self.request, serializer.instance, note_fields)
+
 
 class ProgramLetterViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     """Detail only View for program letters"""
@@ -109,18 +118,20 @@ class ProgramLetterViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
 
     def get_object(self) -> ProgramLetter:
         """
-        Return the letter, 404ing if its certificate is gone or revoked.
+        Return the letter, 404ing if its certificate is gone or gets no letter.
 
         certificate is nullable, and a certificate_id with no matching row
         raises DoesNotExist on access. Every field of the response derives from
-        the certificate, so there is nothing to render without it.
+        the certificate, so there is nothing to render without it. A certificate
+        that fails has_program_letter would render a withdrawn letter or another
+        program's.
         """
         letter = super().get_object()
         try:
             certificate = letter.certificate
         except ProgramCertificate.DoesNotExist as exc:
             raise Http404 from exc
-        if certificate is None or certificate.is_revoked:
+        if certificate is None or not certificate.has_program_letter:
             raise Http404
         return letter
 
@@ -145,7 +156,7 @@ class UserProgramCertificateViewSet(viewsets.ViewSet):
         certificates = list(self.filter_queryset(queryset))
         letters = self.user_letters(request.user, certificates)
         for cert in certificates:
-            cert.user_letter = letters[cert.pk]
+            cert.user_letter = letters.get(cert.pk)
         serializer = ProgramCertificateSerializer(
             certificates, many=True, context={"request": request}
         )
@@ -155,11 +166,12 @@ class UserProgramCertificateViewSet(viewsets.ViewSet):
     def user_letters(user, certificates) -> dict:
         """
         Map certificate id to the user's ProgramLetter, creating any that don't
-        exist yet.
+        exist yet. Certificates without a program letter are left out.
 
         Serializing a certificate has always created its letter on demand; doing
         it here in bulk keeps that behaviour without a query per certificate.
         """
+        certificates = [cert for cert in certificates if cert.has_program_letter]
         letters = {
             letter.certificate_id: letter
             for letter in ProgramLetter.objects.filter(

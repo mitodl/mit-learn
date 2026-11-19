@@ -3,47 +3,47 @@ import { LearningResourceContext } from "./LearningResourceContext"
 
 import {
   useLearningResourcesBulkList,
-  learningResourceKeys,
   LearningResource,
 } from "api/hooks/learningResources"
-import { useQueries } from "@tanstack/react-query"
+import { keepPreviousData } from "@tanstack/react-query"
 
 interface LearningResourceProviderProps {
   resourceIds: number[]
   children: React.ReactNode
 }
+
+const byId = (resources: LearningResource[] | undefined) => {
+  const map: Record<number, LearningResource> = {}
+  resources?.forEach((resource) => {
+    map[resource.id] = resource
+  })
+  return map
+}
+
 export const LearningResourceProvider = ({
   resourceIds,
   children,
 }: LearningResourceProviderProps) => {
-  const { isLoading } = useLearningResourcesBulkList(resourceIds)
-
-  /* We can use the data from useLearningResourcesBulkList(),
-   * however pulling back from the query cache ensures aligns with the
-   * cache population during SSR and ensures we don't get any prefetch warnings.
-   */
-  const resourceQueries = useQueries({
-    queries: resourceIds.map((id) => ({
-      queryKey: learningResourceKeys.detail(id),
-      enabled: false, // 👈 read-only, no refetch
-    })),
-  })
-
-  const resources = React.useMemo(() => {
-    const map: Record<number, LearningResource> = {}
-
-    resourceQueries.forEach((query, index) => {
-      const id = resourceIds[index]
-      if (query.data) {
-        map[id] = query.data as LearningResource
-      }
-    })
-
-    return map
-  }, [resourceQueries, resourceIds])
+  // The bulk list is what the page prefetches on the server, so reading it
+  // directly matches the SSR cache.
+  const { data, isLoading, isPlaceholderData } = useLearningResourcesBulkList(
+    resourceIds,
+    // Adding a card in the editor changes `resourceIds`, and so the key. The
+    // previous list stands in until the new one loads, so the cards already
+    // shown stay put.
+    { placeholderData: keepPreviousData },
+  )
+  const resources = React.useMemo(() => byId(data), [data])
 
   return (
-    <LearningResourceContext.Provider value={{ resources, isLoading }}>
+    <LearningResourceContext.Provider
+      value={{
+        resources,
+        // The previous list standing in for a new key counts as `success`, so
+        // a card it lacks is loading too.
+        isLoading: isLoading || isPlaceholderData,
+      }}
+    >
       {children}
     </LearningResourceContext.Provider>
   )

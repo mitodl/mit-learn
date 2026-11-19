@@ -42,6 +42,7 @@ from learning_resources.tasks import (
     ingest_canvas_course,
     ingest_edx_run_archive,
     load_warehouse_content_files,
+    queue_warehouse_syncs,
 )
 from learning_resources.utils import (
     resource_delete_actions,
@@ -54,6 +55,7 @@ from webhooks.serializers import (
     LearningResourceWebhookRequestSerializer,
     LearningResourceWebhookResponseSerializer,
     OVSVideoWebhookRequestSerializer,
+    WarehouseViewsWebhookRequestSerializer,
     WebhookResponseSerializer,
 )
 from webhooks.utils import sanitize_learning_resources
@@ -594,3 +596,44 @@ def process_delete_content_file_request(data):
             resource_delete_actions(resource)
         except LearningResource.DoesNotExist:
             log.warning("Resource with readable_id %s does not exist", course_id)
+
+
+@extend_schema_view(
+    post=extend_schema(
+        request=WarehouseViewsWebhookRequestSerializer,
+        responses=WebhookResponseSerializer(),
+    ),
+)
+class WarehouseViewsWebhookView(BaseWebhookView):
+    """
+    Webhook handler for the OL Data Platform's "these views were rebuilt"
+    message. It queues a full run of each catalog sync that reads one of them,
+    so a change reaches MIT Learn without waiting for the sync's daily run.
+
+    A 200 says the syncs were queued, not that anything was loaded: each sync
+    checks ownership when it runs, and does nothing until the warehouse owns its
+    source. A view no sync reads is skipped and named in the response, so that
+    one bad name can't reject the rest of a batch.
+    """
+
+    permission_classes = []
+    authentication_classes = []
+    parser_classes = [JSONParser]
+    serializer_class = WarehouseViewsWebhookRequestSerializer
+
+    def post(self, request):
+        try:
+            payload = json.loads(request.body)
+        except json.JSONDecodeError:
+            return HttpResponseBadRequest("Invalid JSON format")
+        serializer = WarehouseViewsWebhookRequestSerializer(data=payload)
+        serializer.is_valid(raise_exception=True)
+        queued, unknown = queue_warehouse_syncs(serializer.validated_data["views"])
+        if unknown:
+            log.warning("No warehouse sync reads %s, skipping", ", ".join(unknown))
+        message = f"Queued {len(queued)} sync(s): {', '.join(queued) or 'none'}"
+        if unknown:
+            message += f". Skipped unknown view(s): {', '.join(unknown)}"
+        return Response(
+            WebhookResponseSerializer({"status": "success", "message": message}).data
+        )

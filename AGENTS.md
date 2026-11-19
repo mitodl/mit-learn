@@ -281,8 +281,8 @@ See `README-keycloak.md` for full setup.
 
 GitHub Actions workflows in `.github/workflows/`:
 
-- Runs pytest with coverage
-- Checks migrations are non-auto
+- Runs pytest with `--no-cov` (local runs still collect coverage via `pytest.ini`)
+- Runs Django system checks and checks migrations are non-auto
 - Validates OpenAPI spec is up-to-date
 - Runs frontend tests and linting
 - Builds Docker images

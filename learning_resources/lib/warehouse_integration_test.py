@@ -31,7 +31,7 @@ pytestmark = [
     ),
 ]
 
-# CI runs `pytest -n logical` (see scripts/test/python_tests.sh); these
+# CI runs `pytest -n logical` (see .github/workflows/ci.yml); these
 # tests share one real StarRocks table across a CREATE/INSERT/DROP
 # lifecycle, so two xdist workers running this module's tests concurrently
 # would race on it (one worker's teardown DROP colliding with another's

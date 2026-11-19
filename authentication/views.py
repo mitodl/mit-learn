@@ -94,6 +94,18 @@ class CustomLoginView(View):
         """
         GET endpoint for logging a user in.
         """
+        if request.user.is_anonymous and request.path != settings.LOGIN_URL:
+            # The gateway always requires authentication on LOGIN_URL, but not
+            # on every variant of it (the local APISIX config passes /login/
+            # through unauthenticated). Send the user through the gateway's
+            # login path rather than on to `next` without logging them in.
+            # LOGIN_URL itself is excluded because sending an anonymous user
+            # there again would only loop back here.
+            query = request.GET.urlencode()
+            return redirect(
+                f"{settings.LOGIN_URL}?{query}" if query else settings.LOGIN_URL
+            )
+
         redirect_url = get_redirect_url(request, ["next"])
         signup_redirect_url = get_redirect_url(request, ["signup_next", "next"])
         should_skip_onboarding = request.GET.get("skip_onboarding", "0") != "0"
@@ -112,7 +124,11 @@ class CustomLoginView(View):
 
             if not profile.has_logged_in:
                 if should_skip_onboarding:
-                    redirect_url = signup_redirect_url
+                    # Onboarding normally reports the new account; tell the
+                    # destination page instead.
+                    redirect_url = with_query_params(
+                        signup_redirect_url, {"is_new_user": "1"}
+                    )
                 else:
                     params = urlencode(
                         {"next": signup_redirect_url, "is_new_user": "1"}

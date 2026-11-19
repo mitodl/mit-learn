@@ -116,8 +116,6 @@ frontends/.yarn
 
 .yarn/*
 !.yarn/releases
-load_testing/.yarn/*
-!load_testing/.yarn/releases
 
 # Typescript
 tsconfig.tsbuildinfo
@@ -146,8 +144,6 @@ backups/
 /playwright/.cache/
 
 .claude
-
-load_testing/data/
 
 # Hacksnack game assets (copied by postinstall)
 frontends/main/public/games/hacksnack

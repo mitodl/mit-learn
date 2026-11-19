@@ -4,6 +4,7 @@ import {
   RiBookmarkFill,
   RiBookmarkLine,
   RiFileCopy2Line,
+  RiMenuAddLine,
 } from "@remixicon/react"
 import { styled } from "ol-components"
 import { ResourceCardSkeleton, ResourceCardView } from "./ResourceCardView"
@@ -31,15 +32,22 @@ const makeAction = (
   onClick: () => {},
 })
 
+const makeLearningPathAction = (cardTitle: string): CardAction => ({
+  label: `Add to learning path: ${cardTitle}`,
+  filled: false,
+  icon: <RiMenuAddLine aria-hidden />,
+  onClick: () => {},
+})
+
 const PRICES: Record<string, PricePanel> = {
   Paid: {
     tone: "dark",
     primary: "$3,750",
     certificate: "Professional Certificate",
   },
-  "Free to audit": {
+  "Free, certificate": {
     tone: "light",
-    primary: "Free to audit",
+    primary: "Free",
     certificate: "Professional Certificate",
     certificatePrice: "$50",
   },
@@ -58,9 +66,9 @@ const LONG_RANGES: Record<string, PricePanel> = {
     primary: "$12,500 – $35,000",
     certificate: "Professional Certificate",
   },
-  "Free to audit, certificate range": {
+  "Free, certificate range": {
     tone: "light",
-    primary: "Free to audit",
+    primary: "Free",
     certificate: "Professional Certificate",
     certificatePrice: "$1,250 – $3,500",
   },
@@ -81,12 +89,12 @@ const meta: Meta<ResourceCardViewProps> = {
       { label: "Starts", value: "Sep 30, 2026" },
       { label: "Format", value: "Online" },
     ],
-    price: PRICES["Free to audit"],
+    price: PRICES["Free, certificate"],
     lang: "en",
     layout: "vertical",
     size: "medium",
     href: "#",
-    action: makeAction(title),
+    actions: [makeAction(title)],
     headingLevel: 3,
   },
 }
@@ -141,7 +149,7 @@ const variants = (
   }))
 
 const edgeCases = (args: ResourceCardViewProps): ResourceCardViewProps[] => [
-  { ...args, title: longTitle, action: makeAction(longTitle) },
+  { ...args, title: longTitle, actions: [makeAction(longTitle)] },
   ...variants(args, LONG_RANGES),
   { ...args, title: `No image: ${args.title}`, imageSrc: null },
   {
@@ -152,11 +160,16 @@ const edgeCases = (args: ResourceCardViewProps): ResourceCardViewProps[] => [
     placeholderIcon: <RiFileCopy2Line />,
     price: PRICES.Free,
   },
-  { ...args, title: `No action: ${args.title}`, action: undefined },
+  { ...args, title: `No action: ${args.title}`, actions: undefined },
   {
     ...args,
     title: `Bookmarked: ${args.title}`,
-    action: makeAction(args.title, { bookmarked: true }),
+    actions: [makeAction(args.title, { bookmarked: true })],
+  },
+  {
+    ...args,
+    title: `Two actions: ${args.title}`,
+    actions: [makeLearningPathAction(args.title), makeAction(args.title)],
   },
   {
     ...args,
@@ -170,7 +183,7 @@ const edgeCases = (args: ResourceCardViewProps): ResourceCardViewProps[] => [
 /**
  * Every price state in each layout and size, then edge cases: a long title,
  * long price ranges, no image (with and without a placeholder icon), no action,
- * a bookmarked action, and no metadata.
+ * a bookmarked action, two actions, and no metadata.
  */
 export const Omnibus: Story = {
   parameters: { layout: "padded" },

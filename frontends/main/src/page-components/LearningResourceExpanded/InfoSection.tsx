@@ -1,7 +1,6 @@
 import React, { useState } from "react"
 import styled from "@emotion/styled"
 import ISO6391 from "iso-639-1"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import {
   RemixiconComponentType,
   RiVerifiedBadgeLine,
@@ -39,6 +38,7 @@ import {
 import { theme, Link } from "ol-components"
 import { ocwLearnPageView } from "@/common/urls"
 import { FeatureFlags } from "@/common/feature_flags"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import DifferingRunsTable from "./DifferingRunsTable"
 
 const SeparatorContainer = styled.span({
@@ -594,7 +594,7 @@ const InfoItem = ({ label, Icon, value }: InfoItemProps) => {
 }
 
 const InfoSection = ({ resource }: { resource?: LearningResource }) => {
-  const ocwProductPages = useFeatureFlagEnabled(FeatureFlags.OcwProductPages)
+  const ocwProductPages = useFeatureFlag(FeatureFlags.OcwProductPages)
 
   if (!resource) {
     return null

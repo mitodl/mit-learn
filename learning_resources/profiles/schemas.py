@@ -118,6 +118,88 @@ class UnitExtraction(Strict):
     )
 
 
+# --------------------------------------------------------------------------- unit merge
+# A unit too large for one call is extracted in parts, and its parts' claims
+# are merged. Merged claims cite the part claims they come from instead of
+# quoting evidence: the evidence checked in the part calls is carried over.
+PART_CLAIM_IDS_DESCRIPTION = (
+    "Ids of the part claims this claim merges, e.g. ['P1:c2', 'P3:c1']. Cite only"
+    " claims of the same list."
+)
+
+
+class MergedConceptOutput(Strict):
+    label: str = Field(
+        description="Canonical name for the merged concept, reusable across courses"
+    )
+    description: str = Field(
+        description="1-2 sentences describing the concept as the whole unit treats it"
+    )
+    kind: Literal["concept", "method", "skill", "tool", "application"]
+    teaching_status: Literal["taught", "reviewed", "used", "mentioned"] = Field(
+        description="The strongest status it has in any part"
+    )
+    part_claim_ids: list[str] = Field(
+        min_length=1, description=PART_CLAIM_IDS_DESCRIPTION
+    )
+
+
+class MergedSkillOutput(Strict):
+    label: str
+    description: str
+    part_claim_ids: list[str] = Field(
+        min_length=1, description=PART_CLAIM_IDS_DESCRIPTION
+    )
+
+
+class MergedAssumedOutput(Strict):
+    label: str
+    description: str
+    how_used: str
+    flagged_as_prior: bool
+    part_claim_ids: list[str] = Field(
+        min_length=1, description=PART_CLAIM_IDS_DESCRIPTION
+    )
+
+
+class MergedAssessmentOutput(Strict):
+    label: str
+    description: str
+    tests_concept_labels: list[str]
+    part_claim_ids: list[str] = Field(
+        min_length=1, description=PART_CLAIM_IDS_DESCRIPTION
+    )
+
+
+class TaughtAssumedOutput(Strict):
+    part_claim_id: str = Field(
+        description="A part's assumed knowledge id, e.g. 'P3:a1', left out"
+        " because a part teaches or reviews it"
+    )
+    taught_by: list[str] = Field(
+        min_length=1,
+        description="Ids of the part concepts with status taught or reviewed"
+        " that teach or review it, e.g. ['P1:c2']",
+    )
+
+
+class UnitMergeExtraction(Strict):
+    summary: str = Field(
+        description="3-5 sentence summary of what the whole unit teaches"
+    )
+    concepts: list[MergedConceptOutput]
+    skills: list[MergedSkillOutput]
+    assumed_knowledge: list[MergedAssumedOutput] = Field(
+        description="Assumed knowledge that no part teaches or reviews"
+    )
+    taught_assumed_knowledge: list[TaughtAssumedOutput] = Field(
+        description="Each part's assumed knowledge left out because a part"
+        " teaches or reviews it"
+    )
+    assessment_expectations: list[MergedAssessmentOutput]
+    extraction_notes: list[str] = Field(description="The parts' notes, combined")
+
+
 # --------------------------------------------------------------------------- context
 class Statement(Strict):
     text: str
@@ -163,4 +245,73 @@ class CourseContextOut(Strict):
     conflicts: list[Conflict]
     extraction_notes: list[str] = Field(
         description="Gaps, ambiguities, material you could not use"
+    )
+
+
+# --------------------------------------------------------------------------- run
+class TopicOutput(Strict):
+    label: str
+    description: str
+    unit_ids: list[str] = Field(min_length=1)
+    concept_claim_ids: list[str] = Field(min_length=1)
+
+
+class CitedStatement(Strict):
+    text: str
+    claim_ids: list[str] = Field(
+        min_length=1, description="Supporting claim ids, e.g. 'U03:c2', 'ctx:prereq:0'"
+    )
+
+
+class PreparationOutput(Strict):
+    label: str = Field(
+        description=(
+            "Canonical name of the knowledge or skill, e.g. 'Single-variable"
+            " differentiation'"
+        )
+    )
+    description: str
+    rationale: str = Field(
+        description=(
+            "Why a learner needs this before starting, citing where it is first assumed"
+        )
+    )
+    first_needed_unit_id: str | None = Field(
+        None,
+        description=(
+            "The first unit (U01, U02, ...) that assumes it; empty when only bins do"
+        ),
+    )
+    assumed_claim_ids: list[str] = Field(
+        min_length=1,
+        description="Assumed-knowledge claim ids ('U01:a2') that motivate this",
+    )
+    taught_before_first_use_claim_ids: list[str] = Field(
+        description=(
+            "Concept claim ids ('U02:c3') with status taught or reviewed, in the"
+            " first unit that needs it or an earlier one, that teach or review"
+            " this same knowledge; empty if none"
+        )
+    )
+    taught_after_first_use_claim_ids: list[str] = Field(
+        description=(
+            "Concept claim ids with status taught or reviewed, in units after"
+            " the first unit that needs it, that teach or review this same"
+            " knowledge; empty if none"
+        )
+    )
+    confidence: Literal["high", "medium", "low"]
+    only_needed_for_optional_material: bool
+
+
+class RunExtraction(Strict):
+    summary: str = Field(description="4-6 sentence course summary")
+    summary_claim_ids: list[str] = Field(min_length=1)
+    audience: list[CitedStatement]
+    main_topics: list[TopicOutput]
+    learning_outcomes: list[CitedStatement]
+    inferred_preparation: list[PreparationOutput]
+    coverage_limitations: list[CitedStatement]
+    extraction_notes: list[str] = Field(
+        default_factory=list, description="Gaps or ambiguities in the records"
     )

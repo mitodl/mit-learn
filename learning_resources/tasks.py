@@ -5,15 +5,16 @@ learning_resources tasks
 import datetime as datetime_module
 import logging
 import uuid
+from collections import Counter
 from datetime import UTC, datetime
 
 import boto3
 import celery
-from celery.exceptions import Ignore, MaxRetriesExceededError
+from celery.exceptions import Ignore
 from django.conf import settings
 from django.core.cache import caches
-from django.db import OperationalError
-from django.db.models import Q
+from django.db import OperationalError, transaction
+from django.db.models import F, Q
 from django.utils import timezone
 
 from learning_resources.api import (
@@ -81,11 +82,14 @@ from learning_resources.lib.warehouse import (
     connect_to_warehouse,
     iter_group_stats,
     iter_rows,
+    run_locked,
 )
 from learning_resources.models import (
+    ClaimExtraction,
     ContentFile,
     LearningResource,
     LearningResourceRun,
+    Unit,
     VideoChannel,
 )
 from learning_resources.site_scrapers.utils import scraper_for_site
@@ -106,7 +110,7 @@ from learning_resources_search.exceptions import RetryError
 from main.celery import app
 from main.constants import ISOFORMAT
 from main.decorators import cooldown_task
-from main.utils import chunks, clear_views_cache, now_in_utc, run_on_worker_loop
+from main.utils import chunks, now_in_utc, run_on_worker_loop
 
 log = logging.getLogger(__name__)
 
@@ -218,13 +222,14 @@ def get_mit_climate_data():
 
 
 @app.task(acks_late=True, reject_on_worker_lost=True)
-def get_content_files(
+def get_content_files(  # noqa: PLR0913
     ids: list[int],
     etl_source: str,
     keys: list[str],
     *,
     overwrite: bool = False,
     overwrite_units: bool = False,
+    ocr_pdfs: bool = False,
 ):
     """
     Task to sync edX course content files with database
@@ -241,17 +246,23 @@ def get_content_files(
     if not may_write(etl_source, CONTENT_FILE):
         return
     sync_edx_course_files(
-        etl_source, ids, keys, overwrite=overwrite, overwrite_units=overwrite_units
+        etl_source,
+        ids,
+        keys,
+        overwrite=overwrite,
+        overwrite_units=overwrite_units,
+        ocr_pdfs=ocr_pdfs,
     )
 
 
-def get_content_tasks(
+def get_content_tasks(  # noqa: PLR0913
     etl_source: str,
     *,
     chunk_size: int | None = None,
     overwrite: bool = False,
     overwrite_units: bool = False,
     learning_resource_ids: list[int] | None = None,
+    ocr_pdfs: bool = False,
 ) -> celery.group:
     """
     Return a list of grouped celery tasks for indexing edx content
@@ -270,6 +281,7 @@ def get_content_tasks(
                 archive_keys,
                 overwrite=overwrite,
                 overwrite_units=overwrite_units,
+                ocr_pdfs=ocr_pdfs,
             )
             for ids in chunks(
                 learning_resources,
@@ -420,12 +432,13 @@ def import_content_files(  # noqa: PLR0913
     overwrite=False,
     overwrite_units=False,
     learning_resource_ids=None,
+    ocr_pdfs=False,
 ):
     """Import content files for any edX-based ETL source.
 
     This task wraps get_content_tasks so that the S3 archive listing and
     task-group construction happen asynchronously in a Celery worker, rather
-    than blocking the calling task.
+    than blocking the calling task. ocr_pdfs re-extracts every PDF with LLM OCR.
     """
     return _replace_with_content_tasks(
         self,
@@ -434,6 +447,7 @@ def import_content_files(  # noqa: PLR0913
         overwrite=overwrite,
         overwrite_units=overwrite_units,
         learning_resource_ids=learning_resource_ids,
+        ocr_pdfs=ocr_pdfs,
     )
 
 
@@ -470,6 +484,7 @@ def get_ocw_courses(
     force_overwrite,
     utc_start_timestamp=None,
     skip_content_files=settings.OCW_SKIP_CONTENT_FILES,
+    ocr_pdfs=False,
 ):
     """
     Task to sync a batch of OCW Next courses
@@ -485,6 +500,7 @@ def get_ocw_courses(
         force_overwrite=force_overwrite,
         start_timestamp=utc_start_timestamp,
         skip_content_files=skip_content_files,
+        ocr_pdfs=ocr_pdfs,
     )
 
 
@@ -1437,6 +1453,187 @@ def generate_all_credential_metadata(
     return len(generation_tasks)
 
 
+def unit_claims_resource_ids() -> list[int]:
+    """
+    Return the published courses that have units on any run.
+
+    The task resolves each course's best run, which isn't queryable, and skips
+    a course whose best run has no units.
+    """
+    return list(
+        LearningResource.objects.filter(
+            published=True,
+            resource_type=LearningResourceType.course.name,
+            runs__units__isnull=False,
+        )
+        .distinct()
+        .values_list("id", flat=True)
+    )
+
+
+@app.task(acks_late=True)
+def generate_claims_for_resource(
+    resource_id: int, *, overwrite: bool = False
+) -> dict | None:
+    """
+    Generate resource profile claims for a course's best run: step 1 for its
+    context unit, then each of its units and bins, and step 2 for the run.
+
+    The context and the units don't depend on each other, so one that fails is
+    logged and skipped without costing the rest; running again retries only
+    what failed, since stored extractions are reused. The run's claims are
+    generated only when none failed: claims missing a unit would misjudge
+    which knowledge the course teaches before it is needed.
+
+    When nothing failed, the extractions the best run uses are then the
+    course's only published ones: see publish_claim_extractions. When
+    something failed, what is published is left as it is, so the course keeps
+    its last complete claims, rather than none or claims missing a unit,
+    until a sweep succeeds.
+
+    Args:
+        resource_id (int): the LearningResource id
+        overwrite (bool): regenerate claims that are already stored
+
+    Returns:
+        dict | None: counts of context, unit and run extractions that were
+            extracted, skipped (no text, a context unit over the input budget,
+            a unit that would need more than max_parts parts, or for the run,
+            a failed unit) and failed (no valid response, or a split unit's
+            merge call over the merge's input budget), or None when the best
+            run has no units
+    """
+    # deferred: the claim modules import the AI libraries, kept out of boot
+    from learning_resources.profiles.context_claims import generate_context_claims
+    from learning_resources.profiles.run_claims import generate_run_claims
+    from learning_resources.profiles.unit_claims import generate_unit_claims
+
+    resource = LearningResource.objects.get(id=resource_id)
+    run = resource.best_run
+    if not run or not run.units.exists():
+        log.info("No units to generate claims for in %s", resource.readable_id)
+        publish_claim_extractions(resource, [])
+        return None
+
+    stats = Counter()
+    # ids of the best run's extractions
+    current_ids = []
+
+    def _extract(kind, external_id, generate):
+        """Return the extraction, or None, and whether the call failed"""
+        try:
+            extraction = generate()
+        except Exception:
+            log.exception(
+                "Claim extraction failed for %s %s of run %s",
+                kind,
+                external_id,
+                run.run_id,
+            )
+            stats[f"{kind}_failed"] += 1
+            return None, True
+        if extraction:
+            current_ids.append(extraction.id)
+        stats[f"{kind}_extracted" if extraction else f"{kind}_skipped"] += 1
+        return extraction, False
+
+    context, any_failed = None, False
+    if run.units.filter(kind=Unit.Kind.CONTEXT).exists():
+        context, any_failed = _extract(
+            Unit.Kind.CONTEXT,
+            "context",
+            lambda: generate_context_claims(run, overwrite=overwrite),
+        )
+    units = run.units.exclude(kind=Unit.Kind.CONTEXT).order_by(
+        F("position").asc(nulls_last=True), "external_id"
+    )
+    unit_extractions = []
+    for unit in units:
+        extraction, failed = _extract(
+            Unit.Kind.UNIT,
+            unit.external_id,
+            lambda unit=unit: generate_unit_claims(unit, overwrite=overwrite),
+        )
+        any_failed = any_failed or failed
+        unit_extractions.append((unit, extraction))
+    if any_failed:
+        log.info(
+            "Not generating run claims for %s: a unit or the context failed",
+            run.run_id,
+        )
+        stats["run_skipped"] += 1
+    else:
+        _, any_failed = _extract(
+            "run",
+            run.run_id,
+            lambda: generate_run_claims(
+                run, context, unit_extractions, overwrite=overwrite
+            ),
+        )
+    if any_failed:
+        log.info(
+            "Not publishing claims for %s: an extraction failed, so its last"
+            " published claims are kept",
+            resource.readable_id,
+        )
+    else:
+        publish_claim_extractions(resource, current_ids)
+    log.info("Generated claims for %s: %s", resource.readable_id, dict(stats))
+    return dict(stats)
+
+
+def publish_claim_extractions(
+    resource: LearningResource, current_ids: list[int]
+) -> None:
+    """
+    Publish a course's current claim extractions and unpublish the rest.
+
+    The rest are those of runs that aren't the best run, and of best-run
+    units, or the best run itself, that were skipped this time. Rows whose
+    unit or run was deleted, which no course sweeps, are unpublished too.
+    It isn't called when an extraction failed: see
+    generate_claims_for_resource.
+
+    Args:
+        resource (LearningResource): the course
+        current_ids (list of int): ids of the best run's extractions
+    """
+    extractions = ClaimExtraction.objects.filter(
+        Q(unit__run__learning_resource=resource) | Q(run__learning_resource=resource)
+    )
+    with transaction.atomic():
+        extractions.filter(id__in=current_ids, published=False).update(published=True)
+        extractions.filter(published=True).exclude(id__in=current_ids).update(
+            published=False
+        )
+        ClaimExtraction.objects.filter(
+            published=True, unit__isnull=True, run__isnull=True
+        ).update(published=False)
+
+
+@app.task(acks_late=True)
+def generate_all_claims(resource_ids: list[int], *, overwrite: bool = False) -> int:
+    """
+    Queue resource profile claim generation for each resource.
+
+    Step 1 (context and unit claims) and step 2 (run claims) both run.
+
+    Args:
+        resource_ids (list of int): the LearningResource ids
+        overwrite (bool): regenerate claims that are already stored
+
+    Returns:
+        int: how many courses were queued
+    """
+    celery.group(
+        [
+            generate_claims_for_resource.si(resource_id, overwrite=overwrite)
+            for resource_id in resource_ids
+        ]
+    ).apply_async()
+    return len(resource_ids)
+
+
 # Names the SyncYouTubeTask run whose playlist loads are current. Kept where
 # the warehouse watermarks are, so it outlives a cache flush.
 YOUTUBE_SYNC_GENERATION_KEY = "warehouse_etl:youtube_sync_generation"
@@ -1781,10 +1978,71 @@ class SyncOCWCoursesTask(BaseWarehouseETLTask):
 SyncOCWCoursesTask = app.register_task(SyncOCWCoursesTask())
 
 
+# The catalog syncs, each with the views whose rebuild reruns it, in the order a
+# batch naming several queues them: programs look their courses up, so a
+# source's programs follow its courses. A program's course view reruns it too:
+# the xPRO programs sync drops a course Learn doesn't have yet, so a course
+# rebuild reruns it to add the course, and the MITx Online one reads that view.
+WAREHOUSE_VIEW_SYNCS = (
+    (SyncOCWCoursesTask, {"integrations__learn__ocw_courses"}),
+    (
+        SyncXproCoursesTask,
+        {"integrations__learn__xpro_courses", "integrations__learn__xpro_runs"},
+    ),
+    (
+        SyncXproProgramsTask,
+        {"integrations__learn__xpro_programs", "integrations__learn__xpro_courses"},
+    ),
+    (
+        SyncMITxOnlineCoursesTask,
+        {
+            "integrations__learn__mitxonline_courses",
+            "integrations__learn__mitxonline_runs",
+        },
+    ),
+    (
+        SyncMITxOnlineProgramsTask,
+        {
+            "integrations__learn__mitxonline_programs",
+            "integrations__learn__mitxonline_program_children",
+            "integrations__learn__mitxonline_courses",
+        },
+    ),
+)
+
+
+def queue_warehouse_syncs(view_names):
+    """
+    Queue a full run of each catalog sync that one of the named views reruns
+    (see WAREHOUSE_VIEW_SYNCS).
+
+    A source's syncs are chained in WAREHOUSE_VIEW_SYNCS order, and the sources
+    run side by side. Each sync checks ownership when it runs, so this queues
+    them whoever owns the source.
+
+    Args:
+        view_names (Iterable[str]): bare view names, e.g.
+            "integrations__learn__ocw_courses"
+
+    Returns:
+        tuple[list[str], list[str]]: the names of the tasks queued, and the
+        view names no sync reads
+    """
+    named = set(view_names)
+    to_queue = [task for task, views in WAREHOUSE_VIEW_SYNCS if views & named]
+    read = set().union(*(views for _, views in WAREHOUSE_VIEW_SYNCS))
+    by_source = {}
+    for task in to_queue:
+        by_source.setdefault(task.writes[0], []).append(task.si())
+    for signatures in by_source.values():
+        celery.chain(*signatures).delay()
+    return [task.name for task in to_queue], sorted(named - read)
+
+
 # Two loads of one run at once could prune on a read that predates the other's
-# upserts. The time limit keeps a load inside the lock, and inside the hour after
-# which the broker redelivers an unacknowledged task, and it is hard because
-# load_content_file swallows a soft limit's exception. A worker killed mid-load
+# upserts. The lock keeps a second load out, a redelivered copy included (see
+# SYNC_LOCK_SECONDS). The time limit keeps a load inside the lock, and it is hard
+# because load_content_file swallows a soft limit's exception. A worker killed mid-load
 # holds up the run until the lock expires. A load that finds it held tries again
 # until the same hour is up, then leaves the run to the next daily sync.
 CONTENT_FILE_LOAD_LOCK_SECONDS = 60 * 60
@@ -1835,17 +2093,8 @@ def load_warehouse_content_files(  # noqa: PLR0913
         if run is None:
             log.info("No run to load %s content files for: %s", etl_source, run_id)
             return 0
-        lock = caches["redis"]
-        lock_key = f"warehouse_content_files:{etl_source}:{run_id}"
-        if not lock.add(lock_key, "1", timeout=CONTENT_FILE_LOAD_LOCK_SECONDS):
-            try:
-                raise self.retry(countdown=CONTENT_FILE_LOAD_RETRY_SECONDS)
-            except MaxRetriesExceededError:
-                log.warning(
-                    "Gave up waiting for a load of %s run %s", etl_source, run_id
-                )
-                return 0
-        try:
+
+        def load():
             conn = connect_to_warehouse()
             try:
                 rows = list(
@@ -1869,8 +2118,19 @@ def load_warehouse_content_files(  # noqa: PLR0913
                 allow_mass_unpublish=allow_mass_unpublish is True,
                 allow_shrink=allow_shrink is True,
             )
-        finally:
-            lock.delete(lock_key)
+
+        count = run_locked(
+            self,
+            f"warehouse_content_files:{etl_source}:{run_id}",
+            load,
+            lock_seconds=CONTENT_FILE_LOAD_LOCK_SECONDS,
+            retry_seconds=CONTENT_FILE_LOAD_RETRY_SECONDS,
+            max_retries=CONTENT_FILE_LOAD_MAX_RETRIES,
+        )
+        if count is None:
+            log.warning("Gave up waiting for a load of %s run %s", etl_source, run_id)
+            return 0
+        return count
 
 
 class SyncContentFilesTask(BaseWarehouseETLTask):
@@ -1964,27 +2224,3 @@ class SyncXproContentFilesTask(SyncContentFilesTask):
 
 
 SyncXproContentFilesTask = app.register_task(SyncXproContentFilesTask())
-
-
-@app.task(acks_late=True, reject_on_worker_lost=True)
-def unpublish_mit_edx_resources():
-    """Unpublish every mit_edx resource. The rows stay, so it is safe to rerun."""
-    mit_edx = ETLSource.mit_edx.name
-    resources = LearningResource.objects.filter(etl_source=mit_edx)
-    resources.update(published=False, test_mode=False)
-    for resource in resources:
-        resource_unpublished_actions(resource)
-
-    # item_count only counts published children, so reindex the lists that
-    # held one
-    parents = (
-        LearningResource.objects.filter(
-            published=True, children__child__etl_source=mit_edx
-        )
-        .exclude(etl_source=mit_edx)
-        .distinct()
-    )
-    for parent in parents:
-        resource_upserted_actions(parent, percolate=False, generate_embeddings=True)
-
-    clear_views_cache()

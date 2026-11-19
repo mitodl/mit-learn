@@ -18,11 +18,11 @@ import invariant from "tiny-invariant"
 import * as routes from "@/common/urls"
 import { FeatureFlags } from "@/common/feature_flags"
 import { assertHeadings, allowConsoleErrors } from "ol-test-utilities"
-import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { capturePostHog } from "@/common/analytics/posthog"
 import { PostHogEvents } from "@/common/constants"
 
-jest.mock("posthog-js/react")
+jest.mock("@/common/useFeatureFlag")
 jest.mock("@/common/analytics/posthog", () => ({
   capturePostHog: jest.fn(),
   initPostHog: jest.fn(),
@@ -32,7 +32,7 @@ jest.mock("ol-components/CarouselV2", () => ({
     <div>{children}</div>
   ),
 }))
-const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
+const mockedUseFeatureFlag = jest.mocked(useFeatureFlag)
 const mockedPostHogCapture = jest.mocked(capturePostHog)
 
 const assertLinksTo = (
@@ -103,13 +103,13 @@ const setupAPIs = () => {
     results: [],
   })
 
-  mockedUseFeatureFlagEnabled.mockReturnValue(false)
+  mockedUseFeatureFlag.mockReturnValue(false)
   return { featured, media }
 }
 
 describe("UAI Announcement Card", () => {
   test("card is not rendered when UniversalAI flag is off", () => {
-    setupAPIs() // mockedUseFeatureFlagEnabled returns false for all flags
+    setupAPIs() // mockedUseFeatureFlag returns false for all flags
     renderWithProviders(<HomePage heroImageIndex={1} />)
     expect(
       screen.queryByRole("heading", { name: "Universal AI" }),
@@ -121,7 +121,7 @@ describe("UAI Announcement Card", () => {
 
   test("card is rendered when UniversalAI flag is on", async () => {
     setupAPIs()
-    mockedUseFeatureFlagEnabled.mockImplementation(
+    mockedUseFeatureFlag.mockImplementation(
       (flag) => flag === FeatureFlags.UniversalAI,
     )
     renderWithProviders(<HomePage heroImageIndex={1} />)
@@ -132,7 +132,7 @@ describe("UAI Announcement Card", () => {
 
   test("CTA link points to the UAI program page", async () => {
     setupAPIs()
-    mockedUseFeatureFlagEnabled.mockImplementation(
+    mockedUseFeatureFlag.mockImplementation(
       (flag) => flag === FeatureFlags.UniversalAI,
     )
     renderWithProviders(<HomePage heroImageIndex={1} />)
@@ -145,7 +145,7 @@ describe("UAI Announcement Card", () => {
   test("CTA click fires cta_clicked with label and readableId", async () => {
     allowConsoleErrors()
     setupAPIs()
-    mockedUseFeatureFlagEnabled.mockImplementation(
+    mockedUseFeatureFlag.mockImplementation(
       (flag) => flag === FeatureFlags.UniversalAI,
     )
     process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"
