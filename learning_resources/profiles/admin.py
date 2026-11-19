@@ -48,6 +48,7 @@ class ClaimExtractionAdmin(admin.ModelAdmin):
     show_full_result_count = False
 
     def get_queryset(self, request):
+        """Leave out the large fields the list doesn't show"""
         # outputs run to hundreds of kilobytes a row and the list never shows them
         return super().get_queryset(request).defer("output", "raw_response")
 
@@ -61,6 +62,17 @@ class RunProfileAdmin(admin.ModelAdmin):
     search_fields = ("run__run_id", "run__learning_resource__readable_id")
     raw_id_fields = ("run", "resource_extraction")
     readonly_fields = ("row_counts",)
+
+    def get_queryset(self, request):
+        """Load the list's foreign keys without the extraction's large fields"""
+        # the run's __str__ shows its resource's platform, and the extraction's
+        # output and raw response are too large to load for its __str__
+        return (
+            super()
+            .get_queryset(request)
+            .select_related("run__learning_resource__platform", "resource_extraction")
+            .defer("resource_extraction__output", "resource_extraction__raw_response")
+        )
 
 
 class ClaimEvidenceInline(admin.TabularInline):
@@ -82,6 +94,7 @@ class ProfileClaimAdmin(admin.ModelAdmin):
     search_fields = ("label", "uid", "display_id", "profile__run__run_id")
     raw_id_fields = ("profile", "unit", "extraction", "cites")
     inlines = [ClaimEvidenceInline]
+    list_select_related = ("profile", "unit")
     show_full_result_count = False
 
 
@@ -93,6 +106,7 @@ class ProfileStatementAdmin(admin.ModelAdmin):
     list_filter = ("section",)
     search_fields = ("text", "profile__run__run_id")
     raw_id_fields = ("profile", "claims", "units")
+    list_select_related = ("profile",)
     show_full_result_count = False
 
 
