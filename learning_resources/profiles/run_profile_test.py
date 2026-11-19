@@ -508,11 +508,13 @@ def test_profile_not_rebuilt_when_current(resource):
     assert RunProfile.objects.count() == 1
 
 
-def test_profile_rebuilt_when_file_recreated(resource):
+@pytest.mark.parametrize("replace", ["delete", "unpublish", "unpublish_unlink"])
+def test_profile_rebuilt_when_file_recreated(resource, replace):
     """
-    A profile whose evidence was deleted with its content file is rebuilt,
-    though its extractions are unchanged, when the file is recreated with
-    the same text
+    A profile whose evidence quotes a content file that was replaced, by a
+    new file with the same text, is rebuilt though its extractions are
+    unchanged: whether the old file was deleted, or unpublished as ETL does,
+    and whether or not its link to the unit was removed
     """
     _, first_files, _ = resource["files"]
     profile, _ = build_resource_profile(resource["run_extraction"])
@@ -526,7 +528,13 @@ def test_profile_rebuilt_when_file_recreated(resource):
     UnitContentFileFactory.create(
         unit=link.unit, content_file=new, position=link.position
     )
-    old.delete()
+    if replace == "delete":
+        old.delete()
+    else:
+        old.published = False
+        old.save()
+        if replace == "unpublish_unlink":
+            link.delete()
 
     profile, built = build_resource_profile(resource["run_extraction"])
 
@@ -537,6 +545,43 @@ def test_profile_rebuilt_when_file_recreated(resource):
         new,
     ]
     assert build_resource_profile(resource["run_extraction"]) == (profile, False)
+
+
+@pytest.mark.parametrize("unpublished", [0, 1])
+@pytest.mark.parametrize("force", [True, False])
+def test_published_run_extraction_with_unpublished_references(
+    resource, unpublished, force
+):
+    """
+    A published run extraction whose unit or context extraction was
+    regenerated, and so unpublished, by a sweep that then failed isn't built,
+    and the run's last profile is left as it was
+    """
+    extractions = [*resource["extractions"], resource["run_extraction"]]
+    ClaimExtraction.objects.filter(id__in=[e.id for e in extractions]).update(
+        published=True
+    )
+    resource["run_extraction"].refresh_from_db()
+    profile, _ = build_resource_profile(resource["run_extraction"])
+    claims = set(profile.claims.values_list("id", flat=True))
+    replaced = resource["extractions"][unpublished]
+    ClaimExtraction.objects.filter(id=replaced.id).update(published=False)
+
+    with pytest.raises(
+        ProfileBuildError, match=f"unpublished extractions {replaced.id}"
+    ):
+        build_resource_profile(resource["run_extraction"], force=force)
+
+    profile.refresh_from_db()
+    assert profile.status == RunProfile.Status.READY
+    assert set(profile.claims.values_list("id", flat=True)) == claims
+
+
+def test_unpublished_run_extraction_with_unpublished_references(resource):
+    """An unpublished run extraction, as in tests or mid-sweep, is built"""
+    _, built = build_resource_profile(resource["run_extraction"])
+
+    assert built is True
 
 
 def test_build_failure_keeps_last_profile(resource, mocker):
@@ -600,8 +645,11 @@ def test_publish_resource_profile(resource):
     assert not RunProfile.objects.filter(id=old_profile.id).exists()
 
 
-def test_publish_resource_profile_failure_deletes_other_runs(resource):
-    """A failed build still deletes the profiles of the resource's other runs"""
+def test_publish_resource_profile_failure_keeps_other_runs(resource):
+    """
+    A failed build of the best run's profile keeps the profiles of the
+    resource's other runs, so the resource keeps its last ready profile
+    """
     old_run = LearningResourceRunFactory.create(learning_resource=resource["resource"])
     old_profile = RunProfile.objects.create(run=old_run, status=RunProfile.Status.READY)
     resource["units"][2].delete()
@@ -609,9 +657,9 @@ def test_publish_resource_profile_failure_deletes_other_runs(resource):
     with pytest.raises(ProfileBuildError, match="unit"):
         publish_resource_profile(resource["resource"], resource["run_extraction"])
 
-    assert not RunProfile.objects.filter(id=old_profile.id).exists()
-    profile = RunProfile.objects.get(run__learning_resource=resource["resource"])
-    assert profile.run_id == resource["run"].id
+    old_profile.refresh_from_db()
+    assert old_profile.status == RunProfile.Status.READY
+    profile = RunProfile.objects.get(run=resource["run"])
     assert profile.status == RunProfile.Status.FAILED
 
 

@@ -1670,36 +1670,52 @@ def rebuild_resource_profile(resource_id: int) -> bool | None:
 
     No claims are generated, so it makes no model calls. It rebuilds even when
     the profile is current, to apply a change to the code that builds
-    profiles, which the freshness check doesn't see.
+    profiles, which the freshness check doesn't see. Like a sweep, it deletes
+    the profiles of the resource's other runs.
+
+    When the best run changed since the resource's last successful sweep, its
+    published run extraction is another run's, so nothing is rebuilt and the
+    next sweep replaces the profile.
 
     Args:
         resource_id (int): the LearningResource id
 
     Returns:
         bool | None: True when the profile was rebuilt, or None when the
-            resource has no published run extraction
+            resource has no published run extraction for its best run
 
     Raises:
         ProfileBuildError: when the extraction refers to units or extractions
-            that are gone
+            that are gone, or to extractions that are no longer published
     """
     # deferred, like the claim modules
-    from learning_resources.profiles.run_profile import build_resource_profile
+    from learning_resources.profiles.run_profile import publish_resource_profile
 
+    resource = LearningResource.objects.get(id=resource_id)
     # publish_claim_extractions publishes at most one run extraction: the
     # best run's, as of the resource's last successful sweep
     extraction = ClaimExtraction.objects.filter(
-        run__learning_resource_id=resource_id,
+        run__learning_resource=resource,
         level=ClaimExtraction.Level.RUN,
         published=True,
     ).first()
     if extraction is None:
         log.info(
-            "No published run claims to rebuild a profile from for %s", resource_id
+            "No published run claims to rebuild a profile from for %s",
+            resource.readable_id,
         )
         return None
-    _, built = build_resource_profile(extraction, force=True)
-    return built
+    best_run = resource.best_run
+    if best_run is None or extraction.run_id != best_run.id:
+        log.info(
+            "Not rebuilding the profile of %s: its published run claims are for"
+            " run %s, not its best run %s; a claims sweep replaces them",
+            resource.readable_id,
+            extraction.run_id,
+            best_run.id if best_run else None,
+        )
+        return None
+    return publish_resource_profile(resource, extraction, force=True)
 
 
 @app.task(acks_late=True)

@@ -35,6 +35,7 @@ import logging
 from collections import Counter
 
 from django.db import transaction
+from django.db.models import Exists, OuterRef
 
 from learning_resources.models import (
     ClaimEvidence,
@@ -45,6 +46,7 @@ from learning_resources.models import (
     ProfileStatement,
     RunProfile,
     Unit,
+    UnitContentFile,
 )
 from learning_resources.profiles.run_claims import (
     CLAIM_KINDS,
@@ -518,12 +520,20 @@ def _save_statements(
 # --------------------------------------------------------------------------- build
 def _row_counts(profile: RunProfile) -> dict[str, int]:
     """
-    Count the profile's rows that deleting a content file or unit elsewhere
-    removes: evidence (cascade), claims' units (set to null) and statements'
-    links to units
+    Count the profile's rows that changes to content files or units elsewhere
+    invalidate: evidence quoting a file that is still published and in its
+    claim's unit, as a build would quote it (deleting a file cascades to its
+    evidence; ETL unpublishes a replaced file and relinks the unit), claims'
+    units (set to null) and statements' links to units
     """
+    linked = UnitContentFile.objects.filter(
+        unit_id=OuterRef("claim__unit_id"),
+        content_file_id=OuterRef("content_file_id"),
+    )
     return {
-        "evidence": ClaimEvidence.objects.filter(claim__profile=profile).count(),
+        "evidence": ClaimEvidence.objects.filter(
+            Exists(linked), claim__profile=profile, content_file__published=True
+        ).count(),
         "claim_units": profile.claims.filter(unit__isnull=False).count(),
         "statement_units": ProfileStatement.units.through.objects.filter(
             profilestatement__profile=profile
@@ -536,9 +546,10 @@ def _is_current(profile: RunProfile | None, extraction: ClaimExtraction) -> bool
     Whether a profile was built from the extraction as it is now, and still
     has every row it was built with.
 
-    ETL can delete and recreate a unit's content files with the same text,
-    which leaves the extractions as they are but deletes the evidence quoting
-    the old files, so the rows are counted as well.
+    ETL can replace a unit's content files with new ones with the same text,
+    unpublishing or deleting the old files, which leaves the extractions as
+    they are but the evidence quoting the old files, so the evidence that
+    still quotes a current file is counted as well.
     """
     return (
         profile is not None
@@ -547,6 +558,45 @@ def _is_current(profile: RunProfile | None, extraction: ClaimExtraction) -> bool
         and profile.updated_on >= extraction.updated_on
         and profile.row_counts == _row_counts(profile)
     )
+
+
+def _check_published_references(extraction: ClaimExtraction) -> None:
+    """
+    Check that a published run extraction's unit and context extractions are
+    published too.
+
+    publish_claim_extractions publishes a run extraction with the extractions
+    it was made from. Regenerating one of those replaces its row in place and
+    unpublishes it, so when a sweep then fails before publishing, the run
+    output's claim ids, like U01:c3, name claims of the old output that the
+    row no longer holds. Building from it would link them to other claims.
+    Rows that are gone are left to _load_references.
+
+    Raises:
+        ProfileBuildError: when a referenced extraction is unpublished
+    """
+    if not extraction.published:
+        return
+    output = extraction.output
+    extraction_ids = [
+        reference["extraction"]
+        for reference in output.get("units", [])
+        if reference["extraction"]
+    ]
+    if output.get("context_extraction"):
+        extraction_ids.append(output["context_extraction"])
+    unpublished = sorted(
+        ClaimExtraction.objects.filter(
+            id__in=extraction_ids, published=False
+        ).values_list("id", flat=True)
+    )
+    if unpublished:
+        msg = (
+            f"Published run extraction {extraction.id} refers to unpublished"
+            f" extractions {', '.join(map(str, unpublished))}, which may have"
+            " been replaced since it was made"
+        )
+        raise ProfileBuildError(msg)
 
 
 def _load(profile: RunProfile, extraction: ClaimExtraction) -> Counter:
@@ -592,11 +642,13 @@ def build_resource_profile(
 
     Raises:
         ProfileBuildError: when the extraction refers to units or extractions
-            that are gone
+            that are gone, or it is published and refers to extractions that
+            aren't
     """
     if extraction.level != ClaimExtraction.Level.RUN or extraction.run_id is None:
         msg = f"Extraction {extraction.id} is not a run's run-level extraction"
         raise ValueError(msg)
+    _check_published_references(extraction)
     profile = RunProfile.objects.filter(run_id=extraction.run_id).first()
     if not force and _is_current(profile, extraction):
         return profile, False
@@ -650,10 +702,14 @@ def publish_resource_profile(
 
     The resource's profile follows its published extractions: see
     publish_claim_extractions. A resource without a run extraction has no
-    profile. The profiles of the resource's other runs are deleted before
-    building, since their claims are no longer published, so the resource never
-    has more than one profile. When building fails, the best run's profile is
-    handled as in build_resource_profile.
+    profile. The profiles of the resource's other runs are deleted once the
+    best run's profile is built, since their claims are no longer published.
+
+    When building fails, the best run's profile is handled as in
+    build_resource_profile, and the other runs' profiles are kept, so a
+    resource whose best run changed keeps its last ready profile until the
+    new one builds. Only then can a resource have more than one profile; the
+    best run's is the one whose run is resource.best_run.
 
     Args:
         resource (LearningResource): the resource
@@ -667,12 +723,14 @@ def publish_resource_profile(
 
     Raises:
         ProfileBuildError: when the extraction refers to units or extractions
-            that are gone
+            that are gone, or it is published and refers to extractions that
+            aren't
     """
     profiles = RunProfile.objects.filter(run__learning_resource=resource)
     if extraction is None:
         profiles.delete()
         return None
-    profiles.exclude(run_id=extraction.run_id).delete()
     _, built = build_resource_profile(extraction, force=force)
+    # after building, so a failed build leaves the last profile in place
+    profiles.exclude(run_id=extraction.run_id).delete()
     return built

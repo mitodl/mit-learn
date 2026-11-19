@@ -4241,25 +4241,62 @@ def test_generate_all_claims(mocker):
 
 
 def test_rebuild_resource_profile(mocker):
-    """The profile is force-rebuilt from the published run extraction only"""
+    """
+    The best run's profile is force-rebuilt from its published run extraction
+    only, through publish_resource_profile, which deletes other runs' profiles
+    """
     run = factories.LearningResourceRunFactory.create()
+    mocker.patch.object(
+        LearningResource, "best_run", new_callable=mocker.PropertyMock, return_value=run
+    )
     factories.ClaimExtractionFactory.create(
         unit=None, run=run, level=ClaimExtraction.Level.RUN, published=False
     )
     published = factories.ClaimExtractionFactory.create(
         unit=None, run=run, level=ClaimExtraction.Level.RUN, published=True
     )
-    build = mocker.patch(
-        "learning_resources.profiles.run_profile.build_resource_profile",
-        return_value=(mocker.Mock(), True),
+    publish = mocker.patch(
+        "learning_resources.profiles.run_profile.publish_resource_profile",
+        return_value=True,
     )
     generate_run_claims = mocker.patch(
         "learning_resources.profiles.run_claims.generate_run_claims"
     )
 
     assert tasks.rebuild_resource_profile(run.learning_resource.id) is True
-    build.assert_called_once_with(published, force=True)
+    publish.assert_called_once_with(run.learning_resource, published, force=True)
     generate_run_claims.assert_not_called()
+
+
+@pytest.mark.parametrize("has_best_run", [True, False])
+def test_rebuild_resource_profile_not_best_run(mocker, has_best_run):
+    """
+    A resource whose published run claims are for a run that is no longer its
+    best run isn't rebuilt, and its profiles are left to the next sweep
+    """
+    old_run = factories.LearningResourceRunFactory.create()
+    best_run = (
+        factories.LearningResourceRunFactory.create(
+            learning_resource=old_run.learning_resource
+        )
+        if has_best_run
+        else None
+    )
+    mocker.patch.object(
+        LearningResource,
+        "best_run",
+        new_callable=mocker.PropertyMock,
+        return_value=best_run,
+    )
+    factories.ClaimExtractionFactory.create(
+        unit=None, run=old_run, level=ClaimExtraction.Level.RUN, published=True
+    )
+    publish = mocker.patch(
+        "learning_resources.profiles.run_profile.publish_resource_profile"
+    )
+
+    assert tasks.rebuild_resource_profile(old_run.learning_resource.id) is None
+    publish.assert_not_called()
 
 
 def test_rebuild_resource_profile_no_extraction(mocker):
@@ -4268,12 +4305,12 @@ def test_rebuild_resource_profile_no_extraction(mocker):
     factories.ClaimExtractionFactory.create(
         unit=None, run=run, level=ClaimExtraction.Level.RUN, published=False
     )
-    build = mocker.patch(
-        "learning_resources.profiles.run_profile.build_resource_profile"
+    publish = mocker.patch(
+        "learning_resources.profiles.run_profile.publish_resource_profile"
     )
 
     assert tasks.rebuild_resource_profile(run.learning_resource.id) is None
-    build.assert_not_called()
+    publish.assert_not_called()
 
 
 def test_rebuild_resource_profiles(mocker):
