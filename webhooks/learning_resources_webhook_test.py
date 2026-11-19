@@ -1083,7 +1083,9 @@ def test_batch_with_a_shadowed_group_is_a_shadow_run(settings, client, mocker):
 
 
 @pytest.mark.django_db
-def test_shadowed_batch_writes_nothing(settings, client, mocker):
+def test_shadowed_batch_writes_nothing(
+    settings, client, mocker, django_capture_on_commit_callbacks
+):
     """The real loaders compare a shadowed group with what is stored and write nothing."""
     etl_source = ETLSource.mit_climate.name
     document = LearningResourceType.document.name
@@ -1098,23 +1100,24 @@ def test_shadowed_batch_writes_nothing(settings, client, mocker):
     platform = LearningResourcePlatformFactory.create()
     topic = LearningResourceTopicFactory.create()
 
-    response = _post(
-        client,
-        settings,
-        {
-            "resources": [
-                _resource(
-                    "doc-1",
-                    etl_source,
-                    document,
-                    url="https://a.example/1",
-                    platform=platform.code,
-                    image=None,
-                    topics=[{"name": topic.name}],
-                )
-            ]
-        },
-    )
+    with django_capture_on_commit_callbacks(execute=True):
+        response = _post(
+            client,
+            settings,
+            {
+                "resources": [
+                    _resource(
+                        "doc-1",
+                        etl_source,
+                        document,
+                        url="https://a.example/1",
+                        platform=platform.code,
+                        image=None,
+                        topics=[{"name": topic.name}],
+                    )
+                ]
+            },
+        )
 
     assert response.status_code == 200
     assert response.json()["shadow"] == [

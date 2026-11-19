@@ -15,9 +15,7 @@ User = get_user_model()
 
 
 class SyncProgramCertificatesTask(BaseWarehouseETLTask):
-    """Warehouse-pull sync of profiles.ProgramCertificate, replacing the
-    Hightouch sync into external.programcertificate (mitodl/hq#12954).
-    """
+    """Warehouse-pull sync of profiles.ProgramCertificate (mitodl/hq#12954)."""
 
     name = "profiles.tasks.SyncProgramCertificatesTask"
     table_name = "integrations__learn__program_certificates"

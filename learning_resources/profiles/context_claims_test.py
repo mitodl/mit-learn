@@ -251,8 +251,9 @@ def test_context_unit_without_text(fake_llm):
     assert fake_llm.calls == []
 
 
-def test_context_over_budget(fake_llm):
-    """A context unit over the input budget makes no call"""
+def test_context_over_budget(fake_llm, mocker):
+    """A context unit over the input budget makes no call and logs a warning"""
+    logger = mocker.patch.object(claims, "logger")
     ResourceProfileConfiguration.objects.filter(stage="context").update(
         input_token_budget=10
     )
@@ -260,6 +261,9 @@ def test_context_over_budget(fake_llm):
 
     assert generate_context_claims(run) is None
     assert fake_llm.calls == []
+    assert not ClaimExtraction.objects.exists()
+    message, *_ = logger.warning.call_args.args
+    assert message.startswith("Skipping")
 
 
 def test_failed_context(mocker):

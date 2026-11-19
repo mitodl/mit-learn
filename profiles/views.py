@@ -21,6 +21,7 @@ from main.permissions import (
     IsStaffPermission,
 )
 from profiles.api import ensure_profile
+from profiles.memory import NOTE_FIELDS, sync_profile_notes
 from profiles.models import Profile, ProgramCertificate, ProgramLetter
 from profiles.permissions import HasEditPermission
 from profiles.serializers import (
@@ -97,6 +98,14 @@ class ProfileViewSet(
             )
         else:
             return super().get_object()
+
+    def perform_update(self, serializer):
+        """Save the profile, then write its notes to the learner's memory"""
+        # Read before saving: ProfileSerializer.update pops topic_interests.
+        # Onboarding saves through this same update.
+        note_fields = set(NOTE_FIELDS) & serializer.validated_data.keys()
+        super().perform_update(serializer)
+        sync_profile_notes(self.request, serializer.instance, note_fields)
 
 
 class ProgramLetterViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):

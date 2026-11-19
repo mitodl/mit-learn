@@ -3552,6 +3552,15 @@ export type VideoResourceResourceTypeEnum =
 export type VideoStreamingUrl = string
 
 /**
+ * Serializer for the ``/api/v1/webhooks/warehouse_views_rebuilt/`` endpoint.  ``views`` are plain strings, not choices: a view no sync reads is logged and skipped, rather than rejecting the batch it came in.
+ */
+export interface WarehouseViewsWebhookRequestRequest {
+  /**
+   * Bare names of the warehouse views the data platform rebuilt, e.g. integrations__learn__ocw_courses
+   */
+  views: Array<string>
+}
+/**
  * Serializer for webhook responses.
  */
 export interface WebhookResponse {
@@ -3780,17 +3789,17 @@ export const ArticlesApiAxiosParamCreator = function (
      * Get a paginated list of website content items
      * @summary List
      * @param {ArticlesListContentTypeEnum} [content_type] Filter by content type  * &#x60;news&#x60; - News * &#x60;article&#x60; - Article
-     * @param {boolean} [draft] Filter to show only draft (unpublished) items
      * @param {number} [limit] Number of results to return per page.
      * @param {number} [offset] The initial index from which to return the results.
+     * @param {ArticlesListStatusEnum} [status] Filter by publish status. Defaults to published. Drafts are only returned to users who may edit website content; for anyone else, draft is always empty and both is the same as published.  * &#x60;published&#x60; - Published * &#x60;draft&#x60; - Draft * &#x60;both&#x60; - Both
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     articlesList: async (
       content_type?: ArticlesListContentTypeEnum,
-      draft?: boolean,
       limit?: number,
       offset?: number,
+      status?: ArticlesListStatusEnum,
       options: RawAxiosRequestConfig = {},
     ): Promise<RequestArgs> => {
       const localVarPath = `/api/v1/articles/`
@@ -3813,16 +3822,16 @@ export const ArticlesApiAxiosParamCreator = function (
         localVarQueryParameter["content_type"] = content_type
       }
 
-      if (draft !== undefined) {
-        localVarQueryParameter["draft"] = draft
-      }
-
       if (limit !== undefined) {
         localVarQueryParameter["limit"] = limit
       }
 
       if (offset !== undefined) {
         localVarQueryParameter["offset"] = offset
+      }
+
+      if (status !== undefined) {
+        localVarQueryParameter["status"] = status
       }
 
       localVarHeaderParameter["Accept"] = "application/json"
@@ -4049,17 +4058,17 @@ export const ArticlesApiFp = function (configuration?: Configuration) {
      * Get a paginated list of website content items
      * @summary List
      * @param {ArticlesListContentTypeEnum} [content_type] Filter by content type  * &#x60;news&#x60; - News * &#x60;article&#x60; - Article
-     * @param {boolean} [draft] Filter to show only draft (unpublished) items
      * @param {number} [limit] Number of results to return per page.
      * @param {number} [offset] The initial index from which to return the results.
+     * @param {ArticlesListStatusEnum} [status] Filter by publish status. Defaults to published. Drafts are only returned to users who may edit website content; for anyone else, draft is always empty and both is the same as published.  * &#x60;published&#x60; - Published * &#x60;draft&#x60; - Draft * &#x60;both&#x60; - Both
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     async articlesList(
       content_type?: ArticlesListContentTypeEnum,
-      draft?: boolean,
       limit?: number,
       offset?: number,
+      status?: ArticlesListStatusEnum,
       options?: RawAxiosRequestConfig,
     ): Promise<
       (
@@ -4069,9 +4078,9 @@ export const ArticlesApiFp = function (configuration?: Configuration) {
     > {
       const localVarAxiosArgs = await localVarAxiosParamCreator.articlesList(
         content_type,
-        draft,
         limit,
         offset,
+        status,
         options,
       )
       const localVarOperationServerIndex = configuration?.serverIndex ?? 0
@@ -4221,9 +4230,9 @@ export const ArticlesApiFactory = function (
       return localVarFp
         .articlesList(
           requestParameters.content_type,
-          requestParameters.draft,
           requestParameters.limit,
           requestParameters.offset,
+          requestParameters.status,
           options,
         )
         .then((request) => request(axios, basePath))
@@ -4302,11 +4311,6 @@ export interface ArticlesApiArticlesListRequest {
   readonly content_type?: ArticlesListContentTypeEnum
 
   /**
-   * Filter to show only draft (unpublished) items
-   */
-  readonly draft?: boolean
-
-  /**
    * Number of results to return per page.
    */
   readonly limit?: number
@@ -4315,6 +4319,11 @@ export interface ArticlesApiArticlesListRequest {
    * The initial index from which to return the results.
    */
   readonly offset?: number
+
+  /**
+   * Filter by publish status. Defaults to published. Drafts are only returned to users who may edit website content; for anyone else, draft is always empty and both is the same as published.  * &#x60;published&#x60; - Published * &#x60;draft&#x60; - Draft * &#x60;both&#x60; - Both
+   */
+  readonly status?: ArticlesListStatusEnum
 }
 
 /**
@@ -4405,9 +4414,9 @@ export class ArticlesApi extends BaseAPI {
     return ArticlesApiFp(this.configuration)
       .articlesList(
         requestParameters.content_type,
-        requestParameters.draft,
         requestParameters.limit,
         requestParameters.offset,
+        requestParameters.status,
         options,
       )
       .then((request) => request(this.axios, this.basePath))
@@ -4456,6 +4465,13 @@ export const ArticlesListContentTypeEnum = {
 } as const
 export type ArticlesListContentTypeEnum =
   (typeof ArticlesListContentTypeEnum)[keyof typeof ArticlesListContentTypeEnum]
+export const ArticlesListStatusEnum = {
+  Both: "both",
+  Draft: "draft",
+  Published: "published",
+} as const
+export type ArticlesListStatusEnum =
+  (typeof ArticlesListStatusEnum)[keyof typeof ArticlesListStatusEnum]
 
 /**
  * ContentFileSearchApi - axios parameter creator
@@ -25184,6 +25200,60 @@ export const WebhooksApiAxiosParamCreator = function (
         options: localVarRequestOptions,
       }
     },
+    /**
+     * Webhook handler for the OL Data Platform\'s \"these views were rebuilt\" message. It queues a full run of each catalog sync that reads one of them, so a change reaches MIT Learn without waiting for the sync\'s daily run.  A 200 says the syncs were queued, not that anything was loaded: each sync checks ownership when it runs, and does nothing until the warehouse owns its source. A view no sync reads is skipped and named in the response, so that one bad name can\'t reject the rest of a batch.
+     * @param {WarehouseViewsWebhookRequestRequest} WarehouseViewsWebhookRequestRequest
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    webhooksWarehouseViewsRebuiltCreate: async (
+      WarehouseViewsWebhookRequestRequest: WarehouseViewsWebhookRequestRequest,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'WarehouseViewsWebhookRequestRequest' is not null or undefined
+      assertParamExists(
+        "webhooksWarehouseViewsRebuiltCreate",
+        "WarehouseViewsWebhookRequestRequest",
+        WarehouseViewsWebhookRequestRequest,
+      )
+      const localVarPath = `/api/v1/webhooks/warehouse_views_rebuilt/`
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
+
+      const localVarRequestOptions = {
+        method: "POST",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
+
+      localVarHeaderParameter["Content-Type"] = "application/json"
+      localVarHeaderParameter["Accept"] = "application/json"
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+      localVarRequestOptions.data = serializeDataIfNeeded(
+        WarehouseViewsWebhookRequestRequest,
+        localVarRequestOptions,
+        configuration,
+      )
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
   }
 }
 
@@ -25337,6 +25407,39 @@ export const WebhooksApiFp = function (configuration?: Configuration) {
           configuration,
         )(axios, localVarOperationServerBasePath || basePath)
     },
+    /**
+     * Webhook handler for the OL Data Platform\'s \"these views were rebuilt\" message. It queues a full run of each catalog sync that reads one of them, so a change reaches MIT Learn without waiting for the sync\'s daily run.  A 200 says the syncs were queued, not that anything was loaded: each sync checks ownership when it runs, and does nothing until the warehouse owns its source. A view no sync reads is skipped and named in the response, so that one bad name can\'t reject the rest of a batch.
+     * @param {WarehouseViewsWebhookRequestRequest} WarehouseViewsWebhookRequestRequest
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async webhooksWarehouseViewsRebuiltCreate(
+      WarehouseViewsWebhookRequestRequest: WarehouseViewsWebhookRequestRequest,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<WebhookResponse>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.webhooksWarehouseViewsRebuiltCreate(
+          WarehouseViewsWebhookRequestRequest,
+          options,
+        )
+      const localVarOperationServerIndex = configuration?.serverIndex ?? 0
+      const localVarOperationServerBasePath =
+        operationServerMap["WebhooksApi.webhooksWarehouseViewsRebuiltCreate"]?.[
+          localVarOperationServerIndex
+        ]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, localVarOperationServerBasePath || basePath)
+    },
   }
 }
 
@@ -25422,6 +25525,23 @@ export const WebhooksApiFactory = function (
         )
         .then((request) => request(axios, basePath))
     },
+    /**
+     * Webhook handler for the OL Data Platform\'s \"these views were rebuilt\" message. It queues a full run of each catalog sync that reads one of them, so a change reaches MIT Learn without waiting for the sync\'s daily run.  A 200 says the syncs were queued, not that anything was loaded: each sync checks ownership when it runs, and does nothing until the warehouse owns its source. A view no sync reads is skipped and named in the response, so that one bad name can\'t reject the rest of a batch.
+     * @param {WebhooksApiWebhooksWarehouseViewsRebuiltCreateRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    webhooksWarehouseViewsRebuiltCreate(
+      requestParameters: WebhooksApiWebhooksWarehouseViewsRebuiltCreateRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<WebhookResponse> {
+      return localVarFp
+        .webhooksWarehouseViewsRebuiltCreate(
+          requestParameters.WarehouseViewsWebhookRequestRequest,
+          options,
+        )
+        .then((request) => request(axios, basePath))
+    },
   }
 }
 
@@ -25462,6 +25582,13 @@ export interface WebhooksApiWebhooksLearningResourcesCreateRequest {
  */
 export interface WebhooksApiWebhooksOvsVideosCreateRequest {
   readonly OVSVideoWebhookRequestRequest?: OVSVideoWebhookRequestRequest
+}
+
+/**
+ * Request parameters for webhooksWarehouseViewsRebuiltCreate operation in WebhooksApi.
+ */
+export interface WebhooksApiWebhooksWarehouseViewsRebuiltCreateRequest {
+  readonly WarehouseViewsWebhookRequestRequest: WarehouseViewsWebhookRequestRequest
 }
 
 /**
@@ -25539,6 +25666,24 @@ export class WebhooksApi extends BaseAPI {
     return WebhooksApiFp(this.configuration)
       .webhooksOvsVideosCreate(
         requestParameters.OVSVideoWebhookRequestRequest,
+        options,
+      )
+      .then((request) => request(this.axios, this.basePath))
+  }
+
+  /**
+   * Webhook handler for the OL Data Platform\'s \"these views were rebuilt\" message. It queues a full run of each catalog sync that reads one of them, so a change reaches MIT Learn without waiting for the sync\'s daily run.  A 200 says the syncs were queued, not that anything was loaded: each sync checks ownership when it runs, and does nothing until the warehouse owns its source. A view no sync reads is skipped and named in the response, so that one bad name can\'t reject the rest of a batch.
+   * @param {WebhooksApiWebhooksWarehouseViewsRebuiltCreateRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   */
+  public webhooksWarehouseViewsRebuiltCreate(
+    requestParameters: WebhooksApiWebhooksWarehouseViewsRebuiltCreateRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return WebhooksApiFp(this.configuration)
+      .webhooksWarehouseViewsRebuiltCreate(
+        requestParameters.WarehouseViewsWebhookRequestRequest,
         options,
       )
       .then((request) => request(this.axios, this.basePath))
@@ -25726,17 +25871,17 @@ export const WebsiteContentApiAxiosParamCreator = function (
      * Get a paginated list of website content items
      * @summary List
      * @param {WebsiteContentListContentTypeEnum} [content_type] Filter by content type  * &#x60;news&#x60; - News * &#x60;article&#x60; - Article
-     * @param {boolean} [draft] Filter to show only draft (unpublished) items
      * @param {number} [limit] Number of results to return per page.
      * @param {number} [offset] The initial index from which to return the results.
+     * @param {WebsiteContentListStatusEnum} [status] Filter by publish status. Defaults to published. Drafts are only returned to users who may edit website content; for anyone else, draft is always empty and both is the same as published.  * &#x60;published&#x60; - Published * &#x60;draft&#x60; - Draft * &#x60;both&#x60; - Both
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     websiteContentList: async (
       content_type?: WebsiteContentListContentTypeEnum,
-      draft?: boolean,
       limit?: number,
       offset?: number,
+      status?: WebsiteContentListStatusEnum,
       options: RawAxiosRequestConfig = {},
     ): Promise<RequestArgs> => {
       const localVarPath = `/api/v1/website_content/`
@@ -25759,16 +25904,16 @@ export const WebsiteContentApiAxiosParamCreator = function (
         localVarQueryParameter["content_type"] = content_type
       }
 
-      if (draft !== undefined) {
-        localVarQueryParameter["draft"] = draft
-      }
-
       if (limit !== undefined) {
         localVarQueryParameter["limit"] = limit
       }
 
       if (offset !== undefined) {
         localVarQueryParameter["offset"] = offset
+      }
+
+      if (status !== undefined) {
+        localVarQueryParameter["status"] = status
       }
 
       localVarHeaderParameter["Accept"] = "application/json"
@@ -25995,17 +26140,17 @@ export const WebsiteContentApiFp = function (configuration?: Configuration) {
      * Get a paginated list of website content items
      * @summary List
      * @param {WebsiteContentListContentTypeEnum} [content_type] Filter by content type  * &#x60;news&#x60; - News * &#x60;article&#x60; - Article
-     * @param {boolean} [draft] Filter to show only draft (unpublished) items
      * @param {number} [limit] Number of results to return per page.
      * @param {number} [offset] The initial index from which to return the results.
+     * @param {WebsiteContentListStatusEnum} [status] Filter by publish status. Defaults to published. Drafts are only returned to users who may edit website content; for anyone else, draft is always empty and both is the same as published.  * &#x60;published&#x60; - Published * &#x60;draft&#x60; - Draft * &#x60;both&#x60; - Both
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     async websiteContentList(
       content_type?: WebsiteContentListContentTypeEnum,
-      draft?: boolean,
       limit?: number,
       offset?: number,
+      status?: WebsiteContentListStatusEnum,
       options?: RawAxiosRequestConfig,
     ): Promise<
       (
@@ -26016,9 +26161,9 @@ export const WebsiteContentApiFp = function (configuration?: Configuration) {
       const localVarAxiosArgs =
         await localVarAxiosParamCreator.websiteContentList(
           content_type,
-          draft,
           limit,
           offset,
+          status,
           options,
         )
       const localVarOperationServerIndex = configuration?.serverIndex ?? 0
@@ -26168,9 +26313,9 @@ export const WebsiteContentApiFactory = function (
       return localVarFp
         .websiteContentList(
           requestParameters.content_type,
-          requestParameters.draft,
           requestParameters.limit,
           requestParameters.offset,
+          requestParameters.status,
           options,
         )
         .then((request) => request(axios, basePath))
@@ -26249,11 +26394,6 @@ export interface WebsiteContentApiWebsiteContentListRequest {
   readonly content_type?: WebsiteContentListContentTypeEnum
 
   /**
-   * Filter to show only draft (unpublished) items
-   */
-  readonly draft?: boolean
-
-  /**
    * Number of results to return per page.
    */
   readonly limit?: number
@@ -26262,6 +26402,11 @@ export interface WebsiteContentApiWebsiteContentListRequest {
    * The initial index from which to return the results.
    */
   readonly offset?: number
+
+  /**
+   * Filter by publish status. Defaults to published. Drafts are only returned to users who may edit website content; for anyone else, draft is always empty and both is the same as published.  * &#x60;published&#x60; - Published * &#x60;draft&#x60; - Draft * &#x60;both&#x60; - Both
+   */
+  readonly status?: WebsiteContentListStatusEnum
 }
 
 /**
@@ -26352,9 +26497,9 @@ export class WebsiteContentApi extends BaseAPI {
     return WebsiteContentApiFp(this.configuration)
       .websiteContentList(
         requestParameters.content_type,
-        requestParameters.draft,
         requestParameters.limit,
         requestParameters.offset,
+        requestParameters.status,
         options,
       )
       .then((request) => request(this.axios, this.basePath))
@@ -26403,3 +26548,10 @@ export const WebsiteContentListContentTypeEnum = {
 } as const
 export type WebsiteContentListContentTypeEnum =
   (typeof WebsiteContentListContentTypeEnum)[keyof typeof WebsiteContentListContentTypeEnum]
+export const WebsiteContentListStatusEnum = {
+  Both: "both",
+  Draft: "draft",
+  Published: "published",
+} as const
+export type WebsiteContentListStatusEnum =
+  (typeof WebsiteContentListStatusEnum)[keyof typeof WebsiteContentListStatusEnum]

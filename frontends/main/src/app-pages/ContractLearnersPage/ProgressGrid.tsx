@@ -44,7 +44,6 @@ import {
 } from "./statusDisplay"
 import { ContentProgress } from "./ContentProgress"
 
-/** The `/learners` endpoint's maximum page size, in learners. */
 const PAGE_SIZE = 25
 
 type GridFilters = Omit<LearnersParams, "limit" | "offset">
@@ -55,11 +54,12 @@ const gridLearnersQuery = (
   contractId: number,
   filters: GridFilters,
   page: number,
+  pageSize = PAGE_SIZE,
 ) =>
   analyticsContractQueries.learners(orgUuid, contractId, {
     ...filters,
-    limit: PAGE_SIZE,
-    offset: (page - 1) * PAGE_SIZE,
+    limit: pageSize,
+    offset: (page - 1) * pageSize,
   })
 
 /** Every run, or only the selected ones. */
@@ -782,10 +782,4 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
   )
 }
 
-export {
-  buildGridCsv,
-  gridColumns,
-  gridLearnersQuery,
-  PAGE_SIZE as GRID_PAGE_SIZE,
-  ProgressGrid,
-}
+export { buildGridCsv, gridColumns, gridLearnersQuery, ProgressGrid }

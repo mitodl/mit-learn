@@ -164,7 +164,14 @@ export const SHARED_COMPLETION_STATUSES: CompletionStatusFilter[] = [
 export const completionStatusFilter = (status?: ContractLearnersStatus) =>
   status ? STATUS_FILTER_COMPLETION_STATUS[status] : SHARED_COMPLETION_STATUSES
 
+/** The `modules` value that selects every module on the Learners page. */
+export const ALL_MODULES = "all"
+
 export type ContractLearnersFilters = {
+  /**
+   * Also selects every module: on a contract with more than one, the page
+   * ignores `status` unless a module is selected.
+   */
   status?: ContractLearnersStatus
   needsAttention?: boolean
   page?: number
@@ -176,7 +183,10 @@ export const contractLearnersView = (
 ) => {
   const path = generatePath(CONTRACT_LEARNERS_VIEW, { orgSlug, contractSlug })
   const params = new URLSearchParams()
-  if (filters.status) params.set("status", filters.status)
+  if (filters.status) {
+    params.set("modules", ALL_MODULES)
+    params.set("status", filters.status)
+  }
   if (filters.needsAttention) params.set("needs_attention", "true")
   if (filters.page && filters.page > 1) params.set("page", String(filters.page))
   const search = params.toString()

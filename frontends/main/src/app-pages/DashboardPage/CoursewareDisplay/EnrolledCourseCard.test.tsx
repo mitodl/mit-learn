@@ -1076,6 +1076,22 @@ describe.each([
     ).not.toBeInTheDocument()
   })
 
+  test("context menu hides View Course Details when the course page is not live", async () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      run: {
+        course: { readable_id: "some-course-id", has_live_product_page: false },
+      },
+    })
+    renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
+    await user.click(
+      within(getCard()).getByRole("button", { name: "More options" }),
+    )
+    expect(
+      screen.queryByRole("menuitem", { name: "View Course Details" }),
+    ).not.toBeInTheDocument()
+  })
+
   test("context menu includes Email Settings and Unenroll", async () => {
     setupUserApis()
     const enrollment = mitxonline.factories.enrollment.courseEnrollment({
