@@ -1,6 +1,25 @@
 Release Notes
 =============
 
+Version 0.88.3
+--------------
+
+- Restyle the Cyber Sale banner and simplify its payload (#4357)
+- Update dependency opentelemetry-api to v1.45.2 [SECURITY] (#4354)
+- Upgrade Next.js to 16.4.6 for the 16.4.5 security fixes (#4346)
+- Update dependency oauthlib to v4.0.1 [SECURITY] (#4283)
+- Update dependency pyasn1 to v0.6.5 [SECURITY] (#4284)
+- Update dependency prek to v0.5.9 (#4280)
+
+Version 0.88.2
+--------------
+
+- List only published articles at /articles (#4320)
+- Run the warehouse catalog syncs when the data platform rebuilds their views (#4291)
+- Update the ETL cutover runbook for delivery sensors and RC rehearsals (#4292)
+- Queue a resource's search upsert only after its transaction commits (#4237)
+- Pin LITELLM_CUSTOM_PROVIDER in pytest.ini (#4343)
+
 Version 0.88.1
 --------------
 

@@ -1,5 +1,6 @@
 """Tests for the warehouse-pull loading of content files"""
 
+import json
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
@@ -107,6 +108,7 @@ def _open_edx_row(key="block-1", **overrides):
         "published": 1,
         "last_modified": "2026-10-20T10:00:00.000Z",
         "release_date": None,
+        "course_xml_version": "v1",
         **overrides,
     }
 
@@ -419,6 +421,263 @@ def test_load_run_drops_unit_links_to_unpublished_files(warehouse_owns_content_f
     assert not unit.content_files.exists()
 
 
+def _unit_row(unit_order, external_id, content_files, **overrides):
+    """Build a row of integrations__learn__content_file_units"""
+    return {
+        "etl_source": MITXONLINE,
+        "run_readable_id": "course-v1:MITxT+1+1T2026",
+        "external_id": external_id,
+        "kind": "unit",
+        "title": f"title {external_id}",
+        "url": f"https://example.com/jump_to_id/{external_id}",
+        "unit_order": unit_order,
+        "content_files": json.dumps(content_files),
+        "course_xml_version": "v1",
+        **overrides,
+    }
+
+
+def test_transform_unit_rows_keeps_the_order_the_units_were_built_in():
+    """Units come back in unit_order, each with its files in lesson order"""
+    rows = [
+        _unit_row(1, "context", [["c", "core"]], kind="context", url=""),
+        _unit_row(0, "seq", [["b", "assessment"], ["a", "supplementary"]]),
+    ]
+
+    units = warehouse_content_files.transform_unit_rows(rows)
+
+    assert [unit["external_id"] for unit in units] == ["seq", "context"]
+    assert list(units[0]["content_files"].items()) == [
+        ("b", "assessment"),
+        ("a", "supplementary"),
+    ]
+    assert units[1] == {
+        "external_id": "context",
+        "kind": "context",
+        "title": "title context",
+        "url": "",
+        "content_files": {"c": "core"},
+    }
+
+
+def test_load_run_replaces_the_units_with_the_view_units(warehouse_owns_content_files):
+    """An Open edX run's units are the view's, linked to the files it loaded"""
+    run = _run()
+    old_unit = UnitFactory.create(run=run, external_id="old")
+    unit_rows = [
+        _unit_row(0, "seq1", [["b", "core"], ["a", "assessment"]]),
+        # no file of this unit is published in Learn, so it is dropped
+        _unit_row(1, "seq2", [["missing", "core"]]),
+        _unit_row(2, "seq3", [["a", "core"], ["missing", "core"]]),
+        _unit_row(3, "context", [], kind="context", title="Course context", url=""),
+    ]
+
+    warehouse_content_files.load_run(
+        run,
+        [_open_edx_row("a"), _open_edx_row("b")],
+        expected_count=2,
+        unit_rows=unit_rows,
+    )
+
+    assert not run.units.filter(id=old_unit.id).exists()
+    assert [
+        (unit.external_id, unit.kind, unit.position, unit.url)
+        for unit in run.units.order_by("kind", "position")
+    ] == [
+        ("context", "context", None, ""),
+        ("seq1", "unit", 0, "https://example.com/jump_to_id/seq1"),
+        ("seq3", "unit", 1, "https://example.com/jump_to_id/seq3"),
+    ]
+    seq1 = run.units.get(external_id="seq1")
+    assert [
+        (link.content_file.key, link.relation, link.position)
+        for link in seq1.unitcontentfile_set.order_by("position")
+    ] == [("b", "core", 0), ("a", "assessment", 1)]
+
+
+def test_load_run_keeps_a_unit_whose_only_new_file_failed(warehouse_owns_content_files):
+    """
+    A unit whose only file failed extraction stays in the course, with the
+    other units replaced and the fingerprint stored
+    """
+    run = _run()
+    seq = UnitFactory.create(run=run, external_id="seq")
+    unit_rows = [
+        _unit_row(0, "seq", [["new", "core"]]),
+        _unit_row(1, "seq2", [["a", "core"]]),
+        # a new unit whose only file failed has nothing to keep
+        _unit_row(2, "seq3", [["new", "core"]]),
+    ]
+
+    warehouse_content_files.load_run(
+        run,
+        [_open_edx_row("a"), _open_edx_row("new", extraction_status="failed")],
+        expected_count=2,
+        unit_rows=unit_rows,
+    )
+
+    assert [
+        (unit.id, unit.position) for unit in run.units.filter(external_id="seq")
+    ] == [(seq.id, 0)]
+    assert set(run.units.values_list("external_id", flat=True)) == {"seq", "seq2"}
+    run.refresh_from_db()
+    assert run.checksum
+
+
+@pytest.mark.parametrize(
+    "bad_row",
+    [{"content_files": "not json"}, {"unit_order": None}, {"title": None}],
+)
+def test_load_run_bad_unit_rows_keep_the_units_and_the_files(
+    warehouse_owns_content_files, bad_row
+):
+    """A unit row that can't be read or saved keeps the run's units, not its files"""
+    run = _run()
+    old_unit = UnitFactory.create(run=run, external_id="old")
+    unit_rows = [
+        _unit_row(0, "seq1", [["a", "core"]]),
+        {**_unit_row(1, "seq2", [["a", "core"]]), **bad_row},
+    ]
+
+    loaded = warehouse_content_files.load_run(
+        run, [_open_edx_row("a")], expected_count=1, unit_rows=unit_rows
+    )
+
+    assert loaded == 1
+    assert list(run.units.values_list("id", flat=True)) == [old_unit.id]
+    run.refresh_from_db()
+    # so the next sync reads the units again
+    assert run.checksum is None
+
+
+def test_load_run_unread_units_keep_the_outline_and_retry(
+    warehouse_owns_content_files,
+):
+    """Units that couldn't be read leave the outline and the fingerprint unset"""
+    run = _run()
+    old_unit = UnitFactory.create(run=run, external_id="old")
+
+    loaded = warehouse_content_files.load_run(
+        run, [_open_edx_row("a")], expected_count=1, units_unread=True
+    )
+
+    assert loaded == 1
+    assert list(run.units.values_list("id", flat=True)) == [old_unit.id]
+    run.refresh_from_db()
+    assert run.checksum is None
+
+
+def test_load_run_no_unit_rows_keep_the_outline_and_retry(
+    warehouse_owns_content_files,
+):
+    """
+    A built run always has its context unit, so no unit rows means the units
+    aren't built for this export yet: the outline stays and the run is retried
+    """
+    run = _run()
+    old_unit = UnitFactory.create(run=run, external_id="old")
+
+    warehouse_content_files.load_run(
+        run, [_open_edx_row("a")], expected_count=1, unit_rows=[]
+    )
+
+    assert list(run.units.values_list("id", flat=True)) == [old_unit.id]
+    run.refresh_from_db()
+    assert run.checksum is None
+
+
+def test_load_run_files_from_two_exports_keep_the_outline(
+    warehouse_owns_content_files,
+):
+    """File rows from more than one export can't be matched to the units"""
+    run = _run()
+    old_unit = UnitFactory.create(run=run, external_id="old")
+
+    warehouse_content_files.load_run(
+        run,
+        [_open_edx_row("a"), _open_edx_row("b", course_xml_version="v2")],
+        expected_count=2,
+        unit_rows=[_unit_row(0, "seq1", [["a", "core"]])],
+    )
+
+    assert list(run.units.values_list("id", flat=True)) == [old_unit.id]
+    run.refresh_from_db()
+    assert run.checksum is None
+
+
+def test_load_run_view_without_the_export_version_writes_nothing(
+    warehouse_owns_content_files,
+):
+    """A view built before course_xml_version fails the load before any write"""
+    run = _run()
+    row = _open_edx_row("a")
+    del row["course_xml_version"]
+
+    with pytest.raises(KeyError):
+        warehouse_content_files.load_run(
+            run,
+            [row],
+            expected_count=1,
+            unit_rows=[_unit_row(0, "seq1", [["a", "core"]])],
+        )
+
+    assert not run.content_files.exists()
+
+
+def test_load_run_units_from_another_export_keep_the_outline_and_retry(
+    warehouse_owns_content_files,
+):
+    """Units read from another export than the files leave the outline and retry"""
+    run = _run()
+    old_unit = UnitFactory.create(run=run, external_id="old")
+
+    loaded = warehouse_content_files.load_run(
+        run,
+        [_open_edx_row("a", course_xml_version="v2")],
+        expected_count=1,
+        unit_rows=[_unit_row(0, "seq1", [["a", "core"]])],
+    )
+
+    assert loaded == 1
+    assert list(run.units.values_list("id", flat=True)) == [old_unit.id]
+    run.refresh_from_db()
+    assert run.checksum is None
+
+
+def test_load_run_short_read_keeps_the_outline(warehouse_owns_content_files):
+    """A read short of the expected rows doesn't replace the units"""
+    run = _run()
+    old_unit = UnitFactory.create(run=run, external_id="old")
+
+    warehouse_content_files.load_run(
+        run,
+        [_open_edx_row("a")],
+        expected_count=2,
+        unit_rows=[_unit_row(0, "seq1", [["a", "core"], ["b", "core"]])],
+    )
+
+    assert list(run.units.values_list("id", flat=True)) == [old_unit.id]
+
+
+def test_load_run_unsaved_file_keeps_the_outline(mocker, warehouse_owns_content_files):
+    """A file that failed to save doesn't let another file replace the units"""
+    run = _run()
+    old_unit = UnitFactory.create(run=run, external_id="old")
+    _refuse_saving(mocker, "b")
+
+    loaded = warehouse_content_files.load_run(
+        run,
+        [_open_edx_row("a"), _open_edx_row("b")],
+        expected_count=2,
+        unit_rows=[_unit_row(0, "seq1", [["b", "core"]])],
+    )
+
+    assert loaded == 1
+    assert list(run.units.values_list("id", flat=True)) == [old_unit.id]
+    run.refresh_from_db()
+    assert run.checksum is None
+
+
 def test_load_run_ocw_sets_tags_completeness_and_learning_materials(
     mocker, warehouse_owns_content_files
 ):
@@ -624,7 +883,11 @@ def test_sync_allowed_to_unpublish_still_refuses_a_renamed_run(
     )
     mocker.patch(
         "learning_resources.tasks.iter_rows",
-        side_effect=lambda _conn, _view, where: iter(rows[where["run_readable_id"]]),
+        side_effect=lambda _conn, view, where: iter(
+            []
+            if view.endswith(warehouse_content_files.OPEN_EDX_UNITS_VIEW)
+            else rows[where["run_readable_id"]]
+        ),
     )
     mocker.patch("learning_resources.tasks.caches")
     failures = []

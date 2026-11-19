@@ -25,6 +25,8 @@ from learning_resources.constants import (
 from learning_resources.models import (
     ContentFile,
     LearningResource,
+    Unit,
+    UnitContentFile,
 )
 from learning_resources.utils import (
     log_missing_content_file,
@@ -249,6 +251,44 @@ class ContentFileFilter(FilterSet):
 
     class Meta:
         model = ContentFile
+        fields = []
+
+
+class UnitFilter(FilterSet):
+    """Unit filter"""
+
+    run_id = NumberInFilter(
+        label="The id of the learning resource run the unit belongs to",
+        field_name="run_id",
+    )
+
+    resource_id = NumberInFilter(
+        label="The id of the learning resource the unit belongs to",
+        field_name="run__learning_resource__id",
+    )
+
+    content_file_id = NumberInFilter(
+        label="The id of a content file in the unit",
+        method="filter_content_file_id",
+    )
+
+    kind = MultipleChoiceFilter(
+        label="The kind of unit",
+        field_name="kind",
+        lookup_expr="exact",
+        choices=Unit.Kind.choices,
+    )
+
+    def filter_content_file_id(self, queryset, _, value):
+        """Units holding any of these content files, once each"""
+        return queryset.filter(
+            pk__in=UnitContentFile.objects.filter(content_file_id__in=value).values(
+                "unit_id"
+            )
+        )
+
+    class Meta:
+        model = Unit
         fields = []
 
 

@@ -26,6 +26,7 @@ from learning_resources.etl.loaders import (
     load_ovs_video_from_webhook,
     load_programs,
     load_videos,
+    prune_ovs_playlists,
 )
 from learning_resources.etl.ownership import (
     Pipeline,
@@ -212,7 +213,11 @@ class OVSVideoWebhookView(BaseWebhookView):
                     resource_type=LearningResourceType.video.name,
                 ).first()
                 if resource:
+                    playlist_ids = list(
+                        resource.playlists.values_list("parent_id", flat=True)
+                    )
                     resource_delete_actions(resource)
+                    prune_ovs_playlists(playlist_ids)
                 else:
                     log.info(
                         "OVS delete webhook: no resource for video_id=%s", video_id

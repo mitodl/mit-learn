@@ -17,8 +17,9 @@ from django.db.models import (
     OuterRef,
     Prefetch,
     Q,
+    Subquery,
 )
-from django.db.models.functions import Lower
+from django.db.models.functions import Coalesce, Lower
 from django.utils import timezone
 
 from learning_resources import constants
@@ -1389,12 +1390,36 @@ class ContentFile(TimestampedModel):
         ]
 
 
+class UnitQuerySet(TimestampedModelQuerySet):
+    """QuerySet for Unit"""
+
+    def with_content_file_count(self):
+        """
+        Annotate content_file_count with the number of content files in each
+        unit. A subquery, so a page of units counts only its own rows.
+        """
+        counts = (
+            UnitContentFile.objects.filter(unit=OuterRef("pk"))
+            .order_by()
+            .values("unit")
+            .annotate(count=Count("pk"))
+            .values("count")
+        )
+        return self.annotate(
+            content_file_count=Coalesce(
+                Subquery(counts, output_field=models.IntegerField()), 0
+            )
+        )
+
+
 class Unit(TimestampedModel):
     """
     A group of a run's content files: an ordered step from the course structure
     (edX sequential, OCW week or lecture), the course-wide context, or an
     unordered bin of leftover files.
     """
+
+    objects = UnitQuerySet.as_manager()
 
     class Kind(models.TextChoices):
         # an ordered step derived from the course structure
@@ -1424,6 +1449,10 @@ class Unit(TimestampedModel):
             models.UniqueConstraint(
                 fields=["run", "external_id"], name="unique_unit_per_run"
             )
+        ]
+        # the units API lists units in this order
+        indexes = [
+            models.Index(fields=["run", "position", "id"], name="unit_run_position_idx")
         ]
 
     def __str__(self):
