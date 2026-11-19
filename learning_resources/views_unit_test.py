@@ -18,8 +18,6 @@ from main.utils import now_in_utc
 pytestmark = pytest.mark.django_db
 
 
-
-
 @pytest.mark.parametrize("endpoint", ["list", "detail"])
 @pytest.mark.parametrize("logged_in", [True, False])
 def test_units_api_is_admin_only(client, user, endpoint, logged_in):
