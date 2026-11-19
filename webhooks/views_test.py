@@ -1100,8 +1100,12 @@ def test_extracted_content_files_webhook_scopes_the_pull_to_the_run(
         published=True,
     )
     mock_connect = mocker.patch("learning_resources.tasks.connect_to_warehouse")
+    files_view = "catalog.schema.integrations__learn__content_files"
+    units_view = "catalog.schema.integrations__learn__content_file_units"
+    view_rows = {files_view: [{"key": "a"}], units_view: [{"unit": "u"}]}
     mock_iter_rows = mocker.patch(
-        "learning_resources.tasks.iter_rows", return_value=iter([{"key": "a"}])
+        "learning_resources.tasks.iter_rows",
+        side_effect=lambda _conn, view, **_: iter(view_rows[view]),
     )
     mock_load_run = mocker.patch(
         "learning_resources.tasks.warehouse_content_files.load_run", return_value=1
@@ -1122,11 +1126,11 @@ def test_extracted_content_files_webhook_scopes_the_pull_to_the_run(
     )
 
     assert response.status_code == 200
-    mock_iter_rows.assert_called_once_with(
-        mock_connect.return_value,
-        "catalog.schema.integrations__learn__content_files",
-        where={"etl_source": ETLSource.xpro.name, "run_readable_id": run.run_id},
-    )
+    run_scope = {"etl_source": ETLSource.xpro.name, "run_readable_id": run.run_id}
+    assert mock_iter_rows.call_args_list == [
+        mocker.call(mock_connect.return_value, files_view, where=run_scope),
+        mocker.call(mock_connect.return_value, units_view, where=run_scope),
+    ]
     # the per-run unpublish limit applies, and nothing a sender sends lifts it
     mock_load_run.assert_called_once_with(
         run,
@@ -1134,4 +1138,6 @@ def test_extracted_content_files_webhook_scopes_the_pull_to_the_run(
         expected_count=1,
         allow_mass_unpublish=False,
         allow_shrink=False,
+        unit_rows=[{"unit": "u"}],
+        units_unread=False,
     )
