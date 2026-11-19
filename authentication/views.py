@@ -165,22 +165,23 @@ def with_query_params(url, params):
     return urlunparse(parsed._replace(query=query))
 
 
+def build_api_url(request, path):
+    """
+    Build an absolute URL on the API domain, for a Keycloak `redirect_uri`.
+
+    The API domain is where APISIX, and so the OIDC client's registered
+    redirect URIs, lives. Keycloak rejects a `redirect_uri` that isn't
+    registered, so the request's host is only used when MITOL_API_BASE_URL
+    is unset (local development).
+    """
+    if settings.MITOL_API_BASE_URL:
+        return f"{settings.MITOL_API_BASE_URL.removesuffix('/')}{path}"
+    return request.build_absolute_uri(path)
+
+
 def build_account_action_callback_url(request, *, next_url, action):
-    """
-    Build the callback URL Keycloak returns the user to.
-
-    It is sent as `redirect_uri` in the authorization request, and Keycloak
-    checks it against the client's registered redirect URIs.
-
-    Keycloak returns the user to the API domain, which is where APISIX (and so
-    the OIDC client's registered redirect URIs) lives.
-    """
-    callback_path = reverse("account-action-complete")
-    base_url = (
-        f"{settings.MITOL_API_BASE_URL.removesuffix('/')}{callback_path}"
-        if settings.MITOL_API_BASE_URL
-        else request.build_absolute_uri(callback_path)
-    )
+    """Build the callback URL Keycloak returns the user to after an action"""
+    base_url = build_api_url(request, reverse("account-action-complete"))
     return with_query_params(base_url, {"next": next_url, ACCOUNT_ACTION_PARAM: action})
 
 
@@ -298,12 +299,7 @@ class PartnerLoginView(RedirectView):
 
     def get_redirect_url(self, *args, **kwargs):  # noqa: ARG002
         """Get the Keycloak authorize URL hinting at the partner's IdP"""
-        login_path = reverse("login")
-        gateway_login_url = (
-            f"{settings.MITOL_API_BASE_URL.removesuffix('/')}{login_path}"
-            if settings.MITOL_API_BASE_URL
-            else self.request.build_absolute_uri(login_path)
-        )
+        gateway_login_url = build_api_url(self.request, reverse("login"))
 
         if not settings.KEYCLOAK_CLIENT_ID:
             log.error(
