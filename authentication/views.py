@@ -184,6 +184,38 @@ def build_account_action_callback_url(request, *, next_url, action):
     return with_query_params(base_url, {"next": next_url, ACCOUNT_ACTION_PARAM: action})
 
 
+def build_keycloak_authorize_url(params):
+    """
+    Build an authorization request to Keycloak for KEYCLOAK_CLIENT_ID.
+
+    Keycloak's pkce-enforcer client policy rejects an authorization request
+    without an S256 challenge, so each URL gets a fresh one. Our callers never
+    redeem the code, so the verifier isn't kept.
+    """
+    code_verifier = secrets.token_urlsafe(64)
+    code_challenge = (
+        urlsafe_b64encode(hashlib.sha256(code_verifier.encode()).digest())
+        .decode()
+        .rstrip("=")
+    )
+    qs = {
+        "client_id": settings.KEYCLOAK_CLIENT_ID,
+        "response_type": "code",
+        **params,
+        "code_challenge": code_challenge,
+        "code_challenge_method": "S256",
+    }
+    return "".join(
+        [
+            settings.KEYCLOAK_BASE_URL.removesuffix("/"),
+            "/realms/",
+            settings.KEYCLOAK_REALM_NAME,
+            "/protocol/openid-connect/auth?",
+            urlencode(qs),
+        ]
+    )
+
+
 class AccountActionStartView(RedirectView):
     """
     Send the user to Keycloak to update their email or password.
@@ -241,34 +273,54 @@ class AccountActionStartView(RedirectView):
             self.request, next_url=next_url, action=action
         )
 
-        # Keycloak's pkce-enforcer client policy rejects an authorization
-        # request without an S256 challenge. The callback never redeems the
-        # code (it only reads kc_action_status), so the verifier isn't kept.
-        code_verifier = secrets.token_urlsafe(64)
-        code_challenge = (
-            urlsafe_b64encode(hashlib.sha256(code_verifier.encode()).digest())
-            .decode()
-            .rstrip("=")
+        # The callback never redeems the code (it only reads kc_action_status).
+        return build_keycloak_authorize_url(
+            {
+                "redirect_uri": callback_url,
+                "scope": "openid email",
+                "kc_action": KEYCLOAK_ACTIONS[action],
+            }
         )
 
-        qs = {
-            "client_id": settings.KEYCLOAK_CLIENT_ID,
-            "response_type": "code",
-            "redirect_uri": callback_url,
-            "scope": "openid email",
-            "kc_action": KEYCLOAK_ACTIONS[action],
-            "code_challenge": code_challenge,
-            "code_challenge_method": "S256",
-        }
 
-        return "".join(
-            [
-                settings.KEYCLOAK_BASE_URL.removesuffix("/"),
-                "/realms/",
-                settings.KEYCLOAK_REALM_NAME,
-                "/protocol/openid-connect/auth?",
-                urlencode(qs),
-            ]
+class PartnerLoginView(RedirectView):
+    """
+    Send a partner's learner straight to their institution's login.
+
+    Partners link here instead of to Keycloak's authorize endpoint, so the
+    request carries a PKCE challenge and the link stays valid if the Keycloak
+    side changes. Keycloak signs the learner in through the IdP named by
+    kc_idp_hint, then returns them to the gateway's /login, which starts its
+    own login and completes it from the Keycloak session without a prompt.
+    The code from this request is never redeemed. An alias Keycloak doesn't
+    know shows its normal login page.
+    """
+
+    def get_redirect_url(self, *args, **kwargs):  # noqa: ARG002
+        """Get the Keycloak authorize URL hinting at the partner's IdP"""
+        login_path = reverse("login")
+        gateway_login_url = (
+            f"{settings.MITOL_API_BASE_URL.removesuffix('/')}{login_path}"
+            if settings.MITOL_API_BASE_URL
+            else self.request.build_absolute_uri(login_path)
+        )
+
+        if not settings.KEYCLOAK_CLIENT_ID:
+            log.error(
+                "KEYCLOAK_CLIENT_ID is not configured; sending partner login for "
+                "%s to the gateway login",
+                kwargs["idp_alias"],
+            )
+            return gateway_login_url
+
+        # organization:* matches the links partners were given, so the session
+        # Keycloak starts carries every organization the learner belongs to.
+        return build_keycloak_authorize_url(
+            {
+                "redirect_uri": gateway_login_url,
+                "scope": "openid profile email organization:*",
+                "kc_idp_hint": kwargs["idp_alias"],
+            }
         )
 
 

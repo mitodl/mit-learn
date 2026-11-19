@@ -7,6 +7,7 @@ from authentication.views import (
     AccountActionStartView,
     CustomLoginView,
     CustomLogoutView,
+    PartnerLoginView,
 )
 
 urlpatterns = [
@@ -16,6 +17,13 @@ urlpatterns = [
         "account/action/start/<slug:action>/",
         AccountActionStartView.as_view(),
         name="account-action-start",
+    ),
+    # Outside the gateway's login paths (/login, /login/*), which would force a
+    # normal login before this view runs.
+    path(
+        "partner-login/<slug:idp_alias>/",
+        PartnerLoginView.as_view(),
+        name="partner-login",
     ),
     path(
         "account/action/complete",
