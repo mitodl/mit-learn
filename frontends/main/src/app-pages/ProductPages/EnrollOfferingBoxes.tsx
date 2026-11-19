@@ -1,6 +1,5 @@
 import React from "react"
 import { Alert } from "@mitodl/smoot-design"
-import { SignupPopover } from "@/page-components/SignupPopover/SignupPopover"
 import CertificateTrackCard from "./CertificateTrackCard"
 import AppliedSavingsCard from "./AppliedSavingsCard"
 import LearnForFreeCard from "./LearnForFreeCard"
@@ -49,18 +48,15 @@ type EnrollOfferingBoxesProps = {
   productNoun: "course" | "program"
   /** Course-only: show the "Certificate deadline passed" note in the free card. */
   certificateDeadlineNote?: boolean
-  /** SignupPopover anchor owned by the caller (set via the hook's onRequireSignup). */
-  anchor: HTMLButtonElement | null
-  onAnchorClose: () => void
 }
 
 /**
  * The InfoBox enroll area's offering boxes, shared by the course and program
  * variants: the enrolled collapse, the paid/free cards with their buttons
- * (side-by-side under "Choose Your Path" when both paths exist), the
- * enrollment-failure alert, and the signup popover. Callers own the hooks and
- * pass data; this component owns the box structure and button conventions, and
- * knows nothing about why a price is what it is.
+ * (side-by-side under "Choose Your Path" when both paths exist), and the
+ * enrollment-failure alert. Callers own the hooks and pass data; this component
+ * owns the box structure and button conventions, and knows nothing about why a
+ * price is what it is.
  */
 const EnrollOfferingBoxes: React.FC<EnrollOfferingBoxesProps> = ({
   offering,
@@ -77,8 +73,6 @@ const EnrollOfferingBoxes: React.FC<EnrollOfferingBoxesProps> = ({
   paidNote,
   productNoun,
   certificateDeadlineNote,
-  anchor,
-  onAnchorClose,
 }) => {
   if (state.status === "none") {
     return null
@@ -224,7 +218,6 @@ const EnrollOfferingBoxes: React.FC<EnrollOfferingBoxesProps> = ({
           </Alert>
         </FullRowCell>
       )}
-      <SignupPopover anchorEl={anchor} onClose={onAnchorClose} />
     </>
   )
 }

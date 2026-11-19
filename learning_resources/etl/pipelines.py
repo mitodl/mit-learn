@@ -133,6 +133,7 @@ def ocw_courses_etl(
     force_overwrite: bool,
     start_timestamp: datetime | None = None,
     skip_content_files: bool = settings.OCW_SKIP_CONTENT_FILES,
+    ocr_pdfs: bool = False,
 ):
     """
     Sync OCW courses to the database
@@ -142,6 +143,8 @@ def ocw_courses_etl(
         force_overwrite (bool): force incoming course data to overwrite existing data
         start_timestamp (datetime or None): backpopulate start time
         skip_content_files (bool): skip loading content files
+        ocr_pdfs (bool): reload the courses, re-extracting their PDFs with LLM
+            OCR; other files are re-extracted only if force_overwrite
     """
     if not may_write(ETLSource.ocw.name, COURSE):
         return
@@ -160,7 +163,8 @@ def ocw_courses_etl(
             data = ocw.extract_course(
                 url_path=url_path,
                 s3_resource=s3_resource,
-                force_overwrite=force_overwrite,
+                # an unchanged course is otherwise skipped before its files
+                force_overwrite=force_overwrite or ocr_pdfs,
                 start_timestamp=start_timestamp,
             )
             if data:
@@ -172,7 +176,7 @@ def ocw_courses_etl(
                     content_file_ids = loaders.load_content_files(
                         course_run,
                         ocw.transform_content_files(
-                            s3_resource, url_path, force_overwrite
+                            s3_resource, url_path, force_overwrite, ocr_pdfs=ocr_pdfs
                         ),
                         calc_completeness=True,
                     )

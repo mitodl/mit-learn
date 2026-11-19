@@ -13,7 +13,7 @@ const readFlagState = (env: Record<string, string>) => {
   return renderHook(
     () => ({
       loaded: useFeatureFlagsLoaded(),
-      enabled: useFeatureFlag(FeatureFlags.B2BAnalyticsDashboard),
+      enabled: useFeatureFlag(FeatureFlags.UniversalAI),
     }),
     { wrapper: ConfiguredPostHogProvider },
   ).result
@@ -31,7 +31,7 @@ describe("useFeatureFlagsLoaded without a PostHog api key", () => {
     "treats NEXT_PUBLIC_FEATURE_*=$value as a loaded, final $enabled",
     ({ value, enabled }) => {
       const flagState = readFlagState({
-        NEXT_PUBLIC_FEATURE_b2b_analytics_dashboard: value,
+        NEXT_PUBLIC_FEATURE_universal_ai: value,
       })
       expect(flagState.current).toEqual({ loaded: true, enabled })
     },

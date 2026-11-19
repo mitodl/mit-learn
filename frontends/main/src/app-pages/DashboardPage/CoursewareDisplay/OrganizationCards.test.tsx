@@ -16,16 +16,8 @@ import {
 } from "api/mitxonline-test-utils"
 import { OrganizationCards } from "./OrganizationCards"
 import type { UserOrganizationPage } from "@mitodl/mitxonline-api-axios/v0"
-import { useFeatureFlag } from "@/common/useFeatureFlag"
-
-jest.mock("@/common/useFeatureFlag")
-const mockedUseFeatureFlag = jest.mocked(useFeatureFlag)
 
 describe("OrganizationCards", () => {
-  beforeEach(() => {
-    mockedUseFeatureFlag.mockReturnValue(true)
-  })
-
   type SetupOptions = {
     organizations?: UserOrganizationPage[]
     isUserLoading?: boolean
@@ -569,13 +561,6 @@ describe("OrganizationCards", () => {
       expect(makeRequest).not.toHaveBeenCalledWith(
         expect.objectContaining({ method: "post" }),
       )
-    })
-
-    it("follows the link without asking when the flag is off", async () => {
-      mockedUseFeatureFlag.mockReturnValue(false)
-      setupContract(null)
-      expect(await clickIsBlocked(await continueButton())).toBe(false)
-      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
     })
   })
 })

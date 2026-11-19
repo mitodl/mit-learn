@@ -1,9 +1,5 @@
 import React from "react"
-import {
-  programPageView,
-  programView,
-  receiptByProgramView,
-} from "@/common/urls"
+import { programView, receiptByProgramView } from "@/common/urls"
 import {
   DisplayModeEnum,
   V3UserProgramEnrollment,
@@ -25,7 +21,10 @@ import {
   isPaidProgramEnrollmentMode,
   mitxonlineLegacyUrl,
 } from "@/common/mitxonline"
-import { getCertificateLink } from "./model/dashboardViewModel"
+import {
+  getCertificateLink,
+  getProgramDetailsLink,
+} from "./model/dashboardViewModel"
 import NiceModal from "@ebay/nice-modal-react"
 import { UnenrollProgramDialog } from "./DashboardDialogs"
 import { getReceiptMenuItem } from "./receiptMenuItem"
@@ -90,10 +89,10 @@ export const ProgramEnrollmentCard = ({
       ) : null}
     </Stack>
   )
-  const detailsUrl = programPageView({
-    readable_id: readableId,
-    display_mode: displayMode,
-  })
+  const detailsUrl = getProgramDetailsLink(
+    { readable_id: readableId, display_mode: displayMode },
+    program.has_live_product_page,
+  )
   const menuItems = []
   if (detailsUrl) {
     menuItems.push({

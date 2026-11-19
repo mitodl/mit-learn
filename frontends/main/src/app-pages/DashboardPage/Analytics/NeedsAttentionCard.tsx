@@ -12,11 +12,11 @@ import SectionError from "./SectionError"
  * The "Needs attention" count and the follow-up it calls for, for one contract.
  *
  * Reads `ContractNeedsAttention`, a distinct-learner count. The CTA lands on
- * the learner directory with its needs-attention filter on, which applies the
- * same server-side rule but lists one row per enrollment, so a learner behind
- * in several courses is one learner here and several rows there.
- * `enrollmentCount` says so up front; it is shown only alongside the learner
- * count, never in place of a floored one.
+ * the learner directory's progress grid with its needs-attention filter on,
+ * which applies the same server-side rule and lists one row per learner, with
+ * each module behind flagged. `enrollmentCount` adds how many enrollments those
+ * learners span; it is shown only alongside the learner count, never in place
+ * of a floored one.
  *
  * The copy promises review, not sending: there is no reminder action yet.
  */
@@ -54,11 +54,6 @@ const Body = styled(Typography)(({ theme }) => ({
 const Unit = styled.span(({ theme }) => ({
   ...theme.typography.h5,
 }))
-
-const Note = styled(Typography)(({ theme }) => ({
-  ...theme.typography.body3,
-  color: theme.custom.colors.silverGrayDark,
-})) as typeof Typography
 
 const Action = styled.div({
   marginTop: "auto",
@@ -98,8 +93,6 @@ const NeedsAttentionCard: React.FC<{
 
   /** No row means the contract is under the anonymity floor; a null count means the count itself is. */
   const count = row?.learners_needing_attention ?? null
-  /** Null is a floored count, so at least one learner is excluded; zero is a real zero. */
-  const withheld = row ? row.learners_outcomes_withheld : 0
 
   return (
     <Card role="group" aria-label="Needs attention">
@@ -123,17 +116,6 @@ const NeedsAttentionCard: React.FC<{
               )} ${enrollments(enrollmentCount)}.`}
         </Body>
       )}
-      {withheld === null ? (
-        <Note component="p">
-          Excludes some learners who haven't shared their progress.
-        </Note>
-      ) : withheld > 0 ? (
-        <Note component="p">
-          {`Excludes ${formatCount(withheld)} ${learners(withheld)} who ${
-            withheld === 1 ? "hasn't" : "haven't"
-          } shared their progress.`}
-        </Note>
-      ) : null}
       {count !== 0 ? (
         <Action>
           <ButtonLink

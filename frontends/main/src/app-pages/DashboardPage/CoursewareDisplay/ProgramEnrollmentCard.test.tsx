@@ -1,24 +1,23 @@
 import React from "react"
 import { renderWithProviders, screen, user, within } from "@/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
-import { makeRequest, setMockResponse, urls } from "api/test-utils"
+import { setMockResponse, urls } from "api/test-utils"
 import { programCertificates as programCertificateFactory } from "api/test-utils/factories"
 import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 import { receiptView } from "@/common/urls"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
-import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { ProgramEnrollmentCard } from "./ProgramEnrollmentCard"
-import { PAID_PROGRAM_ENROLLMENT_MODES, setupOrderHistory } from "./test-utils"
+import {
+  PAID_PROGRAM_ENROLLMENT_MODES,
+  setupOrderHistory,
+  setupProgramCertificates,
+} from "./test-utils"
 
-jest.mock("@/common/useFeatureFlag")
-
-const mockedUseFeatureFlag = jest
-  .mocked(useFeatureFlag)
-  .mockImplementation(() => false)
-
-// Verified cards look up their order; default to none, tests override.
+// Cards look up their order and the learner's program certificates; default to
+// none, tests override.
 beforeEach(() => {
   setupOrderHistory()
+  setupProgramCertificates()
 })
 
 describe.each([
@@ -167,6 +166,26 @@ describe.each([
     expect(
       screen.getByRole("menuitem", { name: "View Program Details" }),
     ).toHaveAttribute("href", `/programs/${program.readable_id}`)
+  })
+
+  test("context menu hides View Program Details when the program page is not live", async () => {
+    const program = mitxonline.factories.programs.simpleProgram({
+      has_live_product_page: false,
+    })
+    const programEnrollment =
+      mitxonline.factories.enrollment.programEnrollmentV3({ program })
+    renderWithProviders(
+      <ProgramEnrollmentCard programEnrollment={programEnrollment} />,
+    )
+    await user.click(
+      within(getCard()).getByRole("button", { name: "More options" }),
+    )
+    expect(
+      screen.queryByRole("menuitem", { name: "View Program Details" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("menuitem", { name: "Program Record" }),
+    ).toBeInTheDocument()
   })
 
   test("context menu includes Program Record linking to mitxonline", async () => {
@@ -327,15 +346,12 @@ describe("ProgramEnrollmentCard program letter", () => {
   const SHARE_URL = "https://learn.mit.edu/program_letter/some-uuid/view"
 
   const setup = ({
-    flagEnabled,
     mitxonlineProgramId,
     shareUrl = SHARE_URL,
   }: {
-    flagEnabled: boolean
     mitxonlineProgramId: number | null
     shareUrl?: string | null
   }) => {
-    mockedUseFeatureFlag.mockReturnValue(flagEnabled)
     setMockResponse.get(urls.programCertificates.list(), [
       programCertificateFactory.programCertificate({
         mitxonline_program_id: mitxonlineProgramId,
@@ -368,7 +384,7 @@ describe("ProgramEnrollmentCard program letter", () => {
   }
 
   test("links to the letter's share url when the learner has a matching certificate", async () => {
-    setup({ flagEnabled: true, mitxonlineProgramId: PROGRAM_ID })
+    setup({ mitxonlineProgramId: PROGRAM_ID })
     await openMenu()
 
     expect(
@@ -377,7 +393,7 @@ describe("ProgramEnrollmentCard program letter", () => {
   })
 
   test("is hidden when no certificate matches this program", async () => {
-    setup({ flagEnabled: true, mitxonlineProgramId: PROGRAM_ID + 1 })
+    setup({ mitxonlineProgramId: PROGRAM_ID + 1 })
     await openMenu()
 
     expect(
@@ -389,7 +405,6 @@ describe("ProgramEnrollmentCard program letter", () => {
     // A certificate for a program with no MicroMasters id (e.g. DEDP Public
     // Policy) has a null share url: there is no letter content for it.
     setup({
-      flagEnabled: true,
       mitxonlineProgramId: PROGRAM_ID,
       shareUrl: null,
     })
@@ -404,7 +419,6 @@ describe("ProgramEnrollmentCard program letter", () => {
     // Deliberate: a failed lookup is indistinguishable from having no
     // certificate, because the failed response is both the letter url and the
     // only signal that the learner has a letter. See useProgramLetterMenuItem.
-    mockedUseFeatureFlag.mockReturnValue(true)
     setMockResponse.get(urls.programCertificates.list(), null, { code: 500 })
     const programEnrollment =
       mitxonline.factories.enrollment.programEnrollmentV3({
@@ -424,20 +438,6 @@ describe("ProgramEnrollmentCard program letter", () => {
     expect(
       screen.getByRole("menuitem", { name: "Program Record" }),
     ).toBeInTheDocument()
-  })
-
-  test("is hidden, and no certificates are requested, when the flag is off", async () => {
-    // Requesting the list mints a shareable uuid for every letter the learner
-    // does not have yet, so it must not happen behind a disabled flag.
-    setup({ flagEnabled: false, mitxonlineProgramId: PROGRAM_ID })
-    await openMenu()
-
-    expect(
-      screen.queryByRole("menuitem", { name: "Program Letter" }),
-    ).not.toBeInTheDocument()
-    expect(makeRequest).not.toHaveBeenCalledWith(
-      expect.objectContaining({ url: urls.programCertificates.list() }),
-    )
   })
 })
 

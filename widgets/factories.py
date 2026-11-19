@@ -3,7 +3,6 @@
 import factory
 from factory.django import DjangoModelFactory
 
-from main.factories import UserFactory
 from widgets.models import WidgetInstance, WidgetList
 
 
@@ -41,15 +40,4 @@ class WidgetInstanceFactory(DjangoModelFactory):
             widget_type="Markdown",
             title="Markdown Widget",
             configuration={"source": "*Here's some basic markdown*"},
-        )
-        type_people = factory.Trait(
-            widget_type="People",
-            title="People Widget",
-            configuration=factory.LazyAttribute(
-                lambda _: {
-                    "title": "",
-                    "people": [UserFactory.create().username for _ in range(10)],
-                    "show_all_members_link": False,
-                }
-            ),
         )

@@ -5,6 +5,9 @@ The context unit holds content about the course as a whole, like the
 syllabus. Its claims are kept apart from the units' claims: unit prompts are
 given an outline built from the run's units, not these claims, so the context
 and the units can be extracted in any order.
+
+Unlike a unit, a context unit over the input budget isn't split into parts:
+it is logged and skipped.
 """
 
 from learning_resources.models import (

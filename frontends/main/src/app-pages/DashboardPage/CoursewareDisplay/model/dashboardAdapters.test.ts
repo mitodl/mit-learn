@@ -26,6 +26,7 @@ const makeEntry = (
     enrollments: [],
     displayedEnrollment: null,
     displayedRun: defaultRun,
+    pastEnrollments: [],
     ...overrides,
   }
 }

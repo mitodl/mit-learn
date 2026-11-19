@@ -18,7 +18,6 @@ import {
 import { formatRunIdentifier } from "./courseDateUtils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { makeRequest } from "api/test-utils"
-import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
 import type { ProgramEnrollmentModeEnum } from "@mitodl/mitxonline-api-axios/v3"
@@ -27,21 +26,17 @@ import {
   trackProgramUnenrolled,
 } from "@/common/analytics/gtm"
 
-// Verified cards look up their order; default to none, tests override.
+// Cards look up their order and the learner's program certificates; default to
+// none, tests override.
 beforeEach(() => {
   setupOrderHistory()
   setupProgramCertificates()
 })
 
-jest.mock("@/common/useFeatureFlag")
 jest.mock("@/common/analytics/gtm", () => ({
   trackCourseUnenrolled: jest.fn(),
   trackProgramUnenrolled: jest.fn(),
 }))
-
-const mockedUseFeatureFlag = jest
-  .mocked(useFeatureFlag)
-  .mockImplementation(() => false)
 
 describe("DashboardDialogs", () => {
   const setupApis = (includeExpired: boolean = true) => {
@@ -50,7 +45,6 @@ describe("DashboardDialogs", () => {
     const { enrollments, completed, expired, started, notStarted } =
       setupEnrollments(includeExpired)
 
-    mockedUseFeatureFlag.mockReturnValue(true)
     setMockResponse.get(
       mitxonline.urls.enrollment.enrollmentsListV3(),
       enrollments,

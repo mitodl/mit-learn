@@ -620,7 +620,9 @@ describe.each([
     expect(makeRequest).toHaveBeenCalledWith(
       expect.objectContaining({ method: "post", url: basketUrl }),
     )
-    expect(assign).toHaveBeenCalledWith(mitxonlineLegacyUrl("/cart/"))
+    expect(assign).toHaveBeenCalledWith(
+      mitxonlineLegacyUrl("/switch-session/?next=/cart/&basket_id=1"),
+    )
   })
 
   test("Calls onUpgradeError when basket API fails", async () => {
@@ -834,7 +836,9 @@ describe.each([
     expect(makeRequest).toHaveBeenCalledWith(
       expect.objectContaining({ method: "post", url: basketUrl }),
     )
-    expect(assign).toHaveBeenCalledWith(mitxonlineLegacyUrl("/cart/"))
+    expect(assign).toHaveBeenCalledWith(
+      mitxonlineLegacyUrl("/switch-session/?next=/cart/&basket_id=1"),
+    )
   })
 
   // ---------------------------------------------------------------------------
@@ -1062,6 +1066,22 @@ describe.each([
     const enrollment = mitxonline.factories.enrollment.courseEnrollment({
       b2b_contract_id: faker.number.int(),
       run: { course: { readable_id: "some-course-id" } },
+    })
+    renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
+    await user.click(
+      within(getCard()).getByRole("button", { name: "More options" }),
+    )
+    expect(
+      screen.queryByRole("menuitem", { name: "View Course Details" }),
+    ).not.toBeInTheDocument()
+  })
+
+  test("context menu hides View Course Details when the course page is not live", async () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      run: {
+        course: { readable_id: "some-course-id", has_live_product_page: false },
+      },
     })
     renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
     await user.click(

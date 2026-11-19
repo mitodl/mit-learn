@@ -16,18 +16,6 @@ def get_ol_events():
     pipelines.ol_events_etl()
 
 
-@app.task
-def get_sloan_exec_news():
-    """Run the Sloan executive education news ETL pipeline"""
-    pipelines.sloan_exec_news_etl()
-
-
-@app.task
-def get_sloan_exec_webinars():
-    """Run the Sloan webinars ETL pipeline"""
-    pipelines.sloan_webinars_etl()
-
-
 @app.task(acks_late=True, reject_on_worker_lost=True)
 def get_mitpe_news():
     """Run the MIT Professional Education news ETL pipeline"""
