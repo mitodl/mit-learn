@@ -91,11 +91,14 @@ def text_checksum(text: str, included_chars: int) -> str:
         included_chars (int): how many characters of it were kept
 
     Returns:
-        str: the checksum of the kept characters; it is the same for any later
-            version of the file whose kept characters are, which an extraction
-            keyed on the text sent stays valid for
+        str: the checksum of the kept characters as truncate() sends them,
+            with trailing whitespace stripped; it is the same for any later
+            version of the file whose kept text is, which an extraction keyed
+            on the text sent stays valid for
     """
-    return checksum_for_content(text[:included_chars]) or ""
+    # truncate() strips the end of the kept text, and an untruncated text is
+    # already stripped
+    return checksum_for_content(text[:included_chars].rstrip()) or ""
 
 
 def truncate(text: str, max_tokens: int) -> tuple[str, int]:

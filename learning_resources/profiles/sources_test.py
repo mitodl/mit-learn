@@ -43,6 +43,27 @@ def test_truncate_hard_cut():
     assert truncated.startswith("x" * 400 + "\n[... truncated: the first 400 of 1,000")
 
 
+def test_text_checksum_is_of_the_text_sent():
+    """
+    A truncated file's checksum is of the kept text as it is sent, without
+    the trailing whitespace truncate() strips, so whitespace changes there
+    that leave the text sent the same keep the checksum
+    """
+    page = "word " * 300
+    texts = [
+        f"[page 1] {page}[page 2] {page}[page 3] {page}",
+        f"[page 1] {page}[page 2] {page[:-1]}\t[page 3] {page}",
+    ]
+    max_tokens = len(texts[0]) // CHARS_PER_TOKEN - 100
+    sent = [truncate(text, max_tokens) for text in texts]
+    assert sent[0] == sent[1]
+    truncated, included = sent[0]
+    kept = truncated.split("\n[... truncated:")[0]
+
+    checksums = {text_checksum(text, included) for text in texts}
+    assert checksums == {text_checksum(kept, len(kept))}
+
+
 @pytest.mark.django_db
 def test_unit_sources():
     """A unit's published files with text are rendered in order, with position ids"""

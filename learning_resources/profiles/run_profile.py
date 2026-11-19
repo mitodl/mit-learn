@@ -628,9 +628,10 @@ def build_resource_profile(
     built from it.
 
     The profile is replaced in one transaction. When building fails, the
-    run's last profile keeps its claims, and a ready one is marked stale,
-    since the extraction it points at may have been replaced in place; a run
-    with no profile gets one with status failed.
+    run's last profile keeps its claims, and a ready one is marked stale
+    unless it is still current for the extraction, since the extraction it
+    points at may have been replaced in place; a run with no profile gets
+    one with status failed.
 
     Args:
         extraction (ClaimExtraction): the run's run-level extraction
@@ -674,9 +675,16 @@ def build_resource_profile(
                 "status": RunProfile.Status.FAILED,
             },
         )
-        if not created and profile.status == RunProfile.Status.READY:
+        current = ClaimExtraction.objects.filter(id=extraction.id).first()
+        if (
+            not created
+            and profile.status == RunProfile.Status.READY
+            and (current is None or not _is_current(profile, current))
+        ):
             # the extraction's row may have been replaced in place, so the
-            # profile's claims no longer match what its foreign key points at
+            # profile's claims no longer match what its foreign key points at.
+            # A profile still current for the extraction as it is now, as when
+            # a forced rebuild fails, still matches it and stays ready
             profile.status = RunProfile.Status.STALE
             profile.save(update_fields=["status", "updated_on"])
         raise

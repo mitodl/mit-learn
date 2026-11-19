@@ -609,6 +609,26 @@ def test_build_failure_keeps_last_profile(resource, mocker):
     assert profile.status == RunProfile.Status.READY
 
 
+def test_forced_build_failure_keeps_current_profile_ready(resource, mocker):
+    """
+    A failed forced rebuild of a profile that is still current for its
+    extraction keeps the profile ready
+    """
+    profile, _ = build_resource_profile(resource["run_extraction"])
+    claims = set(profile.claims.values_list("id", flat=True))
+    mocker.patch(
+        "learning_resources.profiles.run_profile._save_statements",
+        side_effect=ValueError("bad"),
+    )
+
+    with pytest.raises(ValueError, match="bad"):
+        build_resource_profile(resource["run_extraction"], force=True)
+
+    profile.refresh_from_db()
+    assert profile.status == RunProfile.Status.READY
+    assert set(profile.claims.values_list("id", flat=True)) == claims
+
+
 def test_build_failure_without_profile(resource):
     """A run without a profile gets a failed one when building fails"""
     resource["units"][2].delete()
