@@ -5,6 +5,9 @@ import { RiArrowRightLine } from "@remixicon/react"
 import { Section, SectionInner, SectionTitle } from "./SectionLayout"
 import { IMPACT_REPORT_URLS } from "./links"
 
+const REPORT_COVER_MOBILE_RATIO = "368 / 210"
+const COMPACT_TEXT_MIN_WIDTH = "200px"
+
 const Inner = styled(SectionInner)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
@@ -75,6 +78,12 @@ const FeaturedCard = styled(Card)(({ theme }) => ({
 }))
 
 /** Fills the featured card above its title; crops the cover like the design. */
+/**
+ * The covers are 4:3 with text near their top and bottom, so a box much wider
+ * than the design's crops the text off. Where the box's height doesn't come
+ * from the row beside it, it keeps the design's proportions instead of a
+ * fixed height: 679×372 on desktop, 368×210 on phones.
+ */
 const FeaturedCover = styled.div(({ theme }) => ({
   position: "relative",
   flex: 1,
@@ -83,10 +92,14 @@ const FeaturedCover = styled.div(({ theme }) => ({
     objectFit: "cover",
     objectPosition: "center 70%",
   },
-  [theme.breakpoints.down("sm")]: {
+  // Stacked above the other reports, at full width.
+  [theme.breakpoints.down("md")]: {
     flex: "none",
     minHeight: 0,
-    height: "210px",
+    aspectRatio: "679 / 372",
+  },
+  [theme.breakpoints.down("sm")]: {
+    aspectRatio: REPORT_COVER_MOBILE_RATIO,
     img: {
       objectPosition: "center",
     },
@@ -110,15 +123,12 @@ const CompactCover = styled.div(({ theme }) => ({
   [theme.breakpoints.down("sm")]: {
     flex: "none",
     alignSelf: "stretch",
-    aspectRatio: "auto",
-    height: "210px",
+    aspectRatio: REPORT_COVER_MOBILE_RATIO,
     img: {
       objectPosition: "center",
     },
   },
 }))
-
-const COMPACT_TEXT_MIN_WIDTH = "200px"
 
 const FeaturedText = styled.div(({ theme }) => ({
   display: "flex",

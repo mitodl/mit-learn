@@ -4,7 +4,8 @@ import { makeRequest, setMockResponse, urls } from "api/test-utils"
 import { testimonials as factories } from "api/test-utils/factories"
 import type { Attestation } from "api/v0"
 import SupportPage from "./SupportPage"
-import { TESTIMONIAL_EXTRAS, TESTIMONIAL_POSITION } from "./TestimonialSection"
+import { TESTIMONIAL_EXTRAS } from "./TestimonialSection"
+import { FEATURED_TESTIMONIAL_PARAMS } from "./queryParams"
 import {
   FREESIA_STORY_URL,
   IMPACT_REPORT_URLS,
@@ -22,10 +23,12 @@ const FREESIA = factories.testimonial({
 const FREESIA_EXTRAS = TESTIMONIAL_EXTRAS["Freesia Gaul"]
 
 const mockTestimonials = (results: Attestation[]) =>
-  setMockResponse.get(
-    urls.testimonials.list({ position: TESTIMONIAL_POSITION }),
-    { count: results.length, next: null, previous: null, results },
-  )
+  setMockResponse.get(urls.testimonials.list(FEATURED_TESTIMONIAL_PARAMS), {
+    count: results.length,
+    next: null,
+    previous: null,
+    results,
+  })
 
 /** Waits for the testimonial card, which renders once the API responds. */
 const findQuote = (quote = FREESIA.quote) => screen.findByText(`“${quote}”`)
@@ -245,7 +248,7 @@ describe("SupportPage", () => {
       expect(makeRequest).toHaveBeenCalledWith(
         expect.objectContaining({
           method: "get",
-          url: urls.testimonials.list({ position: TESTIMONIAL_POSITION }),
+          url: urls.testimonials.list(FEATURED_TESTIMONIAL_PARAMS),
         }),
       )
     })
@@ -253,7 +256,9 @@ describe("SupportPage", () => {
     test("shows a placeholder while the testimonial loads", async () => {
       renderWithProviders(<SupportPage />)
       const section = sectionOf(SECTION_TITLES.testimonial)
-      within(section).getByTestId("testimonial-skeleton")
+      expect(
+        within(section).getByTestId("testimonial-skeleton"),
+      ).toHaveAttribute("aria-busy", "true")
       await findQuote()
       expect(
         within(section).queryByTestId("testimonial-skeleton"),

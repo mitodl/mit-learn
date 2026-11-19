@@ -3,15 +3,14 @@ import Image from "next/image"
 import { Skeleton, styled } from "ol-components"
 import { ButtonLink } from "@mitodl/smoot-design"
 import { RiArrowRightLine, RiExternalLinkLine } from "@remixicon/react"
-import { useTestimonialList } from "api/hooks/testimonials"
+import { useQuery } from "@tanstack/react-query"
+import { testimonialsQueries } from "api/hooks/testimonials"
 import type { Attestation } from "api/v0"
 import { getSupportShareStoryUrl } from "@/common/config"
 import { env } from "@/env"
 import { Section, SectionInner, SectionTitle } from "./SectionLayout"
 import { FREESIA_STORY_URL } from "./links"
-
-/** The featured testimonial is the first published one at this position. */
-export const TESTIMONIAL_POSITION = 1
+import { FEATURED_TESTIMONIAL_PARAMS } from "./queryParams"
 
 type TestimonialExtras = {
   location: string
@@ -249,9 +248,12 @@ const TestimonialCard: React.FC<{
 
 const TestimonialSection: React.FC = () => {
   const shareStoryUrl = getSupportShareStoryUrl()
-  const { data, isLoading } = useTestimonialList({
-    position: TESTIMONIAL_POSITION,
-  })
+  // The route prefetches this on the server, so the page normally renders
+  // with the testimonial (or without the section) and the placeholder below
+  // only shows if that prefetch failed.
+  const { data, isLoading } = useQuery(
+    testimonialsQueries.list(FEATURED_TESTIMONIAL_PARAMS),
+  )
   const attestation = data?.results[0]
 
   // Nothing to feature: leave the section out rather than show an empty card.
@@ -288,6 +290,7 @@ const TestimonialSection: React.FC = () => {
         ) : (
           <CardSkeleton
             variant="rectangular"
+            aria-busy="true"
             data-testid="testimonial-skeleton"
           />
         )}
