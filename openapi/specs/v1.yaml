@@ -8661,6 +8661,103 @@ paths:
               schema:
                 $ref: '#/components/schemas/LearningResourceTopic'
           description: ''
+  /api/v1/units/:
+    get:
+      operationId: units_list
+      description: |-
+        Units, for admins only, unpublished runs and hidden content files
+        included. A unit's detail lists its content files in unit order.
+      summary: List
+      parameters:
+      - in: query
+        name: content_file_id
+        schema:
+          type: array
+          items:
+            type: number
+        description: The id of a content file in the unit
+        explode: true
+        style: form
+      - in: query
+        name: kind
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - bin
+            - context
+            - unit
+        description: |-
+          The kind of unit
+
+          * `unit` - Unit
+          * `context` - Context
+          * `bin` - Bin
+        explode: true
+        style: form
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      - in: query
+        name: resource_id
+        schema:
+          type: array
+          items:
+            type: integer
+        description: The id of the learning resource the unit belongs to
+        explode: true
+        style: form
+      - in: query
+        name: run_id
+        schema:
+          type: array
+          items:
+            type: number
+        description: The id of the learning resource run the unit belongs to
+        explode: true
+        style: form
+      tags:
+      - units
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedUnitList'
+          description: ''
+  /api/v1/units/{id}/:
+    get:
+      operationId: units_retrieve
+      description: |-
+        Units, for admins only, unpublished runs and hidden content files
+        included. A unit's detail lists its content files in unit order.
+      summary: Retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this unit.
+        required: true
+      tags:
+      - units
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnitDetail'
+          description: ''
   /api/v1/unsubscribe/{token}/:
     post:
       operationId: unsubscribe_create
@@ -14568,6 +14665,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProgramResource'
+    PaginatedUnitList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Unit'
     PaginatedUserListList:
       type: object
       required:
@@ -16938,6 +17058,297 @@ components:
       x-enum-descriptions:
       - search_subscription_type
       - channel_subscription_type
+    Unit:
+      type: object
+      description: Serializer for Units
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        run_id:
+          type: integer
+          readOnly: true
+        run_readable_id:
+          type: string
+          readOnly: true
+        resource_id:
+          type: integer
+          readOnly: true
+        resource_readable_id:
+          type: string
+          readOnly: true
+        external_id:
+          type: string
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/UnitKindEnum'
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+        position:
+          type: integer
+          readOnly: true
+          nullable: true
+        url:
+          type: string
+          format: uri
+          readOnly: true
+        content_file_count:
+          type: integer
+          readOnly: true
+        created_on:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_on:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - content_file_count
+      - created_on
+      - external_id
+      - id
+      - kind
+      - position
+      - resource_id
+      - resource_readable_id
+      - run_id
+      - run_readable_id
+      - title
+      - updated_on
+      - url
+    UnitContentFile:
+      type: object
+      description: A content file in a unit, with its place and role in the unit
+      properties:
+        relation:
+          allOf:
+          - $ref: '#/components/schemas/UnitContentFileRelationEnum'
+          readOnly: true
+        position:
+          type: integer
+          readOnly: true
+          nullable: true
+        content_file:
+          allOf:
+          - $ref: '#/components/schemas/UnitNestedContentFile'
+          readOnly: true
+      required:
+      - content_file
+      - position
+      - relation
+    UnitContentFileRelationEnum:
+      enum:
+      - core
+      - assessment
+      - supplementary
+      - reference
+      type: string
+      description: |-
+        * `core` - Core
+        * `assessment` - Assessment
+        * `supplementary` - Supplementary
+        * `reference` - Reference
+      x-enum-descriptions:
+      - Core
+      - Assessment
+      - Supplementary
+      - Reference
+    UnitDetail:
+      type: object
+      description: Serializer for a Unit with its content files, in unit order
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        run_id:
+          type: integer
+          readOnly: true
+        run_readable_id:
+          type: string
+          readOnly: true
+        resource_id:
+          type: integer
+          readOnly: true
+        resource_readable_id:
+          type: string
+          readOnly: true
+        external_id:
+          type: string
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/UnitKindEnum'
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+        position:
+          type: integer
+          readOnly: true
+          nullable: true
+        url:
+          type: string
+          format: uri
+          readOnly: true
+        content_file_count:
+          type: integer
+          readOnly: true
+        created_on:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_on:
+          type: string
+          format: date-time
+          readOnly: true
+        content_files:
+          type: array
+          items:
+            $ref: '#/components/schemas/UnitContentFile'
+          readOnly: true
+      required:
+      - content_file_count
+      - content_files
+      - created_on
+      - external_id
+      - id
+      - kind
+      - position
+      - resource_id
+      - resource_readable_id
+      - run_id
+      - run_readable_id
+      - title
+      - updated_on
+      - url
+    UnitKindEnum:
+      enum:
+      - unit
+      - context
+      - bin
+      type: string
+      description: |-
+        * `unit` - Unit
+        * `context` - Context
+        * `bin` - Bin
+      x-enum-descriptions:
+      - Unit
+      - Context
+      - Bin
+    UnitNestedContentFile:
+      type: object
+      description: |-
+        A content file inside a unit, without the run and resource fields, which
+        are the same for every file in the unit and on the unit itself. Admins see
+        hidden files too, so it says whether each one is published and released.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        key:
+          type: string
+          readOnly: true
+          nullable: true
+        uid:
+          type: string
+          readOnly: true
+          nullable: true
+        title:
+          type: string
+          readOnly: true
+          nullable: true
+        description:
+          type: string
+          readOnly: true
+          nullable: true
+        url:
+          type: string
+          readOnly: true
+          nullable: true
+        content_feature_type:
+          type: array
+          items:
+            type: string
+        content_type:
+          allOf:
+          - $ref: '#/components/schemas/ContentFileContentTypeEnum'
+          readOnly: true
+        content_title:
+          type: string
+          readOnly: true
+          nullable: true
+        content_author:
+          type: string
+          readOnly: true
+          nullable: true
+        content_language:
+          type: string
+          readOnly: true
+          nullable: true
+        checksum:
+          type: string
+          readOnly: true
+          nullable: true
+        image_src:
+          type: string
+          format: uri
+          readOnly: true
+          nullable: true
+        source_path:
+          type: string
+          readOnly: true
+          nullable: true
+        file_type:
+          type: string
+          readOnly: true
+          nullable: true
+        file_extension:
+          type: string
+          readOnly: true
+          nullable: true
+        edx_module_id:
+          type: string
+          readOnly: true
+          nullable: true
+        youtube_id:
+          type: string
+          readOnly: true
+          nullable: true
+        published:
+          type: boolean
+          readOnly: true
+        release_date:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          description: When the course releases this file to learners; null if the
+            course does not gate it.
+      required:
+      - checksum
+      - content_author
+      - content_feature_type
+      - content_language
+      - content_title
+      - content_type
+      - description
+      - edx_module_id
+      - file_extension
+      - file_type
+      - id
+      - image_src
+      - key
+      - published
+      - release_date
+      - source_path
+      - title
+      - uid
+      - url
+      - youtube_id
     User:
       type: object
       properties:
