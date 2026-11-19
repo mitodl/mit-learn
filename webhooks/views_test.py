@@ -957,7 +957,6 @@ def test_extracted_content_files_webhook_scopes_the_pull_to_the_run(
         ),
         published=True,
     )
-    mocker.patch("learning_resources.tasks.caches")
     mock_connect = mocker.patch("learning_resources.tasks.connect_to_warehouse")
     mock_iter_rows = mocker.patch(
         "learning_resources.tasks.iter_rows", return_value=iter([{"key": "a"}])
