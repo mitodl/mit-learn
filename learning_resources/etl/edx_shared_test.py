@@ -2291,9 +2291,40 @@ def test_process_course_archive_loads_units(mocker, mock_archive):
 
     process_course_archive(mocker.MagicMock(), key, run)
 
-    mock_load_units.assert_called_once_with(run, [unit_data])
+    mock_load_units.assert_called_once_with(run, [unit_data], failed_keys=[])
     run.refresh_from_db()
     assert (run.archive_key, run.checksum) == (key, "checksum")
+
+
+def test_process_course_archive_passes_failed_files_to_the_units(mocker, mock_archive):
+    """The units load is told which files failed, so it keeps their units"""
+    key = "mitxonline/openedx/raw_data/course_xml/course-v1:Test+Course+R1/abc123.xml.tar.gz"
+    run = LearningResourceRunFactory.create(published=True)
+    mocker.patch(
+        "learning_resources.etl.edx_shared.calc_checksum", return_value="checksum"
+    )
+    mock_archive.units.return_value = [{"external_id": "seq"}]
+
+    def transform(*args, failed_keys, **kwargs):
+        failed_keys.append("failed.pdf")
+        return iter([{"key": "content.txt"}])
+
+    mocker.patch(
+        "learning_resources.etl.edx_shared.transform_content_files",
+        side_effect=transform,
+    )
+    mocker.patch(
+        "learning_resources.etl.edx_shared.load_content_files", return_value=[1]
+    )
+    mock_load_units = mocker.patch(
+        "learning_resources.etl.edx_shared.load_course_units"
+    )
+
+    process_course_archive(mocker.MagicMock(), key, run)
+
+    mock_load_units.assert_called_once_with(
+        run, [{"external_id": "seq"}], failed_keys=["failed.pdf"]
+    )
 
 
 def test_process_course_archive_skips_runs_without_units(mocker):
@@ -2348,7 +2379,7 @@ def test_process_course_archive_unit_failure_is_not_retried(
 
     mock_load_files.assert_called_once()
     # a failed build keeps the run's units, minus unpublished files' links
-    mock_load_units.assert_called_once_with(run, [])
+    mock_load_units.assert_called_once_with(run, [], failed_keys=[])
     mock_log.exception.assert_called_once()
     run.refresh_from_db()
     # the receipt is recorded, so the same archive is skipped though the run

@@ -1,7 +1,7 @@
 """learning_resources data loaders"""
 
 import logging
-from collections.abc import Iterable
+from collections.abc import Collection, Iterable
 from typing import NamedTuple
 
 from django.conf import settings
@@ -1221,15 +1221,27 @@ UNIT_TITLE_MAX_LENGTH = Unit._meta.get_field("title").max_length  # noqa: SLF001
 UNIT_URL_MAX_LENGTH = Unit._meta.get_field("url").max_length  # noqa: SLF001
 
 
-def load_course_units(run: LearningResourceRun, units_data: list[dict]) -> list[int]:
+def load_course_units(
+    run: LearningResourceRun,
+    units_data: list[dict],
+    *,
+    failed_keys: Collection[str] = (),
+) -> list[int]:
     """
     Replace a run's units with the ones built from its latest archive.
+
+    A unit that links no published file is dropped, except the context unit
+    and a unit the run already has whose files include one that failed to
+    extract: it is kept, with whatever links remain, so the unit doesn't leave
+    the course until that file next loads.
 
     Args:
         run (LearningResourceRun): the run the units belong to
         units_data (list of dict): units as returned by OlxArchive.units. Empty
             means the outline could not be read, and the run's units are kept,
             minus their links to files no longer published
+        failed_keys (collection of str): keys of the run's files whose text
+            failed to extract in this load
 
     Returns:
         list of int: ids of the run's units after the load
@@ -1242,6 +1254,10 @@ def load_course_units(run: LearningResourceRun, units_data: list[dict]) -> list[
     file_ids = dict(
         ContentFile.objects.filter(run=run, published=True).values_list("key", "id")
     )
+    failed_keys = set(failed_keys)
+    existing_ids = (
+        set(run.units.values_list("external_id", flat=True)) if failed_keys else set()
+    )
     units = []
     unit_links = []
     seen = set()
@@ -1253,9 +1269,15 @@ def load_course_units(run: LearningResourceRun, units_data: list[dict]) -> list[
             if key in file_ids
         }
         external_id = unit_data["external_id"]
+        kept_for_failed_files = (
+            external_id in existing_ids
+            and not failed_keys.isdisjoint(unit_data["content_files"])
+        )
         # a block in two places of the outline keeps its first
         if (
-            not links and unit_data["kind"] != Unit.Kind.CONTEXT
+            not links
+            and unit_data["kind"] != Unit.Kind.CONTEXT
+            and not kept_for_failed_files
         ) or external_id in seen:
             continue
         if len(external_id) > UNIT_EXTERNAL_ID_MAX_LENGTH:

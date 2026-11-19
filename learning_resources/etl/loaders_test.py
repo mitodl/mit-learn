@@ -4601,6 +4601,36 @@ def test_load_course_units_column_limits():
     assert unit.url == ""
 
 
+def test_load_course_units_keeps_a_unit_dropped_only_by_failed_files():
+    """
+    A unit the run has whose files failed to extract is kept with the links it
+    still has; a new one, or one whose files are just gone, is dropped
+    """
+    run = LearningResourceRunFactory.create()
+    kept = ContentFileFactory.create(run=run)
+    load_course_units(
+        run,
+        [
+            _unit_data("seq1", "unit", {kept.key: "core"}),
+            _unit_data("seq2", "unit", {kept.key: "core"}),
+        ],
+    )
+    seq1 = run.units.get(external_id="seq1")
+
+    load_course_units(
+        run,
+        [
+            _unit_data("seq1", "unit", {"failed": "core"}),
+            _unit_data("seq2", "unit", {"gone": "core"}),
+            _unit_data("seq3", "unit", {"failed": "core"}),
+        ],
+        failed_keys=["failed"],
+    )
+
+    assert list(run.units.values_list("id", "position")) == [(seq1.id, 0)]
+    assert not run.units.get().content_files.exists()
+
+
 def test_load_course_units_keeps_empty_context():
     """The context unit is kept with no files, unlike an empty sequential"""
     run = LearningResourceRunFactory.create()
