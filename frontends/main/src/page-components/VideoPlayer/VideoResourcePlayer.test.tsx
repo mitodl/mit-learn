@@ -59,6 +59,26 @@ const makeStreamingVideo = () =>
 
 const playerRegion = () => screen.getByRole("region", { name: /Video player/ })
 
+/**
+ * The emotion CSS rules attached to the player region's own classes.
+ * happy-dom doesn't compute aspect-ratio or min()/max() widths, but the rules
+ * emotion inserts can be read back.
+ */
+const playerRules = () => {
+  const rules = [...document.querySelectorAll("style")].flatMap((style) =>
+    [...(style.sheet?.cssRules ?? [])].map((rule) => rule.cssText),
+  )
+  const classes = playerRegion().className.split(" ")
+  return {
+    own: classes.flatMap((cls) =>
+      rules.filter((rule) => rule.startsWith(`.${cls} {`)),
+    ),
+    nested: classes.flatMap((cls) =>
+      rules.filter((rule) => rule.startsWith(`.${cls} `)),
+    ),
+  }
+}
+
 describe("VideoResourcePlayer", () => {
   test("renders VideoJsPlayer for a non-YouTube streaming URL", async () => {
     const video = makeVideo({
@@ -242,15 +262,9 @@ describe("VideoResourcePlayer", () => {
       renderPlayer(makeStreamingVideo())
       await screen.findByTestId("video-js-player")
       // video.js hides the progress bar at its "x-small" layout (≤320px wide),
-      // which a height-capped vertical video often is. The emotion rules that
-      // undo that must be scoped to this player's class.
-      const rules = [...document.querySelectorAll("style")].flatMap((style) =>
-        [...(style.sheet?.cssRules ?? [])].map((rule) => rule.cssText),
-      )
-      const scoped = playerRegion()
-        .className.split(" ")
-        .flatMap((cls) => rules.filter((rule) => rule.startsWith(`.${cls} `)))
-      expect(scoped).toEqual(
+      // which a height-capped vertical video often is. The rules that undo
+      // that must be scoped to this player's class.
+      expect(playerRules().nested).toEqual(
         expect.arrayContaining([
           expect.stringMatching(
             /\.video-js\.vjs-layout-x-small \.vjs-progress-control \{\s*display: flex;/,
@@ -260,6 +274,30 @@ describe("VideoResourcePlayer", () => {
           ),
         ]),
       )
+    })
+
+    test("caps a portrait player's height, with a minimum width", async () => {
+      renderPlayer(makeStreamingVideo())
+      await screen.findByTestId("video-js-player")
+      act(() => reportDimensions!(540, 960))
+      const own = playerRules().own.join("\n")
+      expect(own).toMatch(/aspect-ratio: 0\.5625/)
+      // At most 80vh tall, but never narrow enough for video.js's "tiny"
+      // layout, which drops the progress bar.
+      expect(own).toMatch(
+        /width: min\(100%, max\(240px, calc\(80vh \* 0\.5625\)\)\)/,
+      )
+      expect(own).toMatch(/margin-inline: auto/)
+    })
+
+    test("keeps a landscape player full width", async () => {
+      renderPlayer(makeStreamingVideo())
+      await screen.findByTestId("video-js-player")
+      act(() => reportDimensions!(1440, 1080))
+      const own = playerRules().own.join("\n")
+      expect(own).toMatch(new RegExp(`aspect-ratio: ${1440 / 1080}`))
+      expect(own).not.toMatch(/80vh/)
+      expect(own).not.toMatch(/margin-inline/)
     })
 
     test("YouTube videos stay 16:9", async () => {
