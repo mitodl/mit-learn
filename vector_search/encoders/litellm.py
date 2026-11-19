@@ -20,6 +20,7 @@ from main.azure_openai import (
     is_azure_model,
     strip_azure_prefix,
 )
+from main.llm import configure_ol_llm
 from vector_search.encoders.base import BaseEncoder
 
 log = logging.getLogger()
@@ -42,10 +43,7 @@ litellm.cache = Cache(
     **({"ssl_cert_reqs": "required"} if redis_ssl else {}),
 )
 
-ol_llm.configure(ol_llm.Settings(environment=settings.OL_LLM_ENVIRONMENT))
-ol_llm.configure_tracing(
-    None if settings.OPIK_URL_OVERRIDE else ol_llm.TracingConfig(enabled=False)
-)
+configure_ol_llm()
 
 APP_NAME = "mit-learn"
 NO_ATTRIBUTION = ol_llm.Attribution()

@@ -361,6 +361,10 @@ def documents_from_olx(archive: OlxArchive) -> Generator[tuple, None, None]:
                 "archive_checksum": archive_checksum,
                 "file_extension": extension_lower,
                 "source_path": f"{rel_dir}/{path.name}",
+                # where the file is on disk; source_path is not always
+                # relative to the root the archive was read from
+                "file_path": str(path),
+                "path": path,
             },
         )
 
@@ -449,11 +453,15 @@ def get_url_from_module_id(
         return None
 
 
-def _should_reprocess(existing_record, metadata: dict, overwrite) -> bool:
+def _should_reprocess(
+    existing_record, metadata: dict, overwrite, *, ocr_pdfs=False
+) -> bool:
     """Determine if content needs to be reprocessed."""
     if not existing_record:
         return True
     if overwrite:
+        return True
+    if ocr_pdfs and metadata.get("file_extension") == ".pdf":
         return True
     return existing_record.archive_checksum != metadata.get("archive_checksum")
 
@@ -509,6 +517,31 @@ def _extract_content_with_ocr(
         "content": _pdf_to_markdown(file_path, figure_folder),
         "content_title": "",
     }
+
+
+def extract_pdf_bytes_with_ocr(pdf_bytes: bytes) -> dict | None:
+    """
+    Extract the text of an in-memory PDF with LLM OCR.
+
+    Returns:
+        dict: {"content": markdown}, or None if OCR is off, the PDF is invalid
+        or over OCR_PDF_MAX_PAGE_THRESHOLD pages, or OCR fails or returns nothing
+    """
+    if not settings.OCR_MODEL or not pdf_bytes:
+        return None
+    with TemporaryDirectory() as tempdir:
+        pdf_path = Path(tempdir, "document.pdf")
+        pdf_path.write_bytes(pdf_bytes)
+        if not pdf_is_valid(pdf_path):
+            return None
+        try:
+            content_dict = _extract_content_with_ocr(pdf_path, is_tutor_problem=False)
+        except Exception:
+            log.warning("OCR extraction failed for in-memory PDF", exc_info=True)
+            return None
+    if not content_dict or not (content_dict.get("content") or "").strip():
+        return None
+    return {"content": content_dict["content"]}
 
 
 def _figure_folder(key: str, metadata: dict) -> str | None:
@@ -572,8 +605,17 @@ def _extract_content(  # noqa: PLR0913
 
     source_path = metadata.get("source_path")
     file_extension = metadata.get("file_extension")
-    file_path = Path(olx_path) / Path(source_path)
-    if file_extension == ".pdf" and file_path.is_file() and not pdf_is_valid(file_path):
+    file_path = (
+        Path(metadata["file_path"])
+        if metadata.get("file_path")
+        else Path(olx_path) / Path(source_path)
+    )
+    if (
+        use_ocr
+        and file_extension == ".pdf"
+        and file_path.is_file()
+        and not pdf_is_valid(file_path)
+    ):
         msg = f"Invalid PDF {file_path}"
         raise InvalidPDFError(msg)
     if _should_use_ocr(
@@ -589,7 +631,8 @@ def _extract_content(  # noqa: PLR0913
         except Exception:  # noqa: BLE001
             log.warning("OCR extraction failed for %s, falling back to tika", file_path)
             content_dict = None
-        if content_dict:
+        # a blank OCR result falls through to tika rather than blanking the text
+        if content_dict and (content_dict.get("content") or "").strip():
             if figure_folder:
                 _delete_unlinked_figure_versions(figure_folder)
             return content_dict
@@ -709,7 +752,6 @@ def _build_result(  # noqa: PLR0913, PLR0917
 ) -> dict:
     """Build the final result dictionary."""
     source_path = metadata.get("source_path")
-    edx_module_id = get_edx_module_id(source_path, run)
     data = {
         "key": key,
         "published": True,
@@ -718,8 +760,8 @@ def _build_result(  # noqa: PLR0913, PLR0917
         "archive_checksum": metadata.get("archive_checksum"),
         "file_extension": metadata.get("file_extension"),
         "source_path": source_path,
-        "edx_module_id": edx_module_id,
-        "url": get_url_from_module_id(edx_module_id, run, video_srt_metadata),
+        "edx_module_id": key,
+        "url": get_url_from_module_id(key, run, video_srt_metadata),
         **content_dict,
     }
 
@@ -728,7 +770,7 @@ def _build_result(  # noqa: PLR0913, PLR0917
         content_dict.get("content"),
         olx_path,
         source_path,
-        edx_module_id,
+        key,
         video_srt_metadata,
     )
     return data
@@ -780,8 +822,10 @@ def process_olx_path(  # noqa: PLR0913
     valid_file_types: list[str] | None = None,
     is_tutor_problem_file_import=False,
     use_ocr=False,
+    ocr_pdfs=False,
     failed_source_paths: list | None = None,
     archive: OlxArchive | None = None,
+    failed_keys: list | None = None,
 ) -> Generator[dict, None, None]:
     """
     Process OLX path and yield content dictionaries. Rows are dated from the
@@ -790,9 +834,13 @@ def process_olx_path(  # noqa: PLR0913
     failed_source_paths is a caller-owned list appended to in place with the
     source_path of each file whose processing raises; it is only complete once
     the generator is fully exhausted. A file Tika yields nothing for is not a
-    failure. archive is the OlxArchive of olx_path, if the caller has one to
+    failure. failed_keys, likewise, gets each such file's ContentFile key.
+    archive is the OlxArchive of olx_path, if the caller has one to
     share; the file types it reads are then the ones ingested, and a different
     valid_file_types raises ValueError.
+
+    ocr_pdfs re-extracts every PDF with LLM OCR, whether or not it changed;
+    other files are reprocessed only as overwrite says.
     """
     if archive is None:
         archive = OlxArchive(
@@ -810,19 +858,26 @@ def process_olx_path(  # noqa: PLR0913
 
     for document, metadata in documents_from_olx(archive):
         source_path = metadata.get("source_path")
-        key = get_edx_module_id(source_path, run)
+        # only an OLX tree's paths can be keyed from where they sit in it
+        key = (
+            archive.key(metadata["path"], run)
+            if archive.is_olx
+            else get_edx_module_id(source_path, run)
+        )
         try:
             existing_record = _get_existing_record(
                 source_path, key, run, is_tutor_problem_file_import
             )
 
-            if _should_reprocess(existing_record, metadata, overwrite):
+            if _should_reprocess(
+                existing_record, metadata, overwrite, ocr_pdfs=ocr_pdfs
+            ):
                 content_dict = _extract_content(
                     document,
                     metadata,
                     olx_path,
                     key,
-                    use_ocr=use_ocr,
+                    use_ocr=use_ocr or ocr_pdfs,
                     is_tutor_problem=is_tutor_problem_file_import,
                 )
                 if content_dict is None:
@@ -842,6 +897,8 @@ def process_olx_path(  # noqa: PLR0913
             )
             if failed_source_paths is not None:
                 failed_source_paths.append(source_path)
+            if failed_keys is not None:
+                failed_keys.append(key)
             continue
 
         yield _build_result(
@@ -884,6 +941,7 @@ def transform_content_files(
     *,
     overwrite: bool,
     failed_keys: list | None = None,
+    ocr_pdfs: bool = False,
 ) -> Generator[dict, None, None]:
     """
     Pass content to tika, then return JSON document with transformed content inside it
@@ -894,22 +952,19 @@ def transform_content_files(
         failed_keys (list): caller-owned list extended in place with the
             ContentFile keys of files whose extraction failed; valid only once
             the generator is fully exhausted
+        ocr_pdfs (bool): re-extract every PDF with LLM OCR, even unchanged ones
 
     Yields:
         dict: content from file
     """
-    failed_source_paths = []
     yield from process_olx_path(
         str(archive.root),
         run,
         overwrite=overwrite,
-        failed_source_paths=failed_source_paths,
+        ocr_pdfs=ocr_pdfs,
         archive=archive,
+        failed_keys=failed_keys,
     )
-    if failed_keys is not None:
-        failed_keys.extend(
-            get_edx_module_id(source_path, run) for source_path in failed_source_paths
-        )
 
 
 def course_units_from_archive(
@@ -1380,6 +1435,7 @@ def _pdf_to_markdown(pdf_path, figure_folder: str | None = None):
     parts and solutions. With a figure_folder, its figures are saved there in the
     default storage and linked by url; otherwise they are placeholder comments.
     """
+    from learning_resources.converters.figures import FigureOutput
     from learning_resources.converters.opendataloader_llm_converter import (
         OpenDataLoaderLLMConverter,
     )
@@ -1389,7 +1445,7 @@ def _pdf_to_markdown(pdf_path, figure_folder: str | None = None):
     with TemporaryDirectory() as figures_dir:
         # figures are linked by file name until they are saved
         converter = OpenDataLoaderLLMConverter(
-            pdf_path, figures_dir=Path(figures_dir), figure_link_prefix=""
+            pdf_path, figure_output=FigureOutput(Path(figures_dir), link_prefix="")
         )
         return _store_figures(
             converter.convert_to_structured_markdown(), converter.figures, figure_folder

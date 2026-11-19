@@ -60,7 +60,11 @@ const CourseInfoBox: React.FC<CourseInfoBoxProps> = ({
         />
       )}
       enrollArea={
-        <CourseEnrollArea course={course} selectedRun={selectedRun} />
+        <CourseEnrollArea
+          course={course}
+          selectedRun={selectedRun}
+          onSelectRun={onSelectRun}
+        />
       }
       upsell={upsell}
       askTim={{ readableId: course.readable_id, resourceType: "course" }}

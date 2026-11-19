@@ -2,9 +2,9 @@
 Shared parts of resource profile claim generation.
 
 An extractor is one stage's prompt, output schema and configuration. Its
-validated output is stored in the unit's ClaimExtraction under a key its
-caller builds from the call's inputs, and a call whose key is already stored,
-for this unit or another, is skipped.
+validated output is stored in the ClaimExtraction of the unit, unit part or
+run it is for, under a key its caller builds from the call's inputs, and a call whose
+key is already stored, for this unit or run or another, is skipped.
 """
 
 import hashlib
@@ -24,6 +24,7 @@ from pydantic import BaseModel, ValidationError
 
 from learning_resources.models import (
     ClaimExtraction,
+    LearningResourceRun,
     ResourceProfileConfiguration,
     Unit,
 )
@@ -39,8 +40,13 @@ class ClaimExtractionError(Exception):
 
 
 def cache_key(*inputs) -> str:
-    """Return the sha256 of a call's inputs"""
-    blob = json.dumps(inputs, ensure_ascii=False, separators=(",", ":"))
+    """
+    Return the sha256 of a call's inputs.
+
+    Keys are sorted because a stored output comes back from Postgres jsonb
+    with its keys in a different order than the model gave them.
+    """
+    blob = json.dumps(inputs, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
     return hashlib.sha256(blob.encode()).hexdigest()
 
 
@@ -67,13 +73,18 @@ class ClaimExtractor:
         return cache_key(self.level, *inputs)
 
 
-def load_extractor(stage: str, schema: type[BaseModel]) -> ClaimExtractor:
+def load_extractor(
+    stage: str,
+    schema: type[BaseModel],
+    level: str = ClaimExtraction.Level.UNIT,
+) -> ClaimExtractor:
     """
     Build a stage's extractor from its ResourceProfileConfiguration.
 
     Args:
         stage (str): a ResourceProfileConfiguration.Stage
         schema (type of BaseModel): the extractor's output schema
+        level (str): the ClaimExtraction.Level its rows are stored at
 
     Raises:
         ClaimExtractionError: when the stage has no configuration
@@ -82,9 +93,7 @@ def load_extractor(stage: str, schema: type[BaseModel]) -> ClaimExtractor:
     if not config:
         msg = f"No ResourceProfileConfiguration for stage {stage}"
         raise ClaimExtractionError(msg)
-    return ClaimExtractor(
-        stage, ClaimExtraction.Level.UNIT, config.prompt, schema, config
-    )
+    return ClaimExtractor(stage, level, config.prompt, schema, config)
 
 
 # --------------------------------------------------------------------------- llm
@@ -259,7 +268,7 @@ def call_llm(extractor: ClaimExtractor, combined_prompt: str) -> tuple[BaseModel
 
 
 # --------------------------------------------------------------------------- outputs
-def _truncation_notes(sources: list[Source]) -> list[str]:
+def truncation_notes(sources: list[Source]) -> list[str]:
     return [
         f"{source.source_id} was truncated: {source.included_chars:,} of"
         f" {source.total_chars:,} characters were read"
@@ -273,14 +282,14 @@ def _stored_output(parsed: dict, sources: list[Source]) -> dict:
     output = verify_all_evidence(
         parsed, {source.source_id: source.text for source in sources}
     )
-    output["extraction_notes"] += _truncation_notes(sources)
+    output["extraction_notes"] += truncation_notes(sources)
     output["sources"] = [source.summary() for source in sources]
     return output
 
 
 # --------------------------------------------------------------------------- extraction
 def over_budget(unit: Unit, sources: list[Source], budget: int) -> bool:
-    """Log a unit whose files are over the input budget"""
+    """Log a context unit whose files are over the input budget"""
     tokens = sum(source.tokens for source in sources)
     if tokens <= budget:
         return False
@@ -300,10 +309,12 @@ def over_budget(unit: Unit, sources: list[Source], budget: int) -> bool:
 def get_or_create_extraction(  # noqa: PLR0913
     extractor: ClaimExtractor,
     key: str,
-    combined_prompt: Callable[[], str],
-    sources: list[Source],
+    build_prompt: Callable[[], str],
+    sources: list[Source] = (),
     *,
-    unit: Unit,
+    unit: Unit | None = None,
+    run: LearningResourceRun | None = None,
+    part: int | None = None,
     finish: Callable[[dict], dict] | None = None,
     overwrite: bool = False,
 ) -> ClaimExtraction:
@@ -312,16 +323,21 @@ def get_or_create_extraction(  # noqa: PLR0913
 
     Units with the same inputs share the key's row, which is pointed at the
     unit asking for it, so `unit` is the unit that used the row last. The
-    unit's other rows are no longer current and are deleted, leaving it one.
+    unit's other rows at the extractor's level are no longer current and are
+    deleted, leaving it one of each, except for parts: see _store_extraction.
 
     Args:
         extractor (ClaimExtractor): the extractor to call
         key (str): the call's cache key
-        combined_prompt (callable): returns the course material for the call,
+        build_prompt (callable): returns the course material for the call,
             called only when the model is
         sources (list of Source): the sources in the prompt, to verify the
             output's evidence against
-        unit (Unit): the unit the call is for
+        unit (Unit): the unit the call is for, for a unit-level extraction
+        run (LearningResourceRun): the run the call is for, for a run-level
+            extraction; exactly one of unit and run is given
+        part (int): the part of the unit the call is for, for a unit_part
+            extraction
         finish (callable): what else to do to the verified output, as plain
             data, before it is stored
         overwrite (bool): call the model even when the key is stored, and
@@ -330,52 +346,79 @@ def get_or_create_extraction(  # noqa: PLR0913
     Raises:
         ClaimExtractionError: when the model gives no valid response
     """
+    if (unit is None) == (run is None):
+        msg = "Pass exactly one of unit and run"
+        raise ValueError(msg)
     if not overwrite:
         extraction = ClaimExtraction.objects.filter(key=key).first()
         if extraction:
-            return _store_extraction(unit, extraction)
-    parsed, raw = call_llm(extractor, combined_prompt())
+            return _store_extraction(
+                extraction, unit=unit, run=run, level=extractor.level, part=part
+            )
+    parsed, raw = call_llm(extractor, build_prompt())
     output = _stored_output(parsed.model_dump(), sources)
     if finish:
         output = finish(output)
     return _store_extraction(
-        unit,
         ClaimExtraction.objects.filter(key=key).first(),
-        key=key,
+        unit=unit,
+        run=run,
         level=extractor.level,
+        part=part,
+        key=key,
         extractor_version=extractor.version,
         model=extractor.config.llm_model,
         output=_sanitize(output),
         raw_response=sanitize_llm_text(raw),
         # a replaced extraction is unpublished until the next claim generation
-        # sweep of its course publishes it again
+        # sweep of its course in which nothing fails publishes it again
         published=False,
     )
 
 
 def _store_extraction(
-    unit: Unit, extraction: ClaimExtraction | None, **fields
+    extraction: ClaimExtraction | None,
+    *,
+    unit: Unit | None,
+    run: LearningResourceRun | None,
+    level: str,
+    part: int | None = None,
+    **fields,
 ) -> ClaimExtraction:
     """
-    Make an extraction the unit's, and delete the unit's other extractions.
+    Point an extraction at its unit or run, and delete that unit's or run's
+    other extractions at the same level.
 
     Args:
-        unit (Unit): the unit
         extraction (ClaimExtraction | None): the row for the key, if there is
-            one; otherwise the unit's latest row is reused for the key, or a
-            row is created
+            one; otherwise the unit's or run's latest row at the level is
+            reused for the key, except for a part, or a row is created
+        unit (Unit | None): the unit the row is for, for a unit-level extraction
+        run (LearningResourceRun | None): the run the row is for, for a
+            run-level extraction; exactly one of unit and run is given
+        level (str): the row's ClaimExtraction.Level
+        part (int | None): the row's part, for a unit_part extraction
         fields: what else to set on the row
     """
+    owner_field, owner = ("unit", unit) if unit is not None else ("run", run)
+    scope = {owner_field: owner, "level": level, "part": part}
+    is_part = level == ClaimExtraction.Level.UNIT_PART
     with transaction.atomic():
-        rows = ClaimExtraction.objects.select_for_update().filter(unit=unit)
-        if extraction is None:
+        rows = ClaimExtraction.objects.select_for_update().filter(**scope)
+        if extraction is None and not is_part:
             extraction = rows.order_by("-updated_on", "-id").first()
         if extraction is None:
-            extraction = ClaimExtraction.objects.create(unit=unit, **fields)
+            extraction = ClaimExtraction.objects.create(**scope, **fields)
         else:
-            rows.exclude(id=extraction.id).delete()
-            if fields or extraction.unit_id != unit.id:
-                extraction.unit = unit
+            if not is_part:
+                rows.exclude(id=extraction.id).delete()
+            if (
+                fields
+                or getattr(extraction, f"{owner_field}_id") != owner.id
+                or extraction.part != part
+            ):
+                setattr(extraction, owner_field, owner)
+                extraction.part = part
                 for name, value in fields.items():
                     setattr(extraction, name, value)
                 extraction.save()

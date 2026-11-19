@@ -213,6 +213,7 @@ def learning_resource_offeror():
 @pytest.mark.parametrize("delivery", [LearningResourceDelivery.in_person.name, None])
 def test_load_program(  # noqa: PLR0913
     mock_upsert_tasks,
+    django_capture_on_commit_callbacks,
     program_exists,
     is_published,
     courses_exist,
@@ -269,28 +270,29 @@ def test_load_program(  # noqa: PLR0913
     }
 
     delivery_data = {"delivery": [delivery]} if delivery else {}
-    result, _, _ = load_program(
-        {
-            "platform": platform.code,
-            "readable_id": program.learning_resource.readable_id,
-            "professional": False,
-            "title": program.learning_resource.title,
-            "url": program.learning_resource.url,
-            "image": {"url": program.learning_resource.image.url},
-            "published": is_published,
-            "runs": [run_data],
-            "availability": program.learning_resource.availability,
-            "courses": [
-                {
-                    "readable_id": course.learning_resource.readable_id,
-                    "platform": platform.code,
-                    "availability": course.learning_resource.availability,
-                }
-                for course in courses
-            ],
-            **delivery_data,
-        },
-    )
+    with django_capture_on_commit_callbacks(execute=True):
+        result, _, _ = load_program(
+            {
+                "platform": platform.code,
+                "readable_id": program.learning_resource.readable_id,
+                "professional": False,
+                "title": program.learning_resource.title,
+                "url": program.learning_resource.url,
+                "image": {"url": program.learning_resource.image.url},
+                "published": is_published,
+                "runs": [run_data],
+                "availability": program.learning_resource.availability,
+                "courses": [
+                    {
+                        "readable_id": course.learning_resource.readable_id,
+                        "platform": platform.code,
+                        "availability": course.learning_resource.availability,
+                    }
+                    for course in courses
+                ],
+                **delivery_data,
+            },
+        )
 
     assert Program.objects.count() == 1
     assert Course.objects.count() == after_course_count
@@ -490,6 +492,7 @@ def test_load_program_bad_platform(mocker):
 @pytest.mark.parametrize("has_departments", [True, False])
 def test_load_course(  # noqa: PLR0913, PLR0912, PLR0915
     mock_upsert_tasks,
+    django_capture_on_commit_callbacks,
     course_exists,
     is_published,
     is_run_published,
@@ -597,7 +600,8 @@ def test_load_course(  # noqa: PLR0913, PLR0912, PLR0915
     else:
         props["runs"] = []
 
-    result = load_course(props, config=CourseLoaderConfig(prune=True))
+    with django_capture_on_commit_callbacks(execute=True):
+        result = load_course(props, config=CourseLoaderConfig(prune=True))
     assert result.professional is True
 
     if is_published and is_run_published and has_upcoming_run:
@@ -2757,8 +2761,9 @@ def test_load_podcasts_nothing_tracked_raises(podcast_platform):
 
 @pytest.mark.parametrize("podcast_episode_exists", [True, False])
 @pytest.mark.parametrize("is_published", [True, False])
-def test_load_podcast_episode(
+def test_load_podcast_episode(  # noqa: PLR0913
     mock_upsert_tasks,
+    django_capture_on_commit_callbacks,
     learning_resource_offeror,
     podcast_platform,
     podcast_episode_exists,
@@ -2783,7 +2788,8 @@ def test_load_podcast_episode(
     )
     props["topics"] = [model_to_dict(topic, exclude=["id"]) for topic in topics]
 
-    result = load_podcast_episode(props)
+    with django_capture_on_commit_callbacks(execute=True):
+        result = load_podcast_episode(props)
 
     assert PodcastEpisode.objects.count() == 1
 
@@ -2827,8 +2833,9 @@ def test_load_podcast_no_episodes(mock_upsert_tasks, podcast_platform):
 
 @pytest.mark.parametrize("podcast_exists", [True, False])
 @pytest.mark.parametrize("is_published", [True, False])
-def test_load_podcast(
+def test_load_podcast(  # noqa: PLR0913
     mock_upsert_tasks,
+    django_capture_on_commit_callbacks,
     learning_resource_offeror,
     podcast_platform,
     podcast_exists,
@@ -2871,7 +2878,8 @@ def test_load_podcast(
     episode_data["offered_by"] = {"name": learning_resource_offeror.name}
 
     podcast_data["episodes"] = [episode_data]
-    result = load_podcast(podcast_data)
+    with django_capture_on_commit_callbacks(execute=True):
+        result = load_podcast(podcast_data)
 
     new_podcast = LearningResource.objects.get(readable_id=podcast.readable_id)
     new_podcast_episode = new_podcast.resources.order_by("-created_on").first()
@@ -3798,6 +3806,7 @@ def test_unpublish_removed_youtube_channels(mock_upsert_tasks):
 def test_load_course_percolation(
     mocker,
     mock_upsert_tasks,
+    django_capture_on_commit_callbacks,
     course_exists,
 ):
     """Test loading a new course triggers percolation"""
@@ -3845,7 +3854,8 @@ def test_load_course_percolation(
     else:
         props["runs"] = []
 
-    result = load_course(props, config=CourseLoaderConfig(prune=True))
+    with django_capture_on_commit_callbacks(execute=True):
+        result = load_course(props, config=CourseLoaderConfig(prune=True))
     mock_upsert_tasks.upsert_learning_resource_immutable_signature.assert_called_with(
         result.id
     )

@@ -120,13 +120,14 @@ def build_run_lookup(
     return lookup
 
 
-def process_course_archive(
+def process_course_archive(  # noqa: PLR0913
     bucket,
     key: str,
     run: LearningResourceRun,
     *,
     overwrite: bool = False,
     overwrite_units: bool = False,
+    ocr_pdfs: bool = False,
 ) -> bool:
     """
     Download and process a course archive from S3, skipping the download
@@ -139,6 +140,7 @@ def process_course_archive(
         overwrite(bool): Whether to overwrite existing content files
         overwrite_units(bool): Whether to rebuild the run's units from an
             unchanged archive, without reloading its content files
+        ocr_pdfs(bool): Reload the archive, re-extracting its PDFs with LLM OCR
 
     Returns:
         bool: False if skipped via matching archive_key, True otherwise
@@ -150,7 +152,7 @@ def process_course_archive(
     stale_run = (
         bool(run.checksum) and not run.content_files.filter(published=True).exists()
     )
-    reload = overwrite or stale_run
+    reload = overwrite or stale_run or ocr_pdfs
 
     if run.archive_key == key and not reload and not overwrite_units:
         log.debug("Archive key unchanged for %s, skipping download", key)
@@ -173,17 +175,20 @@ def process_course_archive(
             if overwrite_units:
                 rebuild_course_units(course_tarpath, run)
             return True
-        load_course_archive(course_tarpath, key, run, checksum, overwrite=overwrite)
+        load_course_archive(
+            course_tarpath, key, run, checksum, overwrite=overwrite, ocr_pdfs=ocr_pdfs
+        )
     return True
 
 
-def load_course_archive(
+def load_course_archive(  # noqa: PLR0913
     course_tarpath: Path,
     key: str,
     run: LearningResourceRun,
     checksum: str,
     *,
     overwrite: bool,
+    ocr_pdfs: bool = False,
 ):
     """
     Load a downloaded course archive's content files and units, recording the
@@ -195,13 +200,18 @@ def load_course_archive(
         run(LearningResourceRun): The run to load
         checksum(str): The archive's checksum
         overwrite(bool): Whether to overwrite existing content files
+        ocr_pdfs(bool): Whether to re-extract the archive's PDFs with LLM OCR
     """
     try:
         with unpacked_course_archive(course_tarpath, run) as archive:
             failed_keys = []
             content_files_data = iter(
                 transform_content_files(
-                    archive, run, overwrite=overwrite, failed_keys=failed_keys
+                    archive,
+                    run,
+                    overwrite=overwrite,
+                    failed_keys=failed_keys,
+                    ocr_pdfs=ocr_pdfs,
                 )
             )
             first = next(content_files_data, None)
@@ -415,13 +425,14 @@ def run_for_edx_archive(etl_source: str, archive_filename: str):
     return runs.order_by("-published", "id").first()
 
 
-def sync_edx_course_files(
+def sync_edx_course_files(  # noqa: PLR0913
     etl_source: str,
     ids: list[int],
     keys: list[str],
     *,
     overwrite: bool = False,
     overwrite_units: bool = False,
+    ocr_pdfs: bool = False,
 ):
     """
     Sync all edx course run files for a list of course ids to database
@@ -432,6 +443,7 @@ def sync_edx_course_files(
         keys(list[str]): list of S3 archive keys to search through
         overwrite(bool): Whether to overwrite existing content files
         overwrite_units(bool): Whether to rebuild units from unchanged archives
+        ocr_pdfs(bool): Whether to re-extract PDFs with LLM OCR
     """
     bucket = get_bucket_by_name(settings.COURSE_ARCHIVE_BUCKET_NAME)
     run_lookup = build_run_lookup(etl_source, ids)
@@ -451,7 +463,12 @@ def sync_edx_course_files(
         # legacy unpublished runs can share an archive id with the current run
         run = max(matching_runs, key=lambda r: r.published)
         if process_course_archive(
-            bucket, key, run, overwrite=overwrite, overwrite_units=overwrite_units
+            bucket,
+            key,
+            run,
+            overwrite=overwrite,
+            overwrite_units=overwrite_units,
+            ocr_pdfs=ocr_pdfs,
         ):
             processed += 1
         else:

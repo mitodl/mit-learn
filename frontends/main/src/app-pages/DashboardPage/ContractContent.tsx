@@ -29,9 +29,7 @@ import { ButtonLink } from "@mitodl/smoot-design"
 import { RiAwardFill } from "@remixicon/react"
 import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
 import { matchOrganizationBySlug, stripOrgPrefix } from "@/common/utils"
-import { FeatureFlags } from "@/common/feature_flags"
 import { DASHBOARD_HOME } from "@/common/urls"
-import { useFeatureFlag } from "@/common/useFeatureFlag"
 import ContractManagerNav from "@/components/ContractManagerNav/ContractManagerNav"
 import { ResourceType, getKey } from "./CoursewareDisplay/helpers"
 import type { DashboardCourseEntry } from "./CoursewareDisplay/model/dashboardViewModel"
@@ -413,14 +411,9 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
     collections,
   } = useContractDashboardData(org, contract)
 
-  const managerDashboardFlag = useFeatureFlag(
-    FeatureFlags.B2BContractManagerDashboard,
+  const { data: managerOrgs } = useQuery(
+    managerOrganizationQueries.managerOrganizationsList(),
   )
-  const analyticsEnabled = useFeatureFlag(FeatureFlags.B2BAnalyticsDashboard)
-  const { data: managerOrgs } = useQuery({
-    ...managerOrganizationQueries.managerOrganizationsList(),
-    enabled: managerDashboardFlag || analyticsEnabled,
-  })
   const isManager =
     managerOrgs?.some(matchOrganizationBySlug(stripOrgPrefix(org.slug))) ??
     false
@@ -552,11 +545,8 @@ const ContractContent: React.FC<ContractContentProps> = ({
     (contract) => contract.slug === contractSlug,
   )
 
-  const consentFlag = useFeatureFlag(FeatureFlags.B2BDataConsent)
   const consentRequired =
-    consentFlag &&
-    !!b2bContract &&
-    b2bContract.consented_to_data_sharing !== true
+    !!b2bContract && b2bContract.consented_to_data_sharing !== true
   const router = useRouter()
   const announce = useDashboardAnnounce()
 

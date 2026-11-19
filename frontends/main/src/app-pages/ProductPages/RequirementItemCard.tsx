@@ -35,10 +35,8 @@ const RequirementItemCard: React.FC<RequirementItemCardProps> = ({
           resource={course}
           resourceType="course"
           href={course ? coursePageView(course.readable_id) : ""}
-          size="small"
           isLoading={isLoading}
           label={label}
-          list
         />
       </li>
     )
@@ -58,10 +56,8 @@ const RequirementItemCard: React.FC<RequirementItemCardProps> = ({
               })
             : ""
         }
-        size="small"
         isLoading={isLoading}
         label={label}
-        list
       />
     </li>
   )

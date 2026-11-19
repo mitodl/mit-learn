@@ -2,15 +2,48 @@ import React from "react"
 import * as yup from "yup"
 import {
   CertificateDesiredEnum,
-  CertificateDesiredEnumDescriptions,
   CurrentEducationEnum,
-  CurrentEducationEnumDescriptions,
   GoalsEnum,
-  GoalsEnumDescriptions,
   DeliveryEnum,
-  DeliveryEnumDescriptions,
 } from "api/v0"
 import { SimpleSelectOption } from "ol-components"
+
+/*
+ * Display labels for the profile choices. Keyed on the generated enums so that
+ * a new backend choice is a type error here until it has a label. The backend's
+ * choice labels are API documentation, not UI copy, so the strings live here.
+ */
+const DELIVERY_LABELS: Record<DeliveryEnum, string> = {
+  [DeliveryEnum.Online]: "Online",
+  [DeliveryEnum.Hybrid]: "Hybrid",
+  [DeliveryEnum.InPerson]: "In-Person",
+  [DeliveryEnum.Offline]: "Offline",
+}
+
+const GOALS_LABELS: Record<GoalsEnum, string> = {
+  [GoalsEnum.AcademicExcellence]: "Academic Boost",
+  [GoalsEnum.CareerGrowth]: "Career Growth",
+  [GoalsEnum.LifelongLearning]: "Lifelong Learning",
+}
+
+const CURRENT_EDUCATION_LABELS: Record<CurrentEducationEnum, string> = {
+  [CurrentEducationEnum.Doctorate]: "Doctorate",
+  [CurrentEducationEnum.MastersOrProfessionalDegree]:
+    "Master's or professional degree",
+  [CurrentEducationEnum.BachelorsDegree]: "Bachelor's degree",
+  [CurrentEducationEnum.AssociateDegree]: "Associate degree",
+  [CurrentEducationEnum.SecondaryHighSchool]: "Secondary/high school",
+  [CurrentEducationEnum.JuniorSecondaryJuniorHighMiddleSchool]:
+    "Junior secondary/junior high/middle school",
+  [CurrentEducationEnum.NoFormalEducation]: "No formal education",
+  [CurrentEducationEnum.OtherEducation]: "Other education",
+}
+
+const CERTIFICATE_DESIRED_LABELS: Record<CertificateDesiredEnum, string> = {
+  [CertificateDesiredEnum.Yes]: "Yes, I am looking for a certificate",
+  [CertificateDesiredEnum.No]: "No, I am not looking for a certificate",
+  [CertificateDesiredEnum.NotSureYet]: "Not Sure",
+}
 
 const DELIVERY_CHOICES = [
   DeliveryEnum.Online,
@@ -19,23 +52,23 @@ const DELIVERY_CHOICES = [
   DeliveryEnum.Offline,
 ].map((value) => ({
   value,
-  label: DeliveryEnumDescriptions[value],
+  label: DELIVERY_LABELS[value],
 }))
 
 const GOALS_CHOICES = [
   {
     value: GoalsEnum.AcademicExcellence,
-    label: GoalsEnumDescriptions[GoalsEnum.AcademicExcellence],
+    label: GOALS_LABELS[GoalsEnum.AcademicExcellence],
     description: "Support my degree studies with supplemental learning.",
   },
   {
     value: GoalsEnum.CareerGrowth,
-    label: GoalsEnumDescriptions[GoalsEnum.CareerGrowth],
+    label: GOALS_LABELS[GoalsEnum.CareerGrowth],
     description: "Advance my career through new skills and certifications.",
   },
   {
     value: GoalsEnum.LifelongLearning,
-    label: GoalsEnumDescriptions[GoalsEnum.LifelongLearning],
+    label: GOALS_LABELS[GoalsEnum.LifelongLearning],
     description: "Learn about topics that spark my curiosity.",
   },
 ]
@@ -48,7 +81,7 @@ const EDUCATION_LEVEL_OPTIONS: SimpleSelectOption[] = [
   },
   ...Object.values(CurrentEducationEnum).map((value) => ({
     value,
-    label: CurrentEducationEnumDescriptions[value],
+    label: CURRENT_EDUCATION_LABELS[value],
   })),
 ]
 
@@ -58,7 +91,7 @@ const CERTIFICATE_CHOICES = [
   CertificateDesiredEnum.NotSureYet,
 ].map((value) => ({
   value,
-  label: CertificateDesiredEnumDescriptions[value],
+  label: CERTIFICATE_DESIRED_LABELS[value],
 }))
 
 const ProfileSchema = yup.object().shape({

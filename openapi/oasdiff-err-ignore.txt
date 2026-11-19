@@ -60,3 +60,14 @@
 2026-11-04 POST /api/v1/webhooks/content_files/delete/ removed the enum value `mit_edx` of the request property `source` (media type: application/json)
 2026-11-04 POST /api/v1/webhooks/content_files/delete/ removed the enum value `mit_edx` of the request property `source` (media type: application/x-www-form-urlencoded)
 2026-11-04 POST /api/v1/webhooks/content_files/delete/ removed the enum value `mit_edx` of the request property `source` (media type: multipart/form-data)
+
+# Removing the People widget type. Its response serialized each listed
+# user's full profile and their usernames (emails for SCIM users) to
+# anonymous callers, and no frontend renders widgets.
+# https://github.com/mitodl/hq/issues/14349
+2026-11-10 PATCH /api/v0/widget_lists/{id}/ removed the enum value `People` of the request property `widgets/items/widget_type` (media type: application/json)
+2026-11-10 PATCH /api/v0/widget_lists/{id}/ removed the enum value `People` of the request property `widgets/items/widget_type` (media type: application/x-www-form-urlencoded)
+2026-11-10 PATCH /api/v0/widget_lists/{id}/ removed the enum value `People` of the request property `widgets/items/widget_type` (media type: multipart/form-data)
+2026-11-10 PUT /api/v0/widget_lists/{id}/ removed the enum value `People` of the request property `widgets/items/widget_type` (media type: application/json)
+2026-11-10 PUT /api/v0/widget_lists/{id}/ removed the enum value `People` of the request property `widgets/items/widget_type` (media type: application/x-www-form-urlencoded)
+2026-11-10 PUT /api/v0/widget_lists/{id}/ removed the enum value `People` of the request property `widgets/items/widget_type` (media type: multipart/form-data)

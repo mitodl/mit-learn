@@ -17,6 +17,7 @@ import type {
 } from "@mitodl/mitxonline-api-axios/v2"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import {
+  expectWindowNavigation,
   renderWithProviders,
   waitFor,
   screen,
@@ -849,8 +850,10 @@ describe("ProgramPage", () => {
     renderWithProviders(<ProgramPage readableId={program.readable_id} />)
 
     const course = courses[0]
-    const card = await screen.findByRole("heading", { name: course.title })
-    await user.click(card)
+    const link = await screen.findByRole("link", {
+      name: new RegExp(course.title),
+    })
+    await expectWindowNavigation(() => user.click(link))
 
     expect(mockCapture).toHaveBeenCalledWith(
       PostHogEvents.CourseCardClicked,

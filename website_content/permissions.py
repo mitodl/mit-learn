@@ -1,7 +1,12 @@
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 from learning_resources.permissions import is_admin_user
-from website_content.constants import GROUP_WEBSITE_CONTENT_EDITORS
+from website_content.constants import (
+    GROUP_WEBSITE_CONTENT_EDITORS,
+    WebsiteContentStatus,
+)
+
+DRAFT_STATUSES = {WebsiteContentStatus.draft.name, WebsiteContentStatus.both.name}
 
 
 def is_website_content_editor(request):
@@ -26,7 +31,18 @@ class CanViewWebsiteContent(BasePermission):
     Allow viewing a content item if:
     - user is admin/content editor, OR
     - the item is published
+
+    Listing drafts (`?status=draft` or `?status=both`) is editor-only.
     """
+
+    def has_permission(self, request, view):
+        asks_for_drafts = (
+            view.action == "list"
+            and request.query_params.get("status") in DRAFT_STATUSES
+        )
+        if asks_for_drafts:
+            return is_admin_user(request) or is_website_content_editor(request)
+        return True
 
     def has_object_permission(self, request, _, obj):
         if is_admin_user(request) or is_website_content_editor(request):

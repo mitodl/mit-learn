@@ -25,6 +25,8 @@ import { analytics } from "@/common/analytics"
 import { useFeatureFlag } from "@/common/useFeatureFlag"
 import HeaderEnrollButton from "./HeaderEnrollButton"
 import { useCourseEnrollment } from "./useCourseEnrollment"
+import { useCertificatePricing } from "./useCertificatePricing"
+import { canPurchaseRun } from "@/common/mitxonline"
 import { getSelectedRun } from "./courseRun"
 import type {
   CourseRunV2,
@@ -45,25 +47,26 @@ const CourseHeaderEnrollButton: React.FC<{
   course: CourseWithCourseRunsSerializerV2
   selectedRun: CourseRunV2 | undefined
 }> = ({ course, selectedRun }) => {
-  const [anchor, setAnchor] = React.useState<null | HTMLButtonElement>(null)
-
   const { state, isStatusLoading, isPending, error } = useCourseEnrollment(
     course,
     selectedRun,
     {
       tracking: { placement: "header" },
-      onRequireSignup: setAnchor,
     },
+  )
+  const { price, breakdown } = useCertificatePricing(
+    course,
+    selectedRun?.products?.[0],
+    { purchasable: selectedRun ? canPurchaseRun(selectedRun) : false },
   )
 
   return (
     <HeaderEnrollButton
       state={state}
+      price={breakdown?.todaysPrice ?? price}
       isStatusLoading={isStatusLoading}
       isPending={isPending}
       error={error}
-      anchor={anchor}
-      onAnchorClose={() => setAnchor(null)}
     />
   )
 }

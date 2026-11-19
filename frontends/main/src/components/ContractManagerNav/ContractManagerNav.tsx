@@ -89,12 +89,8 @@ const ContractManagerNav: React.FC<ContractManagerNavProps> = ({
   contractSlug,
   current,
 }) => {
-  const analyticsEnabled = useFeatureFlag(FeatureFlags.B2BAnalyticsDashboard)
   const learnerAnalyticsEnabled = useFeatureFlag(
     FeatureFlags.B2BLearnerAnalytics,
-  )
-  const managerDashboardEnabled = useFeatureFlag(
-    FeatureFlags.B2BContractManagerDashboard,
   )
 
   const { data: mitxOnlineUser } = useQuery(mitxUserQueries.me())
@@ -119,35 +115,31 @@ const ContractManagerNav: React.FC<ContractManagerNavProps> = ({
       key: "analytics",
       label: "Analytics",
       href: contractAnalyticsView(orgSlug, contractSlug),
-      enabled: analyticsEnabled,
+      enabled: true,
     },
     {
       key: "learners",
       label: "Learners",
       href: contractLearnersView(orgSlug, contractSlug),
-      enabled: analyticsEnabled && learnerAnalyticsEnabled,
+      enabled: learnerAnalyticsEnabled,
     },
     {
       key: "seats",
       label: "Manage seats",
       href: contractAdminView(orgSlug, contractSlug),
-      enabled: managerDashboardEnabled,
+      enabled: true,
     },
   ]
   const visible = sections.filter((section) => section.enabled)
-  const showNav = visible.length >= 2
 
   const navRef = useRef<HTMLElement>(null)
   useEffect(() => {
-    if (!showNav) return
     const key = takeFocusTarget()
     if (document.activeElement !== document.body) return
     navRef.current
       ?.querySelector<HTMLAnchorElement>(`a[data-section="${key}"]`)
       ?.focus()
-  }, [showNav])
-
-  if (!showNav) return null
+  }, [])
 
   return (
     <nav aria-label="Contract" ref={navRef}>

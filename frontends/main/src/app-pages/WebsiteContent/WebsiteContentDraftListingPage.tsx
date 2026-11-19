@@ -12,10 +12,11 @@ import {
   LoadingSpinner,
   Typography,
 } from "ol-components"
-import { Permission } from "api/hooks/user"
+import { Permission, useUserHasPermission } from "api/hooks/user"
 import { useWebsiteContentList } from "api/hooks/website_content"
 import {
   WebsiteContentContentTypeEnum,
+  WebsiteContentListStatusEnum,
   type WebsiteContent,
   type WebsiteContentApiWebsiteContentListRequest as WebsiteContentListRequest,
 } from "api/v1"
@@ -164,12 +165,16 @@ const WebsiteContentDraftListingPage: React.FC<
   const listParams: WebsiteContentListRequest = {
     limit: PAGE_SIZE,
     offset: (page - 1) * PAGE_SIZE,
-    draft: true,
+    status: WebsiteContentListStatusEnum.Draft,
     content_type: type,
   }
 
+  // The API answers a non-editor's request for drafts with a 403, so wait for
+  // the user check rather than let that 403 reach the error boundary;
+  // RestrictedRoute shows non-editors the login or forbidden page instead.
+  const isEditor = useUserHasPermission(Permission.ArticleEditor)
   const { data: contentItems, isLoading: isLoadingContentItems } =
-    useWebsiteContentList(listParams)
+    useWebsiteContentList(listParams, { enabled: isEditor })
 
   useEffect(() => {
     if (page > 1 && scrollRef.current) {

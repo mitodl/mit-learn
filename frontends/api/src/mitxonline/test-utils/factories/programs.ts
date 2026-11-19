@@ -143,6 +143,7 @@ const simpleProgram: PartialFactory<V3SimpleProgram> = (overrides = {}) => {
     ]),
     live: faker.datatype.boolean(),
     display_mode: null,
+    has_live_product_page: true,
   }
 
   return mergeOverrides<V3SimpleProgram>(defaults, overrides)

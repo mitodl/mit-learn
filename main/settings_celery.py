@@ -230,11 +230,9 @@ CELERY_BEAT_SCHEDULE = (
 )
 
 # MicroMasters/MITx Online program certificate sync (StarRocks-backed — see
-# learning_resources.lib.warehouse.BaseWarehouseETLTask), replacing the
-# Hightouch sync into external.programcertificate (mitodl/hq#12954).
-# Doesn't participate in the cutover-switch mechanism below: Hightouch runs
-# externally, not as an MIT Learn Celery task, so there's no legacy beat
-# entry here to retire once validated.
+# learning_resources.lib.warehouse.BaseWarehouseETLTask, mitodl/hq#12954).
+# Doesn't participate in the cutover-switch mechanism below: certificates are
+# not catalog resources, so there is no legacy ETL beat entry to retire.
 if (
     not CELERY_BEAT_DISABLED
     and get_string("STARROCKS_HOST", None)
@@ -287,9 +285,14 @@ if (
                 "schedule": crontab(minute=0, hour=13),
                 "kwargs": {"full_refresh": True},
             },
+            # The data platform rebuilds the OCW course view after each
+            # ocw-studio staging build, a few minutes past 00:00, 06:00,
+            # 12:00 and 18:00 UTC. This daily run follows the midday build,
+            # as the reconciliation for a missed warehouse_views_rebuilt
+            # webhook.
             "warehouse-sync-ocw-courses-every-1-days": {
                 "task": "learning_resources.tasks.SyncOCWCoursesTask",
-                "schedule": crontab(minute=0, hour=12),
+                "schedule": crontab(minute=30, hour=12),
                 "kwargs": {"full_refresh": True},
             },
             # After their sources' courses, whose runs the files load into.
