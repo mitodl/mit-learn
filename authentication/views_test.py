@@ -402,9 +402,9 @@ def mock_is_sso_user(mocker):
 
 
 @pytest.fixture(autouse=True)
-def account_action_settings(settings):
+def keycloak_settings(settings):
     """
-    Pin the settings the account action flow reads.
+    Pin the settings the account action and partner login flows read.
 
     KEYCLOAK_CLIENT_ID has no default and MITOL_API_BASE_URL defaults to empty,
     so without this these tests assert against whatever the environment
