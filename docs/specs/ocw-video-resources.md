@@ -1,20 +1,8 @@
----
-layout: default
-parent: RFCs
-nav_order: 5
-has_toc: true
----
+# OCW Video Resources — Spec
 
-# 0005: OCW Video Resources
-
-{: .no_toc }
-
-## Table of Contents
-
-{: .no_toc .text-delta }
-
-- Table of Contents
-  {:toc}
+Status: **shipped** — history. What it reached is in the code; the checkboxes below record what was planned in 2020, not what is true now.
+Authored: 2020-09-24 by Matt Bertrand
+Basis: migrated from `docs/rfcs/0005-video-resources.md`
 
 ### Abstract
 
