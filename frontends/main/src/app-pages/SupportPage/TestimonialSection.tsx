@@ -44,11 +44,14 @@ export const TESTIMONIAL_EXTRAS: Record<string, TestimonialExtras> = {
 const mediaUrl = (url: string) =>
   new URL(url, env("NEXT_PUBLIC_MITOL_API_BASE_URL")).toString()
 
-const Inner = styled(SectionInner)({
+const Inner = styled(SectionInner)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: "40px",
-})
+  [theme.breakpoints.down("sm")]: {
+    gap: "24px",
+  },
+}))
 
 const Header = styled.div(({ theme }) => ({
   display: "flex",
@@ -56,6 +59,7 @@ const Header = styled.div(({ theme }) => ({
   gap: "8px",
   [theme.breakpoints.down("sm")]: {
     flexDirection: "column",
+    alignItems: "stretch",
     gap: "16px",
   },
 }))
@@ -119,7 +123,11 @@ const Quote = styled.blockquote(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
   margin: 0,
   [theme.breakpoints.down("sm")]: {
-    ...theme.typography.h4,
+    ...theme.typography.h5,
+    fontSize: theme.typography.pxToRem(20),
+    lineHeight: theme.typography.pxToRem(28),
+    // 16px to the attribution, against the story's 12px gap.
+    marginBottom: "4px",
   },
 }))
 
@@ -131,6 +139,9 @@ const Attribution = styled.p(({ theme }) => ({
     fontWeight: theme.typography.fontWeightBold,
     color: theme.custom.colors.darkGray2,
   },
+  [theme.breakpoints.down("sm")]: {
+    ...theme.typography.body2,
+  },
 }))
 
 const Summary = styled.p(({ theme }) => ({
@@ -138,6 +149,9 @@ const Summary = styled.p(({ theme }) => ({
   lineHeight: theme.typography.pxToRem(24),
   color: theme.custom.colors.silverGrayDark,
   margin: 0,
+  [theme.breakpoints.down("sm")]: {
+    ...theme.typography.body2,
+  },
 }))
 
 const TextLink = styled.a(({ theme }) => ({
@@ -154,6 +168,11 @@ const TextLink = styled.a(({ theme }) => ({
   "&:hover": {
     textDecoration: "underline",
   },
+  [theme.breakpoints.down("sm")]: {
+    ...theme.typography.body2,
+    fontWeight: theme.typography.fontWeightBold,
+    gap: "4px",
+  },
 }))
 
 const Prompt = styled.p(({ theme }) => ({
@@ -164,6 +183,18 @@ const Prompt = styled.p(({ theme }) => ({
   gap: "8px",
   color: theme.custom.colors.darkGray2,
   margin: 0,
+  [theme.breakpoints.down("sm")]: {
+    ...theme.typography.body2,
+    columnGap: "16px",
+  },
+}))
+
+/** Roughly the loaded card's height, so the page doesn't jump. */
+const CardSkeleton = styled(Skeleton)(({ theme }) => ({
+  height: "503px",
+  [theme.breakpoints.down("sm")]: {
+    height: "600px",
+  },
 }))
 
 const newTab = { target: "_blank", rel: "noopener noreferrer" }
@@ -255,9 +286,8 @@ const TestimonialSection: React.FC = () => {
             shareStoryUrl={shareStoryUrl}
           />
         ) : (
-          <Skeleton
+          <CardSkeleton
             variant="rectangular"
-            height={503}
             data-testid="testimonial-skeleton"
           />
         )}

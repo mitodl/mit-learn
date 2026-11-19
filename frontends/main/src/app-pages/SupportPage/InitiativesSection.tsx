@@ -11,11 +11,14 @@ import {
 import { Section, SectionInner, SectionTitle } from "./SectionLayout"
 import { ONE_PAGER_URLS, OPEN_LEARNING_GIVE_URL } from "./links"
 
-const Inner = styled(SectionInner)({
+const Inner = styled(SectionInner)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: "64px",
-})
+  [theme.breakpoints.down("sm")]: {
+    gap: "24px",
+  },
+}))
 
 const Intro = styled.div(({ theme }) => ({
   display: "flex",
@@ -39,12 +42,20 @@ const Lead = styled.div(({ theme }) => ({
     paddingRight: 0,
     borderRight: "none",
   },
+  [theme.breakpoints.down("sm")]: {
+    justifyContent: "flex-start",
+    gap: "12px",
+  },
 }))
 
 const Tagline = styled.p(({ theme }) => ({
   ...theme.typography.h4,
   color: theme.custom.colors.red,
   margin: 0,
+  [theme.breakpoints.down("sm")]: {
+    ...theme.typography.subtitle1,
+    lineHeight: 1.5,
+  },
 }))
 
 const Mission = styled.div(({ theme }) => ({
@@ -74,6 +85,9 @@ const Cards = styled.ul(({ theme }) => ({
     gridTemplateColumns: "minmax(0, 1fr)",
     gap: "16px",
   },
+  [theme.breakpoints.down("sm")]: {
+    gap: "24px",
+  },
 }))
 
 const Card = styled.li(({ theme }) => ({
@@ -85,8 +99,9 @@ const Card = styled.li(({ theme }) => ({
   border: `1px solid ${theme.custom.colors.lightGray2}`,
   borderRadius: "8px",
   [theme.breakpoints.down("sm")]: {
+    flexDirection: "column",
     gap: "16px",
-    padding: "24px",
+    padding: "16px",
   },
 }))
 
@@ -118,6 +133,19 @@ const CardTitle = styled.h3(({ theme }) => ({
   ...theme.typography.h4,
   color: theme.custom.colors.darkGray2,
   margin: 0,
+  [theme.breakpoints.down("sm")]: {
+    ...theme.typography.h5,
+  },
+}))
+
+/** Full width on phones, 32px below the cards. */
+const Action = styled.div(({ theme }) => ({
+  [theme.breakpoints.down("sm")]: {
+    marginTop: "8px",
+    "& > a": {
+      width: "100%",
+    },
+  },
 }))
 
 /** Grows so "Learn more" lines up across the cards in a row. */
@@ -223,7 +251,7 @@ const InitiativesSection: React.FC = () => (
           </Card>
         ))}
       </Cards>
-      <div>
+      <Action>
         <ButtonLink
           variant="primary"
           size="large"
@@ -232,7 +260,7 @@ const InitiativesSection: React.FC = () => (
         >
           Make a donation
         </ButtonLink>
-      </div>
+      </Action>
     </Inner>
   </Section>
 )

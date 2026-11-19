@@ -2,12 +2,15 @@ import React from "react"
 import { styled } from "ol-components"
 import { Section, SectionInner, SectionTitle } from "./SectionLayout"
 
-const Header = styled.div({
+const Header = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: "8px",
   paddingBottom: "22px",
-})
+  [theme.breakpoints.down("sm")]: {
+    paddingBottom: "24px",
+  },
+}))
 
 const Description = styled.p(({ theme }) => ({
   ...theme.typography.body2,
@@ -22,7 +25,8 @@ const Metrics = styled.dl(({ theme }) => ({
   borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
   borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
   [theme.breakpoints.down("sm")]: {
-    flexDirection: "column",
+    margin: 0,
+    border: `1px solid ${theme.custom.colors.lightGray2}`,
   },
 }))
 
@@ -47,14 +51,14 @@ const Metric = styled.div(({ theme }) => ({
     borderLeft: `1px solid ${theme.custom.colors.lightGray2}`,
   },
   [theme.breakpoints.down("sm")]: {
-    minHeight: 0,
+    justifyContent: "center",
+    gap: "8px",
+    padding: "16px",
+    // An 80px divider, centred on the metrics.
     "& + &::before": {
-      top: 0,
-      left: "32px",
-      right: "32px",
-      height: 0,
-      borderLeft: "none",
-      borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
+      top: "50%",
+      height: "80px",
+      transform: "translateY(-50%)",
     },
   },
 }))
@@ -63,7 +67,7 @@ const Value = styled.dd(({ theme }) => ({
   ...theme.typography.h1,
   margin: 0,
   [theme.breakpoints.down("sm")]: {
-    ...theme.typography.h2,
+    ...theme.typography.h3,
   },
 }))
 

@@ -15,6 +15,9 @@ const HeroBand = styled(Section)(({ theme }) => ({
   [theme.breakpoints.down("md")]: {
     padding: "40px 16px 56px",
   },
+  [theme.breakpoints.down("sm")]: {
+    padding: "32px 16px",
+  },
 }))
 
 const Inner = styled(SectionInner)(({ theme }) => ({
@@ -24,21 +27,30 @@ const Inner = styled(SectionInner)(({ theme }) => ({
     flexDirection: "column",
     gap: "32px",
   },
+  [theme.breakpoints.down("sm")]: {
+    gap: "24px",
+  },
 }))
 
-const Left = styled.div({
+const Left = styled.div(({ theme }) => ({
   flex: "736 1 0",
   minWidth: 0,
   display: "flex",
   flexDirection: "column",
   gap: "40px",
-})
+  [theme.breakpoints.down("sm")]: {
+    gap: "24px",
+  },
+}))
 
-const Copy = styled.div({
+const Copy = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: "16px",
-})
+  [theme.breakpoints.down("sm")]: {
+    gap: "8px",
+  },
+}))
 
 const Title = styled.h1(({ theme }) => ({
   ...theme.typography.h1,
@@ -53,6 +65,10 @@ const Subtitle = styled.p(({ theme }) => ({
   ...theme.typography.h5,
   color: theme.custom.colors.darkGray2,
   margin: 0,
+  [theme.breakpoints.down("sm")]: {
+    ...theme.typography.subtitle1,
+    lineHeight: 1.5,
+  },
 }))
 
 const Options = styled.ul({
@@ -78,22 +94,40 @@ const Option = styled("li", {
   }`,
   borderRadius: "8px",
   [theme.breakpoints.down("sm")]: {
-    flexWrap: "wrap",
+    display: "grid",
+    gridTemplateColumns: "48px minmax(0, 1fr)",
+    alignItems: "start",
+    rowGap: "16px",
+    columnGap: 0,
+    // 16px from the card's outer edge, as in the design, whose border sits
+    // inside the padding.
+    padding: "15px",
   },
 }))
 
 const OptionIcon = styled("span", {
-  shouldForwardProp: (prop) => prop !== "iconColor",
-})<{ iconColor: "red" | "darkGray2" }>(({ theme, iconColor }) => ({
-  display: "flex",
-  flexShrink: 0,
-  padding: "4px",
-  color: theme.custom.colors[iconColor],
-  svg: {
-    width: "40px",
-    height: "40px",
-  },
-}))
+  shouldForwardProp: (prop) => prop !== "iconColor" && prop !== "mobileSize",
+})<{ iconColor: "red" | "darkGray2"; mobileSize: number }>(
+  ({ theme, iconColor, mobileSize }) => ({
+    display: "flex",
+    flexShrink: 0,
+    padding: "4px",
+    color: theme.custom.colors[iconColor],
+    svg: {
+      width: "40px",
+      height: "40px",
+    },
+    // In a 48px slot beside the title; the design draws the two icons at
+    // slightly different sizes so they look the same weight.
+    [theme.breakpoints.down("sm")]: {
+      padding: mobileSize < 36 ? "0 4px" : 0,
+      svg: {
+        width: `${mobileSize}px`,
+        height: `${mobileSize}px`,
+      },
+    },
+  }),
+)
 
 const OptionText = styled.div({
   flex: 1,
@@ -107,6 +141,11 @@ const OptionTitle = styled.h2(({ theme }) => ({
   ...theme.typography.h4,
   color: theme.custom.colors.darkGray2,
   margin: 0,
+  [theme.breakpoints.down("sm")]: {
+    ...theme.typography.h5,
+    fontSize: theme.typography.pxToRem(20),
+    lineHeight: theme.typography.pxToRem(28),
+  },
 }))
 
 const OptionBody = styled.p(({ theme }) => ({
@@ -119,6 +158,7 @@ const OptionButton = styled(ButtonLink)(({ theme }) => ({
   flexShrink: 0,
   width: "174px",
   [theme.breakpoints.down("sm")]: {
+    gridColumn: "1 / -1",
     width: "100%",
   },
 }))
@@ -131,6 +171,9 @@ const Right = styled.figure(({ theme }) => ({
   [theme.breakpoints.down("md")]: {
     flex: "none",
     height: "300px",
+  },
+  [theme.breakpoints.down("sm")]: {
+    height: "260px",
   },
 }))
 
@@ -147,6 +190,11 @@ const Caption = styled.figcaption(({ theme }) => ({
   padding: "12px 20px",
   backgroundColor: theme.custom.colors.white,
   color: theme.custom.colors.silverGrayDark,
+  [theme.breakpoints.down("sm")]: {
+    right: "8px",
+    bottom: "8px",
+    padding: "12px 16px",
+  },
 }))
 
 type SupportOption = {
@@ -154,6 +202,8 @@ type SupportOption = {
   body: string
   icon: RemixiconComponentType
   iconColor: "red" | "darkGray2"
+  /** Icon size on phones, in px. */
+  mobileIconSize: number
   cta: string
   href: string
   highlighted?: boolean
@@ -168,6 +218,7 @@ const HeroSection: React.FC = () => {
       body: "Support the continued availability of free and open MIT education.",
       icon: RiHeartLine,
       iconColor: "red",
+      mobileIconSize: 32,
       cta: "Make a donation",
       href: OPEN_LEARNING_GIVE_URL,
       highlighted: true,
@@ -179,6 +230,7 @@ const HeroSection: React.FC = () => {
       body: "Tell us how open learning has made a difference for you.",
       icon: RiTeamLine,
       iconColor: "darkGray2",
+      mobileIconSize: 36,
       cta: "Share your story",
       href: shareStoryUrl,
       newTab: true,
@@ -199,7 +251,11 @@ const HeroSection: React.FC = () => {
           <Options>
             {options.map(({ icon: Icon, ...option }) => (
               <Option key={option.title} highlighted={option.highlighted}>
-                <OptionIcon aria-hidden iconColor={option.iconColor}>
+                <OptionIcon
+                  aria-hidden
+                  iconColor={option.iconColor}
+                  mobileSize={option.mobileIconSize}
+                >
                   <Icon />
                 </OptionIcon>
                 <OptionText>

@@ -5,11 +5,14 @@ import { RiArrowRightLine } from "@remixicon/react"
 import { Section, SectionInner, SectionTitle } from "./SectionLayout"
 import { IMPACT_REPORT_URLS } from "./links"
 
-const Inner = styled(SectionInner)({
+const Inner = styled(SectionInner)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: "40px",
-})
+  [theme.breakpoints.down("sm")]: {
+    gap: "24px",
+  },
+}))
 
 const Header = styled.div(({ theme }) => ({
   display: "flex",
@@ -30,15 +33,21 @@ const Cards = styled.div(({ theme }) => ({
     flexDirection: "column",
     gap: "16px",
   },
+  [theme.breakpoints.down("sm")]: {
+    gap: "24px",
+  },
 }))
 
-const Others = styled.div({
+const Others = styled.div(({ theme }) => ({
   flex: "556 1 0",
   minWidth: 0,
   display: "flex",
   flexDirection: "column",
   gap: "16px",
-})
+  [theme.breakpoints.down("sm")]: {
+    gap: "24px",
+  },
+}))
 
 /** The whole card is the link; its title names the report. */
 const Card = styled.a(({ theme }) => ({
@@ -50,6 +59,9 @@ const Card = styled.a(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
   "&:hover .view-report": {
     textDecoration: "underline",
+  },
+  [theme.breakpoints.down("sm")]: {
+    flexDirection: "column",
   },
 }))
 
@@ -72,7 +84,12 @@ const FeaturedCover = styled.div(({ theme }) => ({
     objectPosition: "center 70%",
   },
   [theme.breakpoints.down("sm")]: {
-    minHeight: "220px",
+    flex: "none",
+    minHeight: 0,
+    height: "210px",
+    img: {
+      objectPosition: "center",
+    },
   },
 }))
 
@@ -80,7 +97,7 @@ const FeaturedCover = styled.div(({ theme }) => ({
  * 350×234 at the design width. Narrower cards shrink the cover rather than
  * the text, which keeps at least COMPACT_TEXT_MIN_WIDTH.
  */
-const CompactCover = styled.div({
+const CompactCover = styled.div(({ theme }) => ({
   position: "relative",
   flex: "0 1 350px",
   minWidth: 0,
@@ -90,18 +107,30 @@ const CompactCover = styled.div({
     objectFit: "cover",
     objectPosition: "top",
   },
-})
+  [theme.breakpoints.down("sm")]: {
+    flex: "none",
+    alignSelf: "stretch",
+    aspectRatio: "auto",
+    height: "210px",
+    img: {
+      objectPosition: "center",
+    },
+  },
+}))
 
 const COMPACT_TEXT_MIN_WIDTH = "200px"
 
-const FeaturedText = styled.div({
+const FeaturedText = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: "16px",
   padding: "24px 32px",
-})
+  [theme.breakpoints.down("sm")]: {
+    padding: "16px",
+  },
+}))
 
-const CompactText = styled.div({
+const CompactText = styled.div(({ theme }) => ({
   flex: `1 0 ${COMPACT_TEXT_MIN_WIDTH}`,
   minWidth: 0,
   display: "flex",
@@ -109,17 +138,28 @@ const CompactText = styled.div({
   justifyContent: "space-between",
   gap: "16px",
   padding: "16px 24px",
-})
+  [theme.breakpoints.down("sm")]: {
+    flex: "none",
+    justifyContent: "flex-start",
+    padding: "16px",
+  },
+}))
 
 const FeaturedTitle = styled.h3(({ theme }) => ({
   ...theme.typography.h4,
   margin: 0,
+  [theme.breakpoints.down("sm")]: {
+    ...theme.typography.h5,
+  },
 }))
 
 const CompactTitle = styled.h3(({ theme }) => ({
   ...theme.typography.h5,
   color: theme.custom.colors.black,
   margin: 0,
+  [theme.breakpoints.down("sm")]: {
+    color: theme.custom.colors.darkGray2,
+  },
 }))
 
 const ViewReport = styled("span", {
@@ -134,6 +174,10 @@ const ViewReport = styled("span", {
   svg: {
     width: "20px",
     height: "20px",
+  },
+  [theme.breakpoints.down("sm")]: {
+    ...theme.typography.body2,
+    gap: "4px",
   },
 }))
 

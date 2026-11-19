@@ -20,6 +20,11 @@ export const Section = styled("section", {
   [theme.breakpoints.down("md")]: {
     padding: "40px 16px",
   },
+  // On phones the page body puts 40px of white between sections (see
+  // SupportPage), so white sections need no vertical padding of their own.
+  [theme.breakpoints.down("sm")]: {
+    padding: shade === "gray" ? "24px 16px" : "0 16px",
+  },
 }))
 
 export const SectionInner = styled.div({
@@ -34,5 +39,8 @@ export const SectionTitle = styled.h2(({ theme }) => ({
   margin: 0,
   [theme.breakpoints.down("md")]: {
     ...theme.typography.h3,
+  },
+  [theme.breakpoints.down("sm")]: {
+    ...theme.typography.h4,
   },
 }))
