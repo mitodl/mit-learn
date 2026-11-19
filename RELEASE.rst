@@ -1,6 +1,15 @@
 Release Notes
 =============
 
+Version 0.88.2
+--------------
+
+- List only published articles at /articles (#4320)
+- Run the warehouse catalog syncs when the data platform rebuilds their views (#4291)
+- Update the ETL cutover runbook for delivery sensors and RC rehearsals (#4292)
+- Queue a resource's search upsert only after its transaction commits (#4237)
+- Pin LITELLM_CUSTOM_PROVIDER in pytest.ini (#4343)
+
 Version 0.88.1
 --------------
 
