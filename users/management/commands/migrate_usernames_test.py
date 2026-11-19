@@ -6,8 +6,6 @@ import pytest
 from django.core.management import call_command
 
 from main.factories import UserFactory
-from widgets.factories import WidgetInstanceFactory
-from widgets.serializers.people import PeopleWidgetSerializer
 
 pytestmark = pytest.mark.django_db
 
@@ -91,50 +89,6 @@ def test_migrate_usernames_renames_across_batches(monkeypatch):
         "user1@example.com",
         "user2@example.com",
     ]
-
-
-def test_migrate_usernames_updates_people_widgets():
-    """People widgets list the renamed users by their new usernames"""
-    first = UserFactory.create(username="jdoe", email="next@example.com")
-    second = UserFactory.create(username="next@example.com", email="last@example.com")
-    unchanged = UserFactory.create(username="jane", email="")
-    widget = WidgetInstanceFactory.create(
-        type_people=True,
-        configuration={
-            "people": [unchanged.username, first.username, second.username],
-            "show_all_members_link": False,
-        },
-    )
-
-    _apply_and_get_usernames(first, second)
-
-    widget.refresh_from_db()
-    assert widget.configuration["people"] == [
-        "jane",
-        "next@example.com",
-        "last@example.com",
-    ]
-    assert [
-        person["username"]
-        for person in PeopleWidgetSerializer(widget).data["json"]["people"]
-    ] == ["jane", "next@example.com", "last@example.com"]
-
-
-def test_migrate_usernames_skips_people_widgets_without_renamed_users():
-    """People widgets that list no renamed user, or no one at all, are left alone"""
-    user = UserFactory.create(username="jdoe", email="jdoe@example.com")
-    unchanged = UserFactory.create(username="jane", email="")
-    unrelated = WidgetInstanceFactory.create(
-        type_people=True, configuration={"people": [unchanged.username]}
-    )
-    empty = WidgetInstanceFactory.create(type_people=True, configuration={})
-
-    assert _apply_and_get_usernames(user) == ["jdoe@example.com"]
-
-    unrelated.refresh_from_db()
-    empty.refresh_from_db()
-    assert unrelated.configuration == {"people": ["jane"]}
-    assert empty.configuration == {}
 
 
 def test_migrate_usernames_rerun_renames_nothing():

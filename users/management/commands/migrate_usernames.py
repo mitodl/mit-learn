@@ -12,21 +12,14 @@ email (ignoring case). A user is also skipped when their email is already
 another user's username (ignoring case), or is longer than the username column.
 Those users are listed by id for manual review.
 
-People widgets list users by username, so they're updated along with each
-rename.
-
 Reports what would change by default. Pass --apply to rename.
 """
 
 from django.contrib.auth import get_user_model
 from django.core.management import BaseCommand
-from django.db import transaction
 from django.db.models import Exists, F, OuterRef
 from django.db.models.functions import Length, Lower
 from django.template.defaultfilters import pluralize
-
-from widgets.models import WidgetInstance
-from widgets.serializers.people import PeopleWidgetSerializer
 
 User = get_user_model()
 
@@ -67,25 +60,6 @@ def _renameable_users():
     )
 
 
-def _rename_widget_people(new_usernames):
-    """
-    Replace renamed users' old usernames in People widgets.
-
-    :param new_usernames: new username by old username
-    :type new_usernames: dict[str, str]
-    """
-    widgets = WidgetInstance.objects.select_for_update().filter(
-        widget_type=PeopleWidgetSerializer.name,
-        configuration__people__has_any_keys=list(new_usernames),
-    )
-    for widget in widgets:
-        widget.configuration["people"] = [
-            new_usernames.get(username, username)
-            for username in widget.configuration["people"]
-        ]
-        widget.save(update_fields=["configuration"])
-
-
 def rename_users():
     """
     Set username to the lowercased email for every user where that can't collide.
@@ -93,24 +67,19 @@ def rename_users():
     Each batch is queried fresh, and renamed users drop out of the query, so
     this repeats until none are left. That also picks up a user whose rename
     was blocked by another user's old username once that user is renamed. Each
-    batch commits on its own, along with the People widgets that list its users,
-    so a run holds no row locks between batches, and an interrupted run can be
-    repeated.
+    batch commits on its own, so a run holds no row locks between batches, and
+    an interrupted run can be repeated.
 
     :returns: how many users were renamed
     :rtype: int
     """
     renamed = 0
     while batch := list(
-        _renameable_users().values_list("pk", "username", "lower_email")[
-            :UPDATE_BATCH_SIZE
-        ]
+        _renameable_users().values_list("pk", flat=True)[:UPDATE_BATCH_SIZE]
     ):
-        with transaction.atomic():
-            renamed += User.objects.filter(pk__in=[pk for pk, _, _ in batch]).update(
-                username=Lower("email"), scim_username=Lower("email")
-            )
-            _rename_widget_people({old: new for _, old, new in batch})
+        renamed += User.objects.filter(pk__in=batch).update(
+            username=Lower("email"), scim_username=Lower("email")
+        )
     return renamed
 
 
