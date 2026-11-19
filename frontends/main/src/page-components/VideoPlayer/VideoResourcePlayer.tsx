@@ -27,10 +27,16 @@ const VideoJsPlayer = dynamic<VideoJsPlayerProps>(
 )
 
 /**
- * Tallest the player gets. A vertical (9:16) video at full width would be
- * nearly twice as tall as the viewport, so it is narrowed and centred instead.
+ * Tallest a portrait player gets. A vertical (9:16) video at full width would
+ * be nearly twice as tall as the viewport, so it is narrowed and centred.
  */
-const MAX_PLAYER_HEIGHT = "80vh"
+const MAX_PORTRAIT_HEIGHT = "80vh"
+/**
+ * Narrowest a portrait player gets on a short window (e.g. a phone in
+ * landscape). Below 211px video.js switches to its "tiny" layout, which drops
+ * the progress bar and most controls.
+ */
+const MIN_PORTRAIT_WIDTH = "240px"
 
 const Wrapper = styled("div", {
   shouldForwardProp: (prop) => prop !== "videoAspectRatio",
@@ -40,10 +46,11 @@ const Wrapper = styled("div", {
   // Once the video reports its size, match it. Set as a class rather than an
   // inline style so pages that size the player themselves (the embed page)
   // still override it.
-  ...(videoAspectRatio
+  ...(videoAspectRatio ? { aspectRatio: String(videoAspectRatio) } : {}),
+  // Landscape videos stay full width; only portrait ones are height-capped.
+  ...(videoAspectRatio && videoAspectRatio < 1
     ? {
-        aspectRatio: String(videoAspectRatio),
-        width: `min(100%, calc(${MAX_PLAYER_HEIGHT} * ${videoAspectRatio}))`,
+        width: `min(100%, max(${MIN_PORTRAIT_WIDTH}, calc(${MAX_PORTRAIT_HEIGHT} * ${videoAspectRatio})))`,
         marginInline: "auto",
       }
     : {}),
