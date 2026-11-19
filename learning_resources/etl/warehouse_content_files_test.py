@@ -495,6 +495,35 @@ def test_load_run_replaces_the_units_with_the_view_units(warehouse_owns_content_
     ] == [("b", "core", 0), ("a", "assessment", 1)]
 
 
+def test_load_run_keeps_a_unit_whose_only_new_file_failed(warehouse_owns_content_files):
+    """
+    A unit whose only file failed extraction stays in the course, with the
+    other units replaced and the fingerprint stored
+    """
+    run = _run()
+    seq = UnitFactory.create(run=run, external_id="seq")
+    unit_rows = [
+        _unit_row(0, "seq", [["new", "core"]]),
+        _unit_row(1, "seq2", [["a", "core"]]),
+        # a new unit whose only file failed has nothing to keep
+        _unit_row(2, "seq3", [["new", "core"]]),
+    ]
+
+    warehouse_content_files.load_run(
+        run,
+        [_open_edx_row("a"), _open_edx_row("new", extraction_status="failed")],
+        expected_count=2,
+        unit_rows=unit_rows,
+    )
+
+    assert [
+        (unit.id, unit.position) for unit in run.units.filter(external_id="seq")
+    ] == [(seq.id, 0)]
+    assert set(run.units.values_list("external_id", flat=True)) == {"seq", "seq2"}
+    run.refresh_from_db()
+    assert run.checksum
+
+
 @pytest.mark.parametrize(
     "bad_row",
     [{"content_files": "not json"}, {"unit_order": None}, {"title": None}],

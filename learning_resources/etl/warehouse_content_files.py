@@ -32,6 +32,7 @@ units it has, as when the archive ETL can't build them.
 
 import json
 import logging
+from collections.abc import Collection
 
 from django.db.models import Count, Q
 
@@ -248,7 +249,11 @@ def transform_unit_rows(rows: list[dict]) -> list[dict]:
     ]
 
 
-def load_run_units(run: LearningResourceRun, unit_rows: list[dict]) -> bool:
+def load_run_units(
+    run: LearningResourceRun,
+    unit_rows: list[dict],
+    failed_keys: Collection[str] = (),
+) -> bool:
     """
     Replace a run's units with its rows of the units view. As in
     edx_shared.load_archive_units, a failure is logged rather than raised, so
@@ -260,6 +265,8 @@ def load_run_units(run: LearningResourceRun, unit_rows: list[dict]) -> bool:
     Args:
         run (LearningResourceRun): the run
         unit_rows (list of dict): the run's rows in its units view
+        failed_keys (collection of str): keys of the run's files whose text
+            failed to extract, so a unit dropped only for them is kept
 
     Returns:
         bool: whether the rows were read and loaded
@@ -272,7 +279,7 @@ def load_run_units(run: LearningResourceRun, unit_rows: list[dict]) -> bool:
         log.exception("Units not read for run %s", run.run_id)
         loaded = False
     try:
-        loaders.load_course_units(run, units)
+        loaders.load_course_units(run, units, failed_keys=failed_keys)
     except Exception:
         log.exception("Units not loaded for run %s", run.run_id)
         return False
@@ -314,13 +321,14 @@ def _keep_outline(run: LearningResourceRun):
         log.exception("Unit links not pruned for run %s", run.run_id)
 
 
-def _load_open_edx_units(
+def _load_open_edx_units(  # noqa: PLR0913
     run: LearningResourceRun,
     unit_rows: list[dict] | None,
     *,
     files_landed: bool,
     units_unread: bool,
     units_match: bool,
+    failed_keys: Collection[str],
 ) -> bool:
     """
     Replace an Open edX run's units once all its files have landed, and say
@@ -343,6 +351,8 @@ def _load_open_edx_units(
             was saved
         units_unread (bool): the units view was there to read and the read failed
         units_match (bool): the unit rows are from the files' export
+        failed_keys (collection of str): keys of the run's files whose text
+            failed to extract
 
     Returns:
         bool: False when the units should be read again
@@ -358,7 +368,7 @@ def _load_open_edx_units(
     if not files_landed:
         _keep_outline(run)
         return False
-    return load_run_units(run, unit_rows)
+    return load_run_units(run, unit_rows, failed_keys)
 
 
 def _refuse_unpublish_by_key(
@@ -494,6 +504,7 @@ def load_run(  # noqa: PLR0913
             files_landed=landed,
             units_unread=units_unread,
             units_match=units_match,
+            failed_keys=failed_keys,
         )
     if landed and units_loaded:
         run.checksum = _fingerprint(etl_source, _stats_of_rows(etl_source, rows))
