@@ -1,6 +1,6 @@
 import { renderHook, waitFor } from "@testing-library/react"
 import { UseQueryResult } from "@tanstack/react-query"
-import { LearningResource } from "../../generated/v1"
+import { LearningResource } from "@mitodl/mit-learn-api-axios/v1"
 import * as factories from "../../test-utils/factories"
 import {
   setupReactQueryTest,

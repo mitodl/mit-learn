@@ -1,6 +1,6 @@
 import { queryOptions } from "@tanstack/react-query"
 import { testimonialsApi } from "../../clients"
-import type { TestimonialsApiTestimonialsListRequest as TestimonialsListRequest } from "../../generated/v0"
+import type { TestimonialsApiTestimonialsListRequest as TestimonialsListRequest } from "@mitodl/mit-learn-api-axios/v0"
 
 const testimonialKeys = {
   root: ["testimonials"],

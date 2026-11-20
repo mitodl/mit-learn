@@ -1,4 +1,7 @@
-import { SourceTypeEnum, type PercolateQuery } from "../../generated/v1"
+import {
+  SourceTypeEnum,
+  type PercolateQuery,
+} from "@mitodl/mit-learn-api-axios/v1"
 import { type Factory, makePaginatedFactory } from "ol-test-utilities"
 import { faker } from "@faker-js/faker/locale/en"
 import { UniqueEnforcer } from "enforce-unique"

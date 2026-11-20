@@ -12,7 +12,7 @@ repos:
       - id: check-added-large-files
         # Branch API client tarballs (scripts/generate-branch-client.sh) are ~450 KB, near
         # the 500 KB limit; CI's api-clients-released check keeps them from merging.
-        exclude: "yarn.lock|.yarn/releases/.*|frontends/.yarn/releases/.*|generated/.*|^frontends/api/[^/]*-api-axios-[^/]*\\.tgz$"
+        exclude: "yarn.lock|.yarn/releases/.*|frontends/.yarn/releases/.*|^frontends/api/[^/]*-api-axios-[^/]*\\.tgz$"
       - id: check-merge-conflict
       - id: check-toml
       - id: debug-statements
@@ -77,8 +77,6 @@ repos:
           - poetry.lock
           - --exclude-files
           - yarn.lock
-          - --exclude-files
-          - ".*/generated/"
           - --exclude-files
           - "config/keycloak/tls/*"
           - --exclude-files

@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 
-import type { TestimonialsApiTestimonialsListRequest } from "../../generated/v0"
+import type { TestimonialsApiTestimonialsListRequest } from "@mitodl/mit-learn-api-axios/v0"
 import { testimonialsQueries } from "./queries"
 
 const useTestimonialList = (

@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 
-import type { ChannelsApiChannelsListRequest } from "../../generated/v0"
+import type { ChannelsApiChannelsListRequest } from "@mitodl/mit-learn-api-axios/v0"
 import { channelQueries } from "./queries"
 
 const useChannelsList = (
