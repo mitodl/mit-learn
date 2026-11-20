@@ -1,8 +1,6 @@
 /**
- * We generate an API client for the frontend using openapi-generator-typescript-axios.
- *
- * The generated code does not provide easy access to URLs, which are useful for
- * mocking requests during tests.
+ * The API client (the published @mitodl/mit-learn-api-axios package) does not
+ * provide easy access to URLs, which are useful for mocking requests during tests.
  */
 
 import type {
@@ -65,9 +63,6 @@ const query = (params: any) => {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Callable = (...args: any[]) => void
 type Params<API extends object, K extends keyof API> = API[K] extends Callable
-  ? Parameters<API[K]>[0]
-  : never
-type Paramsv0<API extends object, K extends keyof API> = API[K] extends Callable
   ? Parameters<API[K]>[0]
   : never
 
@@ -213,7 +208,7 @@ const channels = {
   featured: (channelType: string, name: string) =>
     `${getApiBaseUrl()}/api/v0/channels/type/${channelType}/${name}/featured/`,
   patch: (id: number) => `${getApiBaseUrl()}/api/v0/channels/${id}/`,
-  list: (params?: Paramsv0<ChannelsApi, "channelsList">) =>
+  list: (params?: Params<ChannelsApi, "channelsList">) =>
     `${getApiBaseUrl()}/api/v0/channels/${query(params)}`,
 }
 
@@ -230,7 +225,7 @@ const programCertificates = {
 }
 
 const testimonials = {
-  list: (params?: Paramsv0<TestimonialsApi, "testimonialsList">) =>
+  list: (params?: Params<TestimonialsApi, "testimonialsList">) =>
     `${getApiBaseUrl()}/api/v0/testimonials/${query(params)}`,
   details: (id: number) => `${getApiBaseUrl()}/api/v0/testimonials/${id}/`,
 }

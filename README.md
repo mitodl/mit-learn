@@ -106,7 +106,7 @@ MIT Learn uses [drf-spectacular](https://drf-spectacular.readthedocs.io/en/lates
 ./scripts/generate_openapi.sh
 ```
 
-The frontend's TypeScript API client is not generated in this repository. It is the published npm package [`@mitodl/mit-learn-api-axios`](https://www.npmjs.com/package/@mitodl/mit-learn-api-axios), built from the spec by [mitodl/mit-learn-api-clients](https://github.com/mitodl/mit-learn-api-clients) and pinned in `frontends/api/package.json`. `frontends/api` re-exports it as `api`, `api/v0` and `api/v1`. A new stable version is published when a backend release that changes the spec is finished, and Renovate proposes the bump. A frontend change that needs a backend API change therefore merges after that backend change is released.
+The frontend's TypeScript API client is not generated in this repository. It is the published npm package [`@mitodl/mit-learn-api-axios`](https://www.npmjs.com/package/@mitodl/mit-learn-api-axios), built from the spec by [mitodl/mit-learn-api-clients](https://github.com/mitodl/mit-learn-api-clients) and pinned in `frontends/api/package.json`. `frontends/api` re-exports it as `api`, `api/v0` and `api/v1`. A new stable version is published when a backend release that changes the spec is finished. A frontend change that needs a backend API change therefore merges after that backend change is released.
 
 ### Using an unreleased API client
 
