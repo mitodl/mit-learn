@@ -18,6 +18,7 @@ import {
   ORDER_ID_PARAM,
   EnrollmentAlertStatus,
   EnrollmentErrorType,
+  EnrollmentErrorTypeValue,
   OrderAlertStatus,
 } from "@/common/mitxonline"
 import {
@@ -52,7 +53,7 @@ const GENERIC_ENROLLMENT_ERROR: ErrorAlertCopy = {
  * The MITx Online types mirror the text MITx Online shows for the same
  * message on its own pages.
  */
-const ENROLLMENT_ERROR_COPY: Record<string, ErrorAlertCopy> = {
+const ENROLLMENT_ERROR_COPY: Record<EnrollmentErrorTypeValue, ErrorAlertCopy> = {
   [EnrollmentErrorType.INVALID_ENROLLMENT_CODE]: {
     label: "Enrollment Error - ",
     message: "The Enrollment Code is incorrect or no longer available.",
@@ -80,7 +81,10 @@ const ENROLLMENT_ERROR_COPY: Record<string, ErrorAlertCopy> = {
 /**
  * Copy for an `order_status` that says the payment did not go through.
  */
-const PAYMENT_ERROR_COPY: Record<string, ErrorAlertCopy> = {
+type OrderAlertStatusValue =
+  (typeof OrderAlertStatus)[keyof typeof OrderAlertStatus]
+
+const PAYMENT_ERROR_COPY: Partial<Record<OrderAlertStatusValue, ErrorAlertCopy>> = {
   [OrderAlertStatus.DECLINED]: {
     label: "Payment Error - ",
     message: "Your payment was declined. Please try again.",
