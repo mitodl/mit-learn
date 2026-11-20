@@ -53,30 +53,31 @@ const GENERIC_ENROLLMENT_ERROR: ErrorAlertCopy = {
  * The MITx Online types mirror the text MITx Online shows for the same
  * message on its own pages.
  */
-const ENROLLMENT_ERROR_COPY: Record<EnrollmentErrorTypeValue, ErrorAlertCopy> = {
-  [EnrollmentErrorType.INVALID_ENROLLMENT_CODE]: {
-    label: "Enrollment Error - ",
-    message: "The Enrollment Code is incorrect or no longer available.",
-    contactSupport: true,
-  },
-  [EnrollmentErrorType.ENROLL_FAILED]: GENERIC_ENROLLMENT_ERROR,
-  [EnrollmentErrorType.ENROLL_BLOCKED]: {
-    label: "Enrollment Error - ",
-    message:
-      "We're sorry, your country is currently blocked from enrolling in this course.",
-    contactSupport: false,
-  },
-  [EnrollmentErrorType.ENROLL_DUPLICATED]: {
-    label: "Enrollment Error - ",
-    message: "You are already enrolled in this course.",
-    contactSupport: true,
-  },
-  [EnrollmentErrorType.PAYMENT_ERROR_UNKNOWN]: {
-    label: "Payment Error - ",
-    message: "Something went wrong completing your order.",
-    contactSupport: true,
-  },
-}
+const ENROLLMENT_ERROR_COPY: Record<EnrollmentErrorTypeValue, ErrorAlertCopy> =
+  {
+    [EnrollmentErrorType.INVALID_ENROLLMENT_CODE]: {
+      label: "Enrollment Error - ",
+      message: "The Enrollment Code is incorrect or no longer available.",
+      contactSupport: true,
+    },
+    [EnrollmentErrorType.ENROLL_FAILED]: GENERIC_ENROLLMENT_ERROR,
+    [EnrollmentErrorType.ENROLL_BLOCKED]: {
+      label: "Enrollment Error - ",
+      message:
+        "We're sorry, your country is currently blocked from enrolling in this course.",
+      contactSupport: false,
+    },
+    [EnrollmentErrorType.ENROLL_DUPLICATED]: {
+      label: "Enrollment Error - ",
+      message: "You are already enrolled in this course.",
+      contactSupport: true,
+    },
+    [EnrollmentErrorType.PAYMENT_ERROR_UNKNOWN]: {
+      label: "Payment Error - ",
+      message: "Something went wrong completing your order.",
+      contactSupport: true,
+    },
+  }
 
 /**
  * Copy for an `order_status` that says the payment did not go through.
@@ -84,7 +85,9 @@ const ENROLLMENT_ERROR_COPY: Record<EnrollmentErrorTypeValue, ErrorAlertCopy> = 
 type OrderAlertStatusValue =
   (typeof OrderAlertStatus)[keyof typeof OrderAlertStatus]
 
-const PAYMENT_ERROR_COPY: Partial<Record<OrderAlertStatusValue, ErrorAlertCopy>> = {
+const PAYMENT_ERROR_COPY: Partial<
+  Record<OrderAlertStatusValue, ErrorAlertCopy>
+> = {
   [OrderAlertStatus.DECLINED]: {
     label: "Payment Error - ",
     message: "Your payment was declined. Please try again.",
