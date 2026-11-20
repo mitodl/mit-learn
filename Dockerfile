@@ -37,8 +37,10 @@ USER mitodl
 WORKDIR /src
 # BuildKit cache mount keeps the uv download cache across builds, making
 # uv.lock-bump rebuilds reuse already-downloaded wheels.
+# --no-default-groups, not --no-dev: pyproject's `default-groups = "all"` also
+# selects the prek group, which --no-dev leaves in.
 RUN --mount=type=cache,target=/opt/uv-cache,uid=1000,gid=1000 \
-    uv sync --frozen --no-install-project --no-dev
+    uv sync --frozen --no-install-project --no-default-groups
 
 # The dev dependencies, installed before any source so a source edit reuses them.
 FROM deps AS deps-dev
