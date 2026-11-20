@@ -264,4 +264,69 @@ describe("learningResourceCardContent", () => {
       })
     })
   })
+
+  describe("Practice problems", () => {
+    const { document, practiceProblem } = factories.learningResources
+    const problemResource = (
+      overrides: Partial<ReturnType<typeof practiceProblem>> = {},
+      image: ReturnType<typeof document>["image"] = null,
+    ) =>
+      document({
+        free: true,
+        image,
+        content_files: [],
+        practice_problem: practiceProblem({
+          document_title: "Problem set 2",
+          number: "3",
+          topics: ["Kinematics"],
+          parts: [
+            { label: "a", body: "Find $v$." },
+            { label: "b", body: "Find $x$." },
+          ],
+          ...overrides,
+        }),
+      })
+
+    test("Have no price panel", () => {
+      expect(learningResourceCardContent(problemResource()).price).toEqual({
+        tone: "neutral",
+      })
+    })
+
+    test("List their parts instead of a start date or format", () => {
+      expect(learningResourceCardContent(problemResource()).metadata).toEqual([
+        { label: "Parts", value: 2 },
+      ])
+      expect(
+        learningResourceCardContent(problemResource({ parts: [] })).metadata,
+      ).toEqual([])
+    })
+
+    test("Without a figure, show their problem set and topic or number", () => {
+      expect(
+        learningResourceCardContent(problemResource()).placeholderDetails,
+      ).toEqual({ label: "Problem set 2", value: "Kinematics" })
+      expect(
+        learningResourceCardContent(problemResource({ topics: [] }))
+          .placeholderDetails,
+      ).toEqual({ label: "Problem set 2", value: "Problem 3" })
+    })
+
+    test("With a figure, show it", () => {
+      const resource = problemResource(
+        {},
+        factories.learningResources.image({ url: "https://x/fig.png" }),
+      )
+      const content = learningResourceCardContent(resource)
+      expect(content.imageSrc).toBe("https://x/fig.png")
+    })
+
+    test("Other documents keep their price and no details", () => {
+      const content = learningResourceCardContent(
+        document({ free: true, practice_problem: null }),
+      )
+      expect(content.price.primary).toBe("Free")
+      expect(content.placeholderDetails).toBeUndefined()
+    })
+  })
 })

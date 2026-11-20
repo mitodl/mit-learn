@@ -241,7 +241,11 @@ def get_file_content(
             try:
                 s3_body = s3_obj["Body"].read() if s3_obj else None
                 if s3_body and use_ocr:
-                    content_json = extract_pdf_bytes_with_ocr(s3_body)
+                    content_json = extract_pdf_bytes_with_ocr(
+                        s3_body,
+                        key=s3_path,
+                        version=(s3_obj.get("ETag") or "").strip('"') or None,
+                    )
                 if s3_body and not content_json:
                     content_json = extract_text_metadata(
                         s3_body,
