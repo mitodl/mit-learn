@@ -402,9 +402,9 @@ def mock_is_sso_user(mocker):
 
 
 @pytest.fixture(autouse=True)
-def account_action_settings(settings):
+def keycloak_settings(settings):
     """
-    Pin the settings the account action flow reads.
+    Pin the settings the account action and partner login flows read.
 
     KEYCLOAK_CLIENT_ID has no default and MITOL_API_BASE_URL defaults to empty,
     so without this these tests assert against whatever the environment
@@ -593,3 +593,51 @@ def test_account_action_start_unconfigured_client(settings, client):
     )
     settings_url = f"{settings.APP_BASE_URL.removesuffix('/')}/dashboard/settings"
     assert resp.headers["Location"] == f"{settings_url}?{expected_params}"
+
+
+def test_partner_login(mocker, client):
+    """The partner login should hint Keycloak at the IdP and send a PKCE challenge"""
+    # The verifier/challenge pair from RFC 7636 Appendix B
+    mocker.patch(
+        "authentication.views.secrets.token_urlsafe",
+        return_value="dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
+    )
+    resp = client.get(reverse("partner-login", kwargs={"idp_alias": "masai"}))
+
+    assert resp.status_code == 302
+    parsed = urlparse(resp.headers["Location"])
+    assert (
+        f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
+        == "https://sso.example.edu/realms/olapps/protocol/openid-connect/auth"
+    )
+    assert parse_qs(parsed.query) == {
+        "client_id": ["ol-mitlearn-client"],
+        "response_type": ["code"],
+        "redirect_uri": ["https://api.example.edu/login"],
+        "scope": ["openid profile email organization:*"],
+        "kc_idp_hint": ["masai"],
+        "code_challenge": ["E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"],
+        "code_challenge_method": ["S256"],
+    }
+
+
+def test_partner_login_path_outside_gateway_login_paths():
+    """The gateway forces a login on /login and /login/*, before the view runs"""
+    path = reverse("partner-login", kwargs={"idp_alias": "UPGRAD"})
+
+    assert path == "/partner-login/UPGRAD/"
+
+
+def test_partner_login_rejects_non_slug_alias(client):
+    """The alias only goes into the hint; anything that isn't a slug never matches"""
+    assert client.get("/partner-login/a%2Fb/").status_code == 404
+
+
+def test_partner_login_unconfigured_client(settings, client):
+    """Without KEYCLOAK_CLIENT_ID the learner falls back to the gateway login"""
+    settings.KEYCLOAK_CLIENT_ID = None
+
+    resp = client.get(reverse("partner-login", kwargs={"idp_alias": "UPGRAD"}))
+
+    assert resp.status_code == 302
+    assert resp.headers["Location"] == "https://api.example.edu/login"
