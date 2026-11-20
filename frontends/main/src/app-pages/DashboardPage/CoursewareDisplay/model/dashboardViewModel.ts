@@ -135,6 +135,23 @@ export const getCourseDetailsLink = (
     : null
 
 /**
+ * Link to a course's product page from v2 course data, or null on a contract
+ * card or when the page wouldn't load. v2 course data has no
+ * has_live_product_page or course `live`, so this checks the CoursePage half
+ * of mitxonline's Course.has_live_product_page.
+ */
+export const getV2CourseDetailsLink = (
+  course: Pick<
+    CourseWithCourseRunsSerializerV2,
+    "readable_id" | "page" | "include_in_learn_catalog"
+  >,
+  isContractResource: boolean,
+): string | null =>
+  course.page?.live && course.include_in_learn_catalog && !isContractResource
+    ? coursePageView(course.readable_id)
+    : null
+
+/**
  * Link to a program's product page, or null when the page wouldn't load.
  */
 export const getProgramDetailsLink = (
