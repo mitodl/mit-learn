@@ -109,6 +109,7 @@ def test_parse_structured_problems():
     assert first.pages == [1, 2]
     assert first.topics == ["Kinematics"]
     assert first.points == "10"
+    assert first.section == ""
     # its first saved figure, from part (a)
     assert first.figure == {
         "url": "https://example.com/p1_1.png",
@@ -122,6 +123,17 @@ def test_parse_structured_problems():
     assert second.parts == []
     # an unsaved figure is not an image
     assert second.figure is None
+
+
+def test_parse_structured_problems_section():
+    """A problem's section is read from its tag"""
+    markdown = (
+        _header()
+        + _node("n1", "problem", problem="1", number="1", section="Part B")
+        + "## Problem 1\n\nFind $x$.\n"
+    )
+    [problem] = parse_structured_problems(markdown).problems
+    assert problem.section == "Part B"
 
 
 @pytest.mark.parametrize(

@@ -1251,6 +1251,7 @@ def test_delete_unlinked_figure_versions(figure_storage):
             "parts",
             "image",
             "unpublished",
+            "unpublished_image",
             "unlinked",
         )
     }
@@ -1279,13 +1280,21 @@ def test_delete_unlinked_figure_versions(figure_storage):
             {"label": "a", "body": "![a](https://cdn.test/figures/file/parts/p1_1.png)"}
         ]
     )
-    LearningResourceImageFactory.create(
-        url="https://cdn.test/figures/file/image/p1_1.png"
+    LearningResourceFactory.create(
+        image=LearningResourceImageFactory.create(
+            url="https://cdn.test/figures/file/image/p1_1.png"
+        )
     )
-    # an unpublished problem doesn't keep its version
+    # an unpublished problem doesn't keep its version, by its text or its image
     PracticeProblemFactory.create(
         learning_resource__published=False,
         statement="![a](https://cdn.test/figures/file/unpublished/p1_1.png)",
+    )
+    LearningResourceFactory.create(
+        published=False,
+        image=LearningResourceImageFactory.create(
+            url="https://cdn.test/figures/file/unpublished_image/p1_1.png"
+        ),
     )
     utils._delete_unlinked_figure_versions("figures/file/new")  # noqa: SLF001
     for name in (
@@ -1299,7 +1308,7 @@ def test_delete_unlinked_figure_versions(figure_storage):
         "image",
     ):
         assert (folders[name] / "p1_1.png").exists(), name
-    for name in ("unpublished", "unlinked"):
+    for name in ("unpublished", "unpublished_image", "unlinked"):
         assert not (folders[name] / "p1_1.png").exists(), name
 
 

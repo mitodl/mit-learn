@@ -80,7 +80,11 @@ from learning_resources.etl.ownership import (
     OwnershipError,
     shadowing,
 )
-from learning_resources.etl.practice_problems_test import structured_markdown
+from learning_resources.etl.practice_problems_test import (
+    _header,
+    _node,
+    structured_markdown,
+)
 from learning_resources.etl.utils import get_s3_prefix_for_source
 from learning_resources.etl.xpro import _parse_datetime
 from learning_resources.factories import (
@@ -4896,6 +4900,35 @@ def test_load_learning_materials_practice_problems_reloaded(mocker, settings):
     content_file.save()
     loaders.load_learning_materials(run, [])
     assert LearningResource.objects.get(id=ids["1"]).published is False
+
+
+@pytest.mark.django_db
+def test_load_learning_materials_practice_problems_sections(mocker, settings):
+    """Problems sharing a printed number are told apart by their section"""
+    settings.CREATE_HIDDEN_OCW_LEARNING_MATERIALS = True
+    content = (
+        _header()
+        + _node("a1", "problem", problem="1", number="1", section="Part A")
+        + "## Problem 1\n\nFirst.\n"
+        + _node("b1", "problem", problem="1", number="1", section="Part B")
+        + "## Problem 1\n\nSecond.\n"
+        + _node("c1", "problem", problem="1", number="1")
+        + "## Problem 1\n\nThird.\n"
+    )
+    run, content_file = _practice_problem_setup(content=content)
+    mocker.patch("learning_resources.etl.loaders.update_index")
+
+    loaders.load_learning_materials(run, [content_file.id])
+
+    prefix = f"{run.run_id}-{content_file.key}#"
+    assert dict(
+        PracticeProblem.objects.values_list("node_id", "learning_resource__readable_id")
+    ) == {
+        "a1": f"{prefix}problem-1",
+        "b1": f"{prefix}problem-part-b-1",
+        # no section to tell it apart
+        "c1": f"{prefix}problem-1-c1",
+    }
 
 
 @pytest.mark.django_db
