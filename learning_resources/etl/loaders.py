@@ -9,6 +9,7 @@ from django.contrib.auth import get_user_model
 from django.core.cache import caches
 from django.db import transaction
 from django.db.models import Max, Q, QuerySet
+from django.utils.text import slugify
 
 from learning_resources.constants import (
     CONTENT_TYPE_PAGE,
@@ -1441,9 +1442,12 @@ def load_practice_problems(
     resource_ids = []
     used_ids = set()
     for problem in document.problems:
-        # problems are identified by their printed number, so a file converted
-        # again keeps its problems' ids (and their places in user lists)
+        # problems are identified by their printed number (and, when numbering
+        # restarts, their section), so a file converted again keeps its
+        # problems' ids (and their places in user lists)
         suffix = f"problem-{problem.number}" if problem.number else problem.node_id
+        if suffix in used_ids and problem.number and problem.section:
+            suffix = f"problem-{slugify(problem.section)}-{problem.number}"
         if suffix in used_ids:
             suffix = f"{suffix}-{problem.node_id}"
         used_ids.add(suffix)
