@@ -244,7 +244,9 @@ def sync_courses(
     ]
     if not allow_mass_unpublish:
         refuse_mass_unpublish(
-            ETLSource.xpro.name, COURSE, kept_course_ids(courses_data)
+            ETLSource.xpro.name,
+            COURSE,
+            kept_course_ids(ETLSource.xpro.name, courses_data),
         )
     return len(
         loaders.load_courses(

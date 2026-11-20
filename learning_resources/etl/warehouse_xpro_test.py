@@ -539,6 +539,32 @@ def test_sync_courses_refuses_to_unpublish_more_than_the_limit(
         assert resource.published is True
 
 
+def test_sync_courses_keeps_the_test_mode_courses_the_view_omits(
+    warehouse_owns_xpro, api_courses
+):
+    """
+    The course load prunes no test_mode course, so leaving published ones out
+    unpublishes nothing and is not refused
+    """
+    test_mode = LearningResourceFactory.create_batch(
+        5,
+        etl_source=ETLSource.xpro.name,
+        resource_type=COURSE,
+        published=True,
+        test_mode=True,
+        platform__code=PlatformType.xpro.name,
+    )
+
+    with writing_as(Pipeline.WAREHOUSE):
+        warehouse_xpro.sync_courses(
+            [course_row(api_courses[0])], run_rows(api_courses[0])
+        )
+
+    for resource in test_mode:
+        resource.refresh_from_db()
+        assert resource.published is True
+
+
 def test_sync_courses_counts_only_published_courses_as_pulled(
     warehouse_owns_xpro, api_courses
 ):

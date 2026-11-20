@@ -575,3 +575,27 @@ def test_sync_courses_refuses_to_unpublish_more_than_the_limit(
     assert not LearningResource.objects.filter(
         readable_id=view_row(data_json)["readable_id"]
     ).exists()
+
+
+def test_sync_courses_keeps_the_test_mode_courses_the_view_omits(
+    warehouse_owns_ocw, data_json
+):
+    """
+    The course load prunes no test_mode course, so leaving published ones out
+    unpublishes nothing and is not refused
+    """
+    test_mode = LearningResourceFactory.create_batch(
+        5,
+        etl_source=ETLSource.ocw.name,
+        resource_type=COURSE,
+        published=True,
+        test_mode=True,
+        platform__code=PlatformType.ocw.name,
+    )
+
+    with writing_as(Pipeline.WAREHOUSE):
+        warehouse_ocw.sync_courses([view_row(data_json)])
+
+    for resource in test_mode:
+        resource.refresh_from_db()
+        assert resource.published is True

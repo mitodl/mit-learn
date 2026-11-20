@@ -37,7 +37,10 @@ from learning_resources.etl.ownership import (
     writing_as,
 )
 from learning_resources.etl.shadow import run_shadow
-from learning_resources.etl.warehouse_guards import mass_unpublish_refusal
+from learning_resources.etl.warehouse_guards import (
+    mass_unpublish_refusal,
+    omitted_test_mode_course_ids,
+)
 from learning_resources.models import LearningResource
 from learning_resources.tasks import (
     ingest_canvas_course,
@@ -471,23 +474,6 @@ def kept_readable_ids(resource_type, resources):
     return {readable_id for readable_id, is_kept in kept.items() if is_kept}
 
 
-def omitted_test_mode_course_ids(etl_source, resources):
-    """
-    Return the source's published test_mode courses a batch leaves out, which
-    load_courses does not prune. load_programs and load_documents do prune theirs.
-    """
-    return set(
-        LearningResource.objects.filter(
-            etl_source=etl_source,
-            resource_type=LearningResourceType.course.name,
-            published=True,
-            test_mode=True,
-        )
-        .exclude(readable_id__in=[resource["readable_id"] for resource in resources])
-        .values_list("readable_id", flat=True)
-    )
-
-
 def first_mass_unpublish_refusal(grouped):
     """
     Return why the first group over the unpublish limit is refused, or None if
@@ -498,7 +484,9 @@ def first_mass_unpublish_refusal(grouped):
             continue
         kept_ids = kept_readable_ids(resource_type, resources)
         if resource_type == LearningResourceType.course.name:
-            kept_ids |= omitted_test_mode_course_ids(etl_source, resources)
+            kept_ids |= omitted_test_mode_course_ids(
+                etl_source, {resource["readable_id"] for resource in resources}
+            )
         refusal = mass_unpublish_refusal(etl_source, resource_type, kept_ids)
         if refusal:
             return refusal
