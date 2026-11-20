@@ -5,11 +5,13 @@ import {
   CourseRunEnrollmentV3,
   V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v3"
-import { LoadingSpinner, Stack } from "ol-components"
+import { LoadingSpinner, SimpleMenu, Stack } from "ol-components"
+import { RiMore2Line } from "@remixicon/react"
 import {
   CardRoot,
   CardTypeText,
   CoursewareButton,
+  MenuButton,
   TitleHeading,
   TitleText,
   TitleButton,
@@ -22,7 +24,11 @@ import {
 import { SiblingRunsPanel, SiblingRunsToggle } from "./SiblingRunsAccordion"
 import { getCourseDateText } from "./courseDateUtils"
 import { EnrollmentStatus, getBestRun } from "./helpers"
-import { getBestStartableRun, runHasEnded } from "./model/dashboardViewModel"
+import {
+  getBestStartableRun,
+  getV2CourseDetailsLink,
+  runHasEnded,
+} from "./model/dashboardViewModel"
 import { isPaidProgramEnrollmentMode } from "@/common/mitxonline"
 import { useEnrollmentHandler } from "./hooks/useEnrollmentHandler"
 import { EnrollmentStatusIcon } from "./EnrollmentStatus"
@@ -158,6 +164,36 @@ export const UnenrolledCourseCard = ({
     </CoursewareButton>
   )
 
+  const detailsUrl = getV2CourseDetailsLink(course, isContractPageResource)
+  const menuButton = (
+    <MenuButton
+      size="small"
+      variant="text"
+      aria-label="More options"
+      hidden={!detailsUrl}
+      disabled={disabled}
+    >
+      <RiMore2Line />
+    </MenuButton>
+  )
+  // Rendered disabled rather than hidden so the CTA beside it doesn't shift.
+  const contextMenu =
+    disabled || !detailsUrl ? (
+      menuButton
+    ) : (
+      <SimpleMenu
+        items={[
+          {
+            className: "dashboard-card-menu-item",
+            key: "view-course-details",
+            label: "View Course Details",
+            href: detailsUrl,
+          },
+        ]}
+        trigger={menuButton}
+      />
+    )
+
   const progressBadgeSection =
     isModule && isCompact ? null : (
       <Stack direction="row" gap="8px" alignItems="center">
@@ -229,7 +265,10 @@ export const UnenrolledCourseCard = ({
               alignItems="flex-end"
               justifyContent="space-between"
             >
-              {startButton}
+              <Stack direction="row" gap="8px" alignItems="center">
+                {startButton}
+                {contextMenu}
+              </Stack>
               {runsToggle("desktop")}
             </Stack>
           </CardHeaderContent>
@@ -247,11 +286,11 @@ export const UnenrolledCourseCard = ({
           <Stack
             direction="row"
             gap="8px"
-            paddingRight="40px"
             alignItems="center"
             justifyContent="end"
           >
             {startButton}
+            {contextMenu}
           </Stack>
         </CardRoot>
       )}
@@ -288,6 +327,7 @@ export const UnenrolledCourseCard = ({
                 {titleSection}
                 {!isCompact && courseDateText}
               </Stack>
+              {contextMenu}
             </Stack>
             <Stack
               direction="row"

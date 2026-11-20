@@ -15,6 +15,7 @@ import { useComplianceGate } from "@/common/mitxonline/useComplianceGate"
 import CourseEnrollmentDialog from "@/page-components/EnrollmentDialogs/CourseEnrollmentDialog"
 import { analytics } from "@/common/analytics"
 import { canOpenCourseware } from "../courseDateUtils"
+import { runHasEnded } from "../model/dashboardViewModel"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
 import { badRequestDetailOr } from "api/mutation-errors"
@@ -161,7 +162,15 @@ export const useEnrollmentHandler = () => {
           },
         )
       } else {
-        const enrollmentAction = getCourseEnrollmentAction(course)
+        // Archived runs (ended, still enrollable) can't be started from the
+        // dashboard, so leave them out of both the action and the dialog.
+        const startableCourse = {
+          ...course,
+          courseruns: (course.courseruns ?? []).filter(
+            (run) => !runHasEnded(run),
+          ),
+        }
+        const enrollmentAction = getCourseEnrollmentAction(startableCourse)
 
         if (enrollmentAction.type === "audit") {
           await mutateWithCompliance(
@@ -201,7 +210,10 @@ export const useEnrollmentHandler = () => {
         const onCourseEnroll = (run: CourseRunV2) => {
           finishEnrollment(run.courseware_url!, run.start_date)
         }
-        NiceModal.show(CourseEnrollmentDialog, { course, onCourseEnroll })
+        NiceModal.show(CourseEnrollmentDialog, {
+          course: startableCourse,
+          onCourseEnroll,
+        })
       }
     },
     [
