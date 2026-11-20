@@ -62,7 +62,7 @@ const bootstrapPostHog = () => {
      * login (an anonymous request, then an identified one) keeps gated pages
      * on their loading state until ConfiguredPostHogProvider's 10s cap.
      * Waiting that long on a skeleton is worse than an occasional blip falling
-     * back to env defaults.
+     * back to the server's values and env defaults.
      */
     feature_flag_request_max_retries: 0,
     // Scope the posthog cookie to this site's exact domain. Posthog defaults

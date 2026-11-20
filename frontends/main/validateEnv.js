@@ -16,6 +16,7 @@ const yup = require("yup")
 const schema = yup.object().shape({
   // Server-only env vars
   MITOL_NOINDEX: yup.string().oneOf(["true", "false"]),
+  POSTHOG_SECRET_KEY: yup.string(),
   // Required client/server vars — must be present in local dev and at runtime.
   NEXT_PUBLIC_ORIGIN: yup
     .string()

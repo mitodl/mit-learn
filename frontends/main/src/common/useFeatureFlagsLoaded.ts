@@ -5,7 +5,7 @@ import { createContext, useContext } from "react"
  * identified as. ConfiguredPostHogProvider sets it.
  *
  * `true` by default: without a PostHog api key, and outside the provider, the
- * env defaults are the final values.
+ * server's values and env defaults are the final values.
  */
 const FeatureFlagsLoadedContext = createContext(true)
 
@@ -17,7 +17,8 @@ const FeatureFlagsLoadedContext = createContext(true)
  * 1. Avoid using this! Really!:
  *   - A page that waits on this shows its loading state until PostHog answers.
  *     `useFeatureFlag` meanwhile reads the flags PostHog stored on an earlier
- *     visit, or the env default, which is right for almost every flag.
+ *     visit, or the server's value and then the env default, which is right
+ *     for almost every flag.
  *
  *     USE CASE: an entire page is behind a feature flag. It shouldn't 404 or
  *     403 until the flag is final: once a page throws `notFound()`, Next keeps

@@ -25,8 +25,8 @@ jest.mock("@/common/useFeatureFlagsLoaded")
    longer behind one; the department cases turn theirs on for themselves. */
 beforeEach(() => {
   jest.mocked(useFeatureFlag).mockImplementation(() => false)
-  /* The page holds a spinner until the flags are in rather than render on an
-     env default, so without this every case here waits on one. Loaded
+  /* The page holds a spinner until the flags are in rather than render on a
+     fallback value, so without this every case here waits on one. Loaded
      is the state these tests are about; the waiting is its own case below. */
   jest.mocked(useFeatureFlagsLoaded).mockReturnValue(true)
 })
