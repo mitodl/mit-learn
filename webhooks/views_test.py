@@ -702,12 +702,16 @@ def test_ovs_video_webhook_rejects_hostile_urls(settings, client, mocker, hostil
         pytest.param(
             {"src": "https://du3yhovcx8dht.cloudfront.net/x.jpg"}, id="object"
         ),
+        pytest.param(
+            "http://du3yhovcx8dht.cloudfront.net/landing", id="http_on_allowed_host"
+        ),
     ],
 )
 def test_ovs_video_webhook_ignores_disallowed_cta_link(  # noqa: PLR0913
     settings, client, mocker, ovs_platform, webhook_owns_ovs, cta_link
 ):
     """A cta_link off the allowlist is ignored, not rejected: the OVS url is used."""
+    settings.OVS_ALLOWED_MEDIA_HOSTS = [".cloudfront.net"]
     mocker.patch("webhooks.views.clear_views_cache")
     mocker.patch("learning_resources.etl.loaders.update_index")
     mocker.patch(
