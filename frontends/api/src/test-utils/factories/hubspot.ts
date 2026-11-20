@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker/locale/en"
 import type { Factory } from "ol-test-utilities"
-import type { HubspotFormDefinition } from "../../generated/v1"
+import type { HubspotFormDefinition } from "@mitodl/mit-learn-api-axios/v1"
 
 const form: Factory<HubspotFormDefinition> = (overrides = {}) => ({
   id: faker.string.uuid(),

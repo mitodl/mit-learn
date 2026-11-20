@@ -29,8 +29,8 @@ import type {
   CoursesApiCoursesListRequest,
   VideosApiVideosListRequest,
   PodcastEpisodesApiPodcastEpisodesListRequest,
-} from "../../generated/v1"
-import type { VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest as VectorLearningResourcesSearchRetrieveRequest } from "../../generated/v0"
+} from "@mitodl/mit-learn-api-axios/v1"
+import type { VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest as VectorLearningResourcesSearchRetrieveRequest } from "@mitodl/mit-learn-api-axios/v0"
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query"
 import axiosInstance from "../../axios"
 import { toRelativeApiUrl } from "../../runtime/urls"

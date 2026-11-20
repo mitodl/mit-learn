@@ -11,7 +11,7 @@ import type {
   UserlistsApiUserlistsDestroyRequest as DestroyRequest,
   UserlistsApiUserlistsItemsListRequest as ItemsListRequest,
   UserList,
-} from "../../generated/v1"
+} from "@mitodl/mit-learn-api-axios/v1"
 import { userlistKeys, userlistQueries } from "./queries"
 import { useUserIsAuthenticated } from "api/hooks/user"
 import type { MutationHookOptions } from "../../mutations/mutationMeta"

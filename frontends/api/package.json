@@ -4,10 +4,10 @@
   "private": true,
   "sideEffects": false,
   "exports": {
-    ".": "./src/generated/v1/api.ts",
+    ".": "./src/v1.ts",
     "./runtime": "./src/runtime/index.ts",
-    "./v0": "./src/generated/v0/api.ts",
-    "./v1": "./src/generated/v1/api.ts",
+    "./v0": "./src/v0.ts",
+    "./v1": "./src/v1.ts",
     "./hooks/*": "./src/hooks/*/index.ts",
     "./hooks/*/queries": "./src/hooks/*/queries.ts",
     "./constants": "./src/common/constants.ts",
@@ -35,7 +35,7 @@
     "ol-test-utilities": "0.0.0"
   },
   "dependencies": {
-    "@mitodl/mit-learn-api-axios": "2026.8.17",
+    "@mitodl/mit-learn-api-axios": "2026.1119.0",
     "@mitodl/mitxonline-api-axios": "2026.11.16",
     "@mitodl/ol-analytics-dashboard-api-axios": "2026.11.5",
     "@tanstack/react-query": "^5.66.0",

@@ -10,7 +10,7 @@ import type {
   TestimonialsApi,
   ChannelsApi,
   VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest as VectorLearningResourcesSearchRequest,
-} from "../generated/v0"
+} from "@mitodl/mit-learn-api-axios/v0"
 import type {
   LearningResourcesApi as LRApi,
   FeaturedApi,
@@ -30,9 +30,7 @@ import type {
   VideosApi,
   PodcastEpisodesApi,
   LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as LearningResourcesSearchRequest,
-} from "../generated/v1"
-import type { BaseAPI } from "../generated/v1/base"
-import type { BaseAPI as BaseAPIv0 } from "../generated/v0/base"
+} from "@mitodl/mit-learn-api-axios/v1"
 import { queryify } from "ol-test-utilities"
 
 import learnAxios from "../axios"
@@ -66,13 +64,12 @@ const query = (params: any) => {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Callable = (...args: any[]) => void
-type Params<API extends BaseAPI, K extends keyof API> = API[K] extends Callable
+type Params<API extends object, K extends keyof API> = API[K] extends Callable
   ? Parameters<API[K]>[0]
   : never
-type Paramsv0<
-  API extends BaseAPIv0,
-  K extends keyof API,
-> = API[K] extends Callable ? Parameters<API[K]>[0] : never
+type Paramsv0<API extends object, K extends keyof API> = API[K] extends Callable
+  ? Parameters<API[K]>[0]
+  : never
 
 const learningResources = {
   list: (params?: Params<LRApi, "learningResourcesList">) =>

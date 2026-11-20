@@ -6,7 +6,7 @@ import type {
   HubspotApiHubspotFormsDetailRetrieveRequest,
   HubspotApiHubspotFormsListRequest,
   HubspotFormDefinition as HubspotFormDetailResponse,
-} from "../../generated/v1"
+} from "@mitodl/mit-learn-api-axios/v1"
 
 const hubspotKeys = {
   root: ["hubspot"],
