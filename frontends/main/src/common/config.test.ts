@@ -1,4 +1,33 @@
-import { getCacheSMaxageSeconds } from "./config"
+import { getCacheSMaxageSeconds, getSupportShareStoryUrl } from "./config"
+
+describe("getSupportShareStoryUrl", () => {
+  const originalEnv = process.env
+
+  beforeEach(() => {
+    process.env = { ...originalEnv }
+    delete process.env.NEXT_PUBLIC_SUPPORT_SHARE_STORY_URL
+  })
+  afterEach(() => {
+    process.env = originalEnv
+  })
+
+  test("returns the configured URL, trimmed", () => {
+    process.env.NEXT_PUBLIC_SUPPORT_SHARE_STORY_URL =
+      " https://forms.example.com/story \n"
+    expect(getSupportShareStoryUrl()).toBe("https://forms.example.com/story")
+  })
+
+  test.each([
+    ["unset", undefined],
+    ["empty", ""],
+    ["whitespace", "  "],
+  ])("returns undefined when %s", (_label, value) => {
+    if (value !== undefined) {
+      process.env.NEXT_PUBLIC_SUPPORT_SHARE_STORY_URL = value
+    }
+    expect(getSupportShareStoryUrl()).toBeUndefined()
+  })
+})
 
 describe("getCacheSMaxageSeconds", () => {
   const originalEnv = process.env
