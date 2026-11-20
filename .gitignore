@@ -106,6 +106,8 @@ celerybeat-schedule
 
 # for testing out NPM packages
 *.tgz
+# Branch API clients from scripts/generate-branch-client.sh; CI refuses to merge them.
+!/frontends/api/*-api-axios-*.tgz
 
 # docs/bundler/jekyll
 docs/_site

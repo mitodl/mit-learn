@@ -1,7 +1,7 @@
 """learning_resources data loaders"""
 
 import logging
-from collections.abc import Iterable
+from collections.abc import Collection, Iterable
 from typing import NamedTuple
 
 from django.conf import settings
@@ -48,6 +48,7 @@ from learning_resources.etl.practice_problems import (
     parse_structured_problems,
 )
 from learning_resources.etl.utils import enough_youtube_matches, most_common_topics
+from learning_resources.etl.warehouse_guards import MAX_UNPUBLISH_SHARE
 from learning_resources.models import (
     ContentFile,
     Course,
@@ -1227,15 +1228,27 @@ UNIT_TITLE_MAX_LENGTH = Unit._meta.get_field("title").max_length  # noqa: SLF001
 UNIT_URL_MAX_LENGTH = Unit._meta.get_field("url").max_length  # noqa: SLF001
 
 
-def load_course_units(run: LearningResourceRun, units_data: list[dict]) -> list[int]:
+def load_course_units(
+    run: LearningResourceRun,
+    units_data: list[dict],
+    *,
+    failed_keys: Collection[str] = (),
+) -> list[int]:
     """
     Replace a run's units with the ones built from its latest archive.
+
+    A unit that links no published file is dropped, except the context unit
+    and a unit the run already has whose files include one that failed to
+    extract: it is kept, with whatever links remain, so the unit doesn't leave
+    the course until that file next loads.
 
     Args:
         run (LearningResourceRun): the run the units belong to
         units_data (list of dict): units as returned by OlxArchive.units. Empty
             means the outline could not be read, and the run's units are kept,
             minus their links to files no longer published
+        failed_keys (collection of str): keys of the run's files whose text
+            failed to extract in this load
 
     Returns:
         list of int: ids of the run's units after the load
@@ -1248,6 +1261,10 @@ def load_course_units(run: LearningResourceRun, units_data: list[dict]) -> list[
     file_ids = dict(
         ContentFile.objects.filter(run=run, published=True).values_list("key", "id")
     )
+    failed_keys = set(failed_keys)
+    existing_ids = (
+        set(run.units.values_list("external_id", flat=True)) if failed_keys else set()
+    )
     units = []
     unit_links = []
     seen = set()
@@ -1259,9 +1276,15 @@ def load_course_units(run: LearningResourceRun, units_data: list[dict]) -> list[
             if key in file_ids
         }
         external_id = unit_data["external_id"]
+        kept_for_failed_files = (
+            external_id in existing_ids
+            and not failed_keys.isdisjoint(unit_data["content_files"])
+        )
         # a block in two places of the outline keeps its first
         if (
-            not links and unit_data["kind"] != Unit.Kind.CONTEXT
+            not links
+            and unit_data["kind"] != Unit.Kind.CONTEXT
+            and not kept_for_failed_files
         ) or external_id in seen:
             continue
         if len(external_id) > UNIT_EXTERNAL_ID_MAX_LENGTH:
@@ -1835,6 +1858,19 @@ def load_video(video_data: dict) -> LearningResource:
         LearningResource: the created or updated video resource
 
     """
+    learning_resource, created = _write_video(video_data)
+    update_index(learning_resource, created)
+    return learning_resource
+
+
+def _write_video(video_data: dict) -> tuple[LearningResource, bool]:
+    """
+    Write a video to the database without updating the search index, for a
+    caller that has more to write before the video's index document is right.
+
+    Returns:
+        tuple: the video resource and whether it was created
+    """
     readable_id = video_data.pop("readable_id")
     platform = video_data.pop("platform")
     topics_data = video_data.pop("topics", None)
@@ -1863,9 +1899,7 @@ def load_video(video_data: dict) -> LearningResource:
         load_topics(learning_resource, topics_data)
         load_offered_by(learning_resource, offered_by_data)
 
-    update_index(learning_resource, created)
-
-    return learning_resource
+    return learning_resource, created
 
 
 def load_video_with_content_file(
@@ -2069,10 +2103,114 @@ def _upsert_ovs_playlist_from_collection(collection_data: dict) -> LearningResou
     return playlist
 
 
+def prune_ovs_playlists(playlist_ids: list[int]) -> list[int]:
+    """
+    Unpublish the given OVS playlists that have no published videos left, and
+    reindex the rest.
+
+    This is the webhook's version of the prune in load_ovs_playlists, which
+    stops running once the webhook owns OVS. The webhook sees one video at a
+    time, so it only checks the playlists that video just left.
+
+    Returns:
+        list[int]: the ids of the playlists it unpublished
+    """
+    playlists = LearningResource.objects.filter(id__in=playlist_ids)
+    with transaction.atomic():
+        # A push holds its playlist's row until it commits, so waiting for the
+        # lock here means a video that push adds counts in the check below.
+        list(playlists.select_for_update().order_by("id").values_list("id"))
+        with_videos = LearningResourceRelationship.objects.filter(
+            parent_id__in=playlist_ids,
+            relation_type=LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
+            child__published=True,
+        ).values("parent_id")
+        empty_playlists = playlists.filter(published=True).exclude(id__in=with_videos)
+        empty_playlist_ids = list(empty_playlists.values_list("id", flat=True))
+        # Not empty_playlists: removing a video doesn't take the playlist lock,
+        # so its subquery could now match a playlist the hooks below won't see.
+        playlists.filter(id__in=empty_playlist_ids).update(published=False)
+    if empty_playlist_ids:
+        bulk_resources_unpublished_actions(
+            empty_playlist_ids, LearningResourceType.video_playlist.name
+        )
+    for playlist in playlists.filter(published=True):
+        update_index(playlist, newly_created=False)
+    return empty_playlist_ids
+
+
+def unpublish_empty_ovs_playlists(*, allow_mass_unpublish: bool = False) -> list[int]:
+    """
+    Unpublish every published OVS playlist that has no published video.
+
+    The webhook prunes a playlist after the relationship change commits, so a
+    failure between the two leaves an empty playlist published that no retry
+    finds, and the same goes for a deleted video. This catches those. OVS
+    playlists carry no etl_source, so they're matched on platform, as
+    load_ovs_playlists matches them.
+
+    Up to OVS_PLAYLIST_SWEEP_UNPUBLISH_FLOOR playlists are unpublished even
+    when that is over MAX_UNPUBLISH_SHARE, because with few OVS playlists the
+    share alone would refuse one. Above the floor the share applies.
+
+    Args:
+        allow_mass_unpublish (bool): skip the floor and share checks
+
+    Returns:
+        list[int]: the ids of the playlists it unpublished
+
+    Raises:
+        ExtractException: if that is more than both the floor and
+            MAX_UNPUBLISH_SHARE of the published OVS playlists, and
+            allow_mass_unpublish is False
+    """
+    published = LearningResource.objects.filter(
+        resource_type=LearningResourceType.video_playlist.name,
+        platform__code=PlatformType.ovs.name,
+        published=True,
+    )
+    with_videos = LearningResourceRelationship.objects.filter(
+        relation_type=LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
+        child__published=True,
+    ).values("parent_id")
+    empty_ids = list(
+        published.exclude(id__in=with_videos)
+        .order_by("id")
+        .values_list("id", flat=True)
+    )
+    if not empty_ids:
+        return []
+    published_count = published.count()
+    floor = settings.OVS_PLAYLIST_SWEEP_UNPUBLISH_FLOOR
+    if not allow_mass_unpublish and len(empty_ids) > max(
+        floor, published_count * MAX_UNPUBLISH_SHARE
+    ):
+        msg = (
+            f"Refusing to sweep: {len(empty_ids)} of {published_count} published "
+            f"OVS playlists have no published video, over both the floor of "
+            f"{floor} and the {MAX_UNPUBLISH_SHARE:.0%} limit: {empty_ids}. If "
+            "they really are empty, rerun with allow_mass_unpublish=True."
+        )
+        raise ExtractException(msg)
+    # prune_ovs_playlists checks again under the lock, so a playlist a push has
+    # just added a video to is reindexed rather than unpublished
+    unpublished_ids = prune_ovs_playlists(empty_ids)
+    log.info(
+        "Unpublished %d OVS playlists with no published video: %s",
+        len(unpublished_ids),
+        unpublished_ids,
+    )
+    return unpublished_ids
+
+
 def load_ovs_video_from_webhook(video_payload: dict) -> LearningResource | None:
     """
     Upsert a single OVS video and its collection-as-playlist from a webhook payload.
 
+    A video that OVS moved to another collection leaves its old playlist. The
+    video is indexed last, after its relationships commit and its old playlists
+    are pruned, so its document has the new playlist, and an index failure
+    leaves only the reindex for the sender's retry.
     `video_payload` is one result dict from the OVS public videos API. Returns the
     video LearningResource, or None if the payload has no usable streaming source.
     """
@@ -2089,15 +2227,23 @@ def load_ovs_video_from_webhook(video_payload: dict) -> LearningResource | None:
             if collection.get("key")
             else None
         )
-        video = load_video(video_data)
+        video, created = _write_video(video_data)
         if playlist:
             LearningResourceRelationship.objects.update_or_create(
                 parent=playlist,
                 child=video,
                 relation_type=LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
             )
+        old_relationships = LearningResourceRelationship.objects.filter(
+            child=video,
+            relation_type=LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
+        ).exclude(parent=playlist)
+        old_playlist_ids = list(old_relationships.values_list("parent_id", flat=True))
+        old_relationships.delete()
+    prune_ovs_playlists(old_playlist_ids)
     if playlist:
         update_index(playlist, newly_created=False)
+    update_index(video, newly_created=created)
     return video
 
 

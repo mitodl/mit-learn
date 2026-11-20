@@ -5,11 +5,13 @@ import json
 from django.contrib import admin
 from django.contrib.admin import TabularInline
 from django.contrib.admin.widgets import AdminTextareaWidget
+from django.contrib.auth import get_permission_codename
 from django.contrib.postgres.fields import ArrayField
 from django.contrib.postgres.forms import SimpleArrayField
+from django.urls import reverse
 from django.utils.html import format_html
 
-from learning_resources import models
+from learning_resources import constants, models
 from learning_resources.profiles import admin as profiles_admin  # noqa: F401
 
 
@@ -91,6 +93,158 @@ class ContentFileAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         # content can run to megabytes a row and the list page never shows it
         return super().get_queryset(request).defer("content")
+
+
+class UnitContentFileInline(TabularInline):
+    """Read-only list of a unit's content files, in unit order"""
+
+    model = models.UnitContentFile
+    extra = 0
+    fields = (
+        "position",
+        "relation",
+        "content_file_link",
+        "content_file_title",
+        "file_type",
+        "content_type",
+        "published",
+    )
+    readonly_fields = (*fields, "content_file_key")
+    ordering = ("position", "content_file_id")
+
+    def get_fields(self, request, obj=None):
+        fields = super().get_fields(request, obj)
+        content_file_admin = self.admin_site.get_model_admin(models.ContentFile)
+        if content_file_admin.has_view_permission(request):
+            return fields
+        # no link to a page the user would get a 403 on
+        return [
+            "content_file_key" if field == "content_file_link" else field
+            for field in fields
+        ]
+
+    def get_queryset(self, request):
+        # content can run to megabytes a file and the inline never shows it
+        return (
+            super()
+            .get_queryset(request)
+            .select_related("content_file")
+            .defer(
+                *(
+                    f"content_file__{field}"
+                    for field in constants.CONTENT_FILE_LARGE_FIELDS
+                )
+            )
+        )
+
+    def has_view_permission(self, request, obj=None):  # noqa: ARG002
+        # the list is part of the unit's page: whoever can see the unit sees it
+        opts = self.parent_model._meta  # noqa: SLF001
+        return any(
+            request.user.has_perm(
+                f"{opts.app_label}.{get_permission_codename(action, opts)}"
+            )
+            for action in ("view", "change")
+        )
+
+    def has_add_permission(self, request, obj=None):  # noqa: ARG002
+        return False
+
+    def has_change_permission(self, request, obj=None):  # noqa: ARG002
+        return False
+
+    def has_delete_permission(self, request, obj=None):  # noqa: ARG002
+        return False
+
+    @admin.display(description="Content file")
+    def content_file_link(self, obj):
+        content_file = obj.content_file
+        return format_html(
+            '<a href="{}">{}</a>',
+            reverse(
+                "admin:learning_resources_contentfile_change", args=(content_file.id,)
+            ),
+            self.content_file_key(obj),
+        )
+
+    @admin.display(description="Content file")
+    def content_file_key(self, obj):
+        return obj.content_file.key or obj.content_file.id
+
+    @admin.display(description="Title")
+    def content_file_title(self, obj):
+        return obj.content_file.title
+
+    @admin.display(description="File type")
+    def file_type(self, obj):
+        return obj.content_file.file_type
+
+    @admin.display(description="Content type")
+    def content_type(self, obj):
+        return obj.content_file.content_type
+
+    @admin.display(boolean=True, description="Published")
+    def published(self, obj):
+        return obj.content_file.published
+
+
+class UnitAdmin(admin.ModelAdmin):
+    """
+    Read-only Unit Admin. The ETL owns units: each load overwrites them and
+    replaces any whose external_id it no longer finds.
+    """
+
+    model = models.Unit
+    list_display = (
+        "title",
+        "kind",
+        "position",
+        "run__run_id",
+        "external_id",
+        "content_file_count",
+        "updated_on",
+    )
+    list_filter = (
+        "kind",
+        "run__learning_resource__platform",
+        "run__learning_resource__etl_source",
+    )
+    list_select_related = ("run",)
+    search_fields = (
+        "title",
+        "external_id",
+        "run__run_id",
+        "run__learning_resource__readable_id",
+    )
+    fields = (
+        "run",
+        "external_id",
+        "kind",
+        "title",
+        "position",
+        "url",
+        "created_on",
+        "updated_on",
+    )
+    readonly_fields = fields
+    inlines = (UnitContentFileInline,)
+    show_full_result_count = False
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).with_content_file_count()
+
+    def has_add_permission(self, request):  # noqa: ARG002
+        return False
+
+    def has_change_permission(self, request, obj=None):  # noqa: ARG002
+        return False
+
+    def has_delete_permission(self, request, obj=None):  # noqa: ARG002
+        return False
+
+    @admin.display(description="Content files", ordering="content_file_count")
+    def content_file_count(self, obj):
+        return obj.content_file_count
 
 
 class TutorProblemFileAdmin(admin.ModelAdmin):
@@ -521,6 +675,7 @@ admin.site.register(models.UserList, UserListAdmin)
 admin.site.register(models.VideoChannel, VideoChannelAdmin)
 admin.site.register(models.ContentFile, ContentFileAdmin)
 admin.site.register(models.TutorProblemFile, TutorProblemFileAdmin)
+admin.site.register(models.Unit, UnitAdmin)
 admin.site.register(
     models.ContentSummarizerConfiguration, ContentSummarizerConfigurationAdmin
 )

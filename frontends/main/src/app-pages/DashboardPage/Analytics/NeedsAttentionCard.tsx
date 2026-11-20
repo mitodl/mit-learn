@@ -5,7 +5,7 @@ import { RiArrowRightLine } from "@remixicon/react"
 import { Skeleton, styled, Typography } from "ol-components"
 import { ButtonLink } from "@mitodl/smoot-design"
 import type { ContractNeedsAttention } from "api/analytics-hooks/organizations"
-import { formatCount, SuppressibleValue } from "./format"
+import { SuppressibleValue } from "./format"
 import SectionError from "./SectionError"
 
 /**
@@ -14,9 +14,7 @@ import SectionError from "./SectionError"
  * Reads `ContractNeedsAttention`, a distinct-learner count. The CTA lands on
  * the learner directory's progress grid with its needs-attention filter on,
  * which applies the same server-side rule and lists one row per learner, with
- * each module behind flagged. `enrollmentCount` adds how many enrollments those
- * learners span; it is shown only alongside the learner count, never in place
- * of a floored one.
+ * each module behind flagged.
  *
  * The copy promises review, not sending: there is no reminder action yet.
  */
@@ -25,12 +23,17 @@ const Card = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: "12px",
-  height: "100%",
   padding: "20px 24px",
   backgroundColor: theme.custom.colors.white,
   border: `1px solid ${theme.custom.colors.lightGray2}`,
   borderLeft: `4px solid ${theme.custom.colors.mitRed}`,
   borderRadius: "8px",
+  [theme.breakpoints.up("md")]: {
+    display: "grid",
+    gridTemplateColumns: "auto minmax(0, 1fr) auto",
+    alignItems: "baseline",
+    columnGap: "24px",
+  },
 }))
 
 const Eyebrow = styled(Typography)(({ theme }) => ({
@@ -38,6 +41,7 @@ const Eyebrow = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.mitRed,
   textTransform: "uppercase",
   letterSpacing: "0.06em",
+  gridColumn: "1 / -1",
 })) as typeof Typography
 
 const Count = styled(Typography)(({ theme }) => ({
@@ -55,23 +59,22 @@ const Unit = styled.span(({ theme }) => ({
   ...theme.typography.h5,
 }))
 
-const Action = styled.div({
-  marginTop: "auto",
+const Action = styled.div(({ theme }) => ({
   paddingTop: "4px",
-})
+  [theme.breakpoints.up("md")]: {
+    paddingTop: 0,
+    alignSelf: "center",
+  },
+}))
 
 const learners = (count: number) => (count === 1 ? "learner" : "learners")
-const enrollments = (count: number) =>
-  count === 1 ? "enrollment" : "enrollments"
 
 const NeedsAttentionCard: React.FC<{
   row: ContractNeedsAttention | undefined
   isLoading: boolean
   isError?: boolean
-  /** Enrollments needing attention, from the distribution's own response. */
-  enrollmentCount?: number
   learnersHref: string
-}> = ({ row, isLoading, isError, enrollmentCount, learnersHref }) => {
+}> = ({ row, isLoading, isError, learnersHref }) => {
   if (isError) {
     return (
       <Card role="group" aria-label="Needs attention">
@@ -108,13 +111,7 @@ const NeedsAttentionCard: React.FC<{
       ) : count === 0 ? (
         <Body component="p">No learners need attention right now.</Body>
       ) : (
-        <Body component="p">
-          {enrollmentCount === undefined
-            ? "Not started, or inactive for 30+ days."
-            : `Not started, or inactive for 30+ days, across ${formatCount(
-                enrollmentCount,
-              )} ${enrollments(enrollmentCount)}.`}
-        </Body>
+        <Body component="p">Not started, or inactive for 30+ days.</Body>
       )}
       {count !== 0 ? (
         <Action>

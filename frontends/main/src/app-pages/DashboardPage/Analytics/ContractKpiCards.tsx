@@ -91,12 +91,17 @@ const StatSubLabel = styled(Typography)(({ theme }) => ({
 const Stat: React.FC<{
   label: string
   subLabel?: string | null
-  value: number | null
+  /** A string is shown as is, unlike `null`, which reads as withheld. */
+  value: number | string | null
   format?: (value: number) => string
 }> = ({ label, subLabel, value, format }) => (
   <StatBlock role="group" aria-label={label}>
     <StatValue>
-      <SuppressibleValue value={value} format={format} />
+      {typeof value === "string" ? (
+        value
+      ) : (
+        <SuppressibleValue value={value} format={format} />
+      )}
     </StatValue>
     <StatLabel>{label}</StatLabel>
     {subLabel ? <StatSubLabel>{subLabel}</StatSubLabel> : null}
@@ -172,9 +177,9 @@ const ContractKpiCards: React.FC<{
                 subLabel={
                   seatLimit
                     ? `${formatCount(row.seats_consumed)} of ${formatCount(seatLimit)} seats`
-                    : `${formatCount(row.seats_consumed)} seats used · no cap`
+                    : `${formatCount(row.seats_consumed)} seats used`
                 }
-                value={row.seat_utilization_pct}
+                value={seatLimit ? row.seat_utilization_pct : "No cap"}
                 format={formatPercent}
               />
               <Stat
@@ -183,7 +188,7 @@ const ContractKpiCards: React.FC<{
                 format={formatCount}
               />
               <Stat
-                label="Completion rate"
+                label="Certification rate"
                 subLabel={
                   // undefined from an API older than certified_learners.
                   row.certified_learners === null ||
