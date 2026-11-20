@@ -472,6 +472,92 @@ def test_set_userlist_relationships_empty_list(client, user):
     )
 
 
+def test_set_userlist_relationships_reorders_positions(client, user):
+    """
+    PATCH should compact non-contiguous positions to 0-based sequential order
+    and append a newly added resource at the correct next position.
+    """
+    userlist = factories.UserListFactory.create(author=user)
+    existing_courses = factories.CourseFactory.create_batch(3)
+    # Simulate gaps left by prior deletions
+    for pos, course in zip([0, 5, 10], existing_courses):
+        factories.UserListRelationshipFactory.create(
+            parent=userlist, child=course.learning_resource, position=pos
+        )
+    new_course = factories.CourseFactory.create()
+
+    url = reverse(
+        "lr:v1:learning_resource_relationships_api-userlists",
+        args=[new_course.learning_resource.id],
+    )
+    client.force_login(user)
+    resp = client.patch(f"{url}?userlist_id={userlist.id}")
+
+    assert resp.status_code == 200
+
+    rels = list(
+        UserListRelationship.objects.filter(parent=userlist).order_by("position")
+    )
+    # Existing items compacted to 0, 1, 2
+    assert [r.position for r in rels[:3]] == [0, 1, 2]
+    # Newly added resource appended at position 3
+    new_rel = UserListRelationship.objects.get(
+        parent=userlist, child=new_course.learning_resource
+    )
+    assert new_rel.position == 3
+
+
+def test_set_userlist_relationships_empty_list_position(client, user):
+    """
+    Adding a resource to an empty list should place it at position 0.
+    """
+    userlist = factories.UserListFactory.create(author=user)
+    new_course = factories.CourseFactory.create()
+
+    url = reverse(
+        "lr:v1:learning_resource_relationships_api-userlists",
+        args=[new_course.learning_resource.id],
+    )
+    client.force_login(user)
+    resp = client.patch(f"{url}?userlist_id={userlist.id}")
+
+    assert resp.status_code == 200
+
+    rel = UserListRelationship.objects.get(
+        parent=userlist, child=new_course.learning_resource
+    )
+    assert rel.position == 0
+
+
+def test_set_userlist_relationships_already_member(client, user):
+    """
+    PATCHing with a resource already in the list should renumber positions
+    without inserting a duplicate.
+    """
+    userlist = factories.UserListFactory.create(author=user)
+    existing_courses = factories.CourseFactory.create_batch(3)
+    for pos, course in zip([0, 5, 10], existing_courses):
+        factories.UserListRelationshipFactory.create(
+            parent=userlist, child=course.learning_resource, position=pos
+        )
+    existing_resource = existing_courses[0].learning_resource
+
+    url = reverse(
+        "lr:v1:learning_resource_relationships_api-userlists",
+        args=[existing_resource.id],
+    )
+    client.force_login(user)
+    resp = client.patch(f"{url}?userlist_id={userlist.id}")
+
+    assert resp.status_code == 200
+    assert UserListRelationship.objects.filter(parent=userlist).count() == 3
+
+    rels = list(
+        UserListRelationship.objects.filter(parent=userlist).order_by("position")
+    )
+    assert [r.position for r in rels] == [0, 1, 2]
+
+
 def test_adding_to_userlist_not_effect_existing_membership(client, user):
     """
     Given L1 (existing parent), L2 (new parent), and R (resource),
