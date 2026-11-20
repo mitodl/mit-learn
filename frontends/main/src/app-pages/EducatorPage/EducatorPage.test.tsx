@@ -4,6 +4,8 @@ import { setMockResponse, urls } from "api/test-utils"
 import { learningResources as factories } from "api/test-utils/factories"
 import { renderWithProviders, screen, user, within } from "@/test-utils"
 import { analytics } from "@/common/analytics"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
+import { FeatureFlags } from "@/common/feature_flags"
 import EducatorPage from "./EducatorPage"
 import {
   SELECTED_COURSES_PARAMS,
@@ -11,7 +13,10 @@ import {
   TEACHING_VIDEOS_PARAMS,
 } from "./queryParams"
 import StayConnectedSection from "./StayConnectedSection"
-import { OCW_NEWSLETTER_URL, OCW_SOCIAL } from "./links"
+import { OCW_GIVE_URL, OCW_NEWSLETTER_URL, OCW_SOCIAL } from "./links"
+
+jest.mock("@/common/useFeatureFlag")
+const mockUseFeatureFlag = jest.mocked(useFeatureFlag)
 
 jest.mock("@/common/analytics/posthog", () => ({
   capturePostHog: jest.fn(),
@@ -261,7 +266,7 @@ describe("EducatorPage teaching practices", () => {
 })
 
 describe("EducatorPage static sections", () => {
-  test("links to the licensing and support pages", () => {
+  test("links to the licensing page", () => {
     setupApis()
     renderWithProviders(<EducatorPage />)
     expect(
@@ -269,11 +274,25 @@ describe("EducatorPage static sections", () => {
         name: "Learn more about reuse and licensing",
       }),
     ).toHaveAttribute("href", expect.stringMatching(/^\/terms#/))
-    expect(screen.getByRole("link", { name: "Give now" })).toHaveAttribute(
-      "href",
-      "/support",
-    )
   })
+
+  test.each([
+    { supportPageOn: true, href: "/support" },
+    { supportPageOn: false, href: OCW_GIVE_URL },
+  ])(
+    "Give now links to $href when the Support page flag is $supportPageOn",
+    ({ supportPageOn, href }) => {
+      mockUseFeatureFlag.mockImplementation(
+        (flag) => flag === FeatureFlags.SupportPage && supportPageOn,
+      )
+      setupApis()
+      renderWithProviders(<EducatorPage />)
+      expect(screen.getByRole("link", { name: "Give now" })).toHaveAttribute(
+        "href",
+        href,
+      )
+    },
+  )
 
   describe("Share your story", () => {
     const SHARE_STORY_URL = "https://forms.example.com/share-your-story"

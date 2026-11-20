@@ -4,7 +4,10 @@ import { ButtonLink } from "@mitodl/smoot-design"
 import { RiArrowRightLine, RiHeartFill } from "@remixicon/react"
 import { getEducatorShareStoryUrl } from "@/common/config"
 import { SUPPORT } from "@/common/urls"
+import { FeatureFlags } from "@/common/feature_flags"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { Section, SectionInner } from "./SectionLayout"
+import { OCW_GIVE_URL } from "./links"
 
 const Inner = styled(SectionInner)(({ theme }) => ({
   padding: "80px 0",
@@ -74,6 +77,10 @@ const Heart = styled(RiHeartFill)(({ theme }) => ({
 
 const SupportShareSection: React.FC = () => {
   const shareStoryUrl = getEducatorShareStoryUrl()
+  // The Support page 404s while its flag is off, so fall back to OCW giving.
+  const giveUrl = useFeatureFlag(FeatureFlags.SupportPage)
+    ? SUPPORT
+    : OCW_GIVE_URL
   return (
     <Section>
       <Inner>
@@ -86,7 +93,7 @@ const SupportShareSection: React.FC = () => {
             <ButtonLink
               variant="bordered"
               size="large"
-              href={SUPPORT}
+              href={giveUrl}
               endIcon={<Heart aria-hidden />}
             >
               Give now
