@@ -565,6 +565,36 @@ def test_sync_courses_keeps_the_test_mode_courses_the_view_omits(
         assert resource.published is True
 
 
+def test_sync_courses_still_refuses_a_mass_unpublish_beside_test_mode_courses(
+    warehouse_owns_xpro, api_courses
+):
+    """Omitted test_mode courses count as kept, and the others still count"""
+    LearningResourceFactory.create_batch(
+        5,
+        etl_source=ETLSource.xpro.name,
+        resource_type=COURSE,
+        published=True,
+        test_mode=True,
+        platform__code=PlatformType.xpro.name,
+    )
+    published = LearningResourceFactory.create_batch(
+        5,
+        etl_source=ETLSource.xpro.name,
+        resource_type=COURSE,
+        published=True,
+        platform__code=PlatformType.xpro.name,
+    )
+
+    with writing_as(Pipeline.WAREHOUSE), pytest.raises(ExtractException):
+        warehouse_xpro.sync_courses(
+            [course_row(api_courses[0])], run_rows(api_courses[0])
+        )
+
+    for resource in published:
+        resource.refresh_from_db()
+        assert resource.published is True
+
+
 def test_sync_courses_counts_only_published_courses_as_pulled(
     warehouse_owns_xpro, api_courses
 ):
