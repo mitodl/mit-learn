@@ -158,6 +158,14 @@ def _load_references(
     return records, (extractions[context_id], context_unit)
 
 
+def _leading_whitespace(text: str) -> int:
+    """
+    Return how many characters stripping removes from the start of text, as
+    unit_source_files strips it
+    """
+    return len(text) - len(text.lstrip())
+
+
 def _source_unchanged(source: dict, content_file: ContentFile, text: str) -> bool:
     """
     Return whether a stored source still reads the same as the file at its
@@ -356,7 +364,19 @@ class _ProfileLoader:
             )
 
     def _evidence_rows(self) -> list[ClaimEvidence]:
+        """
+        Return the claims' evidence, with spans as offsets into each file's
+        content.
+
+        Verification finds a passage's span in the file's text stripped of
+        its surrounding whitespace, as the source read it, while
+        content_checksum identifies the raw content, so spans are shifted by
+        the whitespace stripped from the start of the content as it is now:
+        a reused extraction's spans may have been found before that changed.
+        """
         locator_length = _max_length(ClaimEvidence, "locator")
+        # each file's leading whitespace, by content file id
+        offsets: dict[int, int] = {}
         rows = []
         for claim, (items, files) in zip(self.claims, self.evidence, strict=True):
             for item in items:
@@ -364,6 +384,12 @@ class _ProfileLoader:
                 if content_file is None:
                     self.stats["evidence_unresolved"] += 1
                     continue
+                if content_file.id not in offsets:
+                    offsets[content_file.id] = _leading_whitespace(
+                        content_file.content or ""
+                    )
+                offset = offsets[content_file.id]
+                span_start, span_end = item.get("span_start"), item.get("span_end")
                 rows.append(
                     ClaimEvidence(
                         claim=claim,
@@ -372,8 +398,8 @@ class _ProfileLoader:
                         passage=item["passage"],
                         locator=_clip(item.get("locator"), locator_length),
                         verified=item.get("verified") or "unverified",
-                        span_start=item.get("span_start"),
-                        span_end=item.get("span_end"),
+                        span_start=None if span_start is None else span_start + offset,
+                        span_end=None if span_end is None else span_end + offset,
                     )
                 )
         return rows

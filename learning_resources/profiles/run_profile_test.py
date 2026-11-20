@@ -421,6 +421,50 @@ def test_unread_file_change_keeps_evidence(resource, change):
     assert evidence[1].content_checksum == first_files[1].checksum
 
 
+def test_evidence_spans_offset_into_raw_content(resource):
+    """
+    Spans, found in a file's stripped text, are stored as offsets into its
+    raw content, shifted by its leading whitespace as it is now
+    """
+    _, first_files, _ = resource["files"]
+    extraction = resource["extractions"][1]
+    text = "Intro. a quoted passage here. End."
+    for content_file, content in zip(
+        first_files, [text, f"\n  \t{text}\n\n"], strict=True
+    ):
+        content_file.content = content
+        content_file.save()
+    # the extraction read the stripped text, so it is reused for both files
+    for source in extraction.output["sources"]:
+        source.update(
+            text_checksum=text_checksum(text, len(text)),
+            included_chars=len(text),
+            total_chars=len(text),
+        )
+    span = {"span_start": 7, "span_end": 28}
+    output = extraction.output
+    output["assumed_knowledge"][0]["evidence"] = [
+        _evidence(**span),
+        _evidence("S02", **span),
+    ]
+    output["skills"][0]["evidence"] = [_evidence("S02", span_start=None, span_end=None)]
+    extraction.save()
+
+    profile, _ = build_resource_profile(resource["run_extraction"])
+
+    evidence = list(profile.claims.get(display_id="U01:a1").evidence.order_by("id"))
+    assert [item.content_file for item in evidence] == first_files
+    assert [(item.span_start, item.span_end) for item in evidence] == [
+        (7, 28),
+        (11, 32),
+    ]
+    for item in evidence:
+        content = item.content_file.content
+        assert content[item.span_start : item.span_end] == "a quoted passage here"
+    unlocated = profile.claims.get(display_id="U01:s1").evidence.get()
+    assert (unlocated.span_start, unlocated.span_end) == (None, None)
+
+
 @pytest.mark.parametrize("checksum_matches", [True, False])
 def test_source_without_text_checksum(resource, checksum_matches):
     """A source stored without text_checksum is checked by the file's checksum"""
