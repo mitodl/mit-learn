@@ -49,10 +49,23 @@ docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -e COREPACK_ENABLE_DOWNL
 		corepack yarn build
 		corepack yarn pack --out /out/$TGZ"
 
+# A root `resolutions` entry, not a file: dependency in frontends/api, so one
+# path serves every workspace that depends on the client: a file: path in a
+# workspace's package.json resolves from that workspace, in root resolutions
+# from the repository root.
+case "$OUT_DIR" in
+"$REPO_ROOT") TGZ_PATH="./$TGZ" ;;
+"$REPO_ROOT"/*) TGZ_PATH="./${OUT_DIR#"$REPO_ROOT"/}/$TGZ" ;;
+*) TGZ_PATH="$OUT_DIR/$TGZ" ;;
+esac
+
 echo
 echo "Wrote $OUT_DIR/$TGZ (spec from $SHA)."
-echo "In the package.json next to it (frontends/api), set the dependency and install:"
-echo "  \"@mitodl/mit-learn-api-axios\": \"file:./$TGZ\""
+echo
+echo "Branch client now installable via (from the repository root)"
+echo
+echo "  npm pkg set 'resolutions.@mitodl/mit-learn-api-axios=file:$TGZ_PATH'"
 echo "  yarn install"
+echo
 echo "Commit the tarball, package.json and yarn.lock. CI's api-clients-released check stays"
-echo "red until the tarball is deleted and a released version is pinned."
+echo "red until the tarball and the resolution are removed and a released version is pinned."

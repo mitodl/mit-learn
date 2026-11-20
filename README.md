@@ -111,7 +111,7 @@ MIT Learn uses [drf-spectacular](https://drf-spectacular.readthedocs.io/en/lates
 The `@mitodl/*-api-axios` packages in `frontends/` must be released npm versions before a branch merges; the `api-clients-released` CI job fails otherwise. To build and review a frontend change against a backend API change that isn't released yet, use one of these, and pin a released version before merging:
 
 - After the backend change merges to `main`, a `next` prerelease of `@mitodl/mit-learn-api-axios` is published within minutes: `yarn up -E @mitodl/mit-learn-api-axios@next`.
-- Before that, commit the spec on the backend branch and run `./scripts/generate-branch-client.sh`. It writes `frontends/api/mit-learn-api-axios-<sha>.tgz` (git and Docker only; nothing is pushed or published). Point the dependency in `frontends/api/package.json` at `file:./mit-learn-api-axios-<sha>.tgz`, run `yarn install`, and commit the tarball, `package.json` and `yarn.lock`. Delete the tarball when you pin the released version.
+- Before that, commit the spec on the backend branch and run `./scripts/generate-branch-client.sh`. It writes `frontends/api/mit-learn-api-axios-<sha>.tgz` (git and Docker only; nothing is pushed or published). From the repository root, run the `npm pkg set 'resolutions.@mitodl/mit-learn-api-axios=file:./frontends/api/mit-learn-api-axios-<sha>.tgz'` and `yarn install` it prints, and commit the tarball, `package.json` and `yarn.lock`. A root `resolutions` entry serves every workspace that depends on the client. Delete the tarball and the resolution (`npm pkg delete 'resolutions.@mitodl/mit-learn-api-axios'`) when you pin the released version.
 
 ## Committing & Formatting
 
