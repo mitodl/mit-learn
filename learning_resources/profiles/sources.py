@@ -40,7 +40,7 @@ class Source:
     # how much of the file's text was kept, and how long it is
     included_chars: int
     total_chars: int
-    # checksum of the part of the file's text that was read, see text_checksum()
+    # checksum of the part of the file's text that was read, see read_text_checksum()
     text_checksum: str = ""
 
     @property
@@ -82,7 +82,7 @@ class Source:
         }
 
 
-def text_checksum(text: str, included_chars: int) -> str:
+def read_text_checksum(text: str, included_chars: int) -> str:
     """
     Return the checksum of the part of a file's text a source was read from.
 
@@ -253,6 +253,9 @@ def unit_sources(
         )
         source = _fit_to_budget(source, text, input_token_budget)
         sources.append(
-            replace(source, text_checksum=text_checksum(text, source.included_chars))
+            replace(
+                source,
+                text_checksum=read_text_checksum(text, source.included_chars),
+            )
         )
     return sources

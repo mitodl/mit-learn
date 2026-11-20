@@ -1,7 +1,7 @@
 {% load i18n %}
 <details data-filter-title="{{ title }}" open>
   <summary>
-    {% blocktranslate with filter_title=title %}
+    {% blocktranslate trimmed with filter_title=title %}
     By
     {{ filter_title }}
     {% endblocktranslate %}

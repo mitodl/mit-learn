@@ -37,9 +37,9 @@ class Migration(migrations.Migration):
                         max_length=16,
                     ),
                 ),
-                ("row_counts", models.JSONField(blank=True, default=dict)),
+                ("invalidation_counts", models.JSONField(blank=True, default=dict)),
                 (
-                    "resource_extraction",
+                    "run_extraction",
                     models.ForeignKey(
                         blank=True,
                         null=True,
@@ -86,12 +86,12 @@ class Migration(migrations.Migration):
                             ("skill", "Skill"),
                             ("assumed", "Assumed knowledge"),
                             ("assessment", "Assessment expectation"),
-                            ("prior", "Prior knowledge"),
-                            ("outcome", "Learning outcome"),
                             ("context", "Context"),
                             ("summary", "Summary"),
                             ("audience", "Audience"),
                             ("topic", "Main topic"),
+                            ("outcome", "Learning outcome"),
+                            ("preparation", "Inferred preparation"),
                             ("limitation", "Coverage limitation"),
                         ],
                         max_length=16,
@@ -101,7 +101,7 @@ class Migration(migrations.Migration):
                 ("description", models.TextField()),
                 ("data", models.JSONField(blank=True, default=dict)),
                 (
-                    "cites",
+                    "cited_claims",
                     models.ManyToManyField(
                         blank=True,
                         related_name="cited_by",

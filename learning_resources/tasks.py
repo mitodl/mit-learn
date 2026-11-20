@@ -1516,7 +1516,7 @@ def generate_claims_for_resource(
     if not run or not run.units.exists():
         log.info("No units to generate claims for in %s", resource.readable_id)
         publish_claim_extractions(resource, [])
-        _publish_profile(resource, None, Counter())
+        _publish_profile_for_sweep(resource, None, Counter())
         return None
 
     stats = Counter()
@@ -1582,12 +1582,12 @@ def generate_claims_for_resource(
         )
     else:
         publish_claim_extractions(resource, current_ids)
-        _publish_profile(resource, run_extraction, stats)
+        _publish_profile_for_sweep(resource, run_extraction, stats)
     log.info("Generated claims for %s: %s", resource.readable_id, dict(stats))
     return dict(stats)
 
 
-def _publish_profile(
+def _publish_profile_for_sweep(
     resource: LearningResource, run_extraction: ClaimExtraction | None, stats: Counter
 ) -> None:
     """

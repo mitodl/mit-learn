@@ -18,8 +18,8 @@ class InputFilter(admin.SimpleListFilter):
     """
 
     template = "admin/learning_resources/input_filter.html"
-    # the lookup the value is matched against
-    lookup = None
+    # the field path the value is matched against, like run__run_id
+    field_path = None
 
     def lookups(self, request, model_admin):  # noqa: ARG002
         """There are no choices to list"""
@@ -37,7 +37,7 @@ class InputFilter(admin.SimpleListFilter):
         """Filter on the value when there is one"""
         value = (self.value() or "").strip()
         if value:
-            return queryset.filter(**{self.lookup: value})
+            return queryset.filter(**{self.field_path: value})
         return queryset
 
     def choices(self, changelist):
@@ -60,7 +60,7 @@ class ProfileResourceFilter(InputFilter):
 
     title = "learning resource readable id"
     parameter_name = "readable_id"
-    lookup = "profile__run__learning_resource__readable_id"
+    field_path = "profile__run__learning_resource__readable_id"
 
 
 class ProfileRunFilter(InputFilter):
@@ -68,7 +68,7 @@ class ProfileRunFilter(InputFilter):
 
     title = "run id"
     parameter_name = "run_id"
-    lookup = "profile__run__run_id"
+    field_path = "profile__run__run_id"
 
 
 class ResourceProfileConfigurationAdmin(admin.ModelAdmin):
@@ -116,11 +116,11 @@ class RunProfileAdmin(admin.ModelAdmin):
     """RunProfile Admin"""
 
     model = RunProfile
-    list_display = ("id", "run", "status", "resource_extraction", "updated_on")
+    list_display = ("id", "run", "status", "run_extraction", "updated_on")
     list_filter = ("status",)
     search_fields = ("run__run_id", "run__learning_resource__readable_id")
-    raw_id_fields = ("run", "resource_extraction")
-    readonly_fields = ("row_counts",)
+    raw_id_fields = ("run", "run_extraction")
+    readonly_fields = ("invalidation_counts",)
 
     def get_queryset(self, request):
         """Load the list's foreign keys without the extraction's large fields"""
@@ -129,8 +129,8 @@ class RunProfileAdmin(admin.ModelAdmin):
         return (
             super()
             .get_queryset(request)
-            .select_related("run__learning_resource__platform", "resource_extraction")
-            .defer("resource_extraction__output", "resource_extraction__raw_response")
+            .select_related("run__learning_resource__platform", "run_extraction")
+            .defer("run_extraction__output", "run_extraction__raw_response")
         )
 
 
@@ -159,20 +159,22 @@ class ProfileClaimAdmin(admin.ModelAdmin):
     )
     list_filter = (ProfileResourceFilter, ProfileRunFilter, "kind", "level")
     search_fields = ("label", "uid", "display_id", "profile__run__run_id")
-    raw_id_fields = ("profile", "unit", "extraction", "cites", "cited_units")
+    raw_id_fields = ("profile", "unit", "extraction", "cited_claims", "cited_units")
     inlines = [ClaimEvidenceInline]
     list_select_related = ("profile__run__learning_resource", "unit")
     show_full_result_count = False
 
     @admin.display(
         description=ProfileResourceFilter.title,
-        ordering=ProfileResourceFilter.lookup,
+        ordering=ProfileResourceFilter.field_path,
     )
     def resource_readable_id(self, obj):
         """Return the profile's learning resource's readable id"""
         return obj.profile.run.learning_resource.readable_id
 
-    @admin.display(description=ProfileRunFilter.title, ordering=ProfileRunFilter.lookup)
+    @admin.display(
+        description=ProfileRunFilter.title, ordering=ProfileRunFilter.field_path
+    )
     def run_id(self, obj):
         """Return the profile's run's run id"""
         return obj.profile.run.run_id

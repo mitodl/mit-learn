@@ -18,7 +18,7 @@ which can be queried, and makes no model calls.
   whose source can't be resolved is left out and logged.
 - The run output's summary, and each of its audiences, main topics, learning
   outcomes, inferred preparation items and coverage limitations, is a
-  run-level ProfileClaim (run:summary:0, run:topic:0, run:prior:0, ...),
+  run-level ProfileClaim (run:summary:0, run:topic:0, run:preparation:0, ...),
   linked to the unit and context claims and the units it cites, and stored
   in that order, so ordering by id reads them as a profile. The items the
   preparation rule excluded are left in the run extraction's output.
@@ -32,6 +32,8 @@ one.
 
 import logging
 from collections import Counter
+from dataclasses import dataclass, field
+from typing import NamedTuple
 
 from django.db import transaction
 from django.db.models import Exists, OuterRef
@@ -51,16 +53,15 @@ from learning_resources.profiles.run_claims import (
     CONTEXT_NOTES_ID,
     context_claims,
 )
-from learning_resources.profiles.sources import text_checksum, unit_source_files
+from learning_resources.profiles.sources import read_text_checksum, unit_source_files
 
 log = logging.getLogger(__name__)
 
-# a unit claim's fields stored in ProfileClaim's own columns, not in data
-_CLAIM_COLUMNS = {"id", "label", "description", "evidence"}
-# a context claim's fields stored in ProfileClaim's own columns, not in data
-_CONTEXT_COLUMNS = {"label", "text", "statement", "evidence"}
-# claim id prefix of the context claims
-CONTEXT_PREFIX = "ctx:"
+# the fields of each kind of item that aren't copied into a claim's data,
+# since they are its columns, its uid or its evidence rows
+_UNIT_FIELDS_NOT_IN_DATA = {"id", "label", "description", "evidence"}
+_CONTEXT_FIELDS_NOT_IN_DATA = {"label", "text", "statement", "evidence"}
+_RUN_FIELDS_NOT_IN_DATA = {"label", "text", "description"}
 # claim id prefix of the run claims
 RUN_PREFIX = "run:"
 # the run output's lists loaded as run claims, in the order a profile reads
@@ -69,11 +70,9 @@ RUN_CLAIM_FIELDS = (
     ("audience", ProfileClaim.Kind.AUDIENCE, "audience"),
     ("main_topics", ProfileClaim.Kind.TOPIC, "topic"),
     ("learning_outcomes", ProfileClaim.Kind.OUTCOME, "outcome"),
-    ("inferred_preparation", ProfileClaim.Kind.PRIOR, "prior"),
+    ("inferred_preparation", ProfileClaim.Kind.PREPARATION, "preparation"),
     ("coverage_limitations", ProfileClaim.Kind.LIMITATION, "limitation"),
 )
-# a run claim's fields stored in ProfileClaim's own columns, not in data
-_RUN_COLUMNS = {"label", "text", "description"}
 
 
 class ProfileBuildError(Exception):
@@ -86,20 +85,44 @@ def _clip(text: str | None, length: int) -> str:
     return text if len(text) <= length else text[: length - 1].rstrip() + "…"
 
 
-def _max_length(model, field: str) -> int:
-    return model._meta.get_field(field).max_length  # noqa: SLF001
+def _max_length(model, field_name: str) -> int:
+    return model._meta.get_field(field_name).max_length  # noqa: SLF001
+
+
+def _extra_fields(item: dict, exclude: set[str]) -> dict:
+    """Return an item's fields other than those stored elsewhere"""
+    return {name: value for name, value in item.items() if name not in exclude}
+
+
+def _unit_display_id(claim_id: str) -> str:
+    """Return the display id of the unit a unit claim id is in: U02 for U02:c3"""
+    return claim_id.partition(":")[0]
 
 
 # --------------------------------------------------------------------------- inputs
+class _UnitExtraction(NamedTuple):
+    """A unit of the run, as the run output refers to it, with its extraction"""
+
+    # U01, U02, ...
+    display_id: str
+    unit: Unit
+    # None when the unit had no text to extract claims from
+    extraction: ClaimExtraction | None
+
+
+class _ContextExtraction(NamedTuple):
+    """The run's context extraction, with the run's own context unit"""
+
+    extraction: ClaimExtraction
+    unit: Unit
+
+
 def _load_references(
-    extraction: ClaimExtraction,
-) -> tuple[
-    list[tuple[str, Unit, ClaimExtraction | None]],
-    tuple[ClaimExtraction, Unit] | None,
-]:
+    run_extraction: ClaimExtraction,
+) -> tuple[list[_UnitExtraction], _ContextExtraction | None]:
     """
-    Return the run's units, as (display id, unit, extraction), and its context
-    extraction with the run's context unit, from the run output's references.
+    Return the run's units with their extractions, and its context extraction,
+    from the run output's references.
 
     The context extraction's own unit is whichever run's context unit last
     stored it, since runs of a resource with the same context files share it,
@@ -110,7 +133,7 @@ def _load_references(
             belongs to another run, or the run has a context extraction but
             no context unit, so the run's claims must be generated again first
     """
-    output = extraction.output
+    output = run_extraction.output
     references = output.get("units", [])
     unit_ids = [reference["unit"] for reference in references]
     extraction_ids = [
@@ -124,7 +147,7 @@ def _load_references(
     missing = [
         f"unit {unit_id}"
         for unit_id in unit_ids
-        if unit_id not in units or units[unit_id].run_id != extraction.run_id
+        if unit_id not in units or units[unit_id].run_id != run_extraction.run_id
     ] + [
         f"extraction {extraction_id}"
         for extraction_id in extraction_ids
@@ -132,12 +155,12 @@ def _load_references(
     ]
     if missing:
         msg = (
-            f"Run extraction {extraction.id} refers to rows that are gone or"
+            f"Run extraction {run_extraction.id} refers to rows that are gone or"
             f" belong to another run: {', '.join(missing)}"
         )
         raise ProfileBuildError(msg)
-    records = [
-        (
+    unit_extractions = [
+        _UnitExtraction(
             reference["unit_id"],
             units[reference["unit"]],
             extractions.get(reference["extraction"]),
@@ -145,17 +168,17 @@ def _load_references(
         for reference in references
     ]
     if not context_id:
-        return records, None
+        return unit_extractions, None
     context_unit = Unit.objects.filter(
-        run_id=extraction.run_id, kind=Unit.Kind.CONTEXT
+        run_id=run_extraction.run_id, kind=Unit.Kind.CONTEXT
     ).first()
     if context_unit is None:
         msg = (
-            f"Run extraction {extraction.id} has context extraction {context_id}"
-            f" but run {extraction.run_id} has no context unit"
+            f"Run extraction {run_extraction.id} has context extraction"
+            f" {context_id} but run {run_extraction.run_id} has no context unit"
         )
         raise ProfileBuildError(msg)
-    return records, (extractions[context_id], context_unit)
+    return unit_extractions, _ContextExtraction(extractions[context_id], context_unit)
 
 
 def _leading_whitespace(text: str) -> int:
@@ -177,13 +200,15 @@ def _source_unchanged(source: dict, content_file: ContentFile, text: str) -> boo
     recorded are checked against the file's checksum.
     """
     if source.get("text_checksum"):
-        return source["text_checksum"] == text_checksum(
+        return source["text_checksum"] == read_text_checksum(
             text, source.get("included_chars", len(text))
         )
     return (content_file.checksum or "") == (source.get("checksum") or "")
 
 
-def _source_files(unit: Unit, extraction: ClaimExtraction) -> dict[str, ContentFile]:
+def _unchanged_source_files(
+    unit: Unit, extraction: ClaimExtraction
+) -> dict[str, ContentFile]:
     """
     Return the content file each of an extraction's sources was read from,
     by source id, for the sources whose text in this unit is unchanged
@@ -201,18 +226,57 @@ def _source_files(unit: Unit, extraction: ClaimExtraction) -> dict[str, ContentF
 
 
 # --------------------------------------------------------------------------- loader
+@dataclass
+class _PendingClaim:
+    """A claim to store, with what its evidence and citations are built from"""
+
+    claim: ProfileClaim
+    # its id within its extraction, which its uid is built from
+    local_id: str
+    # its evidence items, and the content files of its sources by source id
+    evidence: list[dict] = field(default_factory=list)
+    files: dict[str, ContentFile] = field(default_factory=dict)
+    # the claim and unit ids it cites, and the ids of the units it names
+    cited_ids: list[str] = field(default_factory=list)
+    named_unit_ids: list[str] = field(default_factory=list)
+
+
+class _RunCitations(NamedTuple):
+    """What a run output item cites"""
+
+    # claim ids, or unit ids like U03
+    cited_ids: list[str]
+    # the units it names: a topic's units, where a preparation item is first
+    # needed and taught
+    named_unit_ids: list[str]
+
+
+def _run_citations(kind: str, item: dict) -> _RunCitations:
+    """Return what a run output item cites"""
+    if kind == ProfileClaim.Kind.TOPIC:
+        return _RunCitations(
+            item.get("concept_claim_ids", []), item.get("unit_ids", [])
+        )
+    if kind == ProfileClaim.Kind.PREPARATION:
+        taught = item.get("taught_before_first_use_claim_ids", []) + item.get(
+            "taught_after_first_use_claim_ids", []
+        )
+        first_needed = item.get("first_needed_unit_id")
+        return _RunCitations(
+            item.get("assumed_claim_ids", []) + taught,
+            # first_needed, then where the resource teaches it
+            ([first_needed] if first_needed else [])
+            + [_unit_display_id(claim_id) for claim_id in taught],
+        )
+    return _RunCitations(item.get("claim_ids", []), [])
+
+
 class _ProfileLoader:
     """Build the rows of one profile from its run's extractions"""
 
     def __init__(self, profile: RunProfile):
         self.profile = profile
-        self.claims: list[ProfileClaim] = []
-        # each claim's evidence items and the files of its sources, in claim order
-        self.evidence: list[tuple[list[dict], dict[str, ContentFile]]] = []
-        # each claim's cited claim and unit ids, and the ids of the units it
-        # names, in claim order
-        self.cites: list[list[str]] = []
-        self.cited_units: list[list[str]] = []
+        self.pending: list[_PendingClaim] = []
         self.stats = Counter()
 
     @staticmethod
@@ -229,98 +293,82 @@ class _ProfileLoader:
             return f"r:{extraction.key[:12]}:{local_id}"
         return f"u:{extraction.key[:12]}:{unit.id}:{local_id}"
 
-    def _add_claim(  # noqa: PLR0913
-        self,
-        *,
-        extraction: ClaimExtraction,
-        unit: Unit | None,
-        local_id: str,
-        display_id: str,
-        kind: str,
-        label: str,
-        description: str,
-        data: dict,
-        evidence: list[dict],
-        files: dict[str, ContentFile],
-        level: str = ProfileClaim.Level.UNIT,
-        cites: list[str] | None = None,
-        cited_units: list[str] | None = None,
-    ) -> None:
-        self.claims.append(
-            ProfileClaim(
-                profile=self.profile,
-                uid=self._uid(extraction, unit, local_id),
-                display_id=_clip(display_id, _max_length(ProfileClaim, "display_id")),
-                level=level,
-                kind=kind,
-                label=_clip(label, _max_length(ProfileClaim, "label")),
-                description=description or "",
-                unit=unit,
-                extraction=extraction,
-                data=data,
-            )
+    def _add(self, pending: _PendingClaim) -> None:
+        """Add a claim to the profile, fitting its text to its columns"""
+        claim = pending.claim
+        claim.profile = self.profile
+        claim.uid = self._uid(claim.extraction, claim.unit, pending.local_id)
+        claim.display_id = _clip(
+            claim.display_id, _max_length(ProfileClaim, "display_id")
         )
-        self.evidence.append((evidence, files))
-        self.cites.append(cites or [])
-        self.cited_units.append(cited_units or [])
+        claim.label = _clip(claim.label, _max_length(ProfileClaim, "label"))
+        claim.description = claim.description or ""
+        self.pending.append(pending)
 
     def add_unit(
         self, display_id: str, unit: Unit, extraction: ClaimExtraction
     ) -> None:
         """Add a unit's claims"""
-        files = _source_files(unit, extraction)
-        for field, (kind, _) in CLAIM_KINDS.items():
-            for claim in extraction.output.get(field, []):
-                self._add_claim(
+        files = _unchanged_source_files(unit, extraction)
+        for output_field, (kind, _) in CLAIM_KINDS.items():
+            for item in extraction.output.get(output_field, []):
+                claim = ProfileClaim(
                     extraction=extraction,
                     unit=unit,
-                    local_id=claim["id"],
-                    display_id=f"{display_id}:{claim['id']}",
+                    display_id=f"{display_id}:{item['id']}",
+                    level=ProfileClaim.Level.UNIT,
                     kind=kind,
-                    label=claim["label"],
-                    description=claim.get("description"),
-                    data={
-                        name: value
-                        for name, value in claim.items()
-                        if name not in _CLAIM_COLUMNS
-                    },
-                    evidence=claim.get("evidence", []),
-                    files=files,
+                    label=item["label"],
+                    description=item.get("description"),
+                    data=_extra_fields(item, _UNIT_FIELDS_NOT_IN_DATA),
+                )
+                self._add(
+                    _PendingClaim(
+                        claim,
+                        item["id"],
+                        evidence=item.get("evidence", []),
+                        files=files,
+                    )
                 )
 
-    def add_context(self, extraction: ClaimExtraction, unit: Unit) -> None:
+    def add_context(self, context: _ContextExtraction) -> None:
         """Add the context unit's claims, for the run's context unit"""
-        files = _source_files(unit, extraction)
-        for claim_id, field, item, text in context_claims(extraction.output):
+        files = _unchanged_source_files(context.unit, context.extraction)
+        for context_claim in context_claims(context.extraction.output):
+            item = context_claim.item
             # a prerequisite has a label and a statement; the rest only text
-            description = item.get("statement") or item.get("text") or text
-            self._add_claim(
-                extraction=extraction,
-                unit=unit,
-                local_id=claim_id,
-                display_id=claim_id,
+            description = (
+                item.get("statement") or item.get("text") or context_claim.text
+            )
+            claim = ProfileClaim(
+                extraction=context.extraction,
+                unit=context.unit,
+                display_id=context_claim.claim_id,
+                level=ProfileClaim.Level.UNIT,
                 kind=ProfileClaim.Kind.CONTEXT,
                 label=item.get("label") or description,
                 description=description,
                 data={
-                    "field": field,
-                    **{
-                        name: value
-                        for name, value in item.items()
-                        if name not in _CONTEXT_COLUMNS
-                    },
+                    "field": context_claim.field,
+                    **_extra_fields(item, _CONTEXT_FIELDS_NOT_IN_DATA),
                 },
-                evidence=item.get("evidence", []),
-                files=files,
+            )
+            self._add(
+                _PendingClaim(
+                    claim,
+                    context_claim.claim_id,
+                    evidence=item.get("evidence", []),
+                    files=files,
+                )
             )
 
-    def add_run(self, extraction: ClaimExtraction) -> None:
+    def add_run(self, run_extraction: ClaimExtraction) -> None:
         """
         Add the run extraction's claims: its summary, then each item of its
         lists. They quote no sources, so they have no evidence, and cite the
         unit and context claims they rest on instead.
         """
-        output = extraction.output
+        output = run_extraction.output
         items = []
         if output.get("summary"):
             items.append(
@@ -335,32 +383,31 @@ class _ProfileLoader:
             )
         items += [
             (kind, f"{prefix}:{index}", item)
-            for field, kind, prefix in RUN_CLAIM_FIELDS
-            for index, item in enumerate(output.get(field, []))
+            for output_field, kind, prefix in RUN_CLAIM_FIELDS
+            for index, item in enumerate(output.get(output_field, []))
         ]
         for kind, local_id, item in items:
             # a topic and a preparation item have a label and a description;
             # the rest only text
             description = item.get("description") or item.get("text") or ""
-            cites, cited_units = _run_citations(kind, item)
-            self._add_claim(
-                extraction=extraction,
+            claim = ProfileClaim(
+                extraction=run_extraction,
                 unit=None,
-                local_id=local_id,
                 display_id=f"{RUN_PREFIX}{local_id}",
+                level=ProfileClaim.Level.RUN,
                 kind=kind,
                 label=item.get("label") or description,
                 description=description,
-                data={
-                    name: value
-                    for name, value in item.items()
-                    if name not in _RUN_COLUMNS
-                },
-                evidence=[],
-                files={},
-                level=ProfileClaim.Level.RUN,
-                cites=cites,
-                cited_units=cited_units,
+                data=_extra_fields(item, _RUN_FIELDS_NOT_IN_DATA),
+            )
+            citations = _run_citations(kind, item)
+            self._add(
+                _PendingClaim(
+                    claim,
+                    local_id,
+                    cited_ids=citations.cited_ids,
+                    named_unit_ids=citations.named_unit_ids,
+                )
             )
 
     def _evidence_rows(self) -> list[ClaimEvidence]:
@@ -378,9 +425,9 @@ class _ProfileLoader:
         # each file's leading whitespace, by content file id
         offsets: dict[int, int] = {}
         rows = []
-        for claim, (items, files) in zip(self.claims, self.evidence, strict=True):
-            for item in items:
-                content_file = files.get(item.get("source_id"))
+        for pending in self.pending:
+            for item in pending.evidence:
+                content_file = pending.files.get(item.get("source_id"))
                 if content_file is None:
                     self.stats["evidence_unresolved"] += 1
                     continue
@@ -392,7 +439,7 @@ class _ProfileLoader:
                 span_start, span_end = item.get("span_start"), item.get("span_end")
                 rows.append(
                     ClaimEvidence(
-                        claim=claim,
+                        claim=pending.claim,
                         content_file=content_file,
                         content_checksum=content_file.checksum or "",
                         passage=item["passage"],
@@ -414,21 +461,22 @@ class _ProfileLoader:
         claim's data.
 
         Returns:
-            tuple of (list, list): the rows of cites and of cited_units
+            tuple of (list, list): the rows of cited_claims and of cited_units
         """
-        cites, cited_units = [], []
-        for claim, cited_ids, unit_ids in zip(
-            self.claims, self.cites, self.cited_units, strict=True
-        ):
-            cited_claims, linked_units, unknown = [], [], []
-            for cited_id in dict.fromkeys(cited_ids):
+        cited_claim_rows, cited_unit_rows = [], []
+        for pending in self.pending:
+            claim = pending.claim
+            cited_claims, cited_units, unknown = [], [], []
+            for cited_id in dict.fromkeys(pending.cited_ids):
                 if cited_id in claims:
                     cited_claims.append(claims[cited_id])
                 elif cited_id in units:
-                    linked_units.append(units[cited_id])
+                    cited_units.append(units[cited_id])
                 elif cited_id != CONTEXT_NOTES_ID:
                     unknown.append(cited_id)
-            linked_units += [units[unit_id] for unit_id in unit_ids if unit_id in units]
+            cited_units += [
+                units[unit_id] for unit_id in pending.named_unit_ids if unit_id in units
+            ]
             if unknown:
                 log.warning(
                     "Profile %s: claim %s cites unknown ids %s",
@@ -436,57 +484,38 @@ class _ProfileLoader:
                     claim.display_id,
                     ", ".join(unknown),
                 )
-            cites += [
-                ProfileClaim.cites.through(
+            cited_claim_rows += [
+                ProfileClaim.cited_claims.through(
                     from_profileclaim_id=claim.id, to_profileclaim_id=cited.id
                 )
                 for cited in cited_claims
             ]
-            cited_units += [
+            cited_unit_rows += [
                 ProfileClaim.cited_units.through(
                     profileclaim_id=claim.id, unit_id=unit.id
                 )
-                for unit in dict.fromkeys(linked_units)
+                for unit in dict.fromkeys(cited_units)
             ]
-        return cites, cited_units
+        return cited_claim_rows, cited_unit_rows
 
     def save_claims(self, units: dict[str, Unit]) -> None:
         """
         Store the claims, their evidence and their citations, given the run's
         units by display id
         """
-        ProfileClaim.objects.bulk_create(self.claims)
+        claims = [pending.claim for pending in self.pending]
+        ProfileClaim.objects.bulk_create(claims)
         ClaimEvidence.objects.bulk_create(self._evidence_rows())
-        claims = {claim.display_id: claim for claim in self.claims}
-        cites, cited_units = self._citation_rows(claims, units)
-        ProfileClaim.cites.through.objects.bulk_create(cites)
-        ProfileClaim.cited_units.through.objects.bulk_create(cited_units)
-        self.stats["claims"] += len(self.claims)
-
-
-def _run_citations(kind: str, item: dict) -> tuple[list[str], list[str]]:
-    """
-    Return the claim and unit ids a run output item cites, and the ids of the
-    units it names
-    """
-    if kind == ProfileClaim.Kind.TOPIC:
-        return item.get("concept_claim_ids", []), item.get("unit_ids", [])
-    if kind == ProfileClaim.Kind.PRIOR:
-        taught = item.get("taught_before_first_use_claim_ids", []) + item.get(
-            "taught_after_first_use_claim_ids", []
+        cited_claim_rows, cited_unit_rows = self._citation_rows(
+            {claim.display_id: claim for claim in claims}, units
         )
-        first_needed = item.get("first_needed_unit_id")
-        return (
-            item.get("assumed_claim_ids", []) + taught,
-            # first_needed, then where the resource teaches it
-            ([first_needed] if first_needed else [])
-            + [claim_id.split(":")[0] for claim_id in taught],
-        )
-    return item.get("claim_ids", []), []
+        ProfileClaim.cited_claims.through.objects.bulk_create(cited_claim_rows)
+        ProfileClaim.cited_units.through.objects.bulk_create(cited_unit_rows)
+        self.stats["claims"] += len(claims)
 
 
 # --------------------------------------------------------------------------- build
-def _row_counts(profile: RunProfile) -> dict[str, int]:
+def _invalidation_counts(profile: RunProfile) -> dict[str, int]:
     """
     Count the profile's rows that changes to content files or units elsewhere
     invalidate: evidence quoting a file that is still published and in its
@@ -509,10 +538,10 @@ def _row_counts(profile: RunProfile) -> dict[str, int]:
     }
 
 
-def _is_current(profile: RunProfile | None, extraction: ClaimExtraction) -> bool:
+def _is_current(profile: RunProfile | None, run_extraction: ClaimExtraction) -> bool:
     """
-    Whether a profile was built from the extraction as it is now, and still
-    has every row it was built with.
+    Whether a profile was built from the run extraction as it is now, and
+    still has every row it was built with.
 
     ETL can replace a unit's content files with new ones with the same text,
     unpublishing or deleting the old files, which leaves the extractions as
@@ -522,13 +551,13 @@ def _is_current(profile: RunProfile | None, extraction: ClaimExtraction) -> bool
     return (
         profile is not None
         and profile.status == RunProfile.Status.READY
-        and profile.resource_extraction_id == extraction.id
-        and profile.updated_on >= extraction.updated_on
-        and profile.row_counts == _row_counts(profile)
+        and profile.run_extraction_id == run_extraction.id
+        and profile.updated_on >= run_extraction.updated_on
+        and profile.invalidation_counts == _invalidation_counts(profile)
     )
 
 
-def _check_published_references(extraction: ClaimExtraction) -> None:
+def _check_published_references(run_extraction: ClaimExtraction) -> None:
     """
     Check that a published run extraction's unit and context extractions are
     published too.
@@ -543,9 +572,9 @@ def _check_published_references(extraction: ClaimExtraction) -> None:
     Raises:
         ProfileBuildError: when a referenced extraction is unpublished
     """
-    if not extraction.published:
+    if not run_extraction.published:
         return
-    output = extraction.output
+    output = run_extraction.output
     extraction_ids = [
         reference["extraction"]
         for reference in output.get("units", [])
@@ -560,31 +589,31 @@ def _check_published_references(extraction: ClaimExtraction) -> None:
     )
     if unpublished:
         msg = (
-            f"Published run extraction {extraction.id} refers to unpublished"
+            f"Published run extraction {run_extraction.id} refers to unpublished"
             f" extractions {', '.join(map(str, unpublished))}, which may have"
             " been replaced since it was made"
         )
         raise ProfileBuildError(msg)
 
 
-def _load(profile: RunProfile, extraction: ClaimExtraction) -> Counter:
-    """Replace a profile's claims with the extraction's"""
-    records, context = _load_references(extraction)
+def _replace_claims(profile: RunProfile, run_extraction: ClaimExtraction) -> Counter:
+    """Replace a profile's claims with those of the run's extractions"""
+    unit_extractions, context = _load_references(run_extraction)
     profile.claims.all().delete()
     loader = _ProfileLoader(profile)
     if context:
-        loader.add_context(*context)
-    for display_id, unit, unit_extraction in records:
-        if unit_extraction is not None:
-            loader.add_unit(display_id, unit, unit_extraction)
+        loader.add_context(context)
+    for unit_extraction in unit_extractions:
+        if unit_extraction.extraction is not None:
+            loader.add_unit(*unit_extraction)
     # last, so the claims they cite are stored before them
-    loader.add_run(extraction)
-    loader.save_claims({display_id: unit for display_id, unit, _ in records})
+    loader.add_run(run_extraction)
+    loader.save_claims({ue.display_id: ue.unit for ue in unit_extractions})
     return loader.stats
 
 
-def build_resource_profile(
-    extraction: ClaimExtraction, *, force: bool = False
+def build_run_profile(
+    run_extraction: ClaimExtraction, *, force: bool = False
 ) -> tuple[RunProfile, bool]:
     """
     Build the profile of a run from its run extraction, unless it was already
@@ -597,7 +626,7 @@ def build_resource_profile(
     one with status failed.
 
     Args:
-        extraction (ClaimExtraction): the run's run-level extraction
+        run_extraction (ClaimExtraction): the run's run-level extraction
         force (bool): rebuild even when the profile is current, to apply a
             change to this code
 
@@ -609,36 +638,39 @@ def build_resource_profile(
             that are gone, or it is published and refers to extractions that
             aren't
     """
-    if extraction.level != ClaimExtraction.Level.RUN or extraction.run_id is None:
-        msg = f"Extraction {extraction.id} is not a run's run-level extraction"
+    if (
+        run_extraction.level != ClaimExtraction.Level.RUN
+        or run_extraction.run_id is None
+    ):
+        msg = f"Extraction {run_extraction.id} is not a run's run-level extraction"
         raise ValueError(msg)
-    _check_published_references(extraction)
-    profile = RunProfile.objects.filter(run_id=extraction.run_id).first()
-    if not force and _is_current(profile, extraction):
+    _check_published_references(run_extraction)
+    profile = RunProfile.objects.filter(run_id=run_extraction.run_id).first()
+    if not force and _is_current(profile, run_extraction):
         return profile, False
     try:
         with transaction.atomic():
             # update_or_create locks the row, so concurrent builds take turns
             profile, _ = RunProfile.objects.update_or_create(
-                run_id=extraction.run_id,
+                run_id=run_extraction.run_id,
                 defaults={
-                    "resource_extraction": extraction,
+                    "run_extraction": run_extraction,
                     "status": RunProfile.Status.BUILDING,
                 },
             )
-            stats = _load(profile, extraction)
-            profile.row_counts = _row_counts(profile)
+            stats = _replace_claims(profile, run_extraction)
+            profile.invalidation_counts = _invalidation_counts(profile)
             profile.status = RunProfile.Status.READY
             profile.save()
     except Exception:
         profile, created = RunProfile.objects.get_or_create(
-            run_id=extraction.run_id,
+            run_id=run_extraction.run_id,
             defaults={
-                "resource_extraction": extraction,
+                "run_extraction": run_extraction,
                 "status": RunProfile.Status.FAILED,
             },
         )
-        current = ClaimExtraction.objects.filter(id=extraction.id).first()
+        current = ClaimExtraction.objects.filter(id=run_extraction.id).first()
         if (
             not created
             and profile.status == RunProfile.Status.READY
@@ -664,7 +696,7 @@ def build_resource_profile(
 
 def publish_resource_profile(
     resource: LearningResource,
-    extraction: ClaimExtraction | None,
+    run_extraction: ClaimExtraction | None,
     *,
     force: bool = False,
 ) -> bool | None:
@@ -677,14 +709,14 @@ def publish_resource_profile(
     best run's profile is built, since their claims are no longer published.
 
     When building fails, the best run's profile is handled as in
-    build_resource_profile, and the other runs' profiles are kept, so a
-    resource whose best run changed keeps its last ready profile until the
-    new one builds. Only then can a resource have more than one profile; the
-    best run's is the one whose run is resource.best_run.
+    build_run_profile, and the other runs' profiles are kept, so a resource
+    whose best run changed keeps its last ready profile until the new one
+    builds. Only then can a resource have more than one profile; the best
+    run's is the one whose run is resource.best_run.
 
     Args:
         resource (LearningResource): the resource
-        extraction (ClaimExtraction | None): the best run's run-level
+        run_extraction (ClaimExtraction | None): the best run's run-level
             extraction, or None when it has none
         force (bool): rebuild even when the profile is current
 
@@ -698,10 +730,10 @@ def publish_resource_profile(
             aren't
     """
     profiles = RunProfile.objects.filter(run__learning_resource=resource)
-    if extraction is None:
+    if run_extraction is None:
         profiles.delete()
         return None
-    _, built = build_resource_profile(extraction, force=force)
+    _, built = build_run_profile(run_extraction, force=force)
     # after building, so a failed build leaves the last profile in place
-    profiles.exclude(run_id=extraction.run_id).delete()
+    profiles.exclude(run_id=run_extraction.run_id).delete()
     return built

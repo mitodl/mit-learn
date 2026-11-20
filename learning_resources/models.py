@@ -1633,7 +1633,7 @@ class RunProfile(TimestampedModel):
         LearningResourceRun, related_name="profiles", on_delete=models.CASCADE
     )
     # the run-level extraction the profile was loaded from
-    resource_extraction = models.ForeignKey(
+    run_extraction = models.ForeignKey(
         ClaimExtraction,
         null=True,
         blank=True,
@@ -1645,7 +1645,7 @@ class RunProfile(TimestampedModel):
     )
     # counts of the rows the profile was built with that deleting content
     # files or units removes, to tell that it must be rebuilt
-    row_counts = models.JSONField(default=dict, blank=True)
+    invalidation_counts = models.JSONField(default=dict, blank=True)
 
     class Meta:
         constraints = [
@@ -1673,13 +1673,14 @@ class ProfileClaim(models.Model):
         SKILL = "skill", "Skill"
         ASSUMED = "assumed", "Assumed knowledge"
         ASSESSMENT = "assessment", "Assessment expectation"
-        PRIOR = "prior", "Prior knowledge"
-        OUTCOME = "outcome", "Learning outcome"
+        # the context unit's claims
         CONTEXT = "context", "Context"
-        # the run extraction's other items
+        # the run extraction's items
         SUMMARY = "summary", "Summary"
         AUDIENCE = "audience", "Audience"
         TOPIC = "topic", "Main topic"
+        OUTCOME = "outcome", "Learning outcome"
+        PREPARATION = "preparation", "Inferred preparation"
         LIMITATION = "limitation", "Coverage limitation"
 
     profile = models.ForeignKey(
@@ -1689,7 +1690,7 @@ class ProfileClaim(models.Model):
     # "u:91be07aa13cd:4211:a4", from the extraction key, unit id and claim id
     uid = models.CharField(max_length=64)
     # the id the run step cites it by: "U03:a4", "ctx:prereq:0"; run claims
-    # have ids of their own: "run:summary:0", "run:outcome:0", "run:prior:0"
+    # have ids of their own: "run:summary:0", "run:outcome:0", "run:preparation:0"
     display_id = models.CharField(max_length=32)
     level = models.CharField(max_length=16, choices=Level.choices)
     kind = models.CharField(max_length=16, choices=Kind.choices)
@@ -1711,7 +1712,7 @@ class ProfileClaim(models.Model):
         related_name="profile_claims",
     )
     # run claim -> the unit and context claims it rests on
-    cites = models.ManyToManyField(
+    cited_claims = models.ManyToManyField(
         "self", symmetrical=False, blank=True, related_name="cited_by"
     )
     # run claim -> the units it names: a topic's units, where a preparation
