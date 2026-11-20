@@ -67,7 +67,6 @@ from learning_resources.models import (
     ContentFile,
     Course,
     LearningResource,
-    LearningResourceImage,
     LearningResourceRun,
     LearningResourceTopic,
     LearningResourceTopicMapping,
@@ -1517,7 +1516,9 @@ def _figure_version_linked(folder: str) -> bool:
             | Q(parts_text__contains=link)
         )
         .exists()
-        or LearningResourceImage.objects.filter(url__contains=link).exists()
+        or LearningResource.objects.filter(
+            published=True, image__url__contains=link
+        ).exists()
     )
 
 
