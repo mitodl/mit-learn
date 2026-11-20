@@ -18,6 +18,7 @@ regenerated only when one of those changes.
 
 import logging
 from dataclasses import dataclass
+from typing import NamedTuple
 
 from learning_resources.models import (
     ClaimExtraction,
@@ -127,24 +128,58 @@ def _is_taught_concept(kind: str, claim: dict) -> bool:
     return kind == "concept" and claim.get("teaching_status") in TEACHING_STATUSES
 
 
-def context_claims_by_id(output: dict | None) -> dict[str, str]:
-    """Give the context extraction's claims ids, as the run prompt cites them"""
+class ContextClaim(NamedTuple):
+    """A claim of the context extraction"""
+
+    # the id the run prompt cites it by: ctx:aud:0, ctx:desc, ...
+    claim_id: str
+    # the output field it is from
+    field: str
+    item: dict
+    # its text as the run prompt shows it
+    text: str
+
+
+def context_claims(output: dict | None) -> list[ContextClaim]:
+    """Return the context extraction's claims, with the ids the run prompt cites"""
     if not output:
-        return {}
-    claims = {}
-    for index, statement in enumerate(output.get("stated_audience", [])):
-        claims[f"ctx:aud:{index}"] = statement["text"]
-    if output.get("description"):
-        claims["ctx:desc"] = output["description"]["text"]
-    for index, statement in enumerate(output.get("objectives", [])):
-        claims[f"ctx:obj:{index}"] = statement["text"]
-    for index, prerequisite in enumerate(output.get("prerequisites", [])):
-        claims[f"ctx:prereq:{index}"] = (
-            f"[{prerequisite['kind']}] {prerequisite['statement']}"
+        return []
+    claims = [
+        ContextClaim(
+            f"ctx:aud:{index}", "stated_audience", statement, statement["text"]
         )
-    for index, statement in enumerate(output.get("required_materials", [])):
-        claims[f"ctx:req:{index}"] = statement["text"]
+        for index, statement in enumerate(output.get("stated_audience", []))
+    ]
+    if output.get("description"):
+        description = output["description"]
+        claims.append(
+            ContextClaim("ctx:desc", "description", description, description["text"])
+        )
+    claims += [
+        ContextClaim(f"ctx:obj:{index}", "objectives", statement, statement["text"])
+        for index, statement in enumerate(output.get("objectives", []))
+    ]
+    claims += [
+        ContextClaim(
+            f"ctx:prereq:{index}",
+            "prerequisites",
+            prerequisite,
+            f"[{prerequisite['kind']}] {prerequisite['statement']}",
+        )
+        for index, prerequisite in enumerate(output.get("prerequisites", []))
+    ]
+    claims += [
+        ContextClaim(
+            f"ctx:req:{index}", "required_materials", statement, statement["text"]
+        )
+        for index, statement in enumerate(output.get("required_materials", []))
+    ]
     return claims
+
+
+def context_claims_by_id(output: dict | None) -> dict[str, str]:
+    """Return each context claim's text by the id the run prompt cites it by"""
+    return {claim.claim_id: claim.text for claim in context_claims(output)}
 
 
 def _context_block(output: dict | None) -> str:

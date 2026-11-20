@@ -4,16 +4,15 @@ from django.core.management import BaseCommand, CommandError
 
 from learning_resources.tasks import (
     generate_all_claims,
+    rebuild_resource_profiles,
     unit_claims_resource_ids,
 )
 
 
 class Command(BaseCommand):
     """
-    Generate resource profile claims for resources' best runs.
-
-    Only step 1, the claims for the context unit, units and bins, exists so
-    far; later steps will run from here too.
+    Generate resource profile claims for resources' best runs, and load them
+    into their resource profiles.
     """
 
     help = "Generate resource profile claims for resources' best runs"
@@ -39,9 +38,25 @@ class Command(BaseCommand):
                 " model or code change"
             ),
         )
+        parser.add_argument(
+            "--rebuild-profiles",
+            dest="rebuild_profiles",
+            action="store_true",
+            help=(
+                "Only rebuild resource profiles from their published claims,"
+                " without generating claims, to apply a change to the code"
+                " that builds profiles. Makes no model calls."
+            ),
+        )
 
     def handle(self, *args, **options):  # noqa: ARG002
-        """Queue claim generation"""
+        """Queue claim generation, or profile rebuilds"""
+        if options["rebuild_profiles"] and options["overwrite"]:
+            msg = (
+                "--rebuild-profiles doesn't generate claims, so it can't be"
+                " combined with --overwrite"
+            )
+            raise CommandError(msg)
         if options["all"]:
             resource_ids = unit_claims_resource_ids()
         elif options["resource_ids"]:
@@ -59,6 +74,14 @@ class Command(BaseCommand):
             raise CommandError(msg)
         if not resource_ids:
             self.stdout.write("No resources have units to generate claims for")
+            return
+        if options["rebuild_profiles"]:
+            task = rebuild_resource_profiles.delay(resource_ids)
+            self.stdout.write(
+                f"Started task {task} to rebuild the profiles of"
+                f" {len(resource_ids)} resource(s). Follow the celery logs for"
+                " progress."
+            )
             return
         task = generate_all_claims.delay(resource_ids, overwrite=options["overwrite"])
         self.stdout.write(

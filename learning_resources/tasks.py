@@ -1512,10 +1512,12 @@ def generate_claims_for_resource(
     which knowledge the course teaches before it is needed.
 
     When nothing failed, the extractions the best run uses are then the
-    course's only published ones: see publish_claim_extractions. When
-    something failed, what is published is left as it is, so the course keeps
-    its last complete claims, rather than none or claims missing a unit,
-    until a sweep succeeds.
+    resource's only published ones: see publish_claim_extractions. Step 3 then
+    loads them into the best run's resource profile, which is rebuilt only when
+    it is out of date, and the resource's other profiles are deleted.
+    When something failed, what is published is left as it is, so the resource
+    keeps its last complete claims and profile, rather than none or claims
+    missing a unit, until a sweep succeeds.
 
     Args:
         resource_id (int): the LearningResource id
@@ -1526,8 +1528,9 @@ def generate_claims_for_resource(
             extracted, skipped (no text, a context unit over the input budget,
             a unit that would need more than max_parts parts, or for the run,
             a failed unit) and failed (no valid response, or a split unit's
-            merge call over the merge's input budget), or None when the best
-            run has no units
+            merge call over the merge's input budget), and whether the
+            profile was built, unchanged or failed; or None when the best run
+            has no units
     """
     # deferred: the claim modules import the AI libraries, kept out of boot
     from learning_resources.profiles.context_claims import generate_context_claims
@@ -1539,6 +1542,7 @@ def generate_claims_for_resource(
     if not run or not run.units.exists():
         log.info("No units to generate claims for in %s", resource.readable_id)
         publish_claim_extractions(resource, [])
+        _publish_profile_for_sweep(resource, None, Counter())
         return None
 
     stats = Counter()
@@ -1589,7 +1593,7 @@ def generate_claims_for_resource(
         )
         stats["run_skipped"] += 1
     else:
-        _, any_failed = _extract(
+        run_extraction, any_failed = _extract(
             "run",
             run.run_id,
             lambda: generate_run_claims(
@@ -1599,13 +1603,36 @@ def generate_claims_for_resource(
     if any_failed:
         log.info(
             "Not publishing claims for %s: an extraction failed, so its last"
-            " published claims are kept",
+            " published claims and profile are kept",
             resource.readable_id,
         )
     else:
         publish_claim_extractions(resource, current_ids)
+        _publish_profile_for_sweep(resource, run_extraction, stats)
     log.info("Generated claims for %s: %s", resource.readable_id, dict(stats))
     return dict(stats)
+
+
+def _publish_profile_for_sweep(
+    resource: LearningResource, run_extraction: ClaimExtraction | None, stats: Counter
+) -> None:
+    """
+    Load the best run's published claims into its resource profile: step 3.
+
+    A profile that fails to build is logged and counted, and the resource keeps
+    its last profile.
+    """
+    # deferred, like the claim modules
+    from learning_resources.profiles.run_profile import publish_resource_profile
+
+    try:
+        built = publish_resource_profile(resource, run_extraction)
+    except Exception:
+        log.exception("Building the profile of %s failed", resource.readable_id)
+        stats["profile_failed"] += 1
+        return
+    if built is not None:
+        stats["profile_built" if built else "profile_unchanged"] += 1
 
 
 def publish_claim_extractions(
@@ -1642,7 +1669,8 @@ def generate_all_claims(resource_ids: list[int], *, overwrite: bool = False) -> 
     """
     Queue resource profile claim generation for each resource.
 
-    Step 1 (context and unit claims) and step 2 (run claims) both run.
+    Step 1 (context and unit claims), step 2 (run claims) and step 3 (the
+    resource profile) all run.
 
     Args:
         resource_ids (list of int): the LearningResource ids
@@ -1656,6 +1684,79 @@ def generate_all_claims(resource_ids: list[int], *, overwrite: bool = False) -> 
             generate_claims_for_resource.si(resource_id, overwrite=overwrite)
             for resource_id in resource_ids
         ]
+    ).apply_async()
+    return len(resource_ids)
+
+
+@app.task(acks_late=True)
+def rebuild_resource_profile(resource_id: int) -> bool | None:
+    """
+    Rebuild a resource's profile from its published run extraction: step 3
+    only.
+
+    No claims are generated, so it makes no model calls. It rebuilds even when
+    the profile is current, to apply a change to the code that builds
+    profiles, which the freshness check doesn't see. Like a sweep, it deletes
+    the profiles of the resource's other runs.
+
+    When the best run changed since the resource's last successful sweep, its
+    published run extraction is another run's, so nothing is rebuilt and the
+    next sweep replaces the profile.
+
+    Args:
+        resource_id (int): the LearningResource id
+
+    Returns:
+        bool | None: True when the profile was rebuilt, or None when the
+            resource has no published run extraction for its best run
+
+    Raises:
+        ProfileBuildError: when the extraction refers to units or extractions
+            that are gone, or to extractions that are no longer published
+    """
+    # deferred, like the claim modules
+    from learning_resources.profiles.run_profile import publish_resource_profile
+
+    resource = LearningResource.objects.get(id=resource_id)
+    # publish_claim_extractions publishes at most one run extraction: the
+    # best run's, as of the resource's last successful sweep
+    extraction = ClaimExtraction.objects.filter(
+        run__learning_resource=resource,
+        level=ClaimExtraction.Level.RUN,
+        published=True,
+    ).first()
+    if extraction is None:
+        log.info(
+            "No published run claims to rebuild a profile from for %s",
+            resource.readable_id,
+        )
+        return None
+    best_run = resource.best_run
+    if best_run is None or extraction.run_id != best_run.id:
+        log.info(
+            "Not rebuilding the profile of %s: its published run claims are for"
+            " run %s, not its best run %s; a claims sweep replaces them",
+            resource.readable_id,
+            extraction.run_id,
+            best_run.id if best_run else None,
+        )
+        return None
+    return publish_resource_profile(resource, extraction, force=True)
+
+
+@app.task(acks_late=True)
+def rebuild_resource_profiles(resource_ids: list[int]) -> int:
+    """
+    Queue a profile rebuild for each resource, without generating claims.
+
+    Args:
+        resource_ids (list of int): the LearningResource ids
+
+    Returns:
+        int: how many resources were queued
+    """
+    celery.group(
+        [rebuild_resource_profile.si(resource_id) for resource_id in resource_ids]
     ).apply_async()
     return len(resource_ids)
 

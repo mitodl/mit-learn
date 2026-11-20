@@ -13,6 +13,7 @@ from learning_resources.profiles.sources import (
     FILE_BUDGET_SHARE,
     Source,
     pack_parts,
+    read_text_checksum,
     truncate,
     unit_sources,
 )
@@ -40,6 +41,27 @@ def test_truncate_hard_cut():
     truncated, included = truncate(text, max_tokens=100)
     assert included == 400
     assert truncated.startswith("x" * 400 + "\n[... truncated: the first 400 of 1,000")
+
+
+def test_read_text_checksum_is_of_the_text_sent():
+    """
+    A truncated file's checksum is of the kept text as it is sent, without
+    the trailing whitespace truncate() strips, so whitespace changes there
+    that leave the text sent the same keep the checksum
+    """
+    page = "word " * 300
+    texts = [
+        f"[page 1] {page}[page 2] {page}[page 3] {page}",
+        f"[page 1] {page}[page 2] {page[:-1]}\t[page 3] {page}",
+    ]
+    max_tokens = len(texts[0]) // CHARS_PER_TOKEN - 100
+    sent = [truncate(text, max_tokens) for text in texts]
+    assert sent[0] == sent[1]
+    truncated, included = sent[0]
+    kept = truncated.split("\n[... truncated:")[0]
+
+    checksums = {read_text_checksum(text, included) for text in texts}
+    assert checksums == {read_text_checksum(kept, len(kept))}
 
 
 @pytest.mark.django_db
@@ -73,6 +95,8 @@ def test_unit_sources():
     assert sources[1].text == "text 2"
     files[2].refresh_from_db()
     assert sources[1].checksum == files[2].checksum
+    assert sources[1].text_checksum == read_text_checksum("text 2", 6)
+    assert sources[1].summary()["text_checksum"] == sources[1].text_checksum
     assert sources[1].header == (
         f"=== SOURCE S02 | type={files[2].content_type} | title='T2'"
         " | relation=assessment ==="
@@ -101,6 +125,12 @@ def test_unit_sources_fit_budget(budget):
         assert long.tokens <= budget * FILE_BUDGET_SHARE
         assert long.tokens > budget * FILE_BUDGET_SHARE / 2
         assert long.text.endswith("characters of this file are included ...]")
+    full_text = ("A long transcript. " * 500).strip()
+    # the checksum is of the part read, so text past it can change
+    assert long.text_checksum == read_text_checksum(full_text, long.included_chars)
+    assert long.text_checksum == read_text_checksum(
+        f"{full_text} more", long.included_chars
+    )
 
 
 def _source(index, tokens):

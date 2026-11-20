@@ -1610,6 +1610,152 @@ class ClaimExtraction(TimestampedModel):
         return f"{self.level} {self.extractor_version} {self.key[:12]}"
 
 
+class RunProfile(TimestampedModel):
+    """
+    The published profile of a resource's best run, loaded from its claim
+    extractions for querying.
+
+    It copies everything it shows, so it outlives the extractions it was
+    loaded from, which are replaced and deleted as claims are regenerated.
+    """
+
+    class Status(models.TextChoices):
+        BUILDING = "building", "Building"
+        READY = "ready", "Ready"
+        # a rebuild of an out-of-date profile failed: it keeps its last claims
+        # until a rebuild succeeds
+        STALE = "stale", "Stale"
+        FAILED = "failed", "Failed"
+
+    run = models.ForeignKey(
+        LearningResourceRun, related_name="profiles", on_delete=models.CASCADE
+    )
+    # the run-level extraction the profile was loaded from
+    run_extraction = models.ForeignKey(
+        ClaimExtraction,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="profiles",
+    )
+    status = models.CharField(
+        max_length=16, choices=Status.choices, default=Status.BUILDING
+    )
+    # counts of the rows that deleting or unpublishing content files or units
+    # can invalidate, as of the build; a mismatch means it must be rebuilt
+    invalidation_counts = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["run"], name="unique_profile_per_run")
+        ]
+
+    def __str__(self):
+        return f"RunProfile for {self.run_id}: {self.status}"
+
+
+class ProfileClaim(models.Model):
+    """
+    One claim of a run profile: a unit's claim, a context claim, or an item of
+    the run extraction (its summary, an audience, main topic, learning outcome,
+    inferred preparation or coverage limitation), which cites the unit and
+    context claims it rests on
+    """
+
+    class Level(models.TextChoices):
+        UNIT = "unit", "Unit"
+        RUN = "run", "Run"
+
+    class Kind(models.TextChoices):
+        CONCEPT = "concept", "Concept"
+        SKILL = "skill", "Skill"
+        ASSUMED = "assumed", "Assumed knowledge"
+        ASSESSMENT = "assessment", "Assessment expectation"
+        # the context unit's claims
+        CONTEXT = "context", "Context"
+        # the run extraction's items
+        SUMMARY = "summary", "Summary"
+        AUDIENCE = "audience", "Audience"
+        TOPIC = "topic", "Main topic"
+        OUTCOME = "outcome", "Learning outcome"
+        PREPARATION = "preparation", "Inferred preparation"
+        LIMITATION = "limitation", "Coverage limitation"
+
+    profile = models.ForeignKey(
+        RunProfile, related_name="claims", on_delete=models.CASCADE
+    )
+    # stable across rebuilds while the extraction and unit are unchanged:
+    # "u:91be07aa13cd:4211:a4" (extraction key, unit id, claim id), or
+    # "r:91be07aa13cd:summary:0" for a run claim
+    uid = models.CharField(max_length=64)
+    # the id the run step cites it by: "U03:a4", "ctx:prereq:0"; run claims
+    # have ids of their own: "run:summary:0", "run:outcome:0", "run:preparation:0"
+    display_id = models.CharField(max_length=32)
+    level = models.CharField(max_length=16, choices=Level.choices)
+    kind = models.CharField(max_length=16, choices=Kind.choices)
+    label = models.CharField(max_length=512)
+    description = models.TextField()
+    unit = models.ForeignKey(
+        Unit,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="profile_claims",
+    )
+    # the extraction the claim was loaded from
+    extraction = models.ForeignKey(
+        ClaimExtraction,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="profile_claims",
+    )
+    # run claim -> the unit and context claims it rests on
+    cited_claims = models.ManyToManyField(
+        "self", symmetrical=False, blank=True, related_name="cited_by"
+    )
+    # run claim -> the units it names: a topic's units, where a preparation
+    # item is first needed and taught, a unit a limitation cites
+    cited_units = models.ManyToManyField(
+        Unit, related_name="citing_profile_claims", blank=True
+    )
+    # kind-specific fields (teaching_status, how_used, tests_concept_labels, ...)
+    data = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["profile", "uid"], name="unique_claim_uid_per_profile"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.display_id} [{self.kind}] {self.label}"
+
+
+class ClaimEvidence(models.Model):
+    """A passage of a content file quoted as evidence for a claim"""
+
+    claim = models.ForeignKey(
+        ProfileClaim, related_name="evidence", on_delete=models.CASCADE
+    )
+    content_file = models.ForeignKey(
+        ContentFile, related_name="claim_evidence", on_delete=models.CASCADE
+    )
+    # the content version the span refers to
+    content_checksum = models.CharField(max_length=32, blank=True)
+    passage = models.TextField()
+    # [hh:mm:ss], p.N, or section heading
+    locator = models.CharField(max_length=64, blank=True)
+    # exact | fuzzy | unverified | unknown_source, see profiles.verification
+    verified = models.CharField(max_length=16)
+    span_start = models.PositiveIntegerField(null=True, blank=True)
+    span_end = models.PositiveIntegerField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.claim_id} <- {self.content_file_id}: {self.passage[:40]}"
+
+
 class UserList(TimestampedModel):
     """
     Similar in concept to a LearningPath: a list of learning resources.
