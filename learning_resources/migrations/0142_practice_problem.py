@@ -7,7 +7,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("learning_resources", "0140_claim_extraction_unit_parts"),
+        ("learning_resources", "0141_unit_run_position_idx"),
     ]
 
     operations = [
