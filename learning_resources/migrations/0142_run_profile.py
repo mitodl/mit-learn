@@ -6,7 +6,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("learning_resources", "0140_claim_extraction_unit_parts"),
+        ("learning_resources", "0141_unit_run_position_idx"),
     ]
 
     operations = [
@@ -89,6 +89,10 @@ class Migration(migrations.Migration):
                             ("prior", "Prior knowledge"),
                             ("outcome", "Learning outcome"),
                             ("context", "Context"),
+                            ("summary", "Summary"),
+                            ("audience", "Audience"),
+                            ("topic", "Main topic"),
+                            ("limitation", "Coverage limitation"),
                         ],
                         max_length=16,
                     ),
@@ -102,6 +106,14 @@ class Migration(migrations.Migration):
                         blank=True,
                         related_name="cited_by",
                         to="learning_resources.profileclaim",
+                    ),
+                ),
+                (
+                    "cited_units",
+                    models.ManyToManyField(
+                        blank=True,
+                        related_name="citing_profile_claims",
+                        to="learning_resources.unit",
                     ),
                 ),
                 (
@@ -169,64 +181,6 @@ class Migration(migrations.Migration):
                     ),
                 ),
             ],
-        ),
-        migrations.CreateModel(
-            name="ProfileStatement",
-            fields=[
-                (
-                    "id",
-                    models.AutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                (
-                    "section",
-                    models.CharField(
-                        choices=[
-                            ("summary", "Summary"),
-                            ("audience", "Audience"),
-                            ("outcome", "Learning outcome"),
-                            ("topic", "Main topic"),
-                            ("preparation", "Inferred preparation"),
-                            ("limitation", "Coverage limitation"),
-                        ],
-                        max_length=32,
-                    ),
-                ),
-                ("position", models.PositiveIntegerField()),
-                ("text", models.TextField()),
-                ("data", models.JSONField(blank=True, default=dict)),
-                (
-                    "claims",
-                    models.ManyToManyField(
-                        blank=True,
-                        related_name="statements",
-                        to="learning_resources.profileclaim",
-                    ),
-                ),
-                (
-                    "profile",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE,
-                        related_name="statements",
-                        to="learning_resources.runprofile",
-                    ),
-                ),
-                (
-                    "units",
-                    models.ManyToManyField(
-                        blank=True,
-                        related_name="profile_statements",
-                        to="learning_resources.unit",
-                    ),
-                ),
-            ],
-            options={
-                "ordering": ["profile", "section", "position"],
-            },
         ),
         migrations.AddConstraint(
             model_name="runprofile",

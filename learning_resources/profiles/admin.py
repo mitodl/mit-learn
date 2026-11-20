@@ -6,10 +6,69 @@ from learning_resources.models import (
     ClaimEvidence,
     ClaimExtraction,
     ProfileClaim,
-    ProfileStatement,
     ResourceProfileConfiguration,
     RunProfile,
 )
+
+
+class InputFilter(admin.SimpleListFilter):
+    """
+    A list filter with a text box, for fields with too many values to list,
+    matching the value exactly.
+    """
+
+    template = "admin/learning_resources/input_filter.html"
+    # the lookup the value is matched against
+    lookup = None
+
+    def lookups(self, request, model_admin):  # noqa: ARG002
+        """There are no choices to list"""
+        return ()
+
+    def has_output(self):
+        """Show the text box though there are no choices"""
+        return True
+
+    def get_facet_counts(self, pk_attname, filtered_qs):  # noqa: ARG002
+        """There are no choices to count"""
+        return {}
+
+    def queryset(self, request, queryset):  # noqa: ARG002
+        """Filter on the value when there is one"""
+        value = (self.value() or "").strip()
+        if value:
+            return queryset.filter(**{self.lookup: value})
+        return queryset
+
+    def choices(self, changelist):
+        """Yield the text box's value and the other parameters for the form to keep"""
+        yield {
+            "parameter_name": self.parameter_name,
+            "value": self.value() or "",
+            # the other filters, the search and the ordering; not the page
+            "query_parts": [
+                (name, value)
+                for name, values in changelist.filter_params.items()
+                if name != self.parameter_name
+                for value in values
+            ],
+        }
+
+
+class ProfileResourceFilter(InputFilter):
+    """Filter a profile's rows by its learning resource's readable id"""
+
+    title = "learning resource readable id"
+    parameter_name = "readable_id"
+    lookup = "profile__run__learning_resource__readable_id"
+
+
+class ProfileRunFilter(InputFilter):
+    """Filter a profile's rows by its run's run id"""
+
+    title = "run id"
+    parameter_name = "run_id"
+    lookup = "profile__run__run_id"
 
 
 class ResourceProfileConfigurationAdmin(admin.ModelAdmin):
@@ -89,29 +148,37 @@ class ProfileClaimAdmin(admin.ModelAdmin):
     """ProfileClaim Admin"""
 
     model = ProfileClaim
-    list_display = ("display_id", "kind", "level", "label", "profile", "unit")
-    list_filter = ("kind", "level")
+    list_display = (
+        "display_id",
+        "kind",
+        "level",
+        "label",
+        "resource_readable_id",
+        "run_id",
+        "unit",
+    )
+    list_filter = (ProfileResourceFilter, ProfileRunFilter, "kind", "level")
     search_fields = ("label", "uid", "display_id", "profile__run__run_id")
-    raw_id_fields = ("profile", "unit", "extraction", "cites")
+    raw_id_fields = ("profile", "unit", "extraction", "cites", "cited_units")
     inlines = [ClaimEvidenceInline]
-    list_select_related = ("profile", "unit")
+    list_select_related = ("profile__run__learning_resource", "unit")
     show_full_result_count = False
 
+    @admin.display(
+        description=ProfileResourceFilter.title,
+        ordering=ProfileResourceFilter.lookup,
+    )
+    def resource_readable_id(self, obj):
+        """Return the profile's learning resource's readable id"""
+        return obj.profile.run.learning_resource.readable_id
 
-class ProfileStatementAdmin(admin.ModelAdmin):
-    """ProfileStatement Admin"""
-
-    model = ProfileStatement
-    list_display = ("section", "position", "text", "profile")
-    list_filter = ("section",)
-    search_fields = ("text", "profile__run__run_id")
-    raw_id_fields = ("profile", "claims", "units")
-    list_select_related = ("profile",)
-    show_full_result_count = False
+    @admin.display(description=ProfileRunFilter.title, ordering=ProfileRunFilter.lookup)
+    def run_id(self, obj):
+        """Return the profile's run's run id"""
+        return obj.profile.run.run_id
 
 
 admin.site.register(ResourceProfileConfiguration, ResourceProfileConfigurationAdmin)
 admin.site.register(ClaimExtraction, ClaimExtractionAdmin)
 admin.site.register(RunProfile, RunProfileAdmin)
 admin.site.register(ProfileClaim, ProfileClaimAdmin)
-admin.site.register(ProfileStatement, ProfileStatementAdmin)

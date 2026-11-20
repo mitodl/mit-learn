@@ -2,8 +2,8 @@
 Step 3 of resource profile generation: load a run's claims into its profile.
 
 The run's context, unit and run extractions are already stored. This step
-parses their JSON into RunProfile, ProfileClaim, ClaimEvidence and
-ProfileStatement rows, which can be queried, and makes no model calls.
+parses their JSON into RunProfile, ProfileClaim and ClaimEvidence rows,
+which can be queried, and makes no model calls.
 
 - Each unit claim, and each context claim, is a ProfileClaim, with the id the
   run step cites it by (U03:a4, ctx:prereq:0) and a uid built from its
@@ -16,12 +16,11 @@ ProfileStatement rows, which can be queried, and makes no model calls.
   resolved to the content file at its position in the unit that reads it,
   when the part of that file's text the source read is unchanged; evidence
   whose source can't be resolved is left out and logged.
-- Each learning outcome and inferred preparation item of the run output is
-  also a run-level ProfileClaim (run:outcome:0, run:prior:0), which cites the
-  unit and context claims it rests on.
-- Each item of the run output's summary, audience, learning outcomes, main
-  topics, inferred preparation and coverage limitations is a
-  ProfileStatement, linked to the claims and units it cites. The items the
+- The run output's summary, and each of its audiences, main topics, learning
+  outcomes, inferred preparation items and coverage limitations, is a
+  run-level ProfileClaim (run:summary:0, run:topic:0, run:prior:0, ...),
+  linked to the unit and context claims and the units it cites, and stored
+  in that order, so ordering by id reads them as a profile. The items the
   preparation rule excluded are left in the run extraction's output.
 
 A run's profile is rebuilt in one transaction, so readers never see a
@@ -43,7 +42,6 @@ from learning_resources.models import (
     ContentFile,
     LearningResource,
     ProfileClaim,
-    ProfileStatement,
     RunProfile,
     Unit,
     UnitContentFile,
@@ -65,20 +63,15 @@ _CONTEXT_COLUMNS = {"label", "text", "statement", "evidence"}
 CONTEXT_PREFIX = "ctx:"
 # claim id prefix of the run claims
 RUN_PREFIX = "run:"
-# the run output's fields loaded as run claims: (kind, local id prefix, the
-# item's fields listing the claim ids it cites)
-RUN_CLAIM_FIELDS = {
-    "learning_outcomes": (ProfileClaim.Kind.OUTCOME, "outcome", ("claim_ids",)),
-    "inferred_preparation": (
-        ProfileClaim.Kind.PRIOR,
-        "prior",
-        (
-            "assumed_claim_ids",
-            "taught_before_first_use_claim_ids",
-            "taught_after_first_use_claim_ids",
-        ),
-    ),
-}
+# the run output's lists loaded as run claims, in the order a profile reads
+# them, after the summary: (field, kind, local id prefix)
+RUN_CLAIM_FIELDS = (
+    ("audience", ProfileClaim.Kind.AUDIENCE, "audience"),
+    ("main_topics", ProfileClaim.Kind.TOPIC, "topic"),
+    ("learning_outcomes", ProfileClaim.Kind.OUTCOME, "outcome"),
+    ("inferred_preparation", ProfileClaim.Kind.PRIOR, "prior"),
+    ("coverage_limitations", ProfileClaim.Kind.LIMITATION, "limitation"),
+)
 # a run claim's fields stored in ProfileClaim's own columns, not in data
 _RUN_COLUMNS = {"label", "text", "description"}
 
@@ -208,8 +201,10 @@ class _ProfileLoader:
         self.claims: list[ProfileClaim] = []
         # each claim's evidence items and the files of its sources, in claim order
         self.evidence: list[tuple[list[dict], dict[str, ContentFile]]] = []
-        # each claim's cited claim ids, in claim order
+        # each claim's cited claim and unit ids, and the ids of the units it
+        # names, in claim order
         self.cites: list[list[str]] = []
+        self.cited_units: list[list[str]] = []
         self.stats = Counter()
 
     @staticmethod
@@ -241,6 +236,7 @@ class _ProfileLoader:
         files: dict[str, ContentFile],
         level: str = ProfileClaim.Level.UNIT,
         cites: list[str] | None = None,
+        cited_units: list[str] | None = None,
     ) -> None:
         self.claims.append(
             ProfileClaim(
@@ -258,6 +254,7 @@ class _ProfileLoader:
         )
         self.evidence.append((evidence, files))
         self.cites.append(cites or [])
+        self.cited_units.append(cited_units or [])
 
     def add_unit(
         self, display_id: str, unit: Unit, extraction: ClaimExtraction
@@ -311,38 +308,52 @@ class _ProfileLoader:
 
     def add_run(self, extraction: ClaimExtraction) -> None:
         """
-        Add the run extraction's claims: its learning outcomes and inferred
-        preparation. They quote no sources, so they have no evidence, and cite
-        the unit and context claims they rest on instead.
+        Add the run extraction's claims: its summary, then each item of its
+        lists. They quote no sources, so they have no evidence, and cite the
+        unit and context claims they rest on instead.
         """
-        for field, (kind, prefix, cite_fields) in RUN_CLAIM_FIELDS.items():
-            for index, item in enumerate(extraction.output.get(field, [])):
-                local_id = f"{prefix}:{index}"
-                # an outcome has only text; a preparation item a label and a
-                # description
-                description = item.get("description") or item.get("text") or ""
-                self._add_claim(
-                    extraction=extraction,
-                    unit=None,
-                    local_id=local_id,
-                    display_id=f"{RUN_PREFIX}{local_id}",
-                    kind=kind,
-                    label=item.get("label") or description,
-                    description=description,
-                    data={
-                        name: value
-                        for name, value in item.items()
-                        if name not in _RUN_COLUMNS
+        output = extraction.output
+        items = []
+        if output.get("summary"):
+            items.append(
+                (
+                    ProfileClaim.Kind.SUMMARY,
+                    "summary:0",
+                    {
+                        "text": output["summary"],
+                        "claim_ids": output.get("summary_claim_ids", []),
                     },
-                    evidence=[],
-                    files={},
-                    level=ProfileClaim.Level.RUN,
-                    cites=[
-                        claim_id
-                        for cite_field in cite_fields
-                        for claim_id in item.get(cite_field, [])
-                    ],
                 )
+            )
+        items += [
+            (kind, f"{prefix}:{index}", item)
+            for field, kind, prefix in RUN_CLAIM_FIELDS
+            for index, item in enumerate(output.get(field, []))
+        ]
+        for kind, local_id, item in items:
+            # a topic and a preparation item have a label and a description;
+            # the rest only text
+            description = item.get("description") or item.get("text") or ""
+            cites, cited_units = _run_citations(kind, item)
+            self._add_claim(
+                extraction=extraction,
+                unit=None,
+                local_id=local_id,
+                display_id=f"{RUN_PREFIX}{local_id}",
+                kind=kind,
+                label=item.get("label") or description,
+                description=description,
+                data={
+                    name: value
+                    for name, value in item.items()
+                    if name not in _RUN_COLUMNS
+                },
+                evidence=[],
+                files={},
+                level=ProfileClaim.Level.RUN,
+                cites=cites,
+                cited_units=cited_units,
+            )
 
     def _evidence_rows(self) -> list[ClaimEvidence]:
         locator_length = _max_length(ClaimEvidence, "locator")
@@ -367,154 +378,85 @@ class _ProfileLoader:
                 )
         return rows
 
-    def _cites_rows(self, claims: dict[str, ProfileClaim]) -> list:
+    def _citation_rows(
+        self, claims: dict[str, ProfileClaim], units: dict[str, Unit]
+    ) -> tuple[list, list]:
         """
-        Link each claim to the claims it cites. Cited ids that aren't claims,
-        like a unit's U03 or ctx:notes, are left in the claim's data.
-        """
-        through = ProfileClaim.cites.through
-        return [
-            through(from_profileclaim_id=claim.id, to_profileclaim_id=cited.id)
-            for claim, cited_ids in zip(self.claims, self.cites, strict=True)
-            for cited in dict.fromkeys(
-                claims[cited_id] for cited_id in cited_ids if cited_id in claims
-            )
-        ]
+        Link each claim to the claims and units it cites, and the units it
+        names. A cited id that is a unit's (a limitation can cite U03) links
+        the unit. Ids that are neither, like ctx:notes, stay only in the
+        claim's data.
 
-    def save_claims(self) -> dict[str, ProfileClaim]:
+        Returns:
+            tuple of (list, list): the rows of cites and of cited_units
         """
-        Store the claims, their evidence and their citations; return the
-        claims by display id
+        cites, cited_units = [], []
+        for claim, cited_ids, unit_ids in zip(
+            self.claims, self.cites, self.cited_units, strict=True
+        ):
+            cited_claims, linked_units, unknown = [], [], []
+            for cited_id in dict.fromkeys(cited_ids):
+                if cited_id in claims:
+                    cited_claims.append(claims[cited_id])
+                elif cited_id in units:
+                    linked_units.append(units[cited_id])
+                elif cited_id != CONTEXT_NOTES_ID:
+                    unknown.append(cited_id)
+            linked_units += [units[unit_id] for unit_id in unit_ids if unit_id in units]
+            if unknown:
+                log.warning(
+                    "Profile %s: claim %s cites unknown ids %s",
+                    self.profile.id,
+                    claim.display_id,
+                    ", ".join(unknown),
+                )
+            cites += [
+                ProfileClaim.cites.through(
+                    from_profileclaim_id=claim.id, to_profileclaim_id=cited.id
+                )
+                for cited in cited_claims
+            ]
+            cited_units += [
+                ProfileClaim.cited_units.through(
+                    profileclaim_id=claim.id, unit_id=unit.id
+                )
+                for unit in dict.fromkeys(linked_units)
+            ]
+        return cites, cited_units
+
+    def save_claims(self, units: dict[str, Unit]) -> None:
+        """
+        Store the claims, their evidence and their citations, given the run's
+        units by display id
         """
         ProfileClaim.objects.bulk_create(self.claims)
         ClaimEvidence.objects.bulk_create(self._evidence_rows())
         claims = {claim.display_id: claim for claim in self.claims}
-        ProfileClaim.cites.through.objects.bulk_create(self._cites_rows(claims))
+        cites, cited_units = self._citation_rows(claims, units)
+        ProfileClaim.cites.through.objects.bulk_create(cites)
+        ProfileClaim.cited_units.through.objects.bulk_create(cited_units)
         self.stats["claims"] += len(self.claims)
-        return claims
 
 
-# --------------------------------------------------------------------------- statements
-def _items(output: dict) -> list[tuple[str, dict, str, list[str], list[str]]]:
+def _run_citations(kind: str, item: dict) -> tuple[list[str], list[str]]:
     """
-    Return the run output's statements, as (section, data, text, cited claim
-    ids, unit ids), in section order
+    Return the claim and unit ids a run output item cites, and the ids of the
+    units it names
     """
-    Section = ProfileStatement.Section
-    statements = [
-        (
-            Section.SUMMARY,
-            {"claim_ids": output.get("summary_claim_ids", [])},
-            output.get("summary") or "",
-            output.get("summary_claim_ids", []),
-            [],
-        )
-    ]
-    for section, field in (
-        (Section.AUDIENCE, "audience"),
-        (Section.OUTCOME, "learning_outcomes"),
-        (Section.LIMITATION, "coverage_limitations"),
-    ):
-        statements += [
-            (
-                section,
-                {name: value for name, value in item.items() if name != "text"},
-                item["text"],
-                item.get("claim_ids", []),
-                [],
-            )
-            for item in output.get(field, [])
-        ]
-    statements += [
-        (
-            Section.TOPIC,
-            {name: value for name, value in item.items() if name != "description"},
-            item["description"],
-            item.get("concept_claim_ids", []),
-            item.get("unit_ids", []),
-        )
-        for item in output.get("main_topics", [])
-    ]
-    for item in output.get("inferred_preparation", []):
+    if kind == ProfileClaim.Kind.TOPIC:
+        return item.get("concept_claim_ids", []), item.get("unit_ids", [])
+    if kind == ProfileClaim.Kind.PRIOR:
         taught = item.get("taught_before_first_use_claim_ids", []) + item.get(
             "taught_after_first_use_claim_ids", []
         )
         first_needed = item.get("first_needed_unit_id")
-        statements.append(
-            (
-                Section.PREPARATION,
-                {name: value for name, value in item.items() if name != "description"},
-                item["description"],
-                item.get("assumed_claim_ids", []) + taught,
-                # first_needed, then where the resource teaches it
-                ([first_needed] if first_needed else [])
-                + [claim_id.split(":")[0] for claim_id in taught],
-            )
+        return (
+            item.get("assumed_claim_ids", []) + taught,
+            # first_needed, then where the resource teaches it
+            ([first_needed] if first_needed else [])
+            + [claim_id.split(":")[0] for claim_id in taught],
         )
-    return statements
-
-
-def _save_statements(
-    profile: RunProfile,
-    output: dict,
-    claims: dict[str, ProfileClaim],
-    units: dict[str, Unit],
-) -> int:
-    """
-    Store the run output's statements with their citations.
-
-    A cited id that is a unit's (a limitation can cite U03) links the unit.
-    Ids that are neither, like ctx:notes, stay only in the statement's data.
-
-    Returns:
-        int: how many statements were stored
-    """
-    rows, citations = [], []
-    positions = Counter()
-    for section, data, text, claim_ids, unit_ids in _items(output):
-        cited_claims, cited_units, unknown = [], [], []
-        for cited_id in dict.fromkeys(claim_ids):
-            if cited_id in claims:
-                cited_claims.append(claims[cited_id])
-            elif cited_id in units:
-                cited_units.append(units[cited_id])
-            elif cited_id != CONTEXT_NOTES_ID:
-                unknown.append(cited_id)
-        cited_units += [units[unit_id] for unit_id in unit_ids if unit_id in units]
-        if unknown:
-            log.warning(
-                "Profile %s: %s statement cites unknown ids %s",
-                profile.id,
-                section,
-                ", ".join(unknown),
-            )
-        rows.append(
-            ProfileStatement(
-                profile=profile,
-                section=section,
-                position=positions[section],
-                text=text,
-                data=data,
-            )
-        )
-        positions[section] += 1
-        citations.append((cited_claims, list(dict.fromkeys(cited_units))))
-    ProfileStatement.objects.bulk_create(rows)
-    ProfileStatement.claims.through.objects.bulk_create(
-        ProfileStatement.claims.through(
-            profilestatement_id=statement.id, profileclaim_id=claim.id
-        )
-        for statement, (cited_claims, _) in zip(rows, citations, strict=True)
-        for claim in cited_claims
-    )
-    ProfileStatement.units.through.objects.bulk_create(
-        ProfileStatement.units.through(
-            profilestatement_id=statement.id, unit_id=unit.id
-        )
-        for statement, (_, cited_units) in zip(rows, citations, strict=True)
-        for unit in cited_units
-    )
-    return len(rows)
+    return item.get("claim_ids", []), []
 
 
 # --------------------------------------------------------------------------- build
@@ -524,7 +466,7 @@ def _row_counts(profile: RunProfile) -> dict[str, int]:
     invalidate: evidence quoting a file that is still published and in its
     claim's unit, as a build would quote it (deleting a file cascades to its
     evidence; ETL unpublishes a replaced file and relinks the unit), claims'
-    units (set to null) and statements' links to units
+    units (set to null) and run claims' links to units
     """
     linked = UnitContentFile.objects.filter(
         unit_id=OuterRef("claim__unit_id"),
@@ -535,8 +477,8 @@ def _row_counts(profile: RunProfile) -> dict[str, int]:
             Exists(linked), claim__profile=profile, content_file__published=True
         ).count(),
         "claim_units": profile.claims.filter(unit__isnull=False).count(),
-        "statement_units": ProfileStatement.units.through.objects.filter(
-            profilestatement__profile=profile
+        "cited_units": ProfileClaim.cited_units.through.objects.filter(
+            profileclaim__profile=profile
         ).count(),
     }
 
@@ -600,10 +542,9 @@ def _check_published_references(extraction: ClaimExtraction) -> None:
 
 
 def _load(profile: RunProfile, extraction: ClaimExtraction) -> Counter:
-    """Replace a profile's claims and statements with the extraction's"""
+    """Replace a profile's claims with the extraction's"""
     records, context = _load_references(extraction)
     profile.claims.all().delete()
-    profile.statements.all().delete()
     loader = _ProfileLoader(profile)
     if context:
         loader.add_context(*context)
@@ -612,11 +553,7 @@ def _load(profile: RunProfile, extraction: ClaimExtraction) -> Counter:
             loader.add_unit(display_id, unit, unit_extraction)
     # last, so the claims they cite are stored before them
     loader.add_run(extraction)
-    claims = loader.save_claims()
-    units = {display_id: unit for display_id, unit, _ in records}
-    loader.stats["statements"] += _save_statements(
-        profile, extraction.output, claims, units
-    )
+    loader.save_claims({display_id: unit for display_id, unit, _ in records})
     return loader.stats
 
 

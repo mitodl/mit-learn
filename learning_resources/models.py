@@ -1658,8 +1658,10 @@ class RunProfile(TimestampedModel):
 
 class ProfileClaim(models.Model):
     """
-    One claim of a run profile: a unit's claim, a context claim, or a claim
-    of the run extraction, which cites the unit and context claims it rests on
+    One claim of a run profile: a unit's claim, a context claim, or an item of
+    the run extraction (its summary, an audience, main topic, learning outcome,
+    inferred preparation or coverage limitation), which cites the unit and
+    context claims it rests on
     """
 
     class Level(models.TextChoices):
@@ -1674,6 +1676,11 @@ class ProfileClaim(models.Model):
         PRIOR = "prior", "Prior knowledge"
         OUTCOME = "outcome", "Learning outcome"
         CONTEXT = "context", "Context"
+        # the run extraction's other items
+        SUMMARY = "summary", "Summary"
+        AUDIENCE = "audience", "Audience"
+        TOPIC = "topic", "Main topic"
+        LIMITATION = "limitation", "Coverage limitation"
 
     profile = models.ForeignKey(
         RunProfile, related_name="claims", on_delete=models.CASCADE
@@ -1682,7 +1689,7 @@ class ProfileClaim(models.Model):
     # "u:91be07aa13cd:4211:a4", from the extraction key, unit id and claim id
     uid = models.CharField(max_length=64)
     # the id the run step cites it by: "U03:a4", "ctx:prereq:0"; run claims
-    # have ids of their own: "run:outcome:0", "run:prior:0"
+    # have ids of their own: "run:summary:0", "run:outcome:0", "run:prior:0"
     display_id = models.CharField(max_length=32)
     level = models.CharField(max_length=16, choices=Level.choices)
     kind = models.CharField(max_length=16, choices=Kind.choices)
@@ -1706,6 +1713,11 @@ class ProfileClaim(models.Model):
     # run claim -> the unit and context claims it rests on
     cites = models.ManyToManyField(
         "self", symmetrical=False, blank=True, related_name="cited_by"
+    )
+    # run claim -> the units it names: a topic's units, where a preparation
+    # item is first needed and taught, a unit a limitation cites
+    cited_units = models.ManyToManyField(
+        Unit, related_name="citing_profile_claims", blank=True
     )
     # kind-specific fields (teaching_status, how_used, tests_concept_labels, ...)
     data = models.JSONField(default=dict, blank=True)
@@ -1742,38 +1754,6 @@ class ClaimEvidence(models.Model):
 
     def __str__(self):
         return f"{self.claim_id} <- {self.content_file_id}: {self.passage[:40]}"
-
-
-class ProfileStatement(models.Model):
-    """One item of a resource profile, citing the claims that support it"""
-
-    class Section(models.TextChoices):
-        SUMMARY = "summary", "Summary"
-        AUDIENCE = "audience", "Audience"
-        OUTCOME = "outcome", "Learning outcome"
-        TOPIC = "topic", "Main topic"
-        PREPARATION = "preparation", "Inferred preparation"
-        LIMITATION = "limitation", "Coverage limitation"
-
-    profile = models.ForeignKey(
-        RunProfile, related_name="statements", on_delete=models.CASCADE
-    )
-    section = models.CharField(max_length=32, choices=Section.choices)
-    # order within the section
-    position = models.PositiveIntegerField()
-    text = models.TextField()
-    # the item's other fields, as the run step stored them
-    data = models.JSONField(default=dict, blank=True)
-    # citations
-    claims = models.ManyToManyField(ProfileClaim, related_name="statements", blank=True)
-    # covers / first_needed / taught_in / cited
-    units = models.ManyToManyField(Unit, related_name="profile_statements", blank=True)
-
-    class Meta:
-        ordering = ["profile", "section", "position"]
-
-    def __str__(self):
-        return f"{self.section} {self.position}: {self.text[:60]}"
 
 
 class UserList(TimestampedModel):

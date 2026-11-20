@@ -27,6 +27,8 @@ from learning_resources.models import (
     CredentialMetadata,
     ETLShadowRun,
     LearningResource,
+    ProfileClaim,
+    RunProfile,
     TutorProblemFile,
     Unit,
 )
@@ -383,3 +385,47 @@ def test_unit_content_files_link_only_when_viewable(
 
     assert ("content_file_link" in fields) is linked
     assert ("content_file_key" in fields) is not linked
+
+
+@pytest.mark.django_db
+def test_profile_claims_filter_by_resource_and_run(admin_client):
+    """A profile's claims show and filter by resource and run."""
+    runs = LearningResourceRunFactory.create_batch(2)
+    rows = [
+        ProfileClaim.objects.create(
+            profile=RunProfile.objects.create(run=run),
+            uid=f"uid-{run.id}",
+            display_id="U01:c1",
+            level=ProfileClaim.Level.UNIT,
+            kind=ProfileClaim.Kind.CONCEPT,
+            label="label",
+            description="description",
+        )
+        for run in runs
+    ]
+    url = reverse("admin:learning_resources_profileclaim_changelist")
+
+    response = admin_client.get(url)
+    assert response.status_code == 200
+    assert {row.id for row in response.context["cl"].result_list} == {
+        row.id for row in rows
+    }
+    for run in runs:
+        assert run.run_id.encode() in response.content
+        assert run.learning_resource.readable_id.encode() in response.content
+
+    for params in (
+        {"readable_id": runs[0].learning_resource.readable_id},
+        {"run_id": f" {runs[0].run_id} "},
+        {"readable_id": runs[0].learning_resource.readable_id, "run_id": ""},
+    ):
+        response = admin_client.get(url, params)
+        assert response.status_code == 200
+        assert [row.id for row in response.context["cl"].result_list] == [rows[0].id]
+
+    # each text box keeps the other filters as hidden inputs
+    response = admin_client.get(url, {"run_id": runs[1].run_id, "o": "1"})
+    assert [row.id for row in response.context["cl"].result_list] == [rows[1].id]
+    content = response.content.decode()
+    assert f'type="hidden" name="run_id" value="{runs[1].run_id}"' in content
+    assert 'type="hidden" name="o" value="1"' in content

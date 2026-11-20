@@ -16,7 +16,6 @@ from learning_resources.models import (
     ClaimEvidence,
     ClaimExtraction,
     ProfileClaim,
-    ProfileStatement,
     RunProfile,
     Unit,
     UnitContentFile,
@@ -227,10 +226,6 @@ def resource():
     }
 
 
-def _statements(profile, section):
-    return list(profile.statements.filter(section=section).order_by("position"))
-
-
 def test_build_resource_profile_claims(resource):
     """Each unit and context claim is loaded, with its evidence"""
     profile, built = build_resource_profile(resource["run_extraction"])
@@ -250,8 +245,13 @@ def test_build_resource_profile_claims(resource):
         "U01:s1",
         "U01:a1",
         "U02:c1",
+        "run:summary:0",
+        "run:audience:0",
+        "run:topic:0",
         "run:outcome:0",
         "run:prior:0",
+        "run:limitation:0",
+        "run:limitation:1",
     }
     concept = claims["U01:c1"]
     assert concept.uid == f"u:{first_extraction.key[:12]}:{first.id}:c1"
@@ -297,74 +297,88 @@ def test_build_resource_profile_claims(resource):
 
 
 def test_build_resource_profile_run_claims(resource):
-    """The run output's outcomes and preparation are run claims citing claims"""
+    """
+    The run output's summary and each item of its lists are run claims, in
+    profile order, citing claims and units
+    """
     profile, _ = build_resource_profile(resource["run_extraction"])
 
     run_extraction = resource["run_extraction"]
+    _, first, _ = resource["units"]
     claims = {claim.display_id: claim for claim in profile.claims.all()}
+    run_claims = list(
+        profile.claims.filter(level=ProfileClaim.Level.RUN).order_by("id")
+    )
+    assert [claim.display_id for claim in run_claims] == [
+        "run:summary:0",
+        "run:audience:0",
+        "run:topic:0",
+        "run:outcome:0",
+        "run:prior:0",
+        "run:limitation:0",
+        "run:limitation:1",
+    ]
+    for claim in run_claims:
+        assert claim.unit is None
+        assert claim.extraction == run_extraction
+        assert not claim.evidence.exists()
+
+    summary = claims["run:summary:0"]
+    assert summary.uid == f"r:{run_extraction.key[:12]}:summary:0"
+    assert summary.kind == ProfileClaim.Kind.SUMMARY
+    assert summary.description == "A resource on mechanics."
+    assert summary.data == {"claim_ids": ["U01:c1", "ctx:aud:0"]}
+    assert set(summary.cites.all()) == {claims["U01:c1"], claims["ctx:aud:0"]}
+
+    audience = claims["run:audience:0"]
+    assert audience.kind == ProfileClaim.Kind.AUDIENCE
+    assert audience.description == "First-years."
+    assert list(audience.cites.all()) == [claims["ctx:aud:0"]]
+
+    topic = claims["run:topic:0"]
+    assert topic.kind == ProfileClaim.Kind.TOPIC
+    assert topic.label == "Dynamics"
+    assert topic.description == "Forces and motion."
+    assert list(topic.cites.all()) == [claims["U01:c1"]]
+    assert list(topic.cited_units.all()) == [first]
+
     outcome = claims["run:outcome:0"]
     assert outcome.uid == f"r:{run_extraction.key[:12]}:outcome:0"
-    assert outcome.level == ProfileClaim.Level.RUN
     assert outcome.kind == ProfileClaim.Kind.OUTCOME
     assert outcome.label == "Draw free-body diagrams."
     assert outcome.description == "Draw free-body diagrams."
-    assert outcome.unit is None
-    assert outcome.extraction == run_extraction
     assert outcome.data == {"claim_ids": ["U01:s1"]}
     assert list(outcome.cites.all()) == [claims["U01:s1"]]
-    assert not outcome.evidence.exists()
+    assert not outcome.cited_units.exists()
 
+
+def test_build_resource_profile_run_claims_cite_units(resource):
+    """Preparation items and limitations link the units they name or cite"""
+    profile, _ = build_resource_profile(resource["run_extraction"])
+
+    _, first, second = resource["units"]
+    claims = {claim.display_id: claim for claim in profile.claims.all()}
     prior = claims["run:prior:0"]
-    assert prior.level == ProfileClaim.Level.RUN
     assert prior.kind == ProfileClaim.Kind.PRIOR
     assert prior.label == "Derivatives"
     assert prior.description == "Differentiate polynomials."
     assert prior.data["rationale"] == "Used in U01."
+    assert prior.data["review_note"] == "taught later"
     assert prior.data["taught_after_first_use_claim_ids"] == ["U02:c1"]
     assert "label" not in prior.data
     assert "description" not in prior.data
     assert set(prior.cites.all()) == {claims["U01:a1"], claims["U02:c1"]}
     assert list(claims["U02:c1"].cited_by.all()) == [prior]
+    # first needed in U01, taught in U02
+    assert set(prior.cited_units.all()) == {first, second}
 
-    # every other claim is a unit-level one
-    assert {
-        claim.display_id
-        for claim in profile.claims.filter(level=ProfileClaim.Level.RUN)
-    } == {"run:outcome:0", "run:prior:0"}
-
-
-def test_build_resource_profile_statements(resource):
-    """Each item of the run output is a statement citing its claims and units"""
-    profile, _ = build_resource_profile(resource["run_extraction"])
-
-    _, first, second = resource["units"]
-    claims = {claim.display_id: claim for claim in profile.claims.all()}
-    (summary,) = _statements(profile, ProfileStatement.Section.SUMMARY)
-    assert summary.text == "A resource on mechanics."
-    assert set(summary.claims.all()) == {claims["U01:c1"], claims["ctx:aud:0"]}
-    (audience,) = _statements(profile, ProfileStatement.Section.AUDIENCE)
-    assert audience.text == "First-years."
-    assert list(audience.claims.all()) == [claims["ctx:aud:0"]]
-    (outcome,) = _statements(profile, ProfileStatement.Section.OUTCOME)
-    assert list(outcome.claims.all()) == [claims["U01:s1"]]
-    (topic,) = _statements(profile, ProfileStatement.Section.TOPIC)
-    assert topic.text == "Forces and motion."
-    assert topic.data["label"] == "Dynamics"
-    assert list(topic.claims.all()) == [claims["U01:c1"]]
-    assert list(topic.units.all()) == [first]
-    (preparation,) = _statements(profile, ProfileStatement.Section.PREPARATION)
-    assert preparation.text == "Differentiate polynomials."
-    assert preparation.data["label"] == "Derivatives"
-    assert preparation.data["review_note"] == "taught later"
-    assert set(preparation.claims.all()) == {claims["U01:a1"], claims["U02:c1"]}
-    assert set(preparation.units.all()) == {first, second}
-    limitations = _statements(profile, ProfileStatement.Section.LIMITATION)
-    assert [statement.position for statement in limitations] == [0, 1]
+    limitation, from_code = claims["run:limitation:0"], claims["run:limitation:1"]
+    assert limitation.kind == ProfileClaim.Kind.LIMITATION
     # a cited unit id links the unit; ctx:notes stays in the data
-    assert list(limitations[0].units.all()) == [second]
-    assert not limitations[0].claims.exists()
-    assert limitations[0].data["claim_ids"] == ["U02", "ctx:notes"]
-    assert limitations[1].data == {"claim_ids": [], "from_code": True}
+    assert list(limitation.cited_units.all()) == [second]
+    assert not limitation.cites.exists()
+    assert limitation.data == {"claim_ids": ["U02", "ctx:notes"]}
+    assert from_code.data == {"claim_ids": [], "from_code": True}
 
 
 def test_changed_file_evidence_left_out(resource):
@@ -504,7 +518,9 @@ def test_profile_not_rebuilt_when_current(resource):
     resource["run_extraction"].save()
     _, built = build_resource_profile(resource["run_extraction"])
     assert built is True
-    assert profile.statements.get(section="summary").text == "New summary."
+    assert (
+        profile.claims.get(kind=ProfileClaim.Kind.SUMMARY).description == "New summary."
+    )
     assert RunProfile.objects.count() == 1
 
 
@@ -592,7 +608,7 @@ def test_build_failure_keeps_last_profile(resource, mocker):
         updated_on=now_in_utc() - timedelta(days=1)
     )
     mocker.patch(
-        "learning_resources.profiles.run_profile._save_statements",
+        "learning_resources.profiles.run_profile._ProfileLoader._citation_rows",
         side_effect=ValueError("bad"),
     )
 
@@ -617,7 +633,7 @@ def test_forced_build_failure_keeps_current_profile_ready(resource, mocker):
     profile, _ = build_resource_profile(resource["run_extraction"])
     claims = set(profile.claims.values_list("id", flat=True))
     mocker.patch(
-        "learning_resources.profiles.run_profile._save_statements",
+        "learning_resources.profiles.run_profile._ProfileLoader._citation_rows",
         side_effect=ValueError("bad"),
     )
 
