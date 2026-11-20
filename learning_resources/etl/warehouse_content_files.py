@@ -22,10 +22,17 @@ run's files differently, and a load refuses to unpublish more of a run's files b
 key than MAX_UNPUBLISH_SHARE of them or RUN_UNPUBLISH_FLOOR, whichever is more. A
 file whose extraction failed has a row with no text. Its stored row is left as it
 is and is not unpublished.
+
+An Open edX load then replaces the run's units (Unit, UnitContentFile) with the
+ones ``integrations__learn__content_file_units`` lists for it, built by a port of
+OlxArchive.units from the export the files came from, as the archive ETL does
+after loading an archive's files. A run the units view has no rows for keeps the
+units it has, as when the archive ETL can't build them.
 """
 
 import json
 import logging
+from collections.abc import Collection
 
 from django.db.models import Count, Q
 
@@ -50,6 +57,12 @@ VIEWS = {
     ETLSource.mitxonline.name: OPEN_EDX_VIEW,
     ETLSource.xpro.name: OPEN_EDX_VIEW,
     ETLSource.ocw.name: OCW_VIEW,
+}
+# The sources whose runs have units. OCW's ETL builds none.
+OPEN_EDX_UNITS_VIEW = "integrations__learn__content_file_units"
+UNIT_VIEWS = {
+    ETLSource.mitxonline.name: OPEN_EDX_UNITS_VIEW,
+    ETLSource.xpro.name: OPEN_EDX_UNITS_VIEW,
 }
 RUN_COLUMN = "run_readable_id"
 EXTRACTION_FAILED = "failed"
@@ -213,6 +226,151 @@ def transform_ocw_row(row: dict) -> dict:
     }
 
 
+def transform_unit_rows(rows: list[dict]) -> list[dict]:
+    """
+    Transform a run's rows of integrations__learn__content_file_units into the
+    unit data OlxArchive.units builds, in the same order
+
+    Args:
+        rows (list of dict): the run's rows in the units view
+
+    Returns:
+        list of dict: unit data for load_course_units
+    """
+    return [
+        {
+            "external_id": row["external_id"],
+            "kind": row["kind"],
+            "title": row["title"],
+            "url": row["url"],
+            "content_files": dict(json.loads(row["content_files"])),
+        }
+        for row in sorted(rows, key=lambda row: row["unit_order"])
+    ]
+
+
+def load_run_units(
+    run: LearningResourceRun,
+    unit_rows: list[dict],
+    failed_keys: Collection[str] = (),
+) -> bool:
+    """
+    Replace a run's units with its rows of the units view. As in
+    edx_shared.load_archive_units, a failure is logged rather than raised, so
+    the run's files still count as loaded. Rows that can't be read keep the
+    run's units less their links to files no longer published; a failed load
+    keeps them as they were, links included, which unit_sources skips since it
+    reads only published files.
+
+    Args:
+        run (LearningResourceRun): the run
+        unit_rows (list of dict): the run's rows in its units view
+        failed_keys (collection of str): keys of the run's files whose text
+            failed to extract, so a unit dropped only for them is kept
+
+    Returns:
+        bool: whether the rows were read and loaded
+    """
+    units = []
+    loaded = True
+    try:
+        units = transform_unit_rows(unit_rows)
+    except Exception:
+        log.exception("Units not read for run %s", run.run_id)
+        loaded = False
+    try:
+        loaders.load_course_units(run, units, failed_keys=failed_keys)
+    except Exception:
+        log.exception("Units not loaded for run %s", run.run_id)
+        return False
+    return loaded
+
+
+def _units_match_files(
+    run: LearningResourceRun, rows: list[dict], unit_rows: list[dict] | None
+) -> bool:
+    """
+    Tell whether a run's unit rows come from the export its file rows do. The
+    files and units views are replaced in separate commits, so a read between
+    the two can pair a new export's files with the last export's units. With no
+    rows of either there is nothing to compare.
+    """
+    if not (rows and unit_rows):
+        return True
+    file_versions = {row["course_xml_version"] for row in rows}
+    unit_versions = {row["course_xml_version"] for row in unit_rows}
+    if len(file_versions) == 1 and unit_versions == file_versions:
+        return True
+    log.warning(
+        "Units of %s are from export %s and its files from %s; keeping its units",
+        run.run_id,
+        sorted(unit_versions),
+        sorted(file_versions),
+    )
+    return False
+
+
+def _keep_outline(run: LearningResourceRun):
+    """
+    Keep a run's units, less their links to files no longer published, logging
+    a failure as load_run_units does so the run's files still count as loaded
+    """
+    try:
+        loaders.load_course_units(run, [])
+    except Exception:
+        log.exception("Unit links not pruned for run %s", run.run_id)
+
+
+def _load_open_edx_units(  # noqa: PLR0913
+    run: LearningResourceRun,
+    unit_rows: list[dict] | None,
+    *,
+    files_landed: bool,
+    units_unread: bool,
+    units_match: bool,
+    failed_keys: Collection[str],
+) -> bool:
+    """
+    Replace an Open edX run's units once all its files have landed, and say
+    whether its fingerprint can be stored.
+
+    Otherwise the outline is kept, less its links to unpublished files: before
+    the files land (a short read, or a file that failed to save), because a unit
+    whose new file is missing would lose its links and then the unit itself;
+    with no unit rows (a source with no units view); and when the units can't
+    be trusted for this export, which also holds back the fingerprint so the
+    next sync reads them again. That is when the units view couldn't be read,
+    when its rows are from another export than the files, and when it has no
+    rows for the run: a built run always has its context unit, so none means
+    the units for this export aren't built yet, or their build failed.
+
+    Args:
+        run (LearningResourceRun): the run
+        unit_rows (list of dict | None): the run's rows in its units view
+        files_landed (bool): every expected row was read and every file tried
+            was saved
+        units_unread (bool): the units view was there to read and the read failed
+        units_match (bool): the unit rows are from the files' export
+        failed_keys (collection of str): keys of the run's files whose text
+            failed to extract
+
+    Returns:
+        bool: False when the units should be read again
+    """
+    if unit_rows is None and not units_unread:
+        _keep_outline(run)
+        return True
+    if units_unread or not unit_rows or not units_match:
+        if unit_rows == []:
+            log.warning("No units built yet for run %s; keeping its units", run.run_id)
+        _keep_outline(run)
+        return False
+    if not files_landed:
+        _keep_outline(run)
+        return False
+    return load_run_units(run, unit_rows, failed_keys)
+
+
 def _refuse_unpublish_by_key(
     run: LearningResourceRun, rows: list[dict], *, allow_shrink: bool
 ) -> None:
@@ -236,24 +394,27 @@ def _refuse_unpublish_by_key(
     )
 
 
-def load_run(
+def load_run(  # noqa: PLR0913
     run: LearningResourceRun,
     rows: list[dict],
     *,
     expected_count: int | None = None,
     allow_mass_unpublish: bool = False,
     allow_shrink: bool = False,
+    unit_rows: list[dict] | None = None,
+    units_unread: bool = False,
 ) -> int:
     """
-    Load one run's rows as its content files.
+    Load one run's rows as its content files, and an Open edX run's unit rows as
+    its units.
 
     The stored fingerprint is cleared first and set only when the whole run
     landed, so a sync reloads a run that was read short, had a file fail to save
     or stopped partway. A run reloaded for having no published files already has
-    the view's fingerprint, so leaving it in place would strand the repair. Units
-    are not
-    in the views. The run keeps the ones the archive ETL built, less their links
-    to files this unpublishes.
+    the view's fingerprint, so leaving it in place would strand the repair. An
+    Open edX run's units are replaced only once its files have landed, and its
+    fingerprint waits for them too, so units that couldn't be read or loaded
+    are retried (see _load_open_edx_units).
 
     Args:
         run (LearningResourceRun): the run
@@ -265,6 +426,9 @@ def load_run(
         allow_shrink (bool): don't count against the limit the files that the
             drop from the run's published files to its rows explains. Keys
             that changed beyond that still count, so a renamed run is refused
+        unit_rows (list of dict | None): an Open edX run's rows in its units view
+        units_unread (bool): the run's units view couldn't be read, so its
+            fingerprint isn't stored and the next sync tries the units again
 
     Returns:
         int: the number of files loaded
@@ -284,6 +448,9 @@ def load_run(
             etl_source,
             run.run_id,
         )
+    # before anything is written, so a view without course_xml_version fails
+    # the load with nothing changed
+    units_match = _units_match_files(run, rows, unit_rows)
     if run.checksum:
         run.checksum = None
         run.save(update_fields=["checksum"])
@@ -318,6 +485,8 @@ def load_run(
     )
     if not file_ids:
         return 0
+    landed = complete and len(failed_keys) == extraction_failures
+    units_loaded = True
     if is_ocw:
         # from every row, as a failed file still counts toward the score
         if complete:
@@ -329,8 +498,15 @@ def load_run(
             run, run.content_files.filter(published=True).values_list("id", flat=True)
         )
     else:
-        loaders.load_course_units(run, [])
-    if complete and len(failed_keys) == extraction_failures:
+        units_loaded = _load_open_edx_units(
+            run,
+            unit_rows,
+            files_landed=landed,
+            units_unread=units_unread,
+            units_match=units_match,
+            failed_keys=failed_keys,
+        )
+    if landed and units_loaded:
         run.checksum = _fingerprint(etl_source, _stats_of_rows(etl_source, rows))
         run.save(update_fields=["checksum"])
     return len(file_ids)

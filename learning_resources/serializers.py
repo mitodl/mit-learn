@@ -1629,6 +1629,107 @@ class NestedContentFileSerializer(ContentFileSerializer):
         ]
 
 
+# ContentFileSerializer fields that are the same for every file of a run
+CONTENT_FILE_RUN_AND_RESOURCE_FIELDS = frozenset(
+    {
+        "run_id",
+        "run_readable_id",
+        "run_title",
+        "run_slug",
+        "semester",
+        "year",
+        "direct_learning_resource_id",
+        "resource_id",
+        "resource_readable_id",
+        "require_summaries",
+        "course_number",
+        "topics",
+        "departments",
+        "offered_by",
+        "platform",
+    }
+)
+
+
+class UnitNestedContentFileSerializer(NestedContentFileSerializer):
+    """
+    A content file inside a unit, without the run and resource fields, which
+    are the same for every file in the unit and on the unit itself. Admins see
+    hidden files too, so it says whether each one is published and released.
+    """
+
+    checksum = serializers.CharField(read_only=True, allow_null=True)
+    source_path = serializers.CharField(read_only=True, allow_null=True)
+
+    class Meta(NestedContentFileSerializer.Meta):
+        # dict.fromkeys drops the duplicate file_extension, keeping the order
+        fields = [
+            *dict.fromkeys(
+                field
+                for field in NestedContentFileSerializer.Meta.fields
+                if field not in CONTENT_FILE_RUN_AND_RESOURCE_FIELDS
+            ),
+            "published",
+            "release_date",
+        ]
+        read_only_fields = fields
+
+
+class UnitContentFileSerializer(serializers.ModelSerializer):
+    """A content file in a unit, with its place and role in the unit"""
+
+    content_file = UnitNestedContentFileSerializer(read_only=True)
+
+    class Meta:
+        model = models.UnitContentFile
+        fields = ["relation", "position", "content_file"]
+        read_only_fields = fields
+
+
+class UnitSerializer(serializers.ModelSerializer):
+    """Serializer for Units"""
+
+    run_id = serializers.IntegerField(read_only=True)
+    run_readable_id = serializers.CharField(source="run.run_id", read_only=True)
+    resource_id = serializers.IntegerField(
+        source="run.learning_resource_id", read_only=True
+    )
+    resource_readable_id = serializers.CharField(
+        source="run.learning_resource.readable_id", read_only=True
+    )
+    content_file_count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = models.Unit
+        fields = [
+            "id",
+            "run_id",
+            "run_readable_id",
+            "resource_id",
+            "resource_readable_id",
+            "external_id",
+            "kind",
+            "title",
+            "position",
+            "url",
+            "content_file_count",
+            "created_on",
+            "updated_on",
+        ]
+        read_only_fields = fields
+
+
+class UnitDetailSerializer(UnitSerializer):
+    """Serializer for a Unit with its content files, in unit order"""
+
+    content_files = UnitContentFileSerializer(
+        source="unitcontentfile_set", many=True, read_only=True
+    )
+
+    class Meta(UnitSerializer.Meta):
+        fields = [*UnitSerializer.Meta.fields, "content_files"]
+
+
 class VideoResourceSerializer(LearningResourceBaseSerializer):
     """Serializer for video resources"""
 

@@ -34,6 +34,7 @@ from channels.constants import ChannelType
 from channels.models import Channel
 from learning_resources import permissions
 from learning_resources.constants import (
+    CONTENT_FILE_LARGE_FIELDS,
     CREDENTIAL_METADATA_RESOURCE_TYPES,
     GROUP_CONTENT_FILE_CONTENT_VIEWERS,
     LearningResourceRelationTypes,
@@ -49,6 +50,7 @@ from learning_resources.filters import (
     ContentFileFilter,
     LearningResourceFilter,
     TopicFilter,
+    UnitFilter,
 )
 from learning_resources.models import (
     ContentFile,
@@ -63,6 +65,8 @@ from learning_resources.models import (
     LearningResourceSchool,
     LearningResourceTopic,
     TutorProblemFile,
+    Unit,
+    UnitContentFile,
     UserList,
     UserListRelationship,
 )
@@ -98,6 +102,8 @@ from learning_resources.serializers import (
     ProgramResourceSerializer,
     SetLearningPathsRequestSerializer,
     SetUserListsRequestSerializer,
+    UnitDetailSerializer,
+    UnitSerializer,
     UserListRelationshipSerializer,
     UserListSerializer,
     VideoPlaylistResourceSerializer,
@@ -116,6 +122,7 @@ from main.filters import MultipleOptionsFilterBackend
 from main.pagination import LargePagination
 from main.permissions import (
     AnonymousAccessReadonlyPermission,
+    IsStaffPermission,
     is_admin_user,
 )
 from main.utils import (
@@ -1080,6 +1087,49 @@ class ContentFileViewSet(viewsets.ReadOnlyModelViewSet):
                     serializer.fields.pop(field, None)
 
         return serializer
+
+
+@extend_schema_view(
+    list=extend_schema(summary="List"),
+    retrieve=extend_schema(summary="Retrieve"),
+)
+class UnitViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    Units, for admins only, unpublished runs and hidden content files
+    included. A unit's detail lists its content files in unit order.
+    """
+
+    permission_classes = (IsStaffPermission,)
+    filter_backends = [MultipleOptionsFilterBackend]
+    filterset_class = UnitFilter
+
+    def get_serializer_class(self):
+        if self.action == "retrieve":
+            return UnitDetailSerializer
+        return UnitSerializer
+
+    def get_queryset(self):
+        """All units, in run order"""
+        queryset = (
+            Unit.objects.select_related("run__learning_resource")
+            .with_content_file_count()
+            .order_by("run_id", "position", "id")
+        )
+        if self.action == "retrieve":
+            content_files = ContentFile.objects.prefetch_related("content_tags").defer(
+                *CONTENT_FILE_LARGE_FIELDS
+            )
+            queryset = queryset.prefetch_related(
+                Prefetch(
+                    "unitcontentfile_set",
+                    queryset=UnitContentFile.objects.order_by(
+                        "position", "content_file_id"
+                    ).prefetch_related(
+                        Prefetch("content_file", queryset=content_files)
+                    ),
+                )
+            )
+        return queryset
 
 
 @extend_schema_view(
