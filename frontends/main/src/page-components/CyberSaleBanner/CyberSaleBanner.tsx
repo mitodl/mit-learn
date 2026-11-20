@@ -4,26 +4,48 @@ import React, { useCallback, useSyncExternalStore } from "react"
 import * as yup from "yup"
 import { Container, styled } from "ol-components"
 import { ActionButton, ButtonLink } from "@mitodl/smoot-design"
-import { RiArrowRightLine, RiCloseLine } from "@remixicon/react"
+import { RiCloseLine } from "@remixicon/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagResult } from "@/common/useFeatureFlagResult"
 import { analytics } from "@/common/analytics"
 
 const payloadSchema = yup.object({
   eyebrow: yup.string().required(),
-  headline_bold: yup.string().required(),
-  headline: yup.string().required(),
-  date: yup.string().required(),
-  code: yup.string().trim(),
-  cta_url: yup
+  /** Plain text; a run wrapped in `**` is shown bold. */
+  text: yup.string().required(),
+  link_url: yup
     .string()
+    .required()
     .url()
     .matches(/^https:\/\//),
+  link_text: yup.string().required(),
+  /** Raising it shows the banner again to everyone who dismissed it. */
+  revision: yup.number().integer().min(0),
   dismiss_hours: yup.number().moreThan(0),
 })
 
-const storageKey = (variant: string | undefined, code: string | undefined) =>
-  `cyber-sale-banner-dismissed:${variant ?? ""}:${code ?? ""}`
+const storageKey = (
+  variant: string | undefined,
+  revision: number | undefined,
+) => `cyber-sale-banner-dismissed:${variant ?? ""}:${revision ?? 0}`
+
+/**
+ * Bolds each run between a pair of `**` markers. An odd number of markers
+ * leaves one unpaired, so the text is shown as typed and the stray marker is
+ * visible to whoever edited the payload.
+ *
+ * Bold is deliberately the only markup. Don't grow this into a Markdown
+ * subset (italics, links, nesting): if banner copy needs richer formatting,
+ * it should come from a rich-text source such as a CMS, not a hand-rolled
+ * parser over a flag payload.
+ */
+const withBold = (text: string): React.ReactNode => {
+  const parts = text.split("**")
+  if (parts.length % 2 === 0) return text
+  return parts.map((part, i) =>
+    i % 2 === 1 ? <strong key={i}>{part}</strong> : part,
+  )
+}
 
 /**
  * The `storage` event only fires in other tabs, so dismissing here notifies
@@ -71,9 +93,14 @@ const isDismissed = (
 
 const Bar = styled.aside(({ theme }) => ({
   backgroundColor: theme.custom.colors.white,
-  borderBottom: `2px solid ${theme.custom.colors.red}`,
-  padding: "12px 0",
+  borderBottom: `1px solid ${theme.custom.colors.red}`,
+  boxShadow: "0 4px 6px rgba(33, 35, 38, 0.05)",
+  padding: "20px 0",
   "@media print": { display: "none" },
+  [theme.breakpoints.down("sm")]: {
+    boxShadow: "0 4px 6px rgba(33, 35, 38, 0.1)",
+    padding: "16px 0",
+  },
 }))
 
 const Inner = styled(Container)(({ theme }) => ({
@@ -81,7 +108,7 @@ const Inner = styled(Container)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  gap: "16px",
+  gap: "40px",
   [theme.breakpoints.down("sm")]: {
     flexDirection: "column",
     alignItems: "flex-start",
@@ -89,11 +116,13 @@ const Inner = styled(Container)(({ theme }) => ({
   },
 }))
 
-const Text = styled.div(({ theme }) => ({
+const Copy = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
+  gap: "4px",
   [theme.breakpoints.down("sm")]: {
-    gap: "8px",
+    // Keeps the first lines clear of the close button.
+    paddingRight: "32px",
   },
 }))
 
@@ -108,75 +137,53 @@ const Eyebrow = styled.p(({ theme }) => ({
   textTransform: "uppercase",
 }))
 
-const Details = styled.div(({ theme }) => ({
-  display: "flex",
-  alignItems: "baseline",
-  columnGap: "32px",
-  rowGap: "8px",
-  [theme.breakpoints.down("lg")]: {
-    flexDirection: "column",
-    alignItems: "flex-start",
-  },
-}))
-
-const Headline = styled.p(({ theme }) => ({
+const Text = styled.p(({ theme }) => ({
   ...theme.typography.body1,
   margin: 0,
   color: theme.custom.colors.darkGray2,
   strong: {
-    ...theme.typography.h5,
-    marginRight: "4px",
+    fontWeight: theme.typography.fontWeightBold,
   },
   [theme.breakpoints.down("sm")]: {
-    strong: {
-      display: "block",
-      marginRight: 0,
-    },
+    ...theme.typography.body2Loose,
   },
-}))
-
-const Meta = styled.p(({ theme }) => ({
-  ...theme.typography.body3,
-  margin: 0,
-  display: "flex",
-  alignItems: "baseline",
-  gap: "16px",
-  color: theme.custom.colors.silverGrayDark,
-  fontWeight: theme.typography.fontWeightBold,
-  whiteSpace: "nowrap",
-}))
-
-const Separator = styled.span(({ theme }) => ({
-  color: theme.custom.colors.silverGrayLight,
-  fontWeight: theme.typography.fontWeightMedium,
-}))
-
-const Code = styled.span(({ theme }) => ({
-  color: theme.custom.colors.darkGray2,
 }))
 
 const Actions = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: "16px",
+  gap: "40px",
   flexShrink: 0,
   [theme.breakpoints.down("sm")]: {
     display: "contents",
   },
 }))
 
+/**
+ * The tertiary button hovers to white, which on this white bar leaves a
+ * borderless label; a lighter gray keeps its edge visible.
+ */
+const LinkButton = styled(ButtonLink)(({ theme }) => ({
+  ":hover:not(:disabled)": {
+    backgroundColor: theme.custom.colors.lightGray1,
+  },
+}))
+
 const CloseButton = styled(ActionButton)(({ theme }) => ({
   [theme.breakpoints.down("sm")]: {
+    // Measured from the container's padding box, which starts below the
+    // bar's 16px padding: this puts the icon 12px from the bar's top and
+    // right edges.
     position: "absolute",
-    top: 0,
-    right: "16px",
+    top: "-12px",
+    right: "4px",
   },
 }))
 
 const CyberSaleBanner: React.FC = () => {
   const flag = useFeatureFlagResult(FeatureFlags.CyberSaleBanner, payloadSchema)
   const payload = flag?.enabled ? flag.payload : undefined
-  const key = payload ? storageKey(flag?.variant, payload.code) : null
+  const key = payload ? storageKey(flag?.variant, payload.revision) : null
   const dismissedAt = useSyncExternalStore(
     subscribeStorage,
     () => (key ? readStorage(key) : null),
@@ -191,47 +198,29 @@ const CyberSaleBanner: React.FC = () => {
   return (
     <Bar aria-label="Cyber Sale">
       <Inner>
-        <Text>
+        <Copy>
           <Eyebrow>{payload.eyebrow}</Eyebrow>
-          <Details>
-            <Headline>
-              <strong>{payload.headline_bold}</strong> {payload.headline}
-            </Headline>
-            <Meta>
-              <span>{payload.date}</span>
-              {payload.code ? (
-                <>
-                  <Separator aria-hidden>|</Separator>
-                  <span>
-                    Use code <Code>{payload.code}</Code>
-                  </span>
-                </>
-              ) : null}
-            </Meta>
-          </Details>
-        </Text>
+          <Text>{withBold(payload.text)}</Text>
+        </Copy>
         <Actions>
-          {payload.cta_url ? (
-            <ButtonLink
-              href={payload.cta_url}
-              variant="tertiary"
-              size="medium"
-              responsive
-              endIcon={<RiArrowRightLine />}
-              onClick={() =>
-                analytics.ctaClicked({
-                  label: "View eligible courses",
-                  banner: "cyber-sale",
-                  variant: flag?.variant,
-                })
-              }
-            >
-              View eligible courses
-            </ButtonLink>
-          ) : null}
+          <LinkButton
+            href={payload.link_url}
+            variant="tertiary"
+            size="medium"
+            responsive
+            onClick={() =>
+              analytics.ctaClicked({
+                label: payload.link_text,
+                banner: "cyber-sale",
+                variant: flag?.variant,
+              })
+            }
+          >
+            {payload.link_text}
+          </LinkButton>
           <CloseButton
             variant="text"
-            size="small"
+            size="medium"
             aria-label="Dismiss Cyber Sale banner"
             onClick={onDismiss}
           >
@@ -244,4 +233,3 @@ const CyberSaleBanner: React.FC = () => {
 }
 
 export default CyberSaleBanner
-export { payloadSchema }

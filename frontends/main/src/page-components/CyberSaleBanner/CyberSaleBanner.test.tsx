@@ -23,20 +23,18 @@ jest.mock("@sentry/nextjs", () => ({
 const mockGetResult = jest.mocked(posthog.getFeatureFlagResult)
 const mockOnFeatureFlags = jest.mocked(posthog.onFeatureFlags)
 
-const CTA_URL = "https://support.learn.mit.edu/hc/en-us/articles/123-cyber-sale"
 const AWARENESS = {
   eyebrow: "Our Cyber Sale is coming",
-  headline_bold: "Save 15%",
-  headline: "on select MIT courses and programs",
-  date: "Starts November 24",
-  cta_url: CTA_URL,
+  text: "**Save 15%** on select MIT courses and programs - Starts November 24",
+  link_url: "https://support.learn.mit.edu/hc/en-us/articles/123-cyber-sale",
+  link_text: "View eligible courses",
 }
 const SALE = {
   ...AWARENESS,
   eyebrow: "Learn more this Cyber Monday",
-  date: "Ends December 1",
-  code: "LEVELUP",
+  text: "**Save 15%** on select MIT courses and programs - Use code **LEVELUP**",
 }
+const DISMISSED_KEY = "cyber-sale-banner-dismissed:sale:0"
 
 const HOUR = 60 * 60 * 1000
 
@@ -77,42 +75,57 @@ describe("CyberSaleBanner", () => {
     expect(screen.queryByRole("complementary")).toBeNull()
   })
 
-  test("Shows the payload's copy and code, and links to its URL", () => {
+  test("Shows the eyebrow and text, and links to the payload's URL", () => {
     setFlag("sale", SALE)
     renderWithTheme(<CyberSaleBanner />)
     const banner = screen.getByRole("complementary", { name: "Cyber Sale" })
     expect(banner).toHaveTextContent(SALE.eyebrow)
-    expect(banner).toHaveTextContent(`${SALE.headline_bold} ${SALE.headline}`)
-    expect(banner).toHaveTextContent(SALE.date)
-    expect(banner).toHaveTextContent(`Use code ${SALE.code}`)
-    expect(
-      screen.getByRole("link", { name: "View eligible courses" }),
-    ).toHaveAttribute("href", CTA_URL)
+    expect(banner).toHaveTextContent(
+      "Save 15% on select MIT courses and programs - Use code LEVELUP",
+    )
+    expect(screen.getByRole("link", { name: SALE.link_text })).toHaveAttribute(
+      "href",
+      SALE.link_url,
+    )
   })
 
-  test("Without a code it shows no code", () => {
-    setFlag("awareness", AWARENESS)
+  const boldRuns = () =>
+    Array.from(
+      screen.getByRole("complementary").querySelectorAll("strong"),
+      (el) => el.textContent,
+    )
+
+  test.each([
+    { text: AWARENESS.text, bold: ["Save 15%"] },
+    { text: "Save 15% with code **LEVELUP** today", bold: ["LEVELUP"] },
+    { text: SALE.text, bold: ["Save 15%", "LEVELUP"] },
+  ])("Bolds the runs between ** markers in $text", ({ text, bold }) => {
+    setFlag("sale", { ...SALE, text })
     renderWithTheme(<CyberSaleBanner />)
-    const banner = screen.getByRole("complementary", { name: "Cyber Sale" })
-    expect(banner).toHaveTextContent(AWARENESS.date)
-    expect(banner).not.toHaveTextContent("Use code")
+    expect(boldRuns()).toEqual(bold)
   })
 
-  test("Without a cta_url it shows the banner but no button", () => {
-    setFlag("sale", { ...SALE, cta_url: undefined })
+  test("Shows text with an unpaired ** as typed", () => {
+    const text = "**Save 15%** with code ** LEVELUP"
+    setFlag("sale", { ...SALE, text })
     renderWithTheme(<CyberSaleBanner />)
-    expect(screen.getByRole("complementary")).toHaveTextContent(SALE.code)
-    expect(screen.queryByRole("link")).toBeNull()
+    expect(boldRuns()).toEqual([])
+    expect(screen.getByRole("complementary")).toHaveTextContent(text)
   })
 
   test.each([
-    { case: "a cta_url that isn't a URL", payload: { ...SALE, cta_url: "/x" } },
     {
-      case: "a cta_url without https",
-      payload: { ...SALE, cta_url: "//mit.edu/x" },
+      case: "a link_url that isn't a URL",
+      payload: { ...SALE, link_url: "/x" },
     },
+    {
+      case: "a link_url without https",
+      payload: { ...SALE, link_url: "//mit.edu/x" },
+    },
+    { case: "no link_text", payload: { ...SALE, link_text: undefined } },
+    { case: "no text", payload: { ...SALE, text: undefined } },
     { case: "dismiss_hours of 0", payload: { ...SALE, dismiss_hours: 0 } },
-    { case: "no headline", payload: { ...SALE, headline: undefined } },
+    { case: "a fractional revision", payload: { ...SALE, revision: 1.5 } },
   ])("Renders nothing for $case", ({ payload }) => {
     setFlag("sale", payload)
     renderWithTheme(<CyberSaleBanner />)
@@ -124,12 +137,10 @@ describe("CyberSaleBanner", () => {
     allowConsoleErrors()
     setFlag("sale", SALE)
     renderWithTheme(<CyberSaleBanner />)
-    await user.click(
-      screen.getByRole("link", { name: "View eligible courses" }),
-    )
+    await user.click(screen.getByRole("link", { name: SALE.link_text }))
     expect(capturePostHog).toHaveBeenCalledWith(
       PostHogEvents.CallToActionClicked,
-      { label: "View eligible courses", banner: "cyber-sale", variant: "sale" },
+      { label: SALE.link_text, banner: "cyber-sale", variant: "sale" },
     )
   })
 
@@ -138,14 +149,12 @@ describe("CyberSaleBanner", () => {
     renderWithTheme(<CyberSaleBanner />)
     await user.click(dismissButton()!)
     expect(screen.queryByRole("complementary")).toBeNull()
-    expect(
-      window.localStorage.getItem("cyber-sale-banner-dismissed:sale:LEVELUP"),
-    ).not.toBeNull()
+    expect(window.localStorage.getItem(DISMISSED_KEY)).not.toBeNull()
   })
 
   test("Dismissing still hides it when localStorage is blocked", async () => {
-    // A code no other test uses: the fallback lives in module memory.
-    setFlag("sale", { ...SALE, code: "NOSTORAGE" })
+    // A revision no other test uses: the fallback lives in module memory.
+    setFlag("sale", { ...SALE, revision: 99 })
     const blocked = () => {
       throw new DOMException("SecurityError")
     }
@@ -173,7 +182,18 @@ describe("CyberSaleBanner", () => {
 
     setFlag("sale", SALE)
     act(() => mockOnFeatureFlags.mock.calls[0][0]([], {}))
-    expect(screen.getByRole("complementary")).toHaveTextContent(SALE.code)
+    expect(screen.getByRole("complementary")).toHaveTextContent("LEVELUP")
+  })
+
+  test("Raising the revision shows a dismissed banner again", () => {
+    window.localStorage.setItem(DISMISSED_KEY, String(Date.now()))
+    setFlag("sale", SALE)
+    renderWithTheme(<CyberSaleBanner />)
+    expect(screen.queryByRole("complementary")).toBeNull()
+
+    setFlag("sale", { ...SALE, revision: 1 })
+    act(() => mockOnFeatureFlags.mock.calls[0][0]([], {}))
+    expect(screen.getByRole("complementary")).toBeInTheDocument()
   })
 
   test.each([
@@ -184,7 +204,7 @@ describe("CyberSaleBanner", () => {
     "dismiss_hours $dismissHours, dismissed $ageHours hours ago: visible $visible",
     ({ dismissHours, ageHours, visible }) => {
       window.localStorage.setItem(
-        "cyber-sale-banner-dismissed:sale:LEVELUP",
+        DISMISSED_KEY,
         String(Date.now() - ageHours * HOUR),
       )
       setFlag("sale", { ...SALE, dismiss_hours: dismissHours })
@@ -198,10 +218,7 @@ describe("CyberSaleBanner", () => {
     renderWithTheme(<CyberSaleBanner />)
     expect(screen.getByRole("complementary")).toBeInTheDocument()
     act(() => {
-      window.localStorage.setItem(
-        "cyber-sale-banner-dismissed:sale:LEVELUP",
-        String(Date.now()),
-      )
+      window.localStorage.setItem(DISMISSED_KEY, String(Date.now()))
       window.dispatchEvent(new StorageEvent("storage"))
     })
     expect(screen.queryByRole("complementary")).toBeNull()

@@ -16,6 +16,7 @@ from learning_resources.factories import (
     ETLSourceOwnershipFactory,
     LearningResourceFactory,
     LearningResourcePlatformFactory,
+    LearningResourceRunFactory,
 )
 from learning_resources.models import (
     ETLSourceOwnership,
@@ -517,6 +518,148 @@ def test_ovs_video_webhook_delete_missing(settings, client, mocker, webhook_owns
     assert not mock_delete.called
 
 
+@pytest.fixture
+def ovs_loader_mocks(mocker):
+    """Mock the search and embedding work the OVS loaders trigger"""
+    mocker.patch("webhooks.views.clear_views_cache")
+    mocker.patch(
+        "learning_resources.etl.loaders.similar_topics_action", return_value=[]
+    )
+    return mocker.Mock(
+        update_index=mocker.patch("learning_resources.etl.loaders.update_index"),
+        unpublished=mocker.patch(
+            "learning_resources.etl.loaders.bulk_resources_unpublished_actions"
+        ),
+    )
+
+
+def _post_ovs_webhook(client, settings, payload):
+    response = client.post(
+        reverse("webhooks:v1:ovs_video_webhook"),
+        data=json.dumps(payload),
+        content_type="application/json",
+        headers={"X-MITLearn-Signature": get_secret(payload, settings)},
+    )
+    assert response.status_code == 200
+
+
+def _ovs_playlist(key):
+    return LearningResource.objects.get(
+        readable_id=key, resource_type=LearningResourceType.video_playlist.name
+    )
+
+
+@pytest.mark.django_db
+def test_ovs_video_webhook_move_unpublishes_emptied_playlist(
+    settings, client, ovs_platform, webhook_owns_ovs, ovs_loader_mocks
+):
+    """A video moved out of its only playlist's last slot unpublishes that playlist."""
+    _post_ovs_webhook(
+        client, settings, _ovs_payload(key="moved", collection_key="col_old")
+    )
+    learning_path_item = LearningResourceRelationship.objects.create(
+        parent=LearningResourceFactory.create(),
+        child=LearningResource.objects.get(readable_id="moved"),
+        relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value,
+    )
+
+    _post_ovs_webhook(
+        client, settings, _ovs_payload(key="moved", collection_key="col_new")
+    )
+
+    old_playlist = _ovs_playlist("col_old")
+    new_playlist = _ovs_playlist("col_new")
+    assert old_playlist.published is False
+    assert new_playlist.published is True
+    assert list(
+        LearningResourceRelationship.objects.filter(
+            child__readable_id="moved",
+            relation_type=LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
+        ).values_list("parent_id", flat=True)
+    ) == [new_playlist.id]
+    assert LearningResourceRelationship.objects.filter(
+        id=learning_path_item.id
+    ).exists()
+    ovs_loader_mocks.unpublished.assert_called_once_with(
+        [old_playlist.id], LearningResourceType.video_playlist.name
+    )
+
+
+@pytest.mark.django_db
+def test_ovs_video_webhook_move_keeps_playlist_with_other_videos(
+    settings, client, ovs_platform, webhook_owns_ovs, ovs_loader_mocks
+):
+    """A playlist that still has a video stays published and is reindexed."""
+    for key in ("stays", "moved"):
+        _post_ovs_webhook(
+            client, settings, _ovs_payload(key=key, collection_key="col_old")
+        )
+    ovs_loader_mocks.update_index.reset_mock()
+
+    _post_ovs_webhook(
+        client, settings, _ovs_payload(key="moved", collection_key="col_new")
+    )
+
+    old_playlist = _ovs_playlist("col_old")
+    assert old_playlist.published is True
+    assert list(old_playlist.resources.values_list("readable_id", flat=True)) == [
+        "stays"
+    ]
+    ovs_loader_mocks.unpublished.assert_not_called()
+    ovs_loader_mocks.update_index.assert_any_call(old_playlist, newly_created=False)
+
+
+@pytest.mark.django_db
+def test_ovs_video_webhook_push_republishes_emptied_playlist(
+    settings, client, ovs_platform, webhook_owns_ovs, ovs_loader_mocks
+):
+    """A new video in an emptied collection publishes its playlist again."""
+    for collection_key in ("col_old", "col_new"):
+        _post_ovs_webhook(
+            client, settings, _ovs_payload(key="moved", collection_key=collection_key)
+        )
+    assert _ovs_playlist("col_old").published is False
+
+    _post_ovs_webhook(
+        client, settings, _ovs_payload(key="another", collection_key="col_old")
+    )
+
+    assert _ovs_playlist("col_old").published is True
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("other_video_published", "expected_published"),
+    [(None, False), (False, False), (True, True)],
+)
+def test_ovs_video_webhook_delete_unpublishes_emptied_playlist(  # noqa: PLR0913
+    settings,
+    client,
+    mocker,
+    ovs_platform,
+    webhook_owns_ovs,
+    ovs_loader_mocks,
+    other_video_published,
+    expected_published,
+):
+    """Deleting a playlist's last published video unpublishes the playlist."""
+    mocker.patch(
+        "webhooks.views.resource_delete_actions",
+        side_effect=lambda resource: resource.delete(),
+    )
+    _post_ovs_webhook(client, settings, _ovs_payload(key="gone"))
+    if other_video_published is not None:
+        _post_ovs_webhook(client, settings, _ovs_payload(key="other"))
+        LearningResource.objects.filter(readable_id="other").update(
+            published=other_video_published
+        )
+
+    _post_ovs_webhook(client, settings, {"video_id": "gone", "delete": True})
+
+    assert _ovs_playlist("col_abc").published is expected_published
+    assert not LearningResource.objects.filter(readable_id="gone").exists()
+
+
 @pytest.mark.django_db
 @pytest.mark.parametrize(
     "owner",
@@ -811,3 +954,190 @@ def test_content_file_delete_webhook_skips_courses_legacy_does_not_own(
 
     assert response.status_code == 200
     mock_delete.assert_not_called()
+
+
+def _post_extracted(client, settings, payload, *, signature=None):
+    body = json.dumps(payload) if not isinstance(payload, str) else payload
+    return client.post(
+        reverse("webhooks:v1:extracted_content_files_webhook"),
+        data=body,
+        content_type="application/json",
+        headers={"X-MITLearn-Signature": signature or get_secret(body, settings)},
+    )
+
+
+def test_extracted_content_files_webhook_queues_a_pull_per_run(
+    settings, client, mocker
+):
+    """Each entry queues its run's pull, whatever the warehouse owns yet"""
+    mock_load = mocker.patch("webhooks.views.load_warehouse_content_files")
+
+    response = _post_extracted(
+        client,
+        settings,
+        {
+            "courses": [
+                {
+                    "source": ETLSource.mitxonline.name,
+                    "readable_id": "course-v1:MITxT+7.05x+2T2026",
+                    "content_file_count": 2279,
+                    "extracted_at": "2026-08-19T04:31:07+00:00",
+                },
+                {
+                    "source": ETLSource.ocw.name,
+                    "readable_id": "abc123",
+                    "content_file_count": 0,
+                },
+            ]
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "status": "success",
+        "message": "Queued 2 run(s), skipped 0",
+    }
+    assert mock_load.delay.call_args_list == [
+        mocker.call(ETLSource.mitxonline.name, "course-v1:MITxT+7.05x+2T2026", 2279),
+        mocker.call(ETLSource.ocw.name, "abc123", 0),
+    ]
+
+
+def test_extracted_content_files_webhook_skips_a_source_with_no_pull(
+    settings, client, mocker
+):
+    """One bad source doesn't reject the runs around it"""
+    mock_load = mocker.patch("webhooks.views.load_warehouse_content_files")
+    mock_log = mocker.patch("webhooks.views.log.warning")
+
+    response = _post_extracted(
+        client,
+        settings,
+        {
+            "courses": [
+                {"source": "nonsense", "readable_id": "a", "content_file_count": 1},
+                {"source": "xpro", "readable_id": "b", "content_file_count": 1},
+            ]
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["message"] == "Queued 1 run(s), skipped 1"
+    mock_load.delay.assert_called_once_with("xpro", "b", 1)
+    mock_log.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {},
+        {"courses": []},
+        {"courses": "course-v1:a"},
+        {"courses": [{"source": "xpro", "content_file_count": 1}]},
+        {"courses": [{"source": "xpro", "readable_id": "a"}]},
+        {"courses": [{"source": "xpro", "readable_id": "a", "content_file_count": -1}]},
+    ],
+)
+def test_extracted_content_files_webhook_rejects_a_bad_payload(
+    settings, client, mocker, payload
+):
+    """A message without what a pull needs queues nothing"""
+    mock_load = mocker.patch("webhooks.views.load_warehouse_content_files")
+
+    assert _post_extracted(client, settings, payload).status_code == 400
+
+    mock_load.delay.assert_not_called()
+
+
+def test_extracted_content_files_webhook_rejects_invalid_json(settings, client):
+    """A body that isn't JSON is a 400"""
+    assert _post_extracted(client, settings, "not json").status_code == 400
+
+
+def test_extracted_content_files_webhook_requires_a_valid_signature(
+    settings, client, mocker
+):
+    """An unsigned or wrongly signed message queues nothing"""
+    mock_load = mocker.patch("webhooks.views.load_warehouse_content_files")
+
+    response = _post_extracted(
+        client,
+        settings,
+        {"courses": [{"source": "xpro", "readable_id": "a", "content_file_count": 1}]},
+        signature="wrong",
+    )
+
+    assert response.status_code == 403
+    mock_load.delay.assert_not_called()
+
+
+def test_extracted_content_files_webhook_requires_post(settings, client):
+    """Only POST is routed"""
+    response = client.get(reverse("webhooks:v1:extracted_content_files_webhook"))
+
+    assert response.status_code == 405
+
+
+@pytest.mark.django_db
+def test_extracted_content_files_webhook_scopes_the_pull_to_the_run(
+    settings, client, mocker
+):
+    """
+    A signed POST reaches the warehouse with its run's filter and expected count,
+    the end-to-end path a sender uses, with the task eager as in CI.
+    """
+    settings.WAREHOUSE_CATALOG = "catalog"
+    settings.WAREHOUSE_SCHEMA = "schema"
+    ETLSourceOwnershipFactory.create(
+        etl_source=ETLSource.xpro.name,
+        resource_type="content_file",
+        owner=ETLSourceOwnership.Pipeline.WAREHOUSE,
+    )
+    run = LearningResourceRunFactory.create(
+        learning_resource=LearningResourceFactory.create(
+            is_course=True, etl_source=ETLSource.xpro.name, create_runs=False
+        ),
+        published=True,
+    )
+    mock_connect = mocker.patch("learning_resources.tasks.connect_to_warehouse")
+    files_view = "catalog.schema.integrations__learn__content_files"
+    units_view = "catalog.schema.integrations__learn__content_file_units"
+    view_rows = {files_view: [{"key": "a"}], units_view: [{"unit": "u"}]}
+    mock_iter_rows = mocker.patch(
+        "learning_resources.tasks.iter_rows",
+        side_effect=lambda _conn, view, **_: iter(view_rows[view]),
+    )
+    mock_load_run = mocker.patch(
+        "learning_resources.tasks.warehouse_content_files.load_run", return_value=1
+    )
+
+    response = _post_extracted(
+        client,
+        settings,
+        {
+            "courses": [
+                {
+                    "source": ETLSource.xpro.name,
+                    "readable_id": run.run_id,
+                    "content_file_count": 1,
+                }
+            ]
+        },
+    )
+
+    assert response.status_code == 200
+    run_scope = {"etl_source": ETLSource.xpro.name, "run_readable_id": run.run_id}
+    assert mock_iter_rows.call_args_list == [
+        mocker.call(mock_connect.return_value, files_view, where=run_scope),
+        mocker.call(mock_connect.return_value, units_view, where=run_scope),
+    ]
+    # the per-run unpublish limit applies, and nothing a sender sends lifts it
+    mock_load_run.assert_called_once_with(
+        run,
+        [{"key": "a"}],
+        expected_count=1,
+        allow_mass_unpublish=False,
+        allow_shrink=False,
+        unit_rows=[{"unit": "u"}],
+        units_unread=False,
+    )

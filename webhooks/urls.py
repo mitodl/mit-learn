@@ -18,6 +18,11 @@ v1_urls = [
         name="content_file_delete_webhook",
     ),
     re_path(
+        r"^extracted_content_files/$",
+        views.ExtractedContentFilesWebhookView.as_view(),
+        name="extracted_content_files_webhook",
+    ),
+    re_path(
         r"^ovs_videos/$",
         views.OVSVideoWebhookView.as_view(),
         name="ovs_video_webhook",

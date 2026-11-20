@@ -1,6 +1,8 @@
 """Tests for ETL loaders"""
 
 import json
+import threading
+import time
 from datetime import timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -9,8 +11,9 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-from django.db import connection
+from django.db import connection, connections
 from django.forms.models import model_to_dict
+from django.test import override_settings
 
 from learning_resources.constants import (
     CONTENT_TYPE_FILE,
@@ -48,6 +51,7 @@ from learning_resources.etl.loaders import (
     load_offered_by,
     load_ovs_playlist,
     load_ovs_playlists,
+    load_ovs_video_from_webhook,
     load_playlist,
     load_podcast,
     load_podcast_episode,
@@ -64,6 +68,8 @@ from learning_resources.etl.loaders import (
     load_video_with_content_file,
     load_videos,
     load_videos_from_content_files,
+    prune_ovs_playlists,
+    unpublish_empty_ovs_playlists,
     unpublish_orphaned_videos,
     unpublish_removed_playlists,
     unpublish_removed_youtube_channels,
@@ -117,6 +123,8 @@ from learning_resources.test_utils import set_up_topics
 from main.utils import now_in_utc
 
 pytestmark = pytest.mark.django_db
+
+LOCK_WAIT_TIMEOUT_SECONDS = 30
 
 non_transformable_attributes = (
     "id",
@@ -3772,6 +3780,375 @@ def test_load_ovs_playlists_empty_aborts(mocker):
     assert vp.learning_resource.published is True
 
 
+def test_prune_ovs_playlists_unpublishes_only_the_playlists_it_checked(mocker):
+    """A video removed after the check leaves that playlist to its own prune."""
+    mocker.patch("learning_resources.etl.loaders.update_index")
+    mock_unpublished = mocker.patch(
+        "learning_resources.etl.loaders.bulk_resources_unpublished_actions"
+    )
+    empty_playlist = VideoPlaylistFactory.create().learning_resource
+    playlist = VideoPlaylistFactory.create().learning_resource
+    _add_playlist_videos(playlist, [VideoFactory.create().learning_resource])
+
+    def remove_video_before_update(execute, sql, params, many, context):
+        """Stand in for a concurrent removal, which takes no playlist lock"""
+        if sql.startswith('UPDATE "learning_resources_learningresource"'):
+            playlist.children.all().delete()
+        return execute(sql, params, many, context)
+
+    with connection.execute_wrapper(remove_video_before_update):
+        prune_ovs_playlists([empty_playlist.id, playlist.id])
+
+    empty_playlist.refresh_from_db()
+    playlist.refresh_from_db()
+    assert empty_playlist.published is False
+    assert playlist.published is True
+    mock_unpublished.assert_called_once_with(
+        [empty_playlist.id], LearningResourceType.video_playlist.name
+    )
+
+    mock_unpublished.reset_mock()
+    prune_ovs_playlists([playlist.id])
+
+    playlist.refresh_from_db()
+    assert playlist.published is False
+    mock_unpublished.assert_called_once_with(
+        [playlist.id], LearningResourceType.video_playlist.name
+    )
+
+
+@pytest.fixture
+def ovs_media_settings(settings):
+    """Allow the media host _ovs_video_payload uses"""
+    settings.OVS_API_BASE_URL = "https://video.odl.mit.edu"
+    settings.OVS_ALLOWED_MEDIA_HOSTS = [".cloudfront.net"]
+    return settings
+
+
+def _ovs_video_payload(
+    key, collection_title="A collection", collection_key="ovs_collection"
+):
+    """Build a minimal OVS payload for a video in one collection"""
+    return {
+        "key": key,
+        "title": key,
+        "status": "Complete",
+        "is_public": True,
+        "sources": [
+            {"src": f"https://du3yhovcx8dht.cloudfront.net/{key}/video__index.m3u8"}
+        ],
+        "collection": {"key": collection_key, "title": collection_title},
+    }
+
+
+def _ovs_playlist(readable_id):
+    return LearningResource.objects.get(
+        readable_id=readable_id,
+        resource_type=LearningResourceType.video_playlist.name,
+    )
+
+
+def test_load_ovs_video_from_webhook_indexes_a_moved_video_after_the_move(
+    ovs_media_settings, mocker
+):
+    """The video is indexed once, after its relationships change and commit."""
+    mocker.patch(
+        "learning_resources.etl.loaders.similar_topics_action", return_value=[]
+    )
+    mocker.patch("learning_resources.etl.loaders.bulk_resources_unpublished_actions")
+    mock_update_index = mocker.patch("learning_resources.etl.loaders.update_index")
+    load_ovs_video_from_webhook(
+        _ovs_video_payload("moved", collection_key="old_collection")
+    )
+    baseline_depth = len(connection.savepoint_ids)
+    seen_by_video_index = []
+
+    def record_video_state(resource, newly_created):
+        if resource.resource_type == LearningResourceType.video.name:
+            seen_by_video_index.append(
+                (
+                    list(
+                        resource.playlists.values_list("parent__readable_id", flat=True)
+                    ),
+                    len(connection.savepoint_ids),
+                )
+            )
+
+    mock_update_index.side_effect = record_video_state
+    load_ovs_video_from_webhook(
+        _ovs_video_payload("moved", collection_key="new_collection")
+    )
+
+    assert seen_by_video_index == [(["new_collection"], baseline_depth)]
+
+
+class _IndexEnqueueError(Exception):
+    """Stand in for a search task that couldn't be queued"""
+
+
+def test_load_ovs_video_from_webhook_prunes_before_a_failed_video_index(
+    ovs_media_settings, mocker
+):
+    """A video index failure leaves the prune done, and the retry reindexes."""
+    mocker.patch(
+        "learning_resources.etl.loaders.similar_topics_action", return_value=[]
+    )
+    mock_unpublished = mocker.patch(
+        "learning_resources.etl.loaders.bulk_resources_unpublished_actions"
+    )
+    mock_update_index = mocker.patch("learning_resources.etl.loaders.update_index")
+    load_ovs_video_from_webhook(
+        _ovs_video_payload("moved", collection_key="old_collection")
+    )
+
+    def fail_for_the_video(resource, newly_created):
+        if resource.resource_type == LearningResourceType.video.name:
+            raise _IndexEnqueueError
+
+    mock_update_index.side_effect = fail_for_the_video
+    with pytest.raises(_IndexEnqueueError):
+        load_ovs_video_from_webhook(
+            _ovs_video_payload("moved", collection_key="new_collection")
+        )
+
+    old_playlist = _ovs_playlist("old_collection")
+    assert old_playlist.published is False
+    mock_unpublished.assert_called_once_with(
+        [old_playlist.id], LearningResourceType.video_playlist.name
+    )
+
+    mock_update_index.side_effect = None
+    mock_update_index.reset_mock()
+    video = load_ovs_video_from_webhook(
+        _ovs_video_payload("moved", collection_key="new_collection")
+    )
+
+    mock_update_index.assert_any_call(video, newly_created=False)
+    assert list(video.playlists.values_list("parent__readable_id", flat=True)) == [
+        "new_collection"
+    ]
+
+
+def _wait_for_blocked_learning_resource_query():
+    """
+    Wait until a query on learning resources is blocked on a lock in this database.
+
+    A query blocked in Postgres can't signal the test, so pg_stat_activity is how
+    the test sees it. A passing run doesn't depend on the timeout, which only
+    bounds a failure.
+    """
+    deadline = time.monotonic() + LOCK_WAIT_TIMEOUT_SECONDS
+    while time.monotonic() < deadline:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT count(*) FROM pg_stat_activity
+                WHERE datname = current_database()
+                AND pid <> pg_backend_pid()
+                AND wait_event_type = 'Lock'
+                AND query LIKE '%%learning_resources_learningresource%%'
+                """
+            )
+            if cursor.fetchone()[0]:
+                return True
+        time.sleep(0.01)
+    return False
+
+
+@pytest.mark.django_db(transaction=True)
+def test_prune_ovs_playlists_waits_for_a_push_into_the_playlist(
+    ovs_media_settings, mocker
+):
+    """A push in flight keeps its playlist published, with the title it wrote."""
+    mocker.patch("learning_resources.etl.loaders.update_index")
+    mock_unpublished = mocker.patch(
+        "learning_resources.etl.loaders.bulk_resources_unpublished_actions"
+    )
+    mock_topics = mocker.patch(
+        "learning_resources.etl.loaders.similar_topics_action", return_value=[]
+    )
+    load_ovs_video_from_webhook(_ovs_video_payload("last_video")).delete()
+    playlist = _ovs_playlist("ovs_collection")
+    push_holds_playlist = threading.Event()
+    push_may_commit = threading.Event()
+
+    def hold_push_open(_resource):
+        """Stay in the push's transaction, which has written the playlist"""
+        push_holds_playlist.set()
+        assert push_may_commit.wait(LOCK_WAIT_TIMEOUT_SECONDS)
+        return []
+
+    mock_topics.side_effect = hold_push_open
+    errors = []
+
+    def start(function, *args):
+        def run():
+            try:
+                function(*args)
+            except Exception as error:  # noqa: BLE001
+                errors.append(error)
+            finally:
+                connections.close_all()
+
+        thread = threading.Thread(target=run, daemon=True)
+        thread.start()
+        return thread
+
+    push = start(
+        load_ovs_video_from_webhook, _ovs_video_payload("new_video", "A new title")
+    )
+    threads = [push]
+    try:
+        assert push_holds_playlist.wait(LOCK_WAIT_TIMEOUT_SECONDS)
+        threads.append(start(prune_ovs_playlists, [playlist.id]))
+        assert _wait_for_blocked_learning_resource_query()
+    finally:
+        push_may_commit.set()
+        for thread in threads:
+            thread.join(LOCK_WAIT_TIMEOUT_SECONDS)
+
+    assert errors == []
+    playlist.refresh_from_db()
+    assert playlist.published is True
+    assert playlist.title == "A new title"
+    assert playlist.resources.filter(readable_id="new_video").exists()
+    mock_unpublished.assert_not_called()
+
+
+def _playlist_with_videos(platform, *, published=1, unpublished=0):
+    """Create a playlist on a platform holding published and unpublished videos"""
+    playlist = VideoPlaylistFactory.create(
+        learning_resource__platform=platform
+    ).learning_resource
+    _add_playlist_videos(
+        playlist,
+        [VideoFactory.create().learning_resource for _ in range(published)]
+        + [
+            VideoFactory.create(is_unpublished=True).learning_resource
+            for _ in range(unpublished)
+        ],
+    )
+    return playlist
+
+
+def test_unpublish_empty_ovs_playlists(mocker, ovs_platform, youtube_video_platform):
+    """OVS playlists with no published video are unpublished, and nothing else is"""
+    mocker.patch("learning_resources.etl.loaders.update_index")
+    mock_unpublished = mocker.patch(
+        "learning_resources.etl.loaders.bulk_resources_unpublished_actions"
+    )
+    # 2 empty of 20 published is the MAX_UNPUBLISH_SHARE limit, so it's allowed
+    kept = [_playlist_with_videos(ovs_platform) for _ in range(18)]
+    empty = _playlist_with_videos(ovs_platform, published=0)
+    unpublished_videos_only = _playlist_with_videos(
+        ovs_platform, published=0, unpublished=1
+    )
+    youtube_empty = _playlist_with_videos(youtube_video_platform, published=0)
+
+    swept = unpublish_empty_ovs_playlists()
+
+    assert swept == sorted([empty.id, unpublished_videos_only.id])
+    for playlist in (empty, unpublished_videos_only):
+        playlist.refresh_from_db()
+        assert playlist.published is False
+    for playlist in [*kept, youtube_empty]:
+        playlist.refresh_from_db()
+        assert playlist.published is True
+    mock_unpublished.assert_called_once_with(
+        swept, LearningResourceType.video_playlist.name
+    )
+
+    assert unpublish_empty_ovs_playlists() == []
+
+
+@pytest.fixture
+def mock_ovs_prune_hooks(mocker):
+    """Mock the search work prune_ovs_playlists triggers"""
+    mocker.patch("learning_resources.etl.loaders.update_index")
+    return mocker.patch(
+        "learning_resources.etl.loaders.bulk_resources_unpublished_actions"
+    )
+
+
+def _ovs_playlists_with_empty(ovs_platform, *, total, empty):
+    """Create `total` published OVS playlists, `empty` of them with no video"""
+    for _ in range(total - empty):
+        _playlist_with_videos(ovs_platform)
+    return [_playlist_with_videos(ovs_platform, published=0) for _ in range(empty)]
+
+
+def test_unpublish_empty_ovs_playlists_unpublishes_one_of_nine_by_default(
+    mock_ovs_prune_hooks, ovs_platform
+):
+    """
+    One leftover of 9 is over MAX_UNPUBLISH_SHARE, but within the default
+    floor. 9 is production's count on 2026-11-02.
+    """
+    [empty] = _ovs_playlists_with_empty(ovs_platform, total=9, empty=1)
+
+    assert unpublish_empty_ovs_playlists() == [empty.id]
+    empty.refresh_from_db()
+    assert empty.published is False
+
+
+def test_unpublish_empty_ovs_playlists_refuses_past_the_floor_and_share(
+    mock_ovs_prune_hooks, ovs_platform
+):
+    """Over both the floor and MAX_UNPUBLISH_SHARE it unpublishes nothing"""
+    empty = _ovs_playlists_with_empty(ovs_platform, total=9, empty=2)
+    empty_ids = sorted(playlist.id for playlist in empty)
+
+    with pytest.raises(
+        ExtractException,
+        match=(
+            rf"Refusing to sweep: 2 of 9 .*floor of 1 .*\[{empty_ids[0]}, "
+            rf"{empty_ids[1]}\]"
+        ),
+    ):
+        unpublish_empty_ovs_playlists()
+
+    for playlist in empty:
+        playlist.refresh_from_db()
+        assert playlist.published is True
+    mock_ovs_prune_hooks.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("floor", "empty_count", "refused"),
+    [(0, 1, True), (2, 2, False), (2, 3, True)],
+)
+def test_unpublish_empty_ovs_playlists_uses_the_floor_setting(
+    mock_ovs_prune_hooks, ovs_platform, floor, empty_count, refused
+):
+    """OVS_PLAYLIST_SWEEP_UNPUBLISH_FLOOR sets how many it may unpublish"""
+    empty = _ovs_playlists_with_empty(ovs_platform, total=9, empty=empty_count)
+
+    with override_settings(OVS_PLAYLIST_SWEEP_UNPUBLISH_FLOOR=floor):
+        if refused:
+            with pytest.raises(ExtractException, match="Refusing to sweep"):
+                unpublish_empty_ovs_playlists()
+        else:
+            assert unpublish_empty_ovs_playlists() == sorted(p.id for p in empty)
+
+    for playlist in empty:
+        playlist.refresh_from_db()
+        assert playlist.published is refused
+
+
+def test_unpublish_empty_ovs_playlists_override_skips_the_bound(
+    mock_ovs_prune_hooks, ovs_platform
+):
+    """allow_mass_unpublish unpublishes past both the floor and the share"""
+    empty = _ovs_playlists_with_empty(ovs_platform, total=9, empty=3)
+
+    assert unpublish_empty_ovs_playlists(allow_mass_unpublish=True) == sorted(
+        playlist.id for playlist in empty
+    )
+    for playlist in empty:
+        playlist.refresh_from_db()
+        assert playlist.published is False
+
+
 def test_unpublish_removed_youtube_channels(mock_upsert_tasks):
     """A channel dropped from the config takes its playlists and videos with it"""
     channel = VideoChannelFactory.create(etl_source=ETLSource.youtube.name)
@@ -4599,6 +4976,36 @@ def test_load_course_units_column_limits():
     assert unit.external_id == "seq1"
     assert unit.title == "t" * 1024
     assert unit.url == ""
+
+
+def test_load_course_units_keeps_a_unit_dropped_only_by_failed_files():
+    """
+    A unit the run has whose files failed to extract is kept with the links it
+    still has; a new one, or one whose files are just gone, is dropped
+    """
+    run = LearningResourceRunFactory.create()
+    kept = ContentFileFactory.create(run=run)
+    load_course_units(
+        run,
+        [
+            _unit_data("seq1", "unit", {kept.key: "core"}),
+            _unit_data("seq2", "unit", {kept.key: "core"}),
+        ],
+    )
+    seq1 = run.units.get(external_id="seq1")
+
+    load_course_units(
+        run,
+        [
+            _unit_data("seq1", "unit", {"failed": "core"}),
+            _unit_data("seq2", "unit", {"gone": "core"}),
+            _unit_data("seq3", "unit", {"failed": "core"}),
+        ],
+        failed_keys=["failed"],
+    )
+
+    assert list(run.units.values_list("id", "position")) == [(seq1.id, 0)]
+    assert not run.units.get().content_files.exists()
 
 
 def test_load_course_units_keeps_empty_context():
