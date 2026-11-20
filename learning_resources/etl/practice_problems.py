@@ -50,6 +50,8 @@ class ParsedProblem:
     pages: list[int] = field(default_factory=list)
     topics: list[str] = field(default_factory=list)
     points: str = ""
+    # the printed grouping (Part A, Part B) whose numbering the problem's is in
+    section: str = ""
 
     @property
     def figure(self) -> dict | None:
@@ -245,6 +247,7 @@ def _problem(problem: _Node, nodes: list[_Node]) -> ParsedProblem | None:
         pages=sorted(p for p in pages if isinstance(p, int)),
         topics=[str(t) for t in topics] if isinstance(topics, list) else [],
         points=str(problem.meta.get("points") or ""),
+        section=str(problem.meta.get("section") or ""),
     )
 
 
