@@ -144,6 +144,8 @@ The TypeScript API client in `frontends/api/src/generated/` is auto-generated fr
 
 **CI will fail if generated code is out of sync** - always regenerate after changing Django views/serializers.
 
+The published `@mitodl/*-api-axios` packages pinned in `frontends/` must be released npm versions to merge: `scripts/check-api-client-versions.sh` (CI job `api-clients-released`) fails on a `next` prerelease, a `file:` tarball, a GitHub tarball URL, or any tracked `.tgz`. For review before a backend release, pin `@next` (`yarn up -E`) or a tarball from `./scripts/generate-branch-client.sh`; see the README's "Using an unreleased API client".
+
 ## Key Conventions
 
 ### Python/Django

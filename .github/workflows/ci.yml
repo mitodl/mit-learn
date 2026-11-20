@@ -248,6 +248,18 @@ jobs:
       - name: Build Storybook
         run: yarn workspace ol-components build-storybook
 
+  api-clients-released:
+    # A branch may pin an unreleased API client (a `next` prerelease, or a tarball
+    # from scripts/generate-branch-client.sh) for review, but it must not merge
+    # until the backend change is released. This job is red until then.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Every API client is a released npm version
+        run: bash scripts/check-api-client-versions.sh
+
   openapi-generated-client-check-v0:
     # This job checks that the output of openapi-generator-typescript-axios that
     # is checked into version control is up-to-date.
@@ -362,6 +374,7 @@ jobs:
       - javascript-tests
       - build-nextjs-container
       - build-storybook
+      - api-clients-released
       - openapi-generated-client-check-v0
       - openapi-generated-client-check-v1
     # Without this the gate is skipped when a dependency fails, and a skipped required
