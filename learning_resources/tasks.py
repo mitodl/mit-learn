@@ -1488,7 +1488,7 @@ def generate_claims_for_resource(
     When nothing failed, the extractions the best run uses are then the
     resource's only published ones: see publish_claim_extractions. Step 3 then
     loads them into the best run's resource profile, which is rebuilt only when
-    the run's claims changed, and the resource's other profiles are deleted.
+    it is out of date, and the resource's other profiles are deleted.
     When something failed, what is published is left as it is, so the resource
     keeps its last complete claims and profile, rather than none or claims
     missing a unit, until a sweep succeeds.

@@ -20,14 +20,13 @@ which can be queried, and makes no model calls.
   outcomes, inferred preparation items and coverage limitations, is a
   run-level ProfileClaim (run:summary:0, run:topic:0, run:preparation:0, ...),
   linked to the unit and context claims and the units it cites, and stored
-  in that order, so ordering by id reads them as a profile. The items the
-  preparation rule excluded are left in the run extraction's output.
+  in that order, so ordering by id reads them as a profile. Preparation items
+  the preparation rule excluded aren't loaded.
 
 A run's profile is rebuilt in one transaction, so readers never see a
-partial profile, and only when its run extraction has changed since the
-profile was built, or when deleting content files or units removed some of
-its rows, such as evidence quoting a file that ETL replaced with an identical
-one.
+partial profile. It is rebuilt only when its run extraction changed, or when
+deleting or unpublishing content files or units invalidated some of its rows,
+as when ETL replaces a file with an identical one.
 """
 
 import logging
@@ -106,7 +105,7 @@ class _UnitExtraction(NamedTuple):
     # U01, U02, ...
     display_id: str
     unit: Unit
-    # None when the unit had no text to extract claims from
+    # None when the unit was skipped, as when it had no text
     extraction: ClaimExtraction | None
 
 
@@ -124,9 +123,9 @@ def _load_references(
     Return the run's units with their extractions, and its context extraction,
     from the run output's references.
 
-    The context extraction's own unit is whichever run's context unit last
-    stored it, since runs of a resource with the same context files share it,
-    so its claims are loaded for the run's own context unit.
+    Runs with the same context files share a context extraction, so its
+    unit may be another run's; its claims are loaded for this run's context
+    unit instead.
 
     Raises:
         ProfileBuildError: when a referenced unit or extraction is gone or
@@ -413,13 +412,11 @@ class _ProfileLoader:
     def _evidence_rows(self) -> list[ClaimEvidence]:
         """
         Return the claims' evidence, with spans as offsets into each file's
-        content.
+        raw content.
 
-        Verification finds a passage's span in the file's text stripped of
-        its surrounding whitespace, as the source read it, while
-        content_checksum identifies the raw content, so spans are shifted by
-        the whitespace stripped from the start of the content as it is now:
-        a reused extraction's spans may have been found before that changed.
+        Verification finds spans in the file's stripped text, so they are
+        shifted by the content's current leading whitespace, which may differ
+        from when a reused extraction was made.
         """
         locator_length = _max_length(ClaimEvidence, "locator")
         # each file's leading whitespace, by content file id
@@ -517,11 +514,14 @@ class _ProfileLoader:
 # --------------------------------------------------------------------------- build
 def _invalidation_counts(profile: RunProfile) -> dict[str, int]:
     """
-    Count the profile's rows that changes to content files or units elsewhere
-    invalidate: evidence quoting a file that is still published and in its
-    claim's unit, as a build would quote it (deleting a file cascades to its
-    evidence; ETL unpublishes a replaced file and relinks the unit), claims'
-    units (set to null) and run claims' links to units
+    Count the profile's rows that changes to content files or units can
+    invalidate:
+
+    - evidence quoting a published file still in its claim's unit (deleting
+      a file cascades to its evidence; ETL unpublishes a replaced file and
+      relinks the unit)
+    - claims with a unit (deleting a unit sets it to null)
+    - run claims' links to units
     """
     linked = UnitContentFile.objects.filter(
         unit_id=OuterRef("claim__unit_id"),
@@ -540,13 +540,12 @@ def _invalidation_counts(profile: RunProfile) -> dict[str, int]:
 
 def _is_current(profile: RunProfile | None, run_extraction: ClaimExtraction) -> bool:
     """
-    Whether a profile was built from the run extraction as it is now, and
-    still has every row it was built with.
+    Return whether a profile was built from the run extraction as it is now,
+    and none of its rows have been invalidated since.
 
-    ETL can replace a unit's content files with new ones with the same text,
-    unpublishing or deleting the old files, which leaves the extractions as
-    they are but the evidence quoting the old files, so the evidence that
-    still quotes a current file is counted as well.
+    ETL can replace content files with identical ones, which leaves the
+    extractions unchanged but the evidence quoting the old files, hence the
+    invalidation counts.
     """
     return (
         profile is not None
@@ -562,12 +561,11 @@ def _check_published_references(run_extraction: ClaimExtraction) -> None:
     Check that a published run extraction's unit and context extractions are
     published too.
 
-    publish_claim_extractions publishes a run extraction with the extractions
-    it was made from. Regenerating one of those replaces its row in place and
-    unpublishes it, so when a sweep then fails before publishing, the run
-    output's claim ids, like U01:c3, name claims of the old output that the
-    row no longer holds. Building from it would link them to other claims.
-    Rows that are gone are left to _load_references.
+    Regenerating an extraction replaces its row in place and unpublishes it.
+    If the sweep then fails before publishing, the run output's claim ids,
+    like U01:c3, name claims the row no longer holds, and building would
+    link them to the wrong claims. Rows that are gone are left to
+    _load_references.
 
     Raises:
         ProfileBuildError: when a referenced extraction is unpublished
@@ -606,7 +604,7 @@ def _replace_claims(profile: RunProfile, run_extraction: ClaimExtraction) -> Cou
     for unit_extraction in unit_extractions:
         if unit_extraction.extraction is not None:
             loader.add_unit(*unit_extraction)
-    # last, so the claims they cite are stored before them
+    # last, so ordering by id reads the run claims after the claims they cite
     loader.add_run(run_extraction)
     loader.save_claims({ue.display_id: ue.unit for ue in unit_extractions})
     return loader.stats
@@ -620,10 +618,8 @@ def build_run_profile(
     built from it.
 
     The profile is replaced in one transaction. When building fails, the
-    run's last profile keeps its claims, and a ready one is marked stale
-    unless it is still current for the extraction, since the extraction it
-    points at may have been replaced in place; a run with no profile gets
-    one with status failed.
+    run's last profile keeps its claims and is marked stale if it was ready
+    but is out of date; a run with no profile gets a failed one.
 
     Args:
         run_extraction (ClaimExtraction): the run's run-level extraction
@@ -634,6 +630,7 @@ def build_run_profile(
         tuple of (RunProfile, bool): the profile, and whether it was built
 
     Raises:
+        ValueError: when the extraction isn't a run's run-level extraction
         ProfileBuildError: when the extraction refers to units or extractions
             that are gone, or it is published and refers to extractions that
             aren't
@@ -676,10 +673,8 @@ def build_run_profile(
             and profile.status == RunProfile.Status.READY
             and (current is None or not _is_current(profile, current))
         ):
-            # the extraction's row may have been replaced in place, so the
-            # profile's claims no longer match what its foreign key points at.
-            # A profile still current for the extraction as it is now, as when
-            # a forced rebuild fails, still matches it and stays ready
+            # out of date, e.g. its extraction was replaced in place; one that
+            # is still current, as when a forced rebuild fails, stays ready
             profile.status = RunProfile.Status.STALE
             profile.save(update_fields=["status", "updated_on"])
         raise
@@ -703,16 +698,10 @@ def publish_resource_profile(
     """
     Build the profile of a resource's best run, and delete its other profiles.
 
-    The resource's profile follows its published extractions: see
-    publish_claim_extractions. A resource without a run extraction has no
-    profile. The profiles of the resource's other runs are deleted once the
-    best run's profile is built, since their claims are no longer published.
-
-    When building fails, the best run's profile is handled as in
-    build_run_profile, and the other runs' profiles are kept, so a resource
-    whose best run changed keeps its last ready profile until the new one
-    builds. Only then can a resource have more than one profile; the best
-    run's is the one whose run is resource.best_run.
+    A resource without a run extraction has no profile. The other runs'
+    profiles are deleted only once the best run's builds, so a resource whose
+    best run changed keeps its last ready profile until then; that is the
+    only time a resource has more than one.
 
     Args:
         resource (LearningResource): the resource
@@ -734,6 +723,6 @@ def publish_resource_profile(
         profiles.delete()
         return None
     _, built = build_run_profile(run_extraction, force=force)
-    # after building, so a failed build leaves the last profile in place
+    # after building, so a failed build keeps the other runs' profiles
     profiles.exclude(run_id=run_extraction.run_id).delete()
     return built

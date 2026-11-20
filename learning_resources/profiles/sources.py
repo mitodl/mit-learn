@@ -91,10 +91,8 @@ def read_text_checksum(text: str, included_chars: int) -> str:
         included_chars (int): how many characters of it were kept
 
     Returns:
-        str: the checksum of the kept characters as truncate() sends them,
-            with trailing whitespace stripped; it is the same for any later
-            version of the file whose kept text is, which an extraction keyed
-            on the text sent stays valid for
+        str: the checksum of the kept text as truncate() sends it, so it
+            stays the same across file versions that send the same text
     """
     # truncate() strips the end of the kept text, and an untruncated text is
     # already stripped

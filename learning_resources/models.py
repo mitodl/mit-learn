@@ -1615,17 +1615,15 @@ class RunProfile(TimestampedModel):
     The published profile of a resource's best run, loaded from its claim
     extractions for querying.
 
-    It keeps everything it shows, so it outlives the extractions it was
-    loaded from: those rows are replaced and deleted as claims are
-    regenerated, and the profile is rebuilt from the new ones.
+    It copies everything it shows, so it outlives the extractions it was
+    loaded from, which are replaced and deleted as claims are regenerated.
     """
 
     class Status(models.TextChoices):
         BUILDING = "building", "Building"
         READY = "ready", "Ready"
-        # a rebuild failed after the run's extraction changed: the profile
-        # keeps the claims of the extraction's earlier output, which it no
-        # longer matches, until a rebuild succeeds
+        # a rebuild of an out-of-date profile failed: it keeps its last claims
+        # until a rebuild succeeds
         STALE = "stale", "Stale"
         FAILED = "failed", "Failed"
 
@@ -1643,8 +1641,8 @@ class RunProfile(TimestampedModel):
     status = models.CharField(
         max_length=16, choices=Status.choices, default=Status.BUILDING
     )
-    # counts of the rows the profile was built with that deleting content
-    # files or units removes, to tell that it must be rebuilt
+    # counts of the rows that deleting or unpublishing content files or units
+    # can invalidate, as of the build; a mismatch means it must be rebuilt
     invalidation_counts = models.JSONField(default=dict, blank=True)
 
     class Meta:
@@ -1687,7 +1685,8 @@ class ProfileClaim(models.Model):
         RunProfile, related_name="claims", on_delete=models.CASCADE
     )
     # stable across rebuilds while the extraction and unit are unchanged:
-    # "u:91be07aa13cd:4211:a4", from the extraction key, unit id and claim id
+    # "u:91be07aa13cd:4211:a4" (extraction key, unit id, claim id), or
+    # "r:91be07aa13cd:summary:0" for a run claim
     uid = models.CharField(max_length=64)
     # the id the run step cites it by: "U03:a4", "ctx:prereq:0"; run claims
     # have ids of their own: "run:summary:0", "run:outcome:0", "run:preparation:0"

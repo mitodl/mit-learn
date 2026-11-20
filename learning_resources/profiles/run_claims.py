@@ -178,7 +178,7 @@ def context_claims(output: dict | None) -> list[ContextClaim]:
 
 
 def context_claims_by_id(output: dict | None) -> dict[str, str]:
-    """Give the context extraction's claims ids, as the run prompt cites them"""
+    """Return each context claim's text by the id the run prompt cites it by"""
     return {claim.claim_id: claim.text for claim in context_claims(output)}
 
 

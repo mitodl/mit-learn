@@ -107,8 +107,7 @@ class ClaimExtractionAdmin(admin.ModelAdmin):
     show_full_result_count = False
 
     def get_queryset(self, request):
-        """Leave out the large fields the list doesn't show"""
-        # outputs run to hundreds of kilobytes a row and the list never shows them
+        """Leave out output and raw_response, up to hundreds of KB a row"""
         return super().get_queryset(request).defer("output", "raw_response")
 
 
