@@ -11,6 +11,7 @@ from decimal import Decimal
 
 from dateutil.parser import parse
 
+from learning_resources.constants import LearningResourceType
 from learning_resources.etl.exceptions import ExtractException
 from learning_resources.etl.ownership import is_shadow_run
 from learning_resources.models import LearningResource
@@ -131,17 +132,43 @@ def refuse_mass_unpublish(
     _refuse(mass_unpublish_refusal(etl_source, resource_type, kept_ids, field=field))
 
 
-def kept_course_ids(courses: list[dict]) -> set[str]:
+def omitted_test_mode_course_ids(
+    etl_source: str, loaded_ids: set[str], *, field: str = "readable_id"
+) -> set[str]:
     """
-    Return the readable_ids of the transformed courses load_courses will leave
-    published. upsert_course_or_program unpublishes a course with no runs, and
-    the runs come from a view that can be built apart from the courses.
+    Return the source's published test_mode courses a load leaves out, which
+    stay published: the course loads never prune a test_mode course
+    (load_courses, and warehouse_ocw.sync_courses). load_programs and
+    load_documents do prune theirs. ``field`` is the LearningResource field
+    ``loaded_ids`` holds, and the one returned.
+    """
+    return set(
+        LearningResource.objects.filter(
+            etl_source=etl_source,
+            resource_type=LearningResourceType.course.name,
+            published=True,
+            test_mode=True,
+        )
+        .exclude(**{f"{field}__in": loaded_ids})
+        .values_list(field, flat=True)
+    )
+
+
+def kept_course_ids(etl_source: str, courses: list[dict]) -> set[str]:
+    """
+    Return the readable_ids of the source's courses load_courses will leave
+    published, given the transformed courses it loads.
+    upsert_course_or_program unpublishes a course with no runs, and the runs
+    come from a view that can be built apart from the courses. A published
+    test_mode course the courses leave out is not pruned.
     """
     return {
         course["readable_id"]
         for course in courses
         if course["published"] and course["runs"]
-    }
+    } | omitted_test_mode_course_ids(
+        etl_source, {course["readable_id"] for course in courses}
+    )
 
 
 def refuse_empty(**views: list[dict]) -> None:
