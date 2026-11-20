@@ -2,6 +2,7 @@
 
 import logging
 import tarfile
+from collections.abc import Collection
 from itertools import chain
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -232,7 +233,7 @@ def load_course_archive(  # noqa: PLR0913
                 run, chain([first], content_files_data), failed_keys=failed_keys
             )
             if content_files_ids:
-                load_archive_units(archive, run, key)
+                load_archive_units(archive, run, key, failed_keys=failed_keys)
                 run.checksum = checksum
                 run.archive_key = key
                 run.save(update_fields=["checksum", "archive_key"])
@@ -240,7 +241,13 @@ def load_course_archive(  # noqa: PLR0913
         log.exception("Error ingesting OLX content data for %s", key)
 
 
-def load_archive_units(archive: OlxArchive, run: LearningResourceRun, key: str):
+def load_archive_units(
+    archive: OlxArchive,
+    run: LearningResourceRun,
+    key: str,
+    *,
+    failed_keys: Collection[str] = (),
+):
     """
     Load a run's units from its unpacked archive, after its content files. A
     failure is logged rather than raised: the same archive fails the same way
@@ -252,6 +259,8 @@ def load_archive_units(archive: OlxArchive, run: LearningResourceRun, key: str):
         archive(OlxArchive): The run's unpacked course archive
         run(LearningResourceRun): The run whose units to load
         key(str): S3 object key for the course archive
+        failed_keys(collection of str): keys of the run's files whose text
+            failed to extract, so a unit dropped only for them is kept
     """
     units = []
     try:
@@ -259,7 +268,7 @@ def load_archive_units(archive: OlxArchive, run: LearningResourceRun, key: str):
     except Exception:
         log.exception("Units not built for run %s from %s", run.run_id, key)
     try:
-        load_course_units(run, units)
+        load_course_units(run, units, failed_keys=failed_keys)
     except Exception:
         log.exception("Units not loaded for run %s from %s", run.run_id, key)
 

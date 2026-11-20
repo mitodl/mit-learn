@@ -1,6 +1,18 @@
 Release Notes
 =============
 
+Version 0.88.4
+--------------
+
+- Add the Support page at /support (#4338)
+- Sweep OVS playlists left published with no published video (#4239)
+- Add the extracted_content_files webhook (#4223)
+- Install local-dev's dev deps before the source copy (#4345)
+- Unpublish OVS playlists the webhook empties (#4225)
+- fix(users): set username to the lowercased email where it is something else (#4197)
+- Load a run's units from the warehouse with its content files (#4290)
+- units admin and api (#4339)
+
 Version 0.88.3
 --------------
 

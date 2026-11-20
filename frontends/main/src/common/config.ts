@@ -1,12 +1,20 @@
 import { env } from "@/env"
+
+/** An optional setting: unset, empty and whitespace-only all mean "not set". */
+const optionalEnv = (key: Parameters<typeof env>[0]): string | undefined =>
+  (env(key) ?? "").trim() || undefined
+
 export const getRecaptchaSiteKey = (): string | undefined =>
-  (env("NEXT_PUBLIC_RECAPTCHA_SITE_KEY") ?? "").trim() || undefined
+  optionalEnv("NEXT_PUBLIC_RECAPTCHA_SITE_KEY")
 
 export const getOrgLearningHubspotFormId = (): string =>
   (env("NEXT_PUBLIC_ORG_LEARNING_HUBSPOT_FORM_ID") ?? "").trim()
 
 export const getEducatorShareStoryUrl = (): string | undefined =>
-  (env("NEXT_PUBLIC_EDUCATOR_SHARE_STORY_URL") ?? "").trim() || undefined
+  optionalEnv("NEXT_PUBLIC_EDUCATOR_SHARE_STORY_URL")
+
+export const getSupportShareStoryUrl = (): string | undefined =>
+  optionalEnv("NEXT_PUBLIC_SUPPORT_SHARE_STORY_URL")
 
 /** CDN TTL used when NEXT_PUBLIC_CACHE_S_MAXAGE_SECONDS is unset: local dev and CI. */
 const DEFAULT_S_MAXAGE_SECONDS = 1800

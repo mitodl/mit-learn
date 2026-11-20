@@ -92,6 +92,7 @@ router.register(
 router.register(r"featured", views.FeaturedViewSet, basename="featured_api")
 
 router.register(r"contentfiles", views.ContentFileViewSet, basename="contentfiles_api")
+router.register(r"units", views.UnitViewSet, basename="units_api")
 router.register(r"userlists", views.UserListViewSet, basename="userlists_api")
 nested_userlist_router = NestedSimpleRouter(router, r"userlists", lookup="userlist")
 nested_userlist_router.register(

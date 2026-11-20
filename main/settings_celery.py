@@ -104,6 +104,12 @@ CELERY_BEAT_SCHEDULE = (
             "task": "learning_resources.tasks.get_ovs_transcripts",
             "schedule": crontab(minute=30, hour=9),  # 5:30am EST
         },
+        # Unpublishes OVS playlists the webhook left published with no video,
+        # e.g. after a prune failed. A no-op until the webhook owns them.
+        "sweep-empty-ovs-playlists-every-1-days": {
+            "task": "learning_resources.tasks.sweep_empty_ovs_playlists",
+            "schedule": crontab(minute=45, hour=9),  # 5:45am EST
+        },
         "update_medium_mit_news": {
             "task": "news_events.tasks.get_medium_mit_news",
             "schedule": get_int(
