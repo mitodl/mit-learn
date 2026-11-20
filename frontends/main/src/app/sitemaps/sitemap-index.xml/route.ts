@@ -6,10 +6,7 @@ import * as channelsSitemap from "../channels/sitemap"
 export async function GET() {
   const content = await buildSitemapIndex()
   return new NextResponse(content, {
-    headers: {
-      "Content-Type": "application/xml",
-      "Content-Length": Buffer.byteLength(content).toString(),
-    },
+    headers: { "Content-Type": "application/xml" },
   })
 }
 

@@ -1,6 +1,45 @@
 Release Notes
 =============
 
+Version 0.88.2
+--------------
+
+- List only published articles at /articles (#4320)
+- Run the warehouse catalog syncs when the data platform rebuilds their views (#4291)
+- Update the ETL cutover runbook for delivery sensors and RC rehearsals (#4292)
+- Queue a resource's search upsert only after its transaction commits (#4237)
+- Pin LITELLM_CUSTOM_PROVIDER in pytest.ini (#4343)
+
+Version 0.88.1
+--------------
+
+- Remove the external-schema write guard left over from Hightouch (#4302)
+- Hide dashboard details links to product pages that don't load (#4325)
+- Write profile notes to the learner's shared memory (#4326)
+- refactor and reduce complexity of learning_resources/converters/opendataloader_llm_converter.py (#4306)
+- Export the B2B Learners CSV in 100-learner pages (#4336)
+- Add the Cyber Sale banner on MIT Learn (#4332)
+- Find the option by text in the 51-module ContractLearnersPage test (#4337)
+- Bump smoot-design to 6.41.0 for the Contact Us escalation button (#4333)
+
+Version 0.88.0
+--------------
+
+- handle large units (#4297)
+- Put Modules before Status on the B2B Learners page, and disable Status until a module is selected (#4318)
+- Remove the search-ai-overview feature flag (#4321)
+- Remove the account-management and program-letters PostHog flags (#4324)
+- Remove brotli uv exclude-newer override (#4314)
+- Replace the website content draft filter with ?status (#4313)
+- Remove the arithmix and hacksnack feature flags (#4322)
+- Remove the b2b-contract-manager-dashboard, b2b-analytics-dashboard and b2b-data-consent flags (#4323)
+- Expect the /switch-session redirect in the sign-up-return checkout test (#4327)
+- Clamp the card's parent course name at two lines (#4317)
+- fix: send checkout through MITx Online's /switch-session (#4311)
+- Add the Educator page (#4260)
+- Do not reject OVS webhook videos with a non-allowlisted cta_link (#4315)
+- Drop the By enrollment view and hide unconsented learners (#4266)
+
 Version 0.87.3
 --------------
 

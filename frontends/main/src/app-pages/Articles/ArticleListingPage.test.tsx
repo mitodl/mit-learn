@@ -7,8 +7,7 @@ import { ArticleListingPage } from "./ArticleListingPage"
 
 const setup = ({
   isArticleEditor = true,
-  isPublished = true,
-}: { isArticleEditor?: boolean; isPublished?: boolean } = {}) => {
+}: { isArticleEditor?: boolean } = {}) => {
   const user = factories.user.user({
     is_authenticated: true,
     is_article_editor: isArticleEditor,
@@ -19,45 +18,16 @@ const setup = ({
     id: 701,
     title: "Breaking the old model of education",
     content_type: "article",
-    is_published: isPublished,
+    is_published: true,
   })
   setMockResponse.get(
-    urls.websiteContent.list({
-      limit: 10,
-      offset: 0,
-      content_type: "article",
-      // The API lists published content unless asked; editors ask for both.
-      ...(isArticleEditor ? { status: "both" as const } : {}),
-    }),
+    urls.websiteContent.list({ limit: 10, offset: 0, content_type: "article" }),
     { count: 1, next: null, previous: null, results: [article] },
   )
 
   renderWithProviders(<ArticleListingPage />, { user })
   return { article }
 }
-
-describe("ArticleListingPage listing request", () => {
-  test.each([
-    { isArticleEditor: true, status: "both" },
-    { isArticleEditor: false, status: null },
-  ])(
-    "asks for status=$status when isArticleEditor=$isArticleEditor",
-    async ({ isArticleEditor, status }) => {
-      const { article } = setup({ isArticleEditor })
-
-      await screen.findAllByText(article.title)
-
-      const listUrls = jest
-        .mocked(makeRequest)
-        .mock.calls.map(([config]) => new URL(config.url, "http://x"))
-        .filter((url) => url.pathname === "/api/v1/website_content/")
-      expect(listUrls.length).toBeGreaterThan(0)
-      for (const url of listUrls) {
-        expect(url.searchParams.get("status")).toBe(status)
-      }
-    },
-  )
-})
 
 const menuName = (title: string) => `More options for ${title}`
 
@@ -122,14 +92,6 @@ describe("ArticleListingPage article actions", () => {
 
     expect(queryMenuButtons(article.title)).toHaveLength(0)
   })
-
-  test("a draft has no menu, since unpublishing is the only action", async () => {
-    const { article } = setup({ isPublished: false })
-
-    await screen.findAllByText(article.title)
-
-    expect(queryMenuButtons(article.title)).toHaveLength(0)
-  })
 })
 
 describe("ArticleListingPage links", () => {
@@ -138,21 +100,12 @@ describe("ArticleListingPage links", () => {
       .getAllByRole("link", { name: title })
       .map((a) => a.getAttribute("href"))
 
-  test("a draft links to the editor, since it has no public page", async () => {
-    const { article } = setup({ isPublished: false })
+  test("an article links to its public page", async () => {
+    const { article } = setup()
 
     await screen.findAllByText(article.title)
 
     /* Every link on the card, so the title and the image cannot diverge. */
-    const unique = [...new Set(hrefs(article.title))]
-    expect(unique).toEqual([`/website_content/article/${article.id}/edit`])
-  })
-
-  test("a published article links to its public page", async () => {
-    const { article } = setup({ isPublished: true })
-
-    await screen.findAllByText(article.title)
-
     const unique = [...new Set(hrefs(article.title))]
     expect(unique).toEqual([`/articles/${article.slug ?? article.id}`])
   })

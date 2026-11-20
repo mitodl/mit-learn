@@ -460,14 +460,13 @@ def test_get_user_by_me_sets_csrf_cookie(client):
 
 @pytest.mark.parametrize("is_anonymous", [True, False])
 def test_letter_intercept_view_generates_program_letter(
-    mocker, client, user, is_anonymous, settings
+    mocker, client, user, is_anonymous
 ):
     """
     Test that the letter intercept view generates a
     ProgramLetter and then passes the user along to the display.
     Also test that anonymous users do not generate letters and cant access this page
     """
-    settings.DATABASE_ROUTERS = []
     micromasters_program_id = 1
     if not is_anonymous:
         client.force_login(user)
@@ -501,9 +500,8 @@ def test_letter_intercept_view_generates_program_letter(
         assert response.status_code == 302
 
 
-def test_letter_intercept_view_refuses_revoked_certificate(client, user, settings):
+def test_letter_intercept_view_refuses_revoked_certificate(client, user):
     """A revoked certificate 404s like a missing one and gets no letter."""
-    settings.DATABASE_ROUTERS = []
     client.force_login(user)
     ProgramCertificateFactory(
         user_email=user.email, micromasters_program_id=1, is_revoked=True
@@ -517,13 +515,12 @@ def test_letter_intercept_view_refuses_revoked_certificate(client, user, setting
     assert not ProgramLetter.objects.filter(user=user).exists()
 
 
-def test_letter_intercept_view_with_several_certificates(client, user, settings):
+def test_letter_intercept_view_with_several_certificates(client, user):
     """
     Statistics and Data Science tracks share a MicroMasters program id, so one
     link can match several certificates. It opens the earliest completed, with
     record_hash breaking a tie, so a learner always lands on the same letter.
     """
-    settings.DATABASE_ROUTERS = []
     client.force_login(user)
     completed_on = datetime(2026, 1, 1, tzinfo=UTC)
     for record_hash, timestamp in [
@@ -548,9 +545,8 @@ def test_letter_intercept_view_with_several_certificates(client, user, settings)
     assert response.url == frontend_absolute_url(f"/program_letter/{letter.id}/view")
 
 
-def test_letter_intercept_view_skips_revoked_certificate(client, user, settings):
+def test_letter_intercept_view_skips_revoked_certificate(client, user):
     """A revoked certificate for the program does not stand in for a valid one."""
-    settings.DATABASE_ROUTERS = []
     client.force_login(user)
     ProgramCertificateFactory(
         user_email=user.email, micromasters_program_id=1, is_revoked=True
@@ -567,12 +563,11 @@ def test_letter_intercept_view_skips_revoked_certificate(client, user, settings)
 
 
 @pytest.mark.parametrize("is_anonymous", [True, False])
-def test_program_letter_api_view(mocker, client, rf, user, is_anonymous, settings):  # noqa: PLR0913
+def test_program_letter_api_view(mocker, client, rf, user, is_anonymous):
     """
     Test that the program letter display page is viewable by
     all users logged in or not
     """
-    settings.DATABASE_ROUTERS = []
     mocker.patch(
         "profiles.serializers.fetch_program_letter_template_data",
         return_value=PROGRAM_LETTER_TEMPLATE_DATA,
@@ -596,7 +591,7 @@ def test_program_letter_api_view(mocker, client, rf, user, is_anonymous, setting
     )
 
 
-def test_program_letter_api_view_omits_certificate_pii(mocker, client, user, settings):
+def test_program_letter_api_view_omits_certificate_pii(mocker, client, user):
     """
     The unauthenticated letter endpoint exposes only the name and program the
     letter itself states -- not the learner's contact or demographic details.
@@ -604,7 +599,6 @@ def test_program_letter_api_view_omits_certificate_pii(mocker, client, user, set
     Anyone holding the letter's uuid can read this response, so a field added
     to ProgramCertificate must not reach it by default.
     """
-    settings.DATABASE_ROUTERS = []
     mocker.patch(
         "profiles.serializers.fetch_program_letter_template_data",
         return_value=PROGRAM_LETTER_TEMPLATE_DATA,
@@ -638,8 +632,6 @@ def test_program_letter_api_view_without_certificate(
     here on purpose: MICROMASTERS_CMS_API_URL is set because the template fetch
     dereferences the certificate too, and the view has to stop short of it.
     """
-    settings.DATABASE_ROUTERS = []
-    settings.EXTERNAL_MODELS = []
     settings.MICROMASTERS_CMS_API_URL = "https://micromasters.example.com/api/v0/"
     letter = ProgramLetter.objects.create(user=user, certificate=None)
     if certificate_id is not None:
@@ -657,7 +649,6 @@ def test_program_letter_api_view_revoked_certificate(client, settings, user):
     A letter issued before its certificate was revoked 404s. Nothing is mocked,
     so the view has to stop before the template fetch.
     """
-    settings.DATABASE_ROUTERS = []
     settings.MICROMASTERS_CMS_API_URL = "https://micromasters.example.com/api/v0/"
     cert = ProgramCertificateFactory(user_email=user.email, is_revoked=True)
     letter = ProgramLetterFactory(user=user, certificate=cert)
@@ -669,12 +660,11 @@ def test_program_letter_api_view_revoked_certificate(client, settings, user):
     assert response.status_code == 404
 
 
-def test_program_letter_reinstated_after_unrevoke(mocker, client, settings, user):
+def test_program_letter_reinstated_after_unrevoke(mocker, client, user):
     """
     Reversing a revocation brings back the same letter: its link serves again
     and the certificate list points at it instead of issuing a new one.
     """
-    settings.DATABASE_ROUTERS = []
     mocker.patch(
         "profiles.serializers.fetch_program_letter_template_data",
         return_value=PROGRAM_LETTER_TEMPLATE_DATA,
@@ -771,8 +761,6 @@ def test_list_user_program_certificates(mocker, client, user, is_anonymous):
     """
     Test listing program certificates for a user
     """
-    settings.DATABASE_ROUTERS = []
-    settings.EXTERNAL_MODELS = []
     if not is_anonymous:
         client.force_login(user)
         certs = ProgramCertificateFactory.create_batch(

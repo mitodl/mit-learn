@@ -233,3 +233,21 @@ class LearningResourceWebhookRequestSerializer(serializers.Serializer):
                 )
                 raise serializers.ValidationError(msg)
         return resources
+
+
+class WarehouseViewsWebhookRequestSerializer(serializers.Serializer):
+    """
+    Serializer for the ``/api/v1/webhooks/warehouse_views_rebuilt/`` endpoint.
+
+    ``views`` are plain strings, not choices: a view no sync reads is logged
+    and skipped, rather than rejecting the batch it came in.
+    """
+
+    views = serializers.ListField(
+        child=serializers.CharField(allow_blank=True),
+        allow_empty=False,
+        help_text=(
+            "Bare names of the warehouse views the data platform rebuilt, e.g. "
+            "integrations__learn__ocw_courses"
+        ),
+    )
