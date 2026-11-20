@@ -1,15 +1,23 @@
 {% load i18n %}
 <details data-filter-title="{{ title }}" open>
   <summary>
-    {% blocktranslate with filter_title=title %} By {{ filter_title }} {% endblocktranslate %}
+    {% blocktranslate with filter_title=title %}
+    By
+    {{ filter_title }}
+    {% endblocktranslate %}
   </summary>
   {% with choice=choices.0 %}
   <form method="get" style="margin: 0 15px 10px">
     {% for name, value in choice.query_parts %}
-    <input type="hidden" name="{{ name }}" value="{{ value }}">
+    <input type="hidden" name="{{ name }}" value="{{ value }}" />
     {% endfor %}
-    <input type="text" name="{{ choice.parameter_name }}" value="{{ choice.value }}"
-           aria-label="{{ title }}" style="width: 100%; box-sizing: border-box">
+    <input
+      type="text"
+      name="{{ choice.parameter_name }}"
+      value="{{ choice.value }}"
+      aria-label="{{ title }}"
+      style="width: 100%; box-sizing: border-box"
+    />
   </form>
   {% endwith %}
 </details>
