@@ -345,7 +345,9 @@ def sync_courses(
     ]
     if not allow_mass_unpublish:
         refuse_mass_unpublish(
-            ETLSource.mitxonline.name, COURSE, kept_course_ids(courses_data)
+            ETLSource.mitxonline.name,
+            COURSE,
+            kept_course_ids(ETLSource.mitxonline.name, courses_data),
         )
     return len(
         loaders.load_courses(
