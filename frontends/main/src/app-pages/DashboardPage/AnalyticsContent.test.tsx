@@ -10,20 +10,15 @@ import { waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type { AxiosError } from "axios"
 import type { UserOrganizationPage } from "@mitodl/mitxonline-api-axios/v0"
-import type {
-  ContractNeedsAttention,
-  LearnerProgressResponse,
-} from "api/analytics-hooks/organizations"
+import type { ContractNeedsAttention } from "api/analytics-hooks/organizations"
 import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { allowConsoleErrors } from "ol-test-utilities"
-import { ForbiddenError } from "@/common/errors"
-import { FeatureFlags } from "@/common/feature_flags"
 import {
+  ALL_MODULES,
   contractAdminView,
   contractAnalyticsView,
   contractLearnersView,
 } from "@/common/urls"
-import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { SUPPRESSED_LEGEND } from "./Analytics/format"
 import AnalyticsContent from "./AnalyticsContent"
 
@@ -49,8 +44,6 @@ jest.mock("@mui/x-charts/LineChart", () => ({
 }))
 
 jest.mock("@/common/useFeatureFlag")
-jest.mock("@/common/useFeatureFlagsLoaded")
-const mockedUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
 const mockedUseFeatureFlag = jest.mocked(useFeatureFlag)
 
 const managerOrgsUrl = urls.organization.managerOrganizationsList()
@@ -119,14 +112,12 @@ const setAnalyticsResponses = ({
 }
 
 /**
- * Mocks the four section endpoints and the learner progress and
- * needs-attention endpoints, for tests that render with the learner analytics
- * flag on.
+ * Mocks the four section endpoints and the learner count and needs-attention
+ * endpoints, for tests that render with the learner analytics flag on.
  */
 const setContractAnalyticsResponses = (
   contractId: number,
   page = { limit: 200 },
-  learnerProgress: Partial<LearnerProgressResponse> = {},
   needsAttention: ContractNeedsAttention[] = [
     analyticsFactories.contractNeedsAttention({
       contract_id: contractId,
@@ -165,24 +156,6 @@ const setContractAnalyticsResponses = (
       { as_of: AS_OF },
     ),
   )
-  setMockResponse.get(
-    analyticsUrls.contracts.learnerProgress(ORG_UUID, contractId, {
-      limit: 1,
-      completion_status: [...SHARED_STATUSES],
-    }),
-    analyticsFactories.learnerProgressEnvelope([], {
-      as_of: AS_OF,
-      total_count: 40,
-      completion_status_counts: {
-        not_started: 5,
-        in_progress: 15,
-        passed: 12,
-        certified: 8,
-      },
-      needs_attention_count: 26,
-      ...learnerProgress,
-    }),
-  )
   for (const [completionStatus, total] of [
     [SHARED_STATUSES, 30],
     [["not_started"], 4],
@@ -195,18 +168,25 @@ const setContractAnalyticsResponses = (
         offset: 0,
         completion_status: [...completionStatus],
       }),
-      analyticsFactories.learnersEnvelope([], { total_count: total }),
+      analyticsFactories.learnersEnvelope([], {
+        as_of: AS_OF,
+        total_count: total,
+      }),
     )
   }
 }
 
+const allLearnersUrl = (contractId: number) =>
+  analyticsUrls.contracts.learners(ORG_UUID, contractId, {
+    limit: 1,
+    offset: 0,
+    completion_status: [...SHARED_STATUSES],
+  })
+
 describe("AnalyticsContent", () => {
   beforeEach(() => {
-    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
     /** Learner progress is covered below; leaving it off keeps these to four sections. */
-    mockedUseFeatureFlag.mockImplementation(
-      (flag) => flag !== FeatureFlags.B2BLearnerAnalytics,
-    )
+    mockedUseFeatureFlag.mockReturnValue(false)
     setMockResponse.get(
       urls.userMe.get(),
       factories.user.user({ email: "manager@test.com" }),
@@ -214,28 +194,6 @@ describe("AnalyticsContent", () => {
   })
 
   describe("access", () => {
-    test("throws ForbiddenError when the feature flag is off", () => {
-      mockedUseFeatureFlag.mockReturnValue(false)
-      allowConsoleErrors()
-
-      expect(() =>
-        renderWithProviders(
-          <AnalyticsContent orgSlug="any-org" contractSlug="any-contract" />,
-        ),
-      ).toThrow(ForbiddenError)
-    })
-
-    test("waits for PostHog rather than 403-ing on the env default", () => {
-      mockedUseFeatureFlagsLoaded.mockReturnValue(false)
-      mockedUseFeatureFlag.mockReturnValue(false)
-
-      expect(() =>
-        renderWithProviders(
-          <AnalyticsContent orgSlug="any-org" contractSlug="any-contract" />,
-        ),
-      ).not.toThrow()
-    })
-
     test("denies access when the caller does not manage the requested org", async () => {
       setManagerOrgs([orgWithUuid()])
 
@@ -359,10 +317,6 @@ describe("AnalyticsContent", () => {
         analyticsUrls.contracts.engagementTrend(ORG_UUID, contract.id, page),
         analyticsUrls.contracts.enrollmentFunnel(ORG_UUID, contract.id, page),
         analyticsUrls.contracts.contentEngagement(ORG_UUID, contract.id, page),
-        analyticsUrls.contracts.learnerProgress(ORG_UUID, contract.id, {
-          limit: 1,
-          completion_status: [...SHARED_STATUSES],
-        }),
         ...[
           [...SHARED_STATUSES],
           ["not_started" as const],
@@ -480,9 +434,70 @@ describe("AnalyticsContent", () => {
           screen.getByRole("group", { name: "Enrolled learners" }),
         ).getByText("48"),
       ).toBeInTheDocument()
-      expect(screen.getByText("32.3%")).toBeInTheDocument()
+      const certification = screen.getByRole("group", {
+        name: "Certification rate",
+      })
+      expect(within(certification).getByText("32.3%")).toBeInTheDocument()
+      expect(
+        within(certification).getByText("17 certified"),
+      ).toBeInTheDocument()
       expect(screen.getByText("62 of 100 seats")).toBeInTheDocument()
-      expect(screen.getByText("17 certified")).toBeInTheDocument()
+      expect(screen.queryByText(/Completion rate/)).not.toBeInTheDocument()
+    })
+
+    test("says an uncapped contract has no cap instead of marking it withheld", async () => {
+      const org = orgWithUuid()
+      setManagerOrgs([org])
+      setAnalyticsResponses({
+        utilization: [
+          analyticsFactories.contractUtilization({
+            seats_consumed: 978,
+            seat_limit: null,
+            seat_utilization_pct: null,
+          }),
+        ],
+      })
+
+      renderWithProviders(
+        <AnalyticsContent
+          orgSlug={org.slug.replace(/^org-/, "")}
+          contractSlug={CONTRACT.slug}
+        />,
+      )
+
+      const seats = await screen.findByRole("group", {
+        name: "Seat utilization",
+      })
+      expect(within(seats).getByText("No cap")).toBeInTheDocument()
+      expect(within(seats).getByText("978 seats used")).toBeInTheDocument()
+      expect(within(seats).queryByLabelText(/Withheld/)).not.toBeInTheDocument()
+    })
+
+    test("still marks a capped contract's utilization withheld when the API floors it", async () => {
+      const org = orgWithUuid()
+      setManagerOrgs([org])
+      setAnalyticsResponses({
+        utilization: [
+          analyticsFactories.contractUtilization({
+            seats_consumed: 3,
+            seat_limit: 100,
+            seat_utilization_pct: null,
+          }),
+        ],
+      })
+
+      renderWithProviders(
+        <AnalyticsContent
+          orgSlug={org.slug.replace(/^org-/, "")}
+          contractSlug={CONTRACT.slug}
+        />,
+      )
+
+      const seats = await screen.findByRole("group", {
+        name: "Seat utilization",
+      })
+      expect(within(seats).getByLabelText(/Withheld/)).toBeInTheDocument()
+      expect(within(seats).queryByText("No cap")).not.toBeInTheDocument()
     })
 
     test("renders course rows and marks suppressed values as withheld", async () => {
@@ -512,6 +527,9 @@ describe("AnalyticsContent", () => {
       // for the same course runs, so an unscoped "40" is ambiguous.
       const table = screen.getByRole("table", { name: "Course performance" })
       expect(within(table).getByText("40")).toBeInTheDocument()
+      expect(
+        within(table).getByRole("columnheader", { name: "Certification rate" }),
+      ).toBeInTheDocument()
       expect(
         screen.getAllByLabelText(/Withheld: too few learners/).length,
       ).toBeGreaterThan(0)
@@ -993,7 +1011,6 @@ describe("AnalyticsContent", () => {
 
 describe("AnalyticsContent, contract-scoped", () => {
   beforeEach(() => {
-    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
     mockedUseFeatureFlag.mockReturnValue(true)
     setMockResponse.get(
       urls.userMe.get(),
@@ -1128,9 +1145,7 @@ describe("AnalyticsContent, contract-scoped", () => {
   test("hides the Learners link and the Learner progress section when the learner analytics flag is off", async () => {
     // The learner page throws ForbiddenError without its flag, so the button
     // would be a dead end -- and every Learner progress tile links there too.
-    mockedUseFeatureFlag.mockImplementation(
-      (flag) => flag !== FeatureFlags.B2BLearnerAnalytics,
-    )
+    mockedUseFeatureFlag.mockReturnValue(false)
     const contract = factories.contracts.contract()
     const org = orgWithUuid({ contracts: [contract] })
     setManagerOrgs([org])
@@ -1151,7 +1166,7 @@ describe("AnalyticsContent, contract-scoped", () => {
     ).not.toBeInTheDocument()
   })
 
-  test("renders learner progress with its KPI cards and status distribution", async () => {
+  test("renders a learner count tile per status, and a link to every learner", async () => {
     const contract = factories.contracts.contract()
     const org = orgWithUuid({ contracts: [contract] })
     setManagerOrgs([org])
@@ -1167,12 +1182,9 @@ describe("AnalyticsContent, contract-scoped", () => {
 
     await screen.findByRole("heading", { name: "Learner progress" })
 
-    const enrolled = await screen.findByRole("group", {
-      name: "Learners enrolled",
+    const notStarted = await screen.findByRole("group", {
+      name: "Not started",
     })
-    expect(within(enrolled).getByText("30")).toBeInTheDocument()
-
-    const notStarted = screen.getByRole("group", { name: "Not started" })
     expect(within(notStarted).getByText("4")).toBeInTheDocument()
 
     const inProgress = screen.getByRole("group", { name: "In progress" })
@@ -1182,9 +1194,23 @@ describe("AnalyticsContent, contract-scoped", () => {
     expect(within(completed).getByText("18")).toBeInTheDocument()
     expect(screen.queryByText(/share their progress/)).not.toBeInTheDocument()
 
+    expect(
+      screen.queryByRole("group", { name: "Learners enrolled" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByText("A learner can appear in more than one status."),
+    ).toBeInTheDocument()
+    // Learner progress takes its freshness from `/learners`.
+    await waitFor(() =>
+      expect(screen.getAllByText(/Data as of/)).toHaveLength(5),
+    )
+
     const orgSlug = org.slug.replace(/^org-/, "")
+    expect(
+      screen.getByRole("link", { name: "View all learners" }),
+    ).toHaveAttribute("href", contractLearnersView(orgSlug, contract.slug))
+
     for (const [label, linkName, status] of [
-      ["Learners enrolled", "View all learners", undefined],
       ["Not started", "View learners (Not started)", "not_started"],
       ["In progress", "View learners (In progress)", "in_progress"],
       ["Completed", "View learners (Completed)", "passed"],
@@ -1197,18 +1223,16 @@ describe("AnalyticsContent, contract-scoped", () => {
         "href",
         contractLearnersView(orgSlug, contract.slug, { status }),
       )
+      expect(
+        new URL(link.getAttribute("href")!, "http://test").searchParams.getAll(
+          "modules",
+        ),
+      ).toEqual([ALL_MODULES])
     }
 
-    const list = screen.getByRole("list", {
-      name: "Enrollments by status",
-    })
-    expect(within(list).getAllByRole("listitem")).toHaveLength(3)
-    expect(within(list).getByText("Not started")).toBeInTheDocument()
-    expect(within(list).getByText("5")).toBeInTheDocument()
-    expect(within(list).getByText("In progress")).toBeInTheDocument()
-    expect(within(list).getByText("15")).toBeInTheDocument()
-    expect(within(list).getByText("Completed")).toBeInTheDocument()
-    expect(within(list).getByText("20")).toBeInTheDocument()
+    expect(
+      screen.queryByRole("list", { name: "Enrollments by status" }),
+    ).not.toBeInTheDocument()
   })
 
   test("counts only learners who consented, by asking for the four shared statuses", async () => {
@@ -1223,7 +1247,7 @@ describe("AnalyticsContent, contract-scoped", () => {
         contractSlug={contract.slug}
       />,
     )
-    await screen.findByRole("list", { name: "Enrollments by status" })
+    await screen.findByRole("group", { name: "Completed" })
 
     const statusesSent = (resource: string) =>
       makeRequest.mock.calls
@@ -1234,7 +1258,7 @@ describe("AnalyticsContent, contract-scoped", () => {
         )
     const shared = [...SHARED_STATUSES].sort()
 
-    expect(statusesSent("learner-progress")).toEqual([shared])
+    expect(statusesSent("learner-progress")).toEqual([])
     const learnerCounts = statusesSent("learners")
     expect(learnerCounts).toContainEqual(shared)
     expect(learnerCounts).not.toContainEqual([])
@@ -1242,20 +1266,11 @@ describe("AnalyticsContent, contract-scoped", () => {
   })
 
   describe("Needs attention card", () => {
-    const renderCard = async (
-      needsAttention: ContractNeedsAttention[],
-      enrollments?: number,
-    ) => {
+    const renderCard = async (needsAttention: ContractNeedsAttention[]) => {
       const contract = factories.contracts.contract()
       const org = orgWithUuid({ contracts: [contract] })
       setManagerOrgs([org])
-      const contractId = contract.id
-      setContractAnalyticsResponses(
-        contractId,
-        undefined,
-        enrollments === undefined ? {} : { needs_attention_count: enrollments },
-        needsAttention,
-      )
+      setContractAnalyticsResponses(contract.id, undefined, needsAttention)
       const orgSlug = org.slug.replace(/^org-/, "")
       renderWithProviders(
         <AnalyticsContent orgSlug={orgSlug} contractSlug={contract.slug} />,
@@ -1282,10 +1297,9 @@ describe("AnalyticsContent, contract-scoped", () => {
 
       expect(card).toHaveTextContent("20 learners")
       expect(
-        await within(card).findByText(
-          "Not started, or inactive for 30+ days, across 26 enrollments.",
-        ),
+        within(card).getByText("Not started, or inactive for 30+ days."),
       ).toBeInTheDocument()
+      expect(card).not.toHaveTextContent(/enrollment/)
       expect(
         within(card).getByRole("link", {
           name: "Review learners who need attention",
@@ -1305,56 +1319,6 @@ describe("AnalyticsContent, contract-scoped", () => {
       expect(card).not.toHaveTextContent("1 learners")
     })
 
-    test("uses singular wording for one enrollment", async () => {
-      const { card } = await renderCard(
-        [row({ learners_needing_attention: 1 })],
-        1,
-      )
-
-      expect(
-        await within(card).findByText(
-          "Not started, or inactive for 30+ days, across 1 enrollment.",
-        ),
-      ).toBeInTheDocument()
-    })
-
-    test("leaves out the enrollment count when the response has none", async () => {
-      const contract = factories.contracts.contract()
-      const org = orgWithUuid({ contracts: [contract] })
-      setManagerOrgs([org])
-      setContractAnalyticsResponses(contract.id, undefined, {
-        needs_attention_count: undefined,
-      })
-
-      renderWithProviders(
-        <AnalyticsContent
-          orgSlug={org.slug.replace(/^org-/, "")}
-          contractSlug={contract.slug}
-        />,
-      )
-
-      const card = await waitFor(() => {
-        const group = screen.getByRole("group", { name: "Needs attention" })
-        expect(group).not.toHaveAttribute("aria-busy")
-        return group
-      })
-      expect(
-        within(card).getByText("Not started, or inactive for 30+ days."),
-      ).toBeInTheDocument()
-    })
-
-    test("never shows an enrollment count in place of a suppressed learner count", async () => {
-      const { card } = await renderCard(
-        [row({ learners_needing_attention: null })],
-        7,
-      )
-
-      await within(card).findByText(
-        "Too few learners to report how many need attention.",
-      )
-      expect(card).not.toHaveTextContent(/enrollment/)
-    })
-
     test("says no one needs attention instead of offering a follow-up with zero", async () => {
       const { card } = await renderCard([
         row({ learners_needing_attention: 0 }),
@@ -1366,41 +1330,48 @@ describe("AnalyticsContent, contract-scoped", () => {
       expect(within(card).queryByRole("link")).not.toBeInTheDocument()
     })
 
-    test("is not requested or shown when the distribution fails to load", async () => {
-      const contract = factories.contracts.contract()
-      const org = orgWithUuid({ contracts: [contract] })
-      setManagerOrgs([org])
-      allowConsoleErrors()
-      const contractId = contract.id
-      setContractAnalyticsResponses(contractId)
-      setMockResponse.get(
-        analyticsUrls.contracts.learnerProgress(ORG_UUID, contractId, {
-          limit: 1,
-          completion_status: [...SHARED_STATUSES],
-        }),
-        "Internal Server Error",
-        { code: 500 },
-      )
+    test.each([
+      {
+        name: "the learner count fails to load",
+        body: "Internal Server Error",
+        code: 500,
+        message: "This data could not be loaded. Please try again later.",
+      },
+      {
+        name: "no learners are counted",
+        body: analyticsFactories.learnersEnvelope([], { total_count: 0 }),
+        code: 200,
+        message: "No learner activity recorded yet.",
+      },
+    ])(
+      "is not requested or shown when $name",
+      async ({ body, code, message }) => {
+        const contract = factories.contracts.contract()
+        const org = orgWithUuid({ contracts: [contract] })
+        setManagerOrgs([org])
+        allowConsoleErrors()
+        const contractId = contract.id
+        setContractAnalyticsResponses(contractId)
+        setMockResponse.get(allLearnersUrl(contractId), body, { code })
 
-      renderWithProviders(
-        <AnalyticsContent
-          orgSlug={org.slug.replace(/^org-/, "")}
-          contractSlug={contract.slug}
-        />,
-      )
+        renderWithProviders(
+          <AnalyticsContent
+            orgSlug={org.slug.replace(/^org-/, "")}
+            contractSlug={contract.slug}
+          />,
+        )
 
-      await screen.findByText(
-        "This data could not be loaded. Please try again later.",
-      )
-      expect(
-        screen.queryByRole("group", { name: "Needs attention" }),
-      ).not.toBeInTheDocument()
-      expect(makeRequest).not.toHaveBeenCalledWith(
-        expect.objectContaining({
-          url: analyticsUrls.contracts.needsAttention(ORG_UUID, contractId),
-        }),
-      )
-    })
+        await screen.findByText(message)
+        expect(
+          screen.queryByRole("group", { name: "Needs attention" }),
+        ).not.toBeInTheDocument()
+        expect(makeRequest).not.toHaveBeenCalledWith(
+          expect.objectContaining({
+            url: analyticsUrls.contracts.needsAttention(ORG_UUID, contractId),
+          }),
+        )
+      },
+    )
 
     test.each([
       {
@@ -1423,69 +1394,5 @@ describe("AnalyticsContent, contract-scoped", () => {
         }),
       ).toBeInTheDocument()
     })
-  })
-
-  /**
-   * Each row's color fill is the only decorative part; everything else
-   * (label, count, percent) is real text, so there's no separate hidden-chart
-   * pairing to verify the way `EngagementTrendChart` needs — but converting
-   * from a table to this list dropped the "Learners"/"Percent" columnheaders
-   * a screen reader used to announce per cell, so the bare numbers need their
-   * own context restored some other way.
-   */
-  test("gives each distribution value screen-reader context without changing what's shown", async () => {
-    const contract = factories.contracts.contract()
-    const org = orgWithUuid({ contracts: [contract] })
-    setManagerOrgs([org])
-    const contractId = contract.id
-    setContractAnalyticsResponses(contractId)
-
-    renderWithProviders(
-      <AnalyticsContent
-        orgSlug={org.slug.replace(/^org-/, "")}
-        contractSlug={contract.slug}
-      />,
-    )
-
-    const list = await screen.findByRole("list", {
-      name: "Enrollments by status",
-    })
-
-    // Every row's visible count carries a visually-hidden "enrollments," and
-    // its percent a visually-hidden "of total" — sighted users still see
-    // just the bare numbers (asserted above), but a screen reader gets the
-    // units a dropped columnheader used to supply.
-    expect(within(list).getAllByText("enrollments,")).toHaveLength(3)
-    expect(within(list).getAllByText("of total")).toHaveLength(3)
-
-    // Nothing in the list should be a stray focus stop: every value here is
-    // plain text or a decorative, non-interactive fill.
-    expect(within(list).queryByRole("button")).not.toBeInTheDocument()
-    expect(within(list).queryByRole("link")).not.toBeInTheDocument()
-    expect(within(list).queryByRole("textbox")).not.toBeInTheDocument()
-  })
-
-  test("hides the Manage seats button when the manager-dashboard flag is off", async () => {
-    // The button links to ContractAdminPage, which throws ForbiddenError
-    // without this flag — surfacing the button here without it would send a
-    // manager to a dead end.
-    mockedUseFeatureFlag.mockImplementation(
-      (flag) => flag === FeatureFlags.B2BAnalyticsDashboard,
-    )
-    const contract = factories.contracts.contract()
-    const org = orgWithUuid({ contracts: [contract] })
-    setManagerOrgs([org])
-
-    setContractAnalyticsResponses(contract.id)
-
-    const orgSlug = org.slug.replace(/^org-/, "")
-    renderWithProviders(
-      <AnalyticsContent orgSlug={orgSlug} contractSlug={contract.slug} />,
-    )
-
-    await screen.findByText(`Analytics · ${contract.name}`)
-    expect(
-      screen.queryByRole("link", { name: "Manage seats" }),
-    ).not.toBeInTheDocument()
   })
 })

@@ -104,6 +104,12 @@ CELERY_BEAT_SCHEDULE = (
             "task": "learning_resources.tasks.get_ovs_transcripts",
             "schedule": crontab(minute=30, hour=9),  # 5:30am EST
         },
+        # Unpublishes OVS playlists the webhook left published with no video,
+        # e.g. after a prune failed. A no-op until the webhook owns them.
+        "sweep-empty-ovs-playlists-every-1-days": {
+            "task": "learning_resources.tasks.sweep_empty_ovs_playlists",
+            "schedule": crontab(minute=45, hour=9),  # 5:45am EST
+        },
         "update_medium_mit_news": {
             "task": "news_events.tasks.get_medium_mit_news",
             "schedule": get_int(
@@ -230,11 +236,9 @@ CELERY_BEAT_SCHEDULE = (
 )
 
 # MicroMasters/MITx Online program certificate sync (StarRocks-backed — see
-# learning_resources.lib.warehouse.BaseWarehouseETLTask), replacing the
-# Hightouch sync into external.programcertificate (mitodl/hq#12954).
-# Doesn't participate in the cutover-switch mechanism below: Hightouch runs
-# externally, not as an MIT Learn Celery task, so there's no legacy beat
-# entry here to retire once validated.
+# learning_resources.lib.warehouse.BaseWarehouseETLTask, mitodl/hq#12954).
+# Doesn't participate in the cutover-switch mechanism below: certificates are
+# not catalog resources, so there is no legacy ETL beat entry to retire.
 if (
     not CELERY_BEAT_DISABLED
     and get_string("STARROCKS_HOST", None)
@@ -287,9 +291,14 @@ if (
                 "schedule": crontab(minute=0, hour=13),
                 "kwargs": {"full_refresh": True},
             },
+            # The data platform rebuilds the OCW course view after each
+            # ocw-studio staging build, a few minutes past 00:00, 06:00,
+            # 12:00 and 18:00 UTC. This daily run follows the midday build,
+            # as the reconciliation for a missed warehouse_views_rebuilt
+            # webhook.
             "warehouse-sync-ocw-courses-every-1-days": {
                 "task": "learning_resources.tasks.SyncOCWCoursesTask",
-                "schedule": crontab(minute=0, hour=12),
+                "schedule": crontab(minute=30, hour=12),
                 "kwargs": {"full_refresh": True},
             },
             # After their sources' courses, whose runs the files load into.

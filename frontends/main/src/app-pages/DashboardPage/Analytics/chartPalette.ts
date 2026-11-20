@@ -57,10 +57,4 @@ const chartInk = (theme: Theme) => ({
   surface: theme.custom.colors.white,
 })
 
-const progressStatusColors = (theme: Theme) => ({
-  not_started: theme.custom.colors.silverGrayLight,
-  in_progress: theme.custom.colors.silverGrayDark,
-  completed: theme.custom.colors.mitRed,
-})
-
-export { CATEGORICAL, chartInk, progressStatusColors }
+export { CATEGORICAL, chartInk }

@@ -804,6 +804,26 @@ export const DocumentResourceResourceTypeEnum = {
 export type DocumentResourceResourceTypeEnum =
   (typeof DocumentResourceResourceTypeEnum)[keyof typeof DocumentResourceResourceTypeEnum]
 
+/**
+ * One course run in an extracted_content_files message.  ``source`` is not a choice field: a source with no pull is logged and skipped, rather than rejecting the batch it came in. Keys not listed here, e.g. the sender\'s ``extracted_at``, are ignored.
+ */
+export interface ExtractedContentFilesCourseRequest {
+  source: string
+  /**
+   * The run\'s run_id, not its course\'s readable_id
+   */
+  readable_id: string
+  /**
+   * How many rows the sender published for the run. A pull that reads any other number loads what it read and unpublishes nothing.
+   */
+  content_file_count: number
+}
+/**
+ * Serializer for the ``/api/v1/webhooks/extracted_content_files/`` endpoint. A list even for one run, so that a sender can batch without a second shape.
+ */
+export interface ExtractedContentFilesWebhookRequestRequest {
+  courses: Array<ExtractedContentFilesCourseRequest>
+}
 export interface HubspotCollectionResponseFormDefinitionBaseForwardPaging {
   paging?: HubspotCollectionResponseFormDefinitionBaseForwardPagingPaging
   results?: Array<HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItem>
@@ -2005,6 +2025,12 @@ export interface PaginatedProgramResourceList {
   previous?: string | null
   results: Array<ProgramResource>
 }
+export interface PaginatedUnitList {
+  count: number
+  next?: string | null
+  previous?: string | null
+  results: Array<Unit>
+}
 export interface PaginatedUserListList {
   count: number
   next?: string | null
@@ -3182,6 +3208,130 @@ export const SourceTypeEnum = {
 export type SourceTypeEnum =
   (typeof SourceTypeEnum)[keyof typeof SourceTypeEnum]
 
+/**
+ * Serializer for Units
+ */
+export interface Unit {
+  id: number
+  run_id: number
+  run_readable_id: string
+  resource_id: number
+  resource_readable_id: string
+  external_id: string
+  kind: UnitKindEnum
+  title: string
+  position: number | null
+  url: string
+  content_file_count: number
+  created_on: string
+  updated_on: string
+}
+
+/**
+ * A content file in a unit, with its place and role in the unit
+ */
+export interface UnitContentFile {
+  relation: UnitContentFileRelationEnum
+  position: number | null
+  content_file: UnitNestedContentFile
+}
+
+/**
+ * * `core` - Core * `assessment` - Assessment * `supplementary` - Supplementary * `reference` - Reference
+ */
+
+export const UnitContentFileRelationEnum = {
+  /**
+   * Core
+   */
+  Core: "core",
+  /**
+   * Assessment
+   */
+  Assessment: "assessment",
+  /**
+   * Supplementary
+   */
+  Supplementary: "supplementary",
+  /**
+   * Reference
+   */
+  Reference: "reference",
+} as const
+
+export type UnitContentFileRelationEnum =
+  (typeof UnitContentFileRelationEnum)[keyof typeof UnitContentFileRelationEnum]
+
+/**
+ * Serializer for a Unit with its content files, in unit order
+ */
+export interface UnitDetail {
+  id: number
+  run_id: number
+  run_readable_id: string
+  resource_id: number
+  resource_readable_id: string
+  external_id: string
+  kind: UnitKindEnum
+  title: string
+  position: number | null
+  url: string
+  content_file_count: number
+  created_on: string
+  updated_on: string
+  content_files: Array<UnitContentFile>
+}
+
+/**
+ * * `unit` - Unit * `context` - Context * `bin` - Bin
+ */
+
+export const UnitKindEnum = {
+  /**
+   * Unit
+   */
+  Unit: "unit",
+  /**
+   * Context
+   */
+  Context: "context",
+  /**
+   * Bin
+   */
+  Bin: "bin",
+} as const
+
+export type UnitKindEnum = (typeof UnitKindEnum)[keyof typeof UnitKindEnum]
+
+/**
+ * A content file inside a unit, without the run and resource fields, which are the same for every file in the unit and on the unit itself. Admins see hidden files too, so it says whether each one is published and released.
+ */
+export interface UnitNestedContentFile {
+  id: number
+  key: string | null
+  uid: string | null
+  title: string | null
+  description: string | null
+  url: string | null
+  content_feature_type: Array<string>
+  content_type: ContentFileContentTypeEnum
+  content_title: string | null
+  content_author: string | null
+  content_language: string | null
+  checksum: string | null
+  image_src: string | null
+  source_path: string | null
+  file_type: string | null
+  file_extension: string | null
+  edx_module_id: string | null
+  youtube_id: string | null
+  published: boolean
+  /**
+   * When the course releases this file to learners; null if the course does not gate it.
+   */
+  release_date: string | null
+}
+
 export interface UnsubscribeCreate400Response {
   error?: string
 }
@@ -3552,6 +3702,15 @@ export type VideoResourceResourceTypeEnum =
 export type VideoStreamingUrl = string
 
 /**
+ * Serializer for the ``/api/v1/webhooks/warehouse_views_rebuilt/`` endpoint.  ``views`` are plain strings, not choices: a view no sync reads is logged and skipped, rather than rejecting the batch it came in.
+ */
+export interface WarehouseViewsWebhookRequestRequest {
+  /**
+   * Bare names of the warehouse views the data platform rebuilt, e.g. integrations__learn__ocw_courses
+   */
+  views: Array<string>
+}
+/**
  * Serializer for webhook responses.
  */
 export interface WebhookResponse {
@@ -3780,17 +3939,17 @@ export const ArticlesApiAxiosParamCreator = function (
      * Get a paginated list of website content items
      * @summary List
      * @param {ArticlesListContentTypeEnum} [content_type] Filter by content type  * &#x60;news&#x60; - News * &#x60;article&#x60; - Article
-     * @param {boolean} [draft] Filter to show only draft (unpublished) items
      * @param {number} [limit] Number of results to return per page.
      * @param {number} [offset] The initial index from which to return the results.
+     * @param {ArticlesListStatusEnum} [status] Filter by publish status. Defaults to published. Drafts are only returned to users who may edit website content; for anyone else, draft is always empty and both is the same as published.  * &#x60;published&#x60; - Published * &#x60;draft&#x60; - Draft * &#x60;both&#x60; - Both
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     articlesList: async (
       content_type?: ArticlesListContentTypeEnum,
-      draft?: boolean,
       limit?: number,
       offset?: number,
+      status?: ArticlesListStatusEnum,
       options: RawAxiosRequestConfig = {},
     ): Promise<RequestArgs> => {
       const localVarPath = `/api/v1/articles/`
@@ -3813,16 +3972,16 @@ export const ArticlesApiAxiosParamCreator = function (
         localVarQueryParameter["content_type"] = content_type
       }
 
-      if (draft !== undefined) {
-        localVarQueryParameter["draft"] = draft
-      }
-
       if (limit !== undefined) {
         localVarQueryParameter["limit"] = limit
       }
 
       if (offset !== undefined) {
         localVarQueryParameter["offset"] = offset
+      }
+
+      if (status !== undefined) {
+        localVarQueryParameter["status"] = status
       }
 
       localVarHeaderParameter["Accept"] = "application/json"
@@ -4049,17 +4208,17 @@ export const ArticlesApiFp = function (configuration?: Configuration) {
      * Get a paginated list of website content items
      * @summary List
      * @param {ArticlesListContentTypeEnum} [content_type] Filter by content type  * &#x60;news&#x60; - News * &#x60;article&#x60; - Article
-     * @param {boolean} [draft] Filter to show only draft (unpublished) items
      * @param {number} [limit] Number of results to return per page.
      * @param {number} [offset] The initial index from which to return the results.
+     * @param {ArticlesListStatusEnum} [status] Filter by publish status. Defaults to published. Drafts are only returned to users who may edit website content; for anyone else, draft is always empty and both is the same as published.  * &#x60;published&#x60; - Published * &#x60;draft&#x60; - Draft * &#x60;both&#x60; - Both
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     async articlesList(
       content_type?: ArticlesListContentTypeEnum,
-      draft?: boolean,
       limit?: number,
       offset?: number,
+      status?: ArticlesListStatusEnum,
       options?: RawAxiosRequestConfig,
     ): Promise<
       (
@@ -4069,9 +4228,9 @@ export const ArticlesApiFp = function (configuration?: Configuration) {
     > {
       const localVarAxiosArgs = await localVarAxiosParamCreator.articlesList(
         content_type,
-        draft,
         limit,
         offset,
+        status,
         options,
       )
       const localVarOperationServerIndex = configuration?.serverIndex ?? 0
@@ -4221,9 +4380,9 @@ export const ArticlesApiFactory = function (
       return localVarFp
         .articlesList(
           requestParameters.content_type,
-          requestParameters.draft,
           requestParameters.limit,
           requestParameters.offset,
+          requestParameters.status,
           options,
         )
         .then((request) => request(axios, basePath))
@@ -4302,11 +4461,6 @@ export interface ArticlesApiArticlesListRequest {
   readonly content_type?: ArticlesListContentTypeEnum
 
   /**
-   * Filter to show only draft (unpublished) items
-   */
-  readonly draft?: boolean
-
-  /**
    * Number of results to return per page.
    */
   readonly limit?: number
@@ -4315,6 +4469,11 @@ export interface ArticlesApiArticlesListRequest {
    * The initial index from which to return the results.
    */
   readonly offset?: number
+
+  /**
+   * Filter by publish status. Defaults to published. Drafts are only returned to users who may edit website content; for anyone else, draft is always empty and both is the same as published.  * &#x60;published&#x60; - Published * &#x60;draft&#x60; - Draft * &#x60;both&#x60; - Both
+   */
+  readonly status?: ArticlesListStatusEnum
 }
 
 /**
@@ -4405,9 +4564,9 @@ export class ArticlesApi extends BaseAPI {
     return ArticlesApiFp(this.configuration)
       .articlesList(
         requestParameters.content_type,
-        requestParameters.draft,
         requestParameters.limit,
         requestParameters.offset,
+        requestParameters.status,
         options,
       )
       .then((request) => request(this.axios, this.basePath))
@@ -4456,6 +4615,13 @@ export const ArticlesListContentTypeEnum = {
 } as const
 export type ArticlesListContentTypeEnum =
   (typeof ArticlesListContentTypeEnum)[keyof typeof ArticlesListContentTypeEnum]
+export const ArticlesListStatusEnum = {
+  Both: "both",
+  Draft: "draft",
+  Published: "published",
+} as const
+export type ArticlesListStatusEnum =
+  (typeof ArticlesListStatusEnum)[keyof typeof ArticlesListStatusEnum]
 
 /**
  * ContentFileSearchApi - axios parameter creator
@@ -21557,6 +21723,376 @@ export class TopicsApi extends BaseAPI {
 }
 
 /**
+ * UnitsApi - axios parameter creator
+ */
+export const UnitsApiAxiosParamCreator = function (
+  configuration?: Configuration,
+) {
+  return {
+    /**
+     * Units, for admins only, unpublished runs and hidden content files included. A unit\'s detail lists its content files in unit order.
+     * @summary List
+     * @param {Array<number>} [content_file_id] The id of a content file in the unit
+     * @param {Array<UnitsListKindEnum>} [kind] The kind of unit  * &#x60;unit&#x60; - Unit * &#x60;context&#x60; - Context * &#x60;bin&#x60; - Bin
+     * @param {number} [limit] Number of results to return per page.
+     * @param {number} [offset] The initial index from which to return the results.
+     * @param {Array<number>} [resource_id] The id of the learning resource the unit belongs to
+     * @param {Array<number>} [run_id] The id of the learning resource run the unit belongs to
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    unitsList: async (
+      content_file_id?: Array<number>,
+      kind?: Array<UnitsListKindEnum>,
+      limit?: number,
+      offset?: number,
+      resource_id?: Array<number>,
+      run_id?: Array<number>,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      const localVarPath = `/api/v1/units/`
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
+
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
+
+      if (content_file_id) {
+        localVarQueryParameter["content_file_id"] = content_file_id
+      }
+
+      if (kind) {
+        localVarQueryParameter["kind"] = kind
+      }
+
+      if (limit !== undefined) {
+        localVarQueryParameter["limit"] = limit
+      }
+
+      if (offset !== undefined) {
+        localVarQueryParameter["offset"] = offset
+      }
+
+      if (resource_id) {
+        localVarQueryParameter["resource_id"] = resource_id
+      }
+
+      if (run_id) {
+        localVarQueryParameter["run_id"] = run_id
+      }
+
+      localVarHeaderParameter["Accept"] = "application/json"
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+    /**
+     * Units, for admins only, unpublished runs and hidden content files included. A unit\'s detail lists its content files in unit order.
+     * @summary Retrieve
+     * @param {number} id A unique integer value identifying this unit.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    unitsRetrieve: async (
+      id: number,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'id' is not null or undefined
+      assertParamExists("unitsRetrieve", "id", id)
+      const localVarPath = `/api/v1/units/{id}/`.replace(
+        "{id}",
+        encodeURIComponent(String(id)),
+      )
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
+
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
+
+      localVarHeaderParameter["Accept"] = "application/json"
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+  }
+}
+
+/**
+ * UnitsApi - functional programming interface
+ */
+export const UnitsApiFp = function (configuration?: Configuration) {
+  const localVarAxiosParamCreator = UnitsApiAxiosParamCreator(configuration)
+  return {
+    /**
+     * Units, for admins only, unpublished runs and hidden content files included. A unit\'s detail lists its content files in unit order.
+     * @summary List
+     * @param {Array<number>} [content_file_id] The id of a content file in the unit
+     * @param {Array<UnitsListKindEnum>} [kind] The kind of unit  * &#x60;unit&#x60; - Unit * &#x60;context&#x60; - Context * &#x60;bin&#x60; - Bin
+     * @param {number} [limit] Number of results to return per page.
+     * @param {number} [offset] The initial index from which to return the results.
+     * @param {Array<number>} [resource_id] The id of the learning resource the unit belongs to
+     * @param {Array<number>} [run_id] The id of the learning resource run the unit belongs to
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async unitsList(
+      content_file_id?: Array<number>,
+      kind?: Array<UnitsListKindEnum>,
+      limit?: number,
+      offset?: number,
+      resource_id?: Array<number>,
+      run_id?: Array<number>,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<PaginatedUnitList>
+    > {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.unitsList(
+        content_file_id,
+        kind,
+        limit,
+        offset,
+        resource_id,
+        run_id,
+        options,
+      )
+      const localVarOperationServerIndex = configuration?.serverIndex ?? 0
+      const localVarOperationServerBasePath =
+        operationServerMap["UnitsApi.unitsList"]?.[localVarOperationServerIndex]
+          ?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, localVarOperationServerBasePath || basePath)
+    },
+    /**
+     * Units, for admins only, unpublished runs and hidden content files included. A unit\'s detail lists its content files in unit order.
+     * @summary Retrieve
+     * @param {number} id A unique integer value identifying this unit.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async unitsRetrieve(
+      id: number,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<UnitDetail>
+    > {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.unitsRetrieve(
+        id,
+        options,
+      )
+      const localVarOperationServerIndex = configuration?.serverIndex ?? 0
+      const localVarOperationServerBasePath =
+        operationServerMap["UnitsApi.unitsRetrieve"]?.[
+          localVarOperationServerIndex
+        ]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, localVarOperationServerBasePath || basePath)
+    },
+  }
+}
+
+/**
+ * UnitsApi - factory interface
+ */
+export const UnitsApiFactory = function (
+  configuration?: Configuration,
+  basePath?: string,
+  axios?: AxiosInstance,
+) {
+  const localVarFp = UnitsApiFp(configuration)
+  return {
+    /**
+     * Units, for admins only, unpublished runs and hidden content files included. A unit\'s detail lists its content files in unit order.
+     * @summary List
+     * @param {UnitsApiUnitsListRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    unitsList(
+      requestParameters: UnitsApiUnitsListRequest = {},
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<PaginatedUnitList> {
+      return localVarFp
+        .unitsList(
+          requestParameters.content_file_id,
+          requestParameters.kind,
+          requestParameters.limit,
+          requestParameters.offset,
+          requestParameters.resource_id,
+          requestParameters.run_id,
+          options,
+        )
+        .then((request) => request(axios, basePath))
+    },
+    /**
+     * Units, for admins only, unpublished runs and hidden content files included. A unit\'s detail lists its content files in unit order.
+     * @summary Retrieve
+     * @param {UnitsApiUnitsRetrieveRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    unitsRetrieve(
+      requestParameters: UnitsApiUnitsRetrieveRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<UnitDetail> {
+      return localVarFp
+        .unitsRetrieve(requestParameters.id, options)
+        .then((request) => request(axios, basePath))
+    },
+  }
+}
+
+/**
+ * Request parameters for unitsList operation in UnitsApi.
+ */
+export interface UnitsApiUnitsListRequest {
+  /**
+   * The id of a content file in the unit
+   */
+  readonly content_file_id?: Array<number>
+
+  /**
+   * The kind of unit  * &#x60;unit&#x60; - Unit * &#x60;context&#x60; - Context * &#x60;bin&#x60; - Bin
+   */
+  readonly kind?: Array<UnitsListKindEnum>
+
+  /**
+   * Number of results to return per page.
+   */
+  readonly limit?: number
+
+  /**
+   * The initial index from which to return the results.
+   */
+  readonly offset?: number
+
+  /**
+   * The id of the learning resource the unit belongs to
+   */
+  readonly resource_id?: Array<number>
+
+  /**
+   * The id of the learning resource run the unit belongs to
+   */
+  readonly run_id?: Array<number>
+}
+
+/**
+ * Request parameters for unitsRetrieve operation in UnitsApi.
+ */
+export interface UnitsApiUnitsRetrieveRequest {
+  /**
+   * A unique integer value identifying this unit.
+   */
+  readonly id: number
+}
+
+/**
+ * UnitsApi - object-oriented interface
+ */
+export class UnitsApi extends BaseAPI {
+  /**
+   * Units, for admins only, unpublished runs and hidden content files included. A unit\'s detail lists its content files in unit order.
+   * @summary List
+   * @param {UnitsApiUnitsListRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   */
+  public unitsList(
+    requestParameters: UnitsApiUnitsListRequest = {},
+    options?: RawAxiosRequestConfig,
+  ) {
+    return UnitsApiFp(this.configuration)
+      .unitsList(
+        requestParameters.content_file_id,
+        requestParameters.kind,
+        requestParameters.limit,
+        requestParameters.offset,
+        requestParameters.resource_id,
+        requestParameters.run_id,
+        options,
+      )
+      .then((request) => request(this.axios, this.basePath))
+  }
+
+  /**
+   * Units, for admins only, unpublished runs and hidden content files included. A unit\'s detail lists its content files in unit order.
+   * @summary Retrieve
+   * @param {UnitsApiUnitsRetrieveRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   */
+  public unitsRetrieve(
+    requestParameters: UnitsApiUnitsRetrieveRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return UnitsApiFp(this.configuration)
+      .unitsRetrieve(requestParameters.id, options)
+      .then((request) => request(this.axios, this.basePath))
+  }
+}
+
+export const UnitsListKindEnum = {
+  Bin: "bin",
+  Context: "context",
+  Unit: "unit",
+} as const
+export type UnitsListKindEnum =
+  (typeof UnitsListKindEnum)[keyof typeof UnitsListKindEnum]
+
+/**
  * UnsubscribeApi - axios parameter creator
  */
 export const UnsubscribeApiAxiosParamCreator = function (
@@ -25083,6 +25619,60 @@ export const WebhooksApiAxiosParamCreator = function (
       }
     },
     /**
+     * Webhook handler for the OL Data Platform\'s \"extraction is done, come get it\" message, one entry per course run. Unlike content_files/, which says a new archive is ready for MIT Learn to extract, this means the run\'s files are in the warehouse.  Each entry queues a pull of its run and the request returns: a 200 says the message arrived, not that anything was loaded. The pull checks ownership, and does nothing until the warehouse owns the source\'s content files. An entry for a source with no pull is skipped and counted in the response, so that one bad source can\'t reject the rest of a batch.
+     * @param {ExtractedContentFilesWebhookRequestRequest} ExtractedContentFilesWebhookRequestRequest
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    webhooksExtractedContentFilesCreate: async (
+      ExtractedContentFilesWebhookRequestRequest: ExtractedContentFilesWebhookRequestRequest,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'ExtractedContentFilesWebhookRequestRequest' is not null or undefined
+      assertParamExists(
+        "webhooksExtractedContentFilesCreate",
+        "ExtractedContentFilesWebhookRequestRequest",
+        ExtractedContentFilesWebhookRequestRequest,
+      )
+      const localVarPath = `/api/v1/webhooks/extracted_content_files/`
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
+
+      const localVarRequestOptions = {
+        method: "POST",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
+
+      localVarHeaderParameter["Content-Type"] = "application/json"
+      localVarHeaderParameter["Accept"] = "application/json"
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+      localVarRequestOptions.data = serializeDataIfNeeded(
+        ExtractedContentFilesWebhookRequestRequest,
+        localVarRequestOptions,
+        configuration,
+      )
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+    /**
      * Generic webhook handler for pre-computed LearningResource batches delivered by the OL Data Platform (Dagster).  The request body is ``{\"resources\": [ ... ]}`` where each resource is a canonical LearningResource dict carrying at minimum ``readable_id``, ``etl_source`` and ``resource_type``. Resources are grouped by ``(etl_source, resource_type)`` and routed to the matching loader (``load_courses`` / ``load_programs`` / ``load_documents`` / ``load_videos``). Each loader performs a full sync for that source and upserts the OpenSearch index, so a batch must contain the authoritative set of resources for the (etl_source, resource_type) it represents. A pair listed in the optional ``sync`` array with no resources in the batch is pruned, unpublishing all of it. Resource types without a loader are logged and skipped rather than failing the whole batch.  A batch with a group the webhook shadows (ETLSourceOwnership.shadow) is a shadow run as a whole: each group is compared with what is stored (``learning_resources.etl.shadow``), nothing is written, and the response\'s ``shadow`` counts what each group\'s load would have changed. A video group the webhook owns is not compared in a shadow run, and its entry carries an ``error`` in place of the counts. A group the webhook neither owns nor shadows rejects the whole batch with 409.  A batch whose load would unpublish more than 10% of the published resources of any pair it prunes, a declared pair with no resources included, is rejected whole with 422, the limit the warehouse syncs apply. A truncated batch and a bad model build look like that from here, and only MIT Learn holds the published set to compare against. ``allow_mass_unpublish`` skips the check. A shadow run is not refused: its counts report what the load would unpublish.
      * @param {LearningResourceWebhookRequestRequest} LearningResourceWebhookRequestRequest
      * @param {*} [options] Override http request option.
@@ -25184,6 +25774,60 @@ export const WebhooksApiAxiosParamCreator = function (
         options: localVarRequestOptions,
       }
     },
+    /**
+     * Webhook handler for the OL Data Platform\'s \"these views were rebuilt\" message. It queues a full run of each catalog sync that reads one of them, so a change reaches MIT Learn without waiting for the sync\'s daily run.  A 200 says the syncs were queued, not that anything was loaded: each sync checks ownership when it runs, and does nothing until the warehouse owns its source. A view no sync reads is skipped and named in the response, so that one bad name can\'t reject the rest of a batch.
+     * @param {WarehouseViewsWebhookRequestRequest} WarehouseViewsWebhookRequestRequest
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    webhooksWarehouseViewsRebuiltCreate: async (
+      WarehouseViewsWebhookRequestRequest: WarehouseViewsWebhookRequestRequest,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'WarehouseViewsWebhookRequestRequest' is not null or undefined
+      assertParamExists(
+        "webhooksWarehouseViewsRebuiltCreate",
+        "WarehouseViewsWebhookRequestRequest",
+        WarehouseViewsWebhookRequestRequest,
+      )
+      const localVarPath = `/api/v1/webhooks/warehouse_views_rebuilt/`
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
+
+      const localVarRequestOptions = {
+        method: "POST",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
+
+      localVarHeaderParameter["Content-Type"] = "application/json"
+      localVarHeaderParameter["Accept"] = "application/json"
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+      localVarRequestOptions.data = serializeDataIfNeeded(
+        WarehouseViewsWebhookRequestRequest,
+        localVarRequestOptions,
+        configuration,
+      )
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
   }
 }
 
@@ -25272,6 +25916,39 @@ export const WebhooksApiFp = function (configuration?: Configuration) {
         )(axios, localVarOperationServerBasePath || basePath)
     },
     /**
+     * Webhook handler for the OL Data Platform\'s \"extraction is done, come get it\" message, one entry per course run. Unlike content_files/, which says a new archive is ready for MIT Learn to extract, this means the run\'s files are in the warehouse.  Each entry queues a pull of its run and the request returns: a 200 says the message arrived, not that anything was loaded. The pull checks ownership, and does nothing until the warehouse owns the source\'s content files. An entry for a source with no pull is skipped and counted in the response, so that one bad source can\'t reject the rest of a batch.
+     * @param {ExtractedContentFilesWebhookRequestRequest} ExtractedContentFilesWebhookRequestRequest
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async webhooksExtractedContentFilesCreate(
+      ExtractedContentFilesWebhookRequestRequest: ExtractedContentFilesWebhookRequestRequest,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<WebhookResponse>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.webhooksExtractedContentFilesCreate(
+          ExtractedContentFilesWebhookRequestRequest,
+          options,
+        )
+      const localVarOperationServerIndex = configuration?.serverIndex ?? 0
+      const localVarOperationServerBasePath =
+        operationServerMap["WebhooksApi.webhooksExtractedContentFilesCreate"]?.[
+          localVarOperationServerIndex
+        ]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, localVarOperationServerBasePath || basePath)
+    },
+    /**
      * Generic webhook handler for pre-computed LearningResource batches delivered by the OL Data Platform (Dagster).  The request body is ``{\"resources\": [ ... ]}`` where each resource is a canonical LearningResource dict carrying at minimum ``readable_id``, ``etl_source`` and ``resource_type``. Resources are grouped by ``(etl_source, resource_type)`` and routed to the matching loader (``load_courses`` / ``load_programs`` / ``load_documents`` / ``load_videos``). Each loader performs a full sync for that source and upserts the OpenSearch index, so a batch must contain the authoritative set of resources for the (etl_source, resource_type) it represents. A pair listed in the optional ``sync`` array with no resources in the batch is pruned, unpublishing all of it. Resource types without a loader are logged and skipped rather than failing the whole batch.  A batch with a group the webhook shadows (ETLSourceOwnership.shadow) is a shadow run as a whole: each group is compared with what is stored (``learning_resources.etl.shadow``), nothing is written, and the response\'s ``shadow`` counts what each group\'s load would have changed. A video group the webhook owns is not compared in a shadow run, and its entry carries an ``error`` in place of the counts. A group the webhook neither owns nor shadows rejects the whole batch with 409.  A batch whose load would unpublish more than 10% of the published resources of any pair it prunes, a declared pair with no resources included, is rejected whole with 422, the limit the warehouse syncs apply. A truncated batch and a bad model build look like that from here, and only MIT Learn holds the published set to compare against. ``allow_mass_unpublish`` skips the check. A shadow run is not refused: its counts report what the load would unpublish.
      * @param {LearningResourceWebhookRequestRequest} LearningResourceWebhookRequestRequest
      * @param {*} [options] Override http request option.
@@ -25337,6 +26014,39 @@ export const WebhooksApiFp = function (configuration?: Configuration) {
           configuration,
         )(axios, localVarOperationServerBasePath || basePath)
     },
+    /**
+     * Webhook handler for the OL Data Platform\'s \"these views were rebuilt\" message. It queues a full run of each catalog sync that reads one of them, so a change reaches MIT Learn without waiting for the sync\'s daily run.  A 200 says the syncs were queued, not that anything was loaded: each sync checks ownership when it runs, and does nothing until the warehouse owns its source. A view no sync reads is skipped and named in the response, so that one bad name can\'t reject the rest of a batch.
+     * @param {WarehouseViewsWebhookRequestRequest} WarehouseViewsWebhookRequestRequest
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async webhooksWarehouseViewsRebuiltCreate(
+      WarehouseViewsWebhookRequestRequest: WarehouseViewsWebhookRequestRequest,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<WebhookResponse>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.webhooksWarehouseViewsRebuiltCreate(
+          WarehouseViewsWebhookRequestRequest,
+          options,
+        )
+      const localVarOperationServerIndex = configuration?.serverIndex ?? 0
+      const localVarOperationServerBasePath =
+        operationServerMap["WebhooksApi.webhooksWarehouseViewsRebuiltCreate"]?.[
+          localVarOperationServerIndex
+        ]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, localVarOperationServerBasePath || basePath)
+    },
   }
 }
 
@@ -25389,6 +26099,23 @@ export const WebhooksApiFactory = function (
         .then((request) => request(axios, basePath))
     },
     /**
+     * Webhook handler for the OL Data Platform\'s \"extraction is done, come get it\" message, one entry per course run. Unlike content_files/, which says a new archive is ready for MIT Learn to extract, this means the run\'s files are in the warehouse.  Each entry queues a pull of its run and the request returns: a 200 says the message arrived, not that anything was loaded. The pull checks ownership, and does nothing until the warehouse owns the source\'s content files. An entry for a source with no pull is skipped and counted in the response, so that one bad source can\'t reject the rest of a batch.
+     * @param {WebhooksApiWebhooksExtractedContentFilesCreateRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    webhooksExtractedContentFilesCreate(
+      requestParameters: WebhooksApiWebhooksExtractedContentFilesCreateRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<WebhookResponse> {
+      return localVarFp
+        .webhooksExtractedContentFilesCreate(
+          requestParameters.ExtractedContentFilesWebhookRequestRequest,
+          options,
+        )
+        .then((request) => request(axios, basePath))
+    },
+    /**
      * Generic webhook handler for pre-computed LearningResource batches delivered by the OL Data Platform (Dagster).  The request body is ``{\"resources\": [ ... ]}`` where each resource is a canonical LearningResource dict carrying at minimum ``readable_id``, ``etl_source`` and ``resource_type``. Resources are grouped by ``(etl_source, resource_type)`` and routed to the matching loader (``load_courses`` / ``load_programs`` / ``load_documents`` / ``load_videos``). Each loader performs a full sync for that source and upserts the OpenSearch index, so a batch must contain the authoritative set of resources for the (etl_source, resource_type) it represents. A pair listed in the optional ``sync`` array with no resources in the batch is pruned, unpublishing all of it. Resource types without a loader are logged and skipped rather than failing the whole batch.  A batch with a group the webhook shadows (ETLSourceOwnership.shadow) is a shadow run as a whole: each group is compared with what is stored (``learning_resources.etl.shadow``), nothing is written, and the response\'s ``shadow`` counts what each group\'s load would have changed. A video group the webhook owns is not compared in a shadow run, and its entry carries an ``error`` in place of the counts. A group the webhook neither owns nor shadows rejects the whole batch with 409.  A batch whose load would unpublish more than 10% of the published resources of any pair it prunes, a declared pair with no resources included, is rejected whole with 422, the limit the warehouse syncs apply. A truncated batch and a bad model build look like that from here, and only MIT Learn holds the published set to compare against. ``allow_mass_unpublish`` skips the check. A shadow run is not refused: its counts report what the load would unpublish.
      * @param {WebhooksApiWebhooksLearningResourcesCreateRequest} requestParameters Request parameters.
      * @param {*} [options] Override http request option.
@@ -25422,6 +26149,23 @@ export const WebhooksApiFactory = function (
         )
         .then((request) => request(axios, basePath))
     },
+    /**
+     * Webhook handler for the OL Data Platform\'s \"these views were rebuilt\" message. It queues a full run of each catalog sync that reads one of them, so a change reaches MIT Learn without waiting for the sync\'s daily run.  A 200 says the syncs were queued, not that anything was loaded: each sync checks ownership when it runs, and does nothing until the warehouse owns its source. A view no sync reads is skipped and named in the response, so that one bad name can\'t reject the rest of a batch.
+     * @param {WebhooksApiWebhooksWarehouseViewsRebuiltCreateRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    webhooksWarehouseViewsRebuiltCreate(
+      requestParameters: WebhooksApiWebhooksWarehouseViewsRebuiltCreateRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<WebhookResponse> {
+      return localVarFp
+        .webhooksWarehouseViewsRebuiltCreate(
+          requestParameters.WarehouseViewsWebhookRequestRequest,
+          options,
+        )
+        .then((request) => request(axios, basePath))
+    },
   }
 }
 
@@ -25451,6 +26195,13 @@ export interface WebhooksApiWebhooksContentFilesDeleteCreateRequest {
 }
 
 /**
+ * Request parameters for webhooksExtractedContentFilesCreate operation in WebhooksApi.
+ */
+export interface WebhooksApiWebhooksExtractedContentFilesCreateRequest {
+  readonly ExtractedContentFilesWebhookRequestRequest: ExtractedContentFilesWebhookRequestRequest
+}
+
+/**
  * Request parameters for webhooksLearningResourcesCreate operation in WebhooksApi.
  */
 export interface WebhooksApiWebhooksLearningResourcesCreateRequest {
@@ -25462,6 +26213,13 @@ export interface WebhooksApiWebhooksLearningResourcesCreateRequest {
  */
 export interface WebhooksApiWebhooksOvsVideosCreateRequest {
   readonly OVSVideoWebhookRequestRequest?: OVSVideoWebhookRequestRequest
+}
+
+/**
+ * Request parameters for webhooksWarehouseViewsRebuiltCreate operation in WebhooksApi.
+ */
+export interface WebhooksApiWebhooksWarehouseViewsRebuiltCreateRequest {
+  readonly WarehouseViewsWebhookRequestRequest: WarehouseViewsWebhookRequestRequest
 }
 
 /**
@@ -25509,6 +26267,24 @@ export class WebhooksApi extends BaseAPI {
   }
 
   /**
+   * Webhook handler for the OL Data Platform\'s \"extraction is done, come get it\" message, one entry per course run. Unlike content_files/, which says a new archive is ready for MIT Learn to extract, this means the run\'s files are in the warehouse.  Each entry queues a pull of its run and the request returns: a 200 says the message arrived, not that anything was loaded. The pull checks ownership, and does nothing until the warehouse owns the source\'s content files. An entry for a source with no pull is skipped and counted in the response, so that one bad source can\'t reject the rest of a batch.
+   * @param {WebhooksApiWebhooksExtractedContentFilesCreateRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   */
+  public webhooksExtractedContentFilesCreate(
+    requestParameters: WebhooksApiWebhooksExtractedContentFilesCreateRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return WebhooksApiFp(this.configuration)
+      .webhooksExtractedContentFilesCreate(
+        requestParameters.ExtractedContentFilesWebhookRequestRequest,
+        options,
+      )
+      .then((request) => request(this.axios, this.basePath))
+  }
+
+  /**
    * Generic webhook handler for pre-computed LearningResource batches delivered by the OL Data Platform (Dagster).  The request body is ``{\"resources\": [ ... ]}`` where each resource is a canonical LearningResource dict carrying at minimum ``readable_id``, ``etl_source`` and ``resource_type``. Resources are grouped by ``(etl_source, resource_type)`` and routed to the matching loader (``load_courses`` / ``load_programs`` / ``load_documents`` / ``load_videos``). Each loader performs a full sync for that source and upserts the OpenSearch index, so a batch must contain the authoritative set of resources for the (etl_source, resource_type) it represents. A pair listed in the optional ``sync`` array with no resources in the batch is pruned, unpublishing all of it. Resource types without a loader are logged and skipped rather than failing the whole batch.  A batch with a group the webhook shadows (ETLSourceOwnership.shadow) is a shadow run as a whole: each group is compared with what is stored (``learning_resources.etl.shadow``), nothing is written, and the response\'s ``shadow`` counts what each group\'s load would have changed. A video group the webhook owns is not compared in a shadow run, and its entry carries an ``error`` in place of the counts. A group the webhook neither owns nor shadows rejects the whole batch with 409.  A batch whose load would unpublish more than 10% of the published resources of any pair it prunes, a declared pair with no resources included, is rejected whole with 422, the limit the warehouse syncs apply. A truncated batch and a bad model build look like that from here, and only MIT Learn holds the published set to compare against. ``allow_mass_unpublish`` skips the check. A shadow run is not refused: its counts report what the load would unpublish.
    * @param {WebhooksApiWebhooksLearningResourcesCreateRequest} requestParameters Request parameters.
    * @param {*} [options] Override http request option.
@@ -25539,6 +26315,24 @@ export class WebhooksApi extends BaseAPI {
     return WebhooksApiFp(this.configuration)
       .webhooksOvsVideosCreate(
         requestParameters.OVSVideoWebhookRequestRequest,
+        options,
+      )
+      .then((request) => request(this.axios, this.basePath))
+  }
+
+  /**
+   * Webhook handler for the OL Data Platform\'s \"these views were rebuilt\" message. It queues a full run of each catalog sync that reads one of them, so a change reaches MIT Learn without waiting for the sync\'s daily run.  A 200 says the syncs were queued, not that anything was loaded: each sync checks ownership when it runs, and does nothing until the warehouse owns its source. A view no sync reads is skipped and named in the response, so that one bad name can\'t reject the rest of a batch.
+   * @param {WebhooksApiWebhooksWarehouseViewsRebuiltCreateRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   */
+  public webhooksWarehouseViewsRebuiltCreate(
+    requestParameters: WebhooksApiWebhooksWarehouseViewsRebuiltCreateRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return WebhooksApiFp(this.configuration)
+      .webhooksWarehouseViewsRebuiltCreate(
+        requestParameters.WarehouseViewsWebhookRequestRequest,
         options,
       )
       .then((request) => request(this.axios, this.basePath))
@@ -25726,17 +26520,17 @@ export const WebsiteContentApiAxiosParamCreator = function (
      * Get a paginated list of website content items
      * @summary List
      * @param {WebsiteContentListContentTypeEnum} [content_type] Filter by content type  * &#x60;news&#x60; - News * &#x60;article&#x60; - Article
-     * @param {boolean} [draft] Filter to show only draft (unpublished) items
      * @param {number} [limit] Number of results to return per page.
      * @param {number} [offset] The initial index from which to return the results.
+     * @param {WebsiteContentListStatusEnum} [status] Filter by publish status. Defaults to published. Drafts are only returned to users who may edit website content; for anyone else, draft is always empty and both is the same as published.  * &#x60;published&#x60; - Published * &#x60;draft&#x60; - Draft * &#x60;both&#x60; - Both
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     websiteContentList: async (
       content_type?: WebsiteContentListContentTypeEnum,
-      draft?: boolean,
       limit?: number,
       offset?: number,
+      status?: WebsiteContentListStatusEnum,
       options: RawAxiosRequestConfig = {},
     ): Promise<RequestArgs> => {
       const localVarPath = `/api/v1/website_content/`
@@ -25759,16 +26553,16 @@ export const WebsiteContentApiAxiosParamCreator = function (
         localVarQueryParameter["content_type"] = content_type
       }
 
-      if (draft !== undefined) {
-        localVarQueryParameter["draft"] = draft
-      }
-
       if (limit !== undefined) {
         localVarQueryParameter["limit"] = limit
       }
 
       if (offset !== undefined) {
         localVarQueryParameter["offset"] = offset
+      }
+
+      if (status !== undefined) {
+        localVarQueryParameter["status"] = status
       }
 
       localVarHeaderParameter["Accept"] = "application/json"
@@ -25995,17 +26789,17 @@ export const WebsiteContentApiFp = function (configuration?: Configuration) {
      * Get a paginated list of website content items
      * @summary List
      * @param {WebsiteContentListContentTypeEnum} [content_type] Filter by content type  * &#x60;news&#x60; - News * &#x60;article&#x60; - Article
-     * @param {boolean} [draft] Filter to show only draft (unpublished) items
      * @param {number} [limit] Number of results to return per page.
      * @param {number} [offset] The initial index from which to return the results.
+     * @param {WebsiteContentListStatusEnum} [status] Filter by publish status. Defaults to published. Drafts are only returned to users who may edit website content; for anyone else, draft is always empty and both is the same as published.  * &#x60;published&#x60; - Published * &#x60;draft&#x60; - Draft * &#x60;both&#x60; - Both
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     async websiteContentList(
       content_type?: WebsiteContentListContentTypeEnum,
-      draft?: boolean,
       limit?: number,
       offset?: number,
+      status?: WebsiteContentListStatusEnum,
       options?: RawAxiosRequestConfig,
     ): Promise<
       (
@@ -26016,9 +26810,9 @@ export const WebsiteContentApiFp = function (configuration?: Configuration) {
       const localVarAxiosArgs =
         await localVarAxiosParamCreator.websiteContentList(
           content_type,
-          draft,
           limit,
           offset,
+          status,
           options,
         )
       const localVarOperationServerIndex = configuration?.serverIndex ?? 0
@@ -26168,9 +26962,9 @@ export const WebsiteContentApiFactory = function (
       return localVarFp
         .websiteContentList(
           requestParameters.content_type,
-          requestParameters.draft,
           requestParameters.limit,
           requestParameters.offset,
+          requestParameters.status,
           options,
         )
         .then((request) => request(axios, basePath))
@@ -26249,11 +27043,6 @@ export interface WebsiteContentApiWebsiteContentListRequest {
   readonly content_type?: WebsiteContentListContentTypeEnum
 
   /**
-   * Filter to show only draft (unpublished) items
-   */
-  readonly draft?: boolean
-
-  /**
    * Number of results to return per page.
    */
   readonly limit?: number
@@ -26262,6 +27051,11 @@ export interface WebsiteContentApiWebsiteContentListRequest {
    * The initial index from which to return the results.
    */
   readonly offset?: number
+
+  /**
+   * Filter by publish status. Defaults to published. Drafts are only returned to users who may edit website content; for anyone else, draft is always empty and both is the same as published.  * &#x60;published&#x60; - Published * &#x60;draft&#x60; - Draft * &#x60;both&#x60; - Both
+   */
+  readonly status?: WebsiteContentListStatusEnum
 }
 
 /**
@@ -26352,9 +27146,9 @@ export class WebsiteContentApi extends BaseAPI {
     return WebsiteContentApiFp(this.configuration)
       .websiteContentList(
         requestParameters.content_type,
-        requestParameters.draft,
         requestParameters.limit,
         requestParameters.offset,
+        requestParameters.status,
         options,
       )
       .then((request) => request(this.axios, this.basePath))
@@ -26403,3 +27197,10 @@ export const WebsiteContentListContentTypeEnum = {
 } as const
 export type WebsiteContentListContentTypeEnum =
   (typeof WebsiteContentListContentTypeEnum)[keyof typeof WebsiteContentListContentTypeEnum]
+export const WebsiteContentListStatusEnum = {
+  Both: "both",
+  Draft: "draft",
+  Published: "published",
+} as const
+export type WebsiteContentListStatusEnum =
+  (typeof WebsiteContentListStatusEnum)[keyof typeof WebsiteContentListStatusEnum]

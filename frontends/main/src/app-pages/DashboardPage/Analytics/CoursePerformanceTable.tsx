@@ -144,7 +144,7 @@ const CoursePerformanceTable: React.FC<{
               $flex={COLUMN_FLEX.completionRate}
               $numeric
             >
-              Completion rate
+              Certification rate
             </TableHeaderCell>
           </TableHeaderRow>
         </div>
@@ -195,7 +195,7 @@ const CoursePerformanceTable: React.FC<{
                     $flex={COLUMN_FLEX.completionRate}
                     $numeric
                   >
-                    <MobileLabel>Completion rate</MobileLabel>
+                    <MobileLabel>Certification rate</MobileLabel>
                     <SuppressibleValue
                       value={row.completion_rate_pct}
                       format={formatPercent}

@@ -37,8 +37,16 @@ USER mitodl
 WORKDIR /src
 # BuildKit cache mount keeps the uv download cache across builds, making
 # uv.lock-bump rebuilds reuse already-downloaded wheels.
+# --no-default-groups, not --no-dev: pyproject's `default-groups = "all"` also
+# selects the prek group, which --no-dev leaves in.
 RUN --mount=type=cache,target=/opt/uv-cache,uid=1000,gid=1000 \
-    uv sync --frozen --no-install-project --no-dev
+    uv sync --frozen --no-install-project --no-default-groups
+
+# The dev dependencies, installed before any source so a source edit reuses them.
+FROM deps AS deps-dev
+
+RUN --mount=type=cache,target=/opt/uv-cache,uid=1000,gid=1000 \
+    uv sync --frozen --no-install-project
 
 FROM deps AS runtime
 
@@ -60,12 +68,15 @@ RUN --mount=type=cache,target=/opt/uv-cache,uid=1000,gid=1000 \
     uv sync --frozen --no-install-project
 
 # ─── Local-dev target (ol-infrastructure local-dev k8s/Tilt stack) ───────────
-# Runtime user owns /src (live-synced source); dev deps come from `development`.
-FROM development AS local-dev
+# FROM deps-dev, not development: development installs the dev deps after the
+# source, so every source edit would reinstall them. The command and PORT come
+# from the k8s manifest.
+FROM deps-dev AS local-dev
 
-USER root
-RUN chown -R mitodl:mitodl /src
-USER mitodl
+# Owned by mitodl because Tilt's live update writes synced files as mitodl. No
+# staticfiles directory: the webapp's collectstatic init container fills
+# /src/staticfiles, an emptyDir.
+COPY --chown=mitodl:mitodl . /src
 
 # ─── Production target ───────────────────────────────────────────────────────
 # MUST BE THE LAST STAGE. A build without --target produces the last stage, and

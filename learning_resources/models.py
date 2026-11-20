@@ -17,8 +17,9 @@ from django.db.models import (
     OuterRef,
     Prefetch,
     Q,
+    Subquery,
 )
-from django.db.models.functions import Lower
+from django.db.models.functions import Coalesce, Lower
 from django.utils import timezone
 
 from learning_resources import constants
@@ -1389,12 +1390,36 @@ class ContentFile(TimestampedModel):
         ]
 
 
+class UnitQuerySet(TimestampedModelQuerySet):
+    """QuerySet for Unit"""
+
+    def with_content_file_count(self):
+        """
+        Annotate content_file_count with the number of content files in each
+        unit. A subquery, so a page of units counts only its own rows.
+        """
+        counts = (
+            UnitContentFile.objects.filter(unit=OuterRef("pk"))
+            .order_by()
+            .values("unit")
+            .annotate(count=Count("pk"))
+            .values("count")
+        )
+        return self.annotate(
+            content_file_count=Coalesce(
+                Subquery(counts, output_field=models.IntegerField()), 0
+            )
+        )
+
+
 class Unit(TimestampedModel):
     """
     A group of a run's content files: an ordered step from the course structure
     (edX sequential, OCW week or lecture), the course-wide context, or an
     unordered bin of leftover files.
     """
+
+    objects = UnitQuerySet.as_manager()
 
     class Kind(models.TextChoices):
         # an ordered step derived from the course structure
@@ -1424,6 +1449,10 @@ class Unit(TimestampedModel):
             models.UniqueConstraint(
                 fields=["run", "external_id"], name="unique_unit_per_run"
             )
+        ]
+        # the units API lists units in this order
+        indexes = [
+            models.Index(fields=["run", "position", "id"], name="unit_run_position_idx")
         ]
 
     def __str__(self):
@@ -1476,6 +1505,8 @@ class ResourceProfileConfiguration(TimestampedModel):
         CONTEXT = "context", "Context"
         # claims about one unit or bin
         UNIT = "unit", "Unit"
+        # claims about a unit that was split into parts, from its parts' claims
+        UNIT_MERGE = "unit_merge", "Unit merge"
         # claims about the course as a whole, from its units' and context's claims
         RUN = "run", "Run"
 
@@ -1516,7 +1547,17 @@ class ResourceProfileConfiguration(TimestampedModel):
     )
     input_token_budget = models.PositiveIntegerField(
         default=100000,
-        help_text="Most file text one call may read. A unit over it is skipped.",
+        help_text="Most file text one call may read. A unit over it is split"
+        " into parts that are extracted separately and then merged; a context"
+        " unit over it is skipped. For the unit merge stage, the most tokens a"
+        " merge call may take; a unit whose merge call is over it fails, and"
+        " its run's claims wait for it.",
+    )
+    max_parts = models.PositiveIntegerField(
+        default=10,
+        help_text="Most parts a unit over the input budget may be split into;"
+        " each part is a call of its own. A unit that would need more is"
+        " skipped. 1 turns splitting off. Only the unit stage uses it.",
     )
 
     def __str__(self):
@@ -1531,6 +1572,9 @@ class ClaimExtraction(TimestampedModel):
     class Level(models.TextChoices):
         # a unit, bin or context unit
         UNIT = "unit", "Unit"
+        # one part of a unit too large for one call; the unit's own row merges
+        # its parts
+        UNIT_PART = "unit_part", "Unit part"
         # a run, from its units' and context unit's extractions
         RUN = "run", "Run"
 
@@ -1550,6 +1594,8 @@ class ClaimExtraction(TimestampedModel):
         on_delete=models.SET_NULL,
         related_name="claim_extractions",
     )
+    # unit_part level: the part's index within the unit, from 1
+    part = models.PositiveIntegerField(null=True, blank=True)
     # what a run-level extraction was produced for; unit-level ones use `unit`
     run = models.ForeignKey(
         LearningResourceRun,
