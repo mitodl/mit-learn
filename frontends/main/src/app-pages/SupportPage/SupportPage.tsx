@@ -31,11 +31,11 @@ const SupportPage: React.FC = () => (
   <>
     <HeroSection />
     <Body>
-      <InitiativesSection />
       <LetterSection />
       <TestimonialSection />
       <ImpactMetricsSection />
       <ImpactReportsSection />
+      <InitiativesSection />
     </Body>
   </>
 )
