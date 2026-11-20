@@ -3,8 +3,8 @@ import { styled } from "ol-components"
 import { ButtonLink } from "@mitodl/smoot-design"
 import { RiArrowRightLine, RiHeartFill } from "@remixicon/react"
 import { getEducatorShareStoryUrl } from "@/common/config"
+import { SUPPORT } from "@/common/urls"
 import { Section, SectionInner } from "./SectionLayout"
-import { OCW_GIVE_URL } from "./links"
 
 const Inner = styled(SectionInner)(({ theme }) => ({
   padding: "80px 0",
@@ -86,7 +86,7 @@ const SupportShareSection: React.FC = () => {
             <ButtonLink
               variant="bordered"
               size="large"
-              href={OCW_GIVE_URL}
+              href={SUPPORT}
               endIcon={<Heart aria-hidden />}
             >
               Give now
