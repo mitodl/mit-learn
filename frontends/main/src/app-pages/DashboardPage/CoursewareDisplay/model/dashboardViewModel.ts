@@ -21,6 +21,7 @@ import type {
 import type {
   BaseCourseRun,
   CourseRunEnrollmentV3,
+  CourseV3,
   V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v3"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
@@ -37,6 +38,7 @@ import type {
   ProgramRequirementSection,
   ProgramTrack,
 } from "@/common/mitxonline"
+import { coursePageView, programPageView } from "@/common/urls"
 
 /**
  * Discriminant constants identifying the three home-dashboard resource shapes.
@@ -119,6 +121,42 @@ export const getCertificateLink = (
   const pattern = /\/certificate\/([^/]+)\/?$/
   return link.replace(pattern, `/certificate/${certificateType}/$1/`)
 }
+
+/**
+ * Link to a course's product page, or null when the page wouldn't load or the
+ * enrollment comes from a B2B contract.
+ */
+export const getCourseDetailsLink = (
+  course: CourseV3,
+  isContractResource: boolean,
+): string | null =>
+  course.has_live_product_page && !isContractResource
+    ? coursePageView(course.readable_id)
+    : null
+
+/**
+ * Link to a program's product page, or null when the page wouldn't load.
+ */
+export const getProgramDetailsLink = (
+  program: Parameters<typeof programPageView>[0],
+  hasLiveProductPage: boolean,
+): string | null => (hasLiveProductPage ? programPageView(program) : null)
+
+/**
+ * v2 program data has no has_live_product_page. This mirrors mitxonline's
+ * Program.has_live_product_page minus its b2b_only check: v2 program lists
+ * leave out b2b_only programs unless filtered by org_id or contract_id, so
+ * don't use this on contract-scoped program data. Remove it once the
+ * dashboard reads programs from v3.
+ */
+export const v2ProgramHasLiveProductPage = (
+  program: Pick<V2ProgramDetail, "live" | "page">,
+): boolean =>
+  Boolean(
+    program.live &&
+    program.page?.live &&
+    program.page?.include_in_learn_catalog,
+  )
 
 export const getDashboardEnrollmentStatus = (
   resource: DashboardResource,

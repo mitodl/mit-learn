@@ -36,7 +36,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.87.3"
+VERSION = "0.88.2"
 
 log = logging.getLogger()
 
@@ -315,16 +315,6 @@ else:
     DEFAULT_DATABASE_CONFIG["OPTIONS"] = {"sslmode": "require"}
 
 DATABASES = {"default": DEFAULT_DATABASE_CONFIG}
-
-DATABASE_ROUTERS = ["main.routers.ExternalSchemaRouter"]
-
-# "programcertificate" was removed from here deliberately (was
-# EXTERNAL_MODELS = ["programcertificate"]): this app is now the writer of
-# that table (profiles.tasks.SyncProgramCertificatesTask, replacing the
-# Hightouch sync per mitodl/hq#12954) rather than a read-only consumer of
-# rows Hightouch wrote. If another external-schema, write-once-elsewhere
-# model needs the same protection in the future, add it here.
-EXTERNAL_MODELS = []
 
 # Internationalization
 # https://docs.djangoproject.com/en/1.8/topics/i18n/
@@ -997,6 +987,9 @@ EMBEDDING_HEDGE_REQUEST_TIMEOUT_SECONDS = get_float(
 # the SDK would otherwise send to Comet's hosted Opik.
 OL_LLM_ENVIRONMENT = get_string(name="OL_LLM_ENVIRONMENT", default=ENVIRONMENT)
 OPIK_URL_OVERRIDE = get_string(name="OPIK_URL_OVERRIDE", default=None)
+# Profile notes go to the learner's shared memory only where a backend is set
+# (profiles/memory.py). ol-llm reads the rest of OL_LLM_MEMORY_* itself.
+OL_LLM_MEMORY_BACKEND = get_string(name="OL_LLM_MEMORY_BACKEND", default=None)
 
 CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = get_int(
     name="CONTENT_FILE_EMBEDDING_CHUNK_SIZE", default=512
