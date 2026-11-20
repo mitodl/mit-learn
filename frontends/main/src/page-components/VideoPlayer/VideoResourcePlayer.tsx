@@ -1,6 +1,12 @@
 "use client"
 
-import React, { useImperativeHandle, useMemo, useRef } from "react"
+import React, {
+  useCallback,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 import dynamic from "next/dynamic"
 import Image from "next/image"
 import { Skeleton, styled } from "ol-components"
@@ -20,9 +26,34 @@ const VideoJsPlayer = dynamic<VideoJsPlayerProps>(
   { ssr: false },
 )
 
-const Wrapper = styled.div(({ theme }) => ({
+/**
+ * Tallest a portrait player gets. A vertical (9:16) video at full width would
+ * be nearly twice as tall as the viewport, so it is narrowed and centred.
+ */
+const MAX_PORTRAIT_HEIGHT = "80vh"
+/**
+ * Narrowest a portrait player gets on a short window (e.g. a phone in
+ * landscape). Below 211px video.js switches to its "tiny" layout, which drops
+ * the progress bar and most controls.
+ */
+const MIN_PORTRAIT_WIDTH = "240px"
+
+const Wrapper = styled("div", {
+  shouldForwardProp: (prop) => prop !== "videoAspectRatio",
+})<{ videoAspectRatio?: number }>(({ theme, videoAspectRatio }) => ({
   width: "100%",
   aspectRatio: "16/9",
+  // Once the video reports its size, match it. Set as a class rather than an
+  // inline style so pages that size the player themselves (the embed page)
+  // still override it.
+  ...(videoAspectRatio ? { aspectRatio: String(videoAspectRatio) } : {}),
+  // Landscape videos stay full width; only portrait ones are height-capped.
+  ...(videoAspectRatio && videoAspectRatio < 1
+    ? {
+        width: `min(100%, max(${MIN_PORTRAIT_WIDTH}, calc(${MAX_PORTRAIT_HEIGHT} * ${videoAspectRatio})))`,
+        marginInline: "auto",
+      }
+    : {}),
   backgroundColor: "#000",
   overflow: "hidden",
   position: "relative",
@@ -53,6 +84,16 @@ const Wrapper = styled.div(({ theme }) => ({
   },
   ".vjs-icon-placeholder": {
     border: "none !important",
+  },
+  // video.js drops the progress bar from players 320px wide or narrower (its
+  // "x-small" layout), which a height-capped vertical video often is. The
+  // remaining controls take ~160px, so the bar still fits; it replaces the
+  // spacer video.js shows in its place.
+  "& .video-js.vjs-layout-x-small .vjs-progress-control": {
+    display: "flex",
+  },
+  "& .video-js.vjs-layout-x-small .vjs-custom-control-spacer": {
+    display: "none",
   },
   "& .vjs-big-play-button": {
     opacity: 1,
@@ -115,6 +156,18 @@ const VideoResourcePlayer = React.forwardRef<
     ref,
   ) => {
     const vjsPlayerRef = useRef<Player | null>(null)
+    // Keyed by video so a new video starts at 16:9 again until it reports.
+    const [measured, setMeasured] = useState<{
+      videoId: number
+      aspectRatio: number
+    } | null>(null)
+    const videoAspectRatio =
+      measured?.videoId === videoId ? measured.aspectRatio : undefined
+    const onVideoDimensions = useCallback(
+      (width: number, height: number) =>
+        setMeasured({ videoId, aspectRatio: width / height }),
+      [videoId],
+    )
     const ytPlayerRef = useRef<YouTubePlayerHandle | null>(null)
 
     const sources = useMemo(
@@ -164,6 +217,8 @@ const VideoResourcePlayer = React.forwardRef<
         aria-label={`Video player for ${videoTitleLabel}`}
         aria-describedby={ariaDescribedBy}
         className={className}
+        videoAspectRatio={videoAspectRatio}
+        data-video-aspect-ratio={videoAspectRatio}
       >
         {isLoading ? (
           <div
@@ -197,6 +252,7 @@ const VideoResourcePlayer = React.forwardRef<
             onReady={(player) => {
               vjsPlayerRef.current = player
             }}
+            onVideoDimensions={onVideoDimensions}
             onPlay={() => analytics.videoStarted(videoTitleLabel)}
             onHalfProgress={() =>
               analytics.videoReachedHalfway(videoTitleLabel)

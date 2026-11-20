@@ -89,21 +89,20 @@ export const DurationText = styled.span(({ theme }) => ({
 
 // ── Player / description ──
 
+/**
+ * The rule under the player is the player's own border, so it is as wide as
+ * the video: full width for landscape, narrower for a centred vertical short.
+ */
 export const StyledVideoResourcePlayer = styled(VideoResourcePlayer)(
   ({ theme }) => ({
+    borderBottom: `4px solid ${theme.custom.colors.darkGray2}`,
+    marginBottom: "40px",
     [theme.breakpoints.down("sm")]: {
       marginTop: "0",
+      marginBottom: "24px",
     },
   }),
 )
-
-export const BorderLine = styled.div(({ theme }) => ({
-  borderBottom: `4px solid ${theme.custom.colors.darkGray2}`,
-  marginBottom: "40px",
-  [theme.breakpoints.down("sm")]: {
-    marginBottom: "24px",
-  },
-}))
 
 export const DescriptionText = styled(Typography)<
   Pick<TypographyProps, "component">
