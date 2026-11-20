@@ -3,6 +3,7 @@
 import pytest
 from django.contrib.admin.sites import site
 from django.contrib.admin.widgets import AdminTextareaWidget
+from django.contrib.auth.models import Permission
 from django.test import RequestFactory
 from django.urls import reverse
 
@@ -11,18 +12,23 @@ from learning_resources.admin import (
     ETLShadowRunAdmin,
     LearningResourceAdmin,
     TutorProblemFileAdmin,
+    UnitAdmin,
+    UnitContentFileInline,
 )
 from learning_resources.factories import (
     CredentialMetadataFactory,
     LearningResourceFactory,
     LearningResourceRunFactory,
     TutorProblemFileFactory,
+    UnitContentFileFactory,
+    UnitFactory,
 )
 from learning_resources.models import (
     CredentialMetadata,
     ETLShadowRun,
     LearningResource,
     TutorProblemFile,
+    Unit,
 )
 
 
@@ -263,3 +269,117 @@ def test_etl_shadow_run_admin_is_read_only(admin_client, admin_user):
     )
     assert delete.status_code == 403
     assert ETLShadowRun.objects.filter(id=run.id).exists()
+
+
+@pytest.mark.django_db
+def test_unit_changelist_shows_content_file_counts(admin_client):
+    """The unit list renders with each unit's number of content files"""
+    unit = UnitFactory.create(title="Week 1: Vectors")
+    UnitContentFileFactory.create_batch(3, unit=unit)
+    UnitFactory.create()
+
+    resp = admin_client.get(reverse("admin:learning_resources_unit_changelist"))
+
+    assert resp.status_code == 200
+    assert b"Week 1: Vectors" in resp.content
+    counts = {row.id: row.content_file_count for row in resp.context["cl"].result_list}
+    assert counts[unit.id] == 3
+
+
+@pytest.mark.django_db
+def test_unit_change_view_lists_content_files(admin_client):
+    """A unit's page lists its content files in unit order, linked to each"""
+    unit = UnitFactory.create()
+    later = UnitContentFileFactory.create(
+        unit=unit, position=2, content_file__key="later-file"
+    )
+    earlier = UnitContentFileFactory.create(
+        unit=unit, position=1, content_file__key="earlier-file"
+    )
+    UnitContentFileFactory.create(content_file__key="another-units-file")
+
+    resp = admin_client.get(
+        reverse("admin:learning_resources_unit_change", args=(unit.id,))
+    )
+
+    assert resp.status_code == 200
+    content = resp.content.decode()
+    assert content.index("earlier-file") < content.index("later-file")
+    assert "another-units-file" not in content
+    for membership in (earlier, later):
+        assert (
+            reverse(
+                "admin:learning_resources_contentfile_change",
+                args=(membership.content_file_id,),
+            )
+            in content
+        )
+
+
+@pytest.mark.django_db
+def test_unit_content_files_are_read_only(admin_user):
+    """The content file inline only lists a unit's files"""
+    request = RequestFactory().get("/")
+    request.user = admin_user
+    inline = UnitContentFileInline(Unit, site)
+    unit = UnitFactory.create()
+
+    assert inline.has_add_permission(request, unit) is False
+    assert inline.has_change_permission(request, unit) is False
+    assert inline.has_delete_permission(request, unit) is False
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("permission", "can_view"),
+    [("view_unit", True), ("change_unit", True), (None, False)],
+)
+def test_unit_content_files_follow_unit_permissions(
+    django_user_model, permission, can_view
+):
+    """Staff who can see a unit see its content files, with no inline permission"""
+    user = django_user_model.objects.create(username="staff", is_staff=True)
+    if permission:
+        user.user_permissions.add(Permission.objects.get(codename=permission))
+    request = RequestFactory().get("/")
+    request.user = django_user_model.objects.get(id=user.id)
+    inline = UnitContentFileInline(Unit, site)
+
+    assert inline.has_view_permission(request, UnitFactory.create()) is can_view
+
+
+@pytest.mark.django_db
+def test_unit_admin_is_read_only(admin_user):
+    """The ETL owns units, so no one adds, changes or deletes them in the admin"""
+    request = RequestFactory().get("/")
+    request.user = admin_user
+    unit_admin = UnitAdmin(Unit, site)
+    unit = UnitFactory.create()
+
+    assert unit_admin.has_view_permission(request, unit) is True
+    assert unit_admin.has_add_permission(request) is False
+    assert unit_admin.has_change_permission(request, unit) is False
+    assert unit_admin.has_delete_permission(request, unit) is False
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("permission", "linked"),
+    [("view_contentfile", True), ("change_contentfile", True), (None, False)],
+)
+def test_unit_content_files_link_only_when_viewable(
+    django_user_model, permission, linked
+):
+    """Content files link to their admin page only for staff who can open it"""
+    user = django_user_model.objects.create(username="staff", is_staff=True)
+    user.user_permissions.add(Permission.objects.get(codename="view_unit"))
+    if permission:
+        user.user_permissions.add(Permission.objects.get(codename=permission))
+    request = RequestFactory().get("/")
+    request.user = django_user_model.objects.get(id=user.id)
+    inline = UnitContentFileInline(Unit, site)
+
+    fields = inline.get_fields(request, UnitFactory.create())
+
+    assert ("content_file_link" in fields) is linked
+    assert ("content_file_key" in fields) is not linked

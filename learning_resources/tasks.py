@@ -792,6 +792,32 @@ def get_ovs_transcripts(*, overwrite=False):
 
 
 @app.task(acks_late=True)
+def sweep_empty_ovs_playlists(*, allow_mass_unpublish=False):
+    """
+    Unpublish OVS playlists the webhook left published with no published video.
+
+    Runs only while the webhook owns OVS playlists and videos, the pairs the
+    OVS webhook needs before it writes either. Under the legacy OVS ETL,
+    load_ovs_playlists prunes playlists itself.
+
+    Args:
+        allow_mass_unpublish (bool): skip the MAX_UNPUBLISH_SHARE check
+
+    Returns:
+        list[int]: the ids of the playlists it unpublished
+    """
+    with writing_as(Pipeline.WEBHOOK):
+        if not may_write(
+            ETLSource.ovs.name,
+            [LearningResourceType.video_playlist.name, LearningResourceType.video.name],
+        ):
+            return []
+        return loaders.unpublish_empty_ovs_playlists(
+            allow_mass_unpublish=allow_mass_unpublish
+        )
+
+
+@app.task(acks_late=True)
 def get_podcast_transcripts(*, overwrite=False):
     """
     Fetch transcripts for podcast episodes from their podcast:transcript urls.
@@ -2068,7 +2094,9 @@ def load_warehouse_content_files(  # noqa: PLR0913
     allow_shrink: bool = False,
 ) -> int:
     """
-    Load one run's content files from the warehouse
+    Load one run's content files from the warehouse, and an Open edX run's
+    units. A failed read of the units keeps the run's units, as the archive
+    ETL does when it can't build them, and doesn't hold up the files.
 
     Args:
         etl_source (str): the run's source
@@ -2093,6 +2121,10 @@ def load_warehouse_content_files(  # noqa: PLR0913
         if run is None:
             log.info("No run to load %s content files for: %s", etl_source, run_id)
             return 0
+        run_scope = {
+            "etl_source": etl_source,
+            warehouse_content_files.RUN_COLUMN: run_id,
+        }
 
         def load():
             conn = connect_to_warehouse()
@@ -2103,12 +2135,27 @@ def load_warehouse_content_files(  # noqa: PLR0913
                         BaseWarehouseETLTask.qualified_name(
                             warehouse_content_files.VIEWS[etl_source]
                         ),
-                        where={
-                            "etl_source": etl_source,
-                            warehouse_content_files.RUN_COLUMN: run_id,
-                        },
+                        where=run_scope,
                     )
                 )
+                unit_rows = None
+                units_unread = False
+                if etl_source in warehouse_content_files.UNIT_VIEWS:
+                    try:
+                        unit_rows = list(
+                            iter_rows(
+                                conn,
+                                BaseWarehouseETLTask.qualified_name(
+                                    warehouse_content_files.UNIT_VIEWS[etl_source]
+                                ),
+                                where=run_scope,
+                            )
+                        )
+                    except Exception:
+                        log.exception(
+                            "Units not read for %s run %s", etl_source, run_id
+                        )
+                        units_unread = True
             finally:
                 conn.close()
             return warehouse_content_files.load_run(
@@ -2117,6 +2164,8 @@ def load_warehouse_content_files(  # noqa: PLR0913
                 expected_count=expected_count,
                 allow_mass_unpublish=allow_mass_unpublish is True,
                 allow_shrink=allow_shrink is True,
+                unit_rows=unit_rows,
+                units_unread=units_unread,
             )
 
         count = run_locked(
