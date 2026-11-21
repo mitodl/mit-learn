@@ -44,7 +44,7 @@ services:
       - backend
     # All-in-one FE+BE image, for local dev/test only — production StarRocks
     # is a separately-operated cluster (see learning_resources.lib.warehouse).
-    image: starrocks/allin1-ubuntu:4.1.4
+    image: starrocks/allin1-ubuntu:4.1.7
     ports:
       - "9030:9030" # FE MySQL-protocol query port
       - "8030:8030" # FE HTTP port
