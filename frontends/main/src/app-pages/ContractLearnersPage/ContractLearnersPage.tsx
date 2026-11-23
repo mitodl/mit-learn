@@ -21,7 +21,6 @@ import {
 import { Alert, Button, VisuallyHidden } from "@mitodl/smoot-design"
 import {
   analyticsContractQueries,
-  type LearnerStatusFilter,
   type LearnerWithEnrollments,
 } from "api/analytics-hooks/organizations"
 import { managerOrganizationQueries } from "api/mitxonline-hooks/organizations"
@@ -54,11 +53,7 @@ import {
   gridLearnersQuery,
   ProgressGrid,
 } from "./ProgressGrid"
-import {
-  ALL_MODULES,
-  type LearnersPageStatus,
-  STATUS_FILTER_COMPLETION_STATUS,
-} from "@/common/urls"
+import { ALL_MODULES, STATUS_FILTER_COMPLETION_STATUS } from "@/common/urls"
 import {
   ALL,
   MAX_GRID_MODULES,
@@ -204,10 +199,6 @@ const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: "in_progress", label: "In progress" },
   { value: "passed", label: "Completed" },
 ]
-const STATUS_FILTER: Record<LearnersPageStatus, LearnerStatusFilter[]> = {
-  ...STATUS_FILTER_COMPLETION_STATUS,
-  not_enrolled: ["not_enrolled"],
-}
 const STATUS_HINT_ID = "learner-status-hint"
 /** The keys MUI's select opens on. */
 const OPEN_KEYS = [" ", "ArrowUp", "ArrowDown", "Enter"]
@@ -436,6 +427,7 @@ const CSV_EXPORT_CONCURRENCY = 2
 const UNAVAILABLE_MESSAGE_ID = "learner-analytics-unavailable-message"
 const NOT_LOADED_MESSAGE_ID = "learner-analytics-not-loaded-message"
 const NO_LEARNERS_MESSAGE_ID = "learner-analytics-no-learners-message"
+const NO_COURSES_MESSAGE_ID = "learner-analytics-no-courses-message"
 const MODULES_FAILED_MESSAGE_ID = "learner-export-modules-failed-message"
 
 type ContractLearnersPageProps = {
@@ -529,7 +521,9 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   const statusAvailable = !showModuleFilter || activeGridModules.length > 0
   const activeStatus = statusAvailable ? statusFilter : ALL
   const completionStatus =
-    activeStatus === ALL ? undefined : STATUS_FILTER[activeStatus]
+    activeStatus === ALL
+      ? undefined
+      : STATUS_FILTER_COMPLETION_STATUS[activeStatus]
 
   useEffect(() => {
     if (coursesQuery.isSuccess && !statusAvailable && statusFilter !== ALL) {
@@ -639,8 +633,15 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     [courses, activeGridModules],
   )
   const coursesFailed = coursesQuery.isError && !courses
+  /** `/courses` lists only courses in the contract's programs, as the learner Overview does. */
+  const noCourses = courses?.length === 0
   const exportUnavailable =
-    !canQuery || notLoaded || noLearners || !filtersResolved || !columns
+    !canQuery ||
+    notLoaded ||
+    noLearners ||
+    noCourses ||
+    !filtersResolved ||
+    !columns
 
   const handleExport = useCallback(async () => {
     if (isExporting || exportUnavailable || !orgUuid || !contractId) return
@@ -789,9 +790,11 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                     ? NOT_LOADED_MESSAGE_ID
                     : noLearners
                       ? NO_LEARNERS_MESSAGE_ID
-                      : coursesFailed
-                        ? MODULES_FAILED_MESSAGE_ID
-                        : undefined
+                      : noCourses
+                        ? NO_COURSES_MESSAGE_ID
+                        : coursesFailed
+                          ? MODULES_FAILED_MESSAGE_ID
+                          : undefined
               }
               aria-busy={
                 isExporting ||
@@ -844,6 +847,11 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
           <Typography id={NO_LEARNERS_MESSAGE_ID} variant="body1">
             No learners have joined {contract.name} yet. They&apos;ll appear
             here once they join.
+          </Typography>
+        ) : noCourses ? (
+          <Typography id={NO_COURSES_MESSAGE_ID} variant="body1">
+            No courses to show for {contract.name}. Progress appears here for
+            the courses in its programs.
           </Typography>
         ) : (
           <ResultsSection>

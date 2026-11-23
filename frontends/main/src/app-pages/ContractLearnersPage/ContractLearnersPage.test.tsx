@@ -326,6 +326,26 @@ describe("ContractLearnersPage", () => {
       expect(exportButton).toHaveAttribute("aria-describedby", message.id)
     })
 
+    test("says there are no courses in place of the grid when none of the contract's courses is in a program", async () => {
+      const { contractId, contract } = renderGrid("/", [])
+      mockGridPage(contractId, 0, [learnerNamed("Ada Lovelace")])
+
+      const message = await screen.findByText(
+        `No courses to show for ${contract.name}. Progress appears here for the courses in its programs.`,
+      )
+      expect(
+        screen.queryByRole("table", { name: "Learner progress by module" }),
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole("combobox", { name: /status/i }),
+      ).not.toBeInTheDocument()
+      const exportButton = screen.getByRole("button", {
+        name: "Export learners",
+      })
+      expect(exportButton).toHaveAttribute("aria-disabled", "true")
+      expect(exportButton).toHaveAttribute("aria-describedby", message.id)
+    })
+
     test("says the data is on its way when the warehouse has not loaded the contract", async () => {
       const { contractId, contract } = renderGrid()
       const notLoaded = [
