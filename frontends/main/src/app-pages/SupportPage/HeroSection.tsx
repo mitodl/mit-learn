@@ -214,7 +214,7 @@ const HeroSection: React.FC = () => {
   const shareStoryUrl = getSupportShareStoryUrl()
   const options: SupportOption[] = [
     {
-      title: "Donate",
+      title: "Give",
       body: "Support the continued availability of free and open MIT education.",
       icon: RiHeartLine,
       iconColor: "red",
@@ -242,9 +242,9 @@ const HeroSection: React.FC = () => {
       <Inner>
         <Left>
           <Copy>
-            <Title>Support free education.</Title>
+            <Title>Support open education.</Title>
             <Subtitle>
-              Help MIT keep high-quality educational resources available to
+              Help keep MIT’s high-quality educational resources available to
               learners everywhere. Your support can take many forms.
             </Subtitle>
           </Copy>

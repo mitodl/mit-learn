@@ -63,6 +63,62 @@ describe("EnrollmentRedirectAlert", () => {
     expect(screen.getByText("Contact Support")).toBeInTheDocument()
   })
 
+  test.each([
+    {
+      errorType: "enroll-failed",
+      label: "Enrollment Error",
+      text: /Something went wrong processing your enrollment\./,
+      contactSupport: true,
+    },
+    {
+      errorType: "enroll-blocked",
+      label: "Enrollment Error",
+      text: /your country is currently blocked from enrolling in this course\./,
+      contactSupport: false,
+    },
+    {
+      errorType: "enroll-duplicated",
+      label: "Enrollment Error",
+      text: /You are already enrolled in this course\./,
+      contactSupport: true,
+    },
+    {
+      errorType: "payment-error-unknown",
+      label: "Payment Error",
+      text: /Something went wrong completing your order\./,
+      contactSupport: true,
+    },
+  ])(
+    "shows MITx Online $errorType error alert and clears params",
+    async ({ errorType, label, text, contactSupport }) => {
+      const { location } = renderWithProviders(<EnrollmentRedirectAlert />, {
+        url: `/dashboard?enrollment_status=error&error_type=${errorType}`,
+      })
+
+      const alert = await screen.findByRole("alert")
+      expect(alert).toHaveTextContent(label)
+      expect(alert).toHaveTextContent(text)
+      expect(Boolean(screen.queryByText("Contact Support"))).toBe(
+        contactSupport,
+      )
+      await waitFor(() => {
+        expect(location.current.search).toBe("")
+      })
+    },
+  )
+
+  test("shows generic error alert when error_type names an Object.prototype member", async () => {
+    renderWithProviders(<EnrollmentRedirectAlert />, {
+      url: "/dashboard?enrollment_status=error&error_type=constructor",
+    })
+
+    expect(
+      await screen.findByText(
+        /Something went wrong processing your enrollment\./i,
+      ),
+    ).toBeInTheDocument()
+  })
+
   test("shows free success alert with bold title and My Learning link", async () => {
     const { location } = renderWithProviders(<EnrollmentRedirectAlert />, {
       url: "/dashboard?enrollment_status=success&enrollment_title=Data+Science",
@@ -265,6 +321,85 @@ describe("EnrollmentRedirectAlert", () => {
       ),
     ).toBeInTheDocument()
   })
+
+  test.each(["pending", "review"])(
+    "shows payment processing alert for order_status=%s without fetching the receipt",
+    async (orderStatus) => {
+      const { location, queryClient } = renderWithProviders(
+        <EnrollmentRedirectAlert />,
+        { url: `/dashboard?order_status=${orderStatus}&order_id=17` },
+      )
+
+      const alert = await screen.findByRole("alert")
+      expect(alert).toHaveTextContent(
+        /Thank you!.*Your payment is being processed\. Your enrollment will be updated once it is complete\./,
+      )
+      await waitFor(() => {
+        expect(location.current.search).toBe("")
+      })
+      expect(queryClient.isFetching()).toBe(0)
+      expect(trackCheckoutCompleted).not.toHaveBeenCalled()
+      expect(mockedPostHogCapture).not.toHaveBeenCalled()
+    },
+  )
+
+  test.each([
+    {
+      orderStatus: "declined",
+      text: /Your payment was declined\. Please try again\./,
+      contactSupport: false,
+    },
+    {
+      orderStatus: "canceled",
+      text: /Your payment was cancelled\./,
+      contactSupport: false,
+    },
+    {
+      orderStatus: "errored",
+      text: /There was an error processing your payment\. Please try again\./,
+      contactSupport: true,
+    },
+  ])(
+    "shows payment error alert for order_status=$orderStatus",
+    async ({ orderStatus, text, contactSupport }) => {
+      const { location } = renderWithProviders(<EnrollmentRedirectAlert />, {
+        url: `/dashboard?order_status=${orderStatus}&order_id=17`,
+      })
+
+      const alert = await screen.findByRole("alert")
+      expect(alert).toHaveTextContent("Payment Error")
+      expect(alert).toHaveTextContent(text)
+      expect(Boolean(screen.queryByText("Contact Support"))).toBe(
+        contactSupport,
+      )
+      await waitFor(() => {
+        expect(location.current.search).toBe("")
+      })
+      expect(trackCheckoutCompleted).not.toHaveBeenCalled()
+    },
+  )
+
+  test.each(["refunded", "toString"])(
+    "clears params without showing an alert for unrecognized order_status=%s",
+    async (orderStatus) => {
+      const warnSpy = jest.spyOn(console, "warn").mockImplementation()
+
+      const { location } = renderWithProviders(<EnrollmentRedirectAlert />, {
+        url: `/dashboard?order_status=${orderStatus}&order_id=17`,
+      })
+
+      await waitFor(() => {
+        expect(location.current.search).toBe("")
+      })
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Unrecognized order_status"),
+        orderStatus,
+      )
+
+      warnSpy.mockRestore()
+    },
+  )
 
   test("tracks checkout-completed once with order id, course name, and value from receipt", async () => {
     const receipt = mitxonline.factories.orders.order({

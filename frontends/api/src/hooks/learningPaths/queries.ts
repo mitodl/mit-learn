@@ -4,7 +4,7 @@ import type {
   LearningpathsApiLearningpathsItemsListRequest as ItemsListRequest,
   LearningpathsApiLearningpathsListRequest as ListRequest,
   PaginatedLearningPathRelationshipList,
-} from "../../generated/v1"
+} from "@mitodl/mit-learn-api-axios/v1"
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query"
 import { toRelativeApiUrl } from "../../runtime/urls"
 

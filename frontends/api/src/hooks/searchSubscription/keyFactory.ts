@@ -1,5 +1,5 @@
 import { searchSubscriptionApi } from "../../clients"
-import type { LearningResourcesUserSubscriptionApiLearningResourcesUserSubscriptionCheckListRequest as subscriptionCheckListRequest } from "../../generated/v1"
+import type { LearningResourcesUserSubscriptionApiLearningResourcesUserSubscriptionCheckListRequest as subscriptionCheckListRequest } from "@mitodl/mit-learn-api-axios/v1"
 import { queryOptions } from "@tanstack/react-query"
 
 const searchSubscriptionKeys = {

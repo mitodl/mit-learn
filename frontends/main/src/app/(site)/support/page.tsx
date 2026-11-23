@@ -9,9 +9,9 @@ import { FEATURED_TESTIMONIAL_PARAMS } from "@/app-pages/SupportPage/queryParams
 import SupportFlagGate from "./SupportFlagGate"
 
 export const metadata: Metadata = standardizeMetadata({
-  title: "Support free education",
+  title: "Support open education",
   description:
-    "Help MIT keep high-quality educational resources available to learners everywhere.",
+    "Help keep MIT’s high-quality educational resources available to learners everywhere.",
 })
 
 const Page = async () => {

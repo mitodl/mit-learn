@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker/locale/en"
 import type { Factory } from "ol-test-utilities"
-import type { ProgramLetter } from "../../generated/v1"
+import type { ProgramLetter } from "@mitodl/mit-learn-api-axios/v1"
 
 const programLetter: Factory<ProgramLetter> = (overrides = {}) => ({
   id: faker.string.uuid(),

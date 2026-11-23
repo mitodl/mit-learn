@@ -12,7 +12,7 @@ import {
   UnitChannel,
   PathwayChannel,
   TopicChannel,
-} from "../../generated/v0"
+} from "@mitodl/mit-learn-api-axios/v0"
 import { offeror } from "./learningResources"
 const channelType = () =>
   faker.helpers.arrayElement(Object.values(ChannelTypeEnum))

@@ -11,10 +11,31 @@ import {
 import { Section, SectionInner, SectionTitle } from "./SectionLayout"
 import { ONE_PAGER_URLS, OPEN_LEARNING_GIVE_URL } from "./links"
 
+/**
+ * Continues the impact reports' gray band, after a divider spaced like the
+ * band's own padding. On phones the sections are separate, with no divider.
+ */
 const Inner = styled(SectionInner)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: "64px",
+  paddingTop: "64px",
+  borderTop: `1px solid ${theme.custom.colors.silverGray}`,
+  [theme.breakpoints.down("md")]: {
+    paddingTop: "40px",
+  },
+  [theme.breakpoints.down("sm")]: {
+    gap: "24px",
+    paddingTop: 0,
+    borderTop: "none",
+  },
+}))
+
+/** The cards and the donate button, 32px apart. */
+const Initiatives = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: "32px",
   [theme.breakpoints.down("sm")]: {
     gap: "24px",
   },
@@ -138,8 +159,10 @@ const CardTitle = styled.h3(({ theme }) => ({
   },
 }))
 
-/** Full width on phones, 32px below the cards. */
+/** Centred below the cards; full width on phones, 32px below them. */
 const Action = styled.div(({ theme }) => ({
+  display: "flex",
+  justifyContent: "center",
   [theme.breakpoints.down("sm")]: {
     marginTop: "8px",
     "& > a": {
@@ -231,36 +254,37 @@ const InitiativesSection: React.FC = () => (
           </p>
         </Mission>
       </Intro>
-      <Cards>
-        {INITIATIVES.map(({ title, body, icon, href }) => (
-          <Card key={title}>
-            <IconTile aria-hidden>{icon}</IconTile>
-            <CardText>
-              <CardTitle>{title}</CardTitle>
-              <CardBody>{body}</CardBody>
-              <LearnMore
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={`Learn more about ${title}`}
-              >
-                Learn more
-                <RiArrowRightLine aria-hidden />
-              </LearnMore>
-            </CardText>
-          </Card>
-        ))}
-      </Cards>
-      <Action>
-        <ButtonLink
-          variant="primary"
-          size="large"
-          href={OPEN_LEARNING_GIVE_URL}
-          endIcon={<RiArrowRightLine aria-hidden />}
-        >
-          Make a donation
-        </ButtonLink>
-      </Action>
+      <Initiatives>
+        <Cards>
+          {INITIATIVES.map(({ title, body, icon, href }) => (
+            <Card key={title}>
+              <IconTile aria-hidden>{icon}</IconTile>
+              <CardText>
+                <CardTitle>{title}</CardTitle>
+                <CardBody>{body}</CardBody>
+                <LearnMore
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`Learn more about ${title}`}
+                >
+                  Learn more
+                  <RiArrowRightLine aria-hidden />
+                </LearnMore>
+              </CardText>
+            </Card>
+          ))}
+        </Cards>
+        <Action>
+          <ButtonLink
+            variant="primary"
+            size="large"
+            href={OPEN_LEARNING_GIVE_URL}
+          >
+            Make a donation
+          </ButtonLink>
+        </Action>
+      </Initiatives>
     </Inner>
   </Section>
 )

@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker/locale/en"
 import type { Factory } from "ol-test-utilities"
-import type { ProgramCertificate } from "../../generated/v0"
+import type { ProgramCertificate } from "@mitodl/mit-learn-api-axios/v0"
 
 const programCertificate: Factory<ProgramCertificate> = (overrides = {}) => ({
   record_hash: faker.string.uuid(),
