@@ -33,6 +33,26 @@ const Markdown = styled.div(({ theme }) => ({
   },
 }))
 
+type MarkdownNode = {
+  type: string
+  value?: string
+  children?: MarkdownNode[]
+}
+
+const remarkTableBreaks = () => (tree: MarkdownNode) => {
+  const visit = (node: MarkdownNode) => {
+    if (node.type === "tableCell") {
+      node.children = node.children?.map((child) =>
+        child.type === "html" && /^<br\s*\/?>$/i.test(child.value ?? "")
+          ? { type: "break" }
+          : child,
+      )
+    }
+    node.children?.forEach(visit)
+  }
+  visit(tree)
+}
+
 /**
  * GFM for the pipe tables the OCR assembler emits. singleTilde is off so a
  * "~" used for "approximately" in problem text is not read as strikethrough.
@@ -40,6 +60,7 @@ const Markdown = styled.div(({ theme }) => ({
 const REMARK_PLUGINS: MarkdownOptions["remarkPlugins"] = [
   [remarkGfm, { singleTilde: false }],
   remarkMath,
+  remarkTableBreaks,
 ]
 
 const DISPLAY_MATH = /\$\$([\s\S]+?)\$\$/g
