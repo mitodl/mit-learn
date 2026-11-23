@@ -2,12 +2,12 @@ import asyncio
 from datetime import timedelta
 from types import SimpleNamespace
 
+import grpc
 import pytest
 from django.contrib.auth.models import Group
 from django.urls import reverse
 from django.utils import timezone
 from qdrant_client import models
-from qdrant_client.http.exceptions import UnexpectedResponse
 from qdrant_client.http.models.models import CountResult
 from rest_framework.exceptions import (
     NotAuthenticated,
@@ -357,20 +357,29 @@ def test_vector_search_drf_exceptions_get_their_status(
         assert response["Retry-After"] == "30"
 
 
-def _qdrant_error(status_code):
-    return UnexpectedResponse(
-        status_code=status_code,
-        reason_phrase="",
-        content=b"{}",
-        headers={},
+def _qdrant_error(code):
+    """Build the gRPC error the async Qdrant client raises."""
+    return grpc.aio.AioRpcError(
+        code=code,
+        initial_metadata=grpc.aio.Metadata(),
+        trailing_metadata=grpc.aio.Metadata(),
+        details="test error",
     )
 
 
 @pytest.mark.django_db(transaction=True)
-@pytest.mark.parametrize("status_code", [400, 404, 422])
-def test_vector_search_qdrant_4xx_returns_its_status(client, mock_qdrant, status_code):
-    """A 4xx from Qdrant is passed on to the caller with the same status."""
-    mock_qdrant.query_points.side_effect = _qdrant_error(status_code)
+@pytest.mark.parametrize(
+    ("code", "status_code"),
+    [
+        (grpc.StatusCode.INVALID_ARGUMENT, 400),
+        (grpc.StatusCode.NOT_FOUND, 404),
+    ],
+)
+def test_vector_search_qdrant_client_errors_return_4xx(
+    client, mock_qdrant, code, status_code
+):
+    """A Qdrant error caused by the request gets the matching 4xx."""
+    mock_qdrant.query_points.side_effect = _qdrant_error(code)
 
     response = client.get(
         reverse("vector_search:v0:vector_learning_resources_search"),
@@ -382,7 +391,14 @@ def test_vector_search_qdrant_4xx_returns_its_status(client, mock_qdrant, status
 
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize(
-    "exc", [RuntimeError("boom"), _qdrant_error(500), _qdrant_error(503)]
+    "exc",
+    [
+        RuntimeError("boom"),
+        _qdrant_error(grpc.StatusCode.UNAVAILABLE),
+        _qdrant_error(grpc.StatusCode.INTERNAL),
+        _qdrant_error(grpc.StatusCode.DEADLINE_EXCEEDED),
+        _qdrant_error(grpc.StatusCode.PERMISSION_DENIED),
+    ],
 )
 def test_vector_search_unexpected_errors_propagate(client, mock_qdrant, exc):
     """Errors DRF doesn't know how to answer still reach Django's error handling."""

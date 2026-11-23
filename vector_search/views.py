@@ -3,11 +3,12 @@ import logging
 from collections import Counter
 from itertools import chain
 
+import grpc
 from django.conf import settings
 from django.utils.decorators import method_decorator
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from qdrant_client import models
-from qdrant_client.http.exceptions import UnexpectedResponse
+from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
@@ -52,6 +53,14 @@ from vector_search.utils import (
 )
 
 log = logging.getLogger(__name__)
+
+# The Qdrant client talks gRPC (prefer_grpc=True). These codes mean the
+# request was bad (unknown collection, invalid filter), so the caller gets a
+# 4xx. Every other code is a server problem and still raises.
+QDRANT_GRPC_CLIENT_ERRORS = {
+    grpc.StatusCode.INVALID_ARGUMENT: status.HTTP_400_BAD_REQUEST,
+    grpc.StatusCode.NOT_FOUND: status.HTTP_404_NOT_FOUND,
+}
 
 
 def _normalize_score_cutoff(value, hybrid_search_enabled):
@@ -722,11 +731,12 @@ class QdrantView(AsyncAPIView):
         }
 
     def handle_exception(self, exc):
-        if isinstance(exc, UnexpectedResponse) and (
-            isinstance(exc.status_code, int) and 400 <= exc.status_code < 500  # noqa: PLR2004
+        if (
+            isinstance(exc, grpc.aio.AioRpcError)
+            and exc.code() in QDRANT_GRPC_CLIENT_ERRORS
         ):
             log.exception("Received a 4xx error from Qdrant")
-            return Response(status=exc.status_code)
+            return Response(status=QDRANT_GRPC_CLIENT_ERRORS[exc.code()])
         # DRF maps its own exceptions (NotAuthenticated, ValidationError,
         # Throttled, ...) to responses and re-raises anything else.
         return super().handle_exception(exc)
