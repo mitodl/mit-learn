@@ -40,7 +40,12 @@ export default function robots(): MetadataRoute.Robots {
           disallow: "/",
         },
       ],
-      sitemap: `${BASE_URL}/sitemaps/sitemap-index.xml`,
+      sitemap: [
+        `${BASE_URL}/sitemaps/sitemap-index.xml`,
+        // OCW course sitemaps live under /courses/o/, so their index has to
+        // sit at the root rather than inside the main index's /sitemaps/.
+        `${BASE_URL}/sitemap-index-courses-o.xml`,
+      ],
     }
   } else {
     return {
