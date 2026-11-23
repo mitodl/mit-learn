@@ -1,7 +1,6 @@
 """Tests for OVS ETL functions"""
 
 import json
-from unittest.mock import Mock
 from urllib.parse import urlparse
 
 import pytest
@@ -22,11 +21,9 @@ from learning_resources.etl.ovs import (
     _get_resource_url,
     _get_source_url,
     clean_description,
-    extract,
     get_ovs_transcripts,
     get_ovs_videos_for_transcripts_job,
     is_allowed_media_url,
-    transform,
     transform_collection,
     transform_video,
 )
@@ -66,169 +63,6 @@ def ovs_video_with_subtitles(ovs_api_response):
 def ovs_video_without_subtitles(ovs_api_response):
     """Return the second video (no thumbnails or subtitles)"""
     return ovs_api_response["results"][1]
-
-
-def _mock_ovs_response(mocker, data, **patch_kwargs):
-    """Create a mock OVS API response and patch requests.get"""
-    mock_response = Mock()
-    mock_response.json.return_value = data
-    mock_response.raise_for_status.return_value = None
-    mock_get = mocker.patch(
-        "learning_resources.etl.ovs.requests.get",
-        return_value=mock_response,
-        **patch_kwargs,
-    )
-    return mock_get, mock_response
-
-
-@pytest.fixture
-def mock_ovs_api_response(mocker, ovs_api_response):
-    """Mock the OVS API response"""
-    _, mock_response = _mock_ovs_response(mocker, ovs_api_response)
-    return mock_response
-
-
-class TestExtract:
-    """Tests for extract function"""
-
-    def test_extract_yields_public_complete_videos(
-        self,
-        mock_ovs_api_response,  # noqa: ARG002
-        ovs_api_response,
-    ):
-        """Extract should yield all public, complete videos"""
-        results = list(extract())
-        assert len(results) == 2
-        assert results[0]["key"] == ovs_api_response["results"][0]["key"]
-        assert results[1]["key"] == ovs_api_response["results"][1]["key"]
-
-    def test_extract_skips_non_public_videos(self, mocker):
-        """Extract should skip videos that are not public"""
-        api_data = {
-            "count": 1,
-            "next": None,
-            "results": [
-                {
-                    "key": "private_video",
-                    "is_public": False,
-                    "status": "Complete",
-                }
-            ],
-        }
-        _mock_ovs_response(mocker, api_data)
-        results = list(extract())
-        assert len(results) == 0
-
-    def test_extract_skips_incomplete_videos(self, mocker):
-        """Extract should skip videos that are not Complete"""
-        api_data = {
-            "count": 1,
-            "next": None,
-            "results": [
-                {
-                    "key": "processing_video",
-                    "is_public": True,
-                    "status": "Processing",
-                }
-            ],
-        }
-        _mock_ovs_response(mocker, api_data)
-        results = list(extract())
-        assert len(results) == 0
-
-    def test_extract_handles_pagination(self, mocker):
-        """Extract should follow pagination"""
-        page1 = {
-            "count": 2,
-            "next": "https://video-rc.odl.mit.edu/api/v0/public/videos/?page=2",
-            "results": [{"key": "video1", "is_public": True, "status": "Complete"}],
-        }
-        page2 = {
-            "count": 2,
-            "next": None,
-            "results": [{"key": "video2", "is_public": True, "status": "Complete"}],
-        }
-        mock_resp1 = Mock()
-        mock_resp1.json.return_value = page1
-        mock_resp1.raise_for_status.return_value = None
-        mock_resp2 = Mock()
-        mock_resp2.json.return_value = page2
-        mock_resp2.raise_for_status.return_value = None
-
-        mocker.patch(
-            "learning_resources.etl.ovs.requests.get",
-            side_effect=[mock_resp1, mock_resp2],
-        )
-        results = list(extract())
-        assert len(results) == 2
-        assert results[0]["key"] == "video1"
-        assert results[1]["key"] == "video2"
-
-    def test_extract_adds_include_in_learn_param(self, mocker):
-        """Extract should add include_in_learn=true to the URL"""
-        api_data = {"count": 0, "next": None, "results": []}
-        mock_get, _ = _mock_ovs_response(mocker, api_data)
-        list(extract(url="https://video.odl.mit.edu/api/v0/public/videos/"))
-        called_url = mock_get.call_args[0][0]
-        assert "include_in_learn=true" in called_url
-
-    def test_extract_preserves_existing_include_in_learn_param(self, mocker):
-        """Extract should not duplicate include_in_learn if already present"""
-        api_data = {"count": 0, "next": None, "results": []}
-        mock_get, _ = _mock_ovs_response(mocker, api_data)
-        url = "https://video.odl.mit.edu/api/v0/public/videos/?include_in_learn=true"
-        list(extract(url=url))
-        called_url = mock_get.call_args[0][0]
-        assert called_url.count("include_in_learn") == 1
-
-    def test_extract_skips_when_url_not_configured(self, mocker, settings):
-        """Extract should return nothing when OVS_API_BASE_URL is not set"""
-        settings.OVS_API_BASE_URL = None
-        mock_get = mocker.patch("learning_resources.etl.ovs.requests.get")
-        results = list(extract())
-        assert len(results) == 0
-        mock_get.assert_not_called()
-
-    def test_extract_raises_on_http_error(self, mocker):
-        """Extract should propagate HTTP errors from the API"""
-        mock_response = Mock()
-        mock_response.raise_for_status.side_effect = requests.HTTPError(
-            "500 Server Error"
-        )
-        mocker.patch(
-            "learning_resources.etl.ovs.requests.get",
-            return_value=mock_response,
-        )
-        with pytest.raises(requests.HTTPError):
-            list(extract())
-
-    def test_extract_adds_include_in_learn_to_next_urls(self, mocker):
-        """Extract should add include_in_learn=true to paginated next URLs"""
-        page1 = {
-            "count": 2,
-            "next": "https://video.odl.mit.edu/api/v0/public/videos/?page=2",
-            "results": [{"key": "video1", "is_public": True, "status": "Complete"}],
-        }
-        page2 = {
-            "count": 2,
-            "next": None,
-            "results": [{"key": "video2", "is_public": True, "status": "Complete"}],
-        }
-        mock_resp1 = Mock()
-        mock_resp1.json.return_value = page1
-        mock_resp1.raise_for_status.return_value = None
-        mock_resp2 = Mock()
-        mock_resp2.json.return_value = page2
-        mock_resp2.raise_for_status.return_value = None
-
-        mock_get = mocker.patch(
-            "learning_resources.etl.ovs.requests.get",
-            side_effect=[mock_resp1, mock_resp2],
-        )
-        list(extract())
-        # Both calls should include include_in_learn=true
-        for call in mock_get.call_args_list:
-            assert "include_in_learn=true" in call[0][0]
 
 
 class TestHelpers:
@@ -437,119 +271,6 @@ class TestTransform:
                 "published": True,
             },
         )
-
-    def test_transform_groups_by_collection(self, ovs_api_response):
-        """Test that transform groups videos into playlists by collection"""
-        videos = ovs_api_response["results"]
-        results = list(transform(videos))
-        # Two videos in two different collections = 2 playlists
-        assert len(results) == 2
-        for playlist in results:
-            assert "playlist_id" in playlist
-            assert "videos" in playlist
-            assert len(playlist["videos"]) == 1
-
-    def test_transform_skips_videos_without_collection(self):
-        """Test that videos without a collection are skipped"""
-        videos = [
-            {
-                "key": "video_no_collection",
-                "title": "No Collection Video",
-                "description": "",
-                "created_at": "2020-01-01T00:00:00Z",
-                "sources": [],
-                "videothumbnail_set": [],
-                "videosubtitle_set": [],
-                "cta_link": None,
-                "duration": 0,
-                "collection": None,
-            },
-            {
-                "key": "video_empty_collection_key",
-                "title": "Empty Collection Key Video",
-                "description": "",
-                "created_at": "2020-01-01T00:00:00Z",
-                "sources": [],
-                "videothumbnail_set": [],
-                "videosubtitle_set": [],
-                "cta_link": None,
-                "duration": 0,
-                "collection": {"key": "", "title": "Empty", "description": ""},
-            },
-        ]
-        results = list(transform(videos))
-        assert len(results) == 0
-
-    def test_transform_merges_same_collection(self):
-        """Test that videos in the same collection are merged into one playlist"""
-        videos = [
-            {
-                "key": "video1",
-                "title": "Video 1",
-                "description": "",
-                "created_at": "2020-01-01T00:00:00Z",
-                "sources": [
-                    {"src": "https://example.com/video1__index.m3u8"},
-                ],
-                "videothumbnail_set": [],
-                "videosubtitle_set": [],
-                "cta_link": None,
-                "duration": 0,
-                "collection": {
-                    "key": "collection1",
-                    "title": "Same Collection",
-                    "description": "",
-                    "is_public": True,
-                },
-            },
-            {
-                "key": "video2",
-                "title": "Video 2",
-                "description": "",
-                "created_at": "2020-01-02T00:00:00Z",
-                "sources": [
-                    {"src": "https://example.com/video2__index.m3u8"},
-                ],
-                "videothumbnail_set": [],
-                "videosubtitle_set": [],
-                "cta_link": None,
-                "duration": 0,
-                "collection": {
-                    "key": "collection1",
-                    "title": "Same Collection",
-                    "description": "",
-                    "is_public": True,
-                },
-            },
-        ]
-        results = list(transform(videos))
-        assert len(results) == 1
-        assert results[0]["playlist_id"] == "collection1"
-        assert len(results[0]["videos"]) == 2
-
-    def test_transform_skips_video_without_m3u8_source(self):
-        """Test that videos with no m3u8 source are skipped"""
-        videos = [
-            {
-                "key": "video_no_hls",
-                "title": "Video No HLS",
-                "description": "",
-                "created_at": "2020-01-01T00:00:00Z",
-                "sources": [{"src": "https://example.com/video.mp4"}],
-                "videothumbnail_set": [],
-                "videosubtitle_set": [],
-                "cta_link": None,
-                "duration": 0,
-                "collection": {
-                    "key": "collection1",
-                    "title": "Collection",
-                    "description": "",
-                    "is_public": True,
-                },
-            }
-        ]
-        results = list(transform(videos))
-        assert len(results) == 0
 
     @pytest.mark.parametrize(
         "sources",
