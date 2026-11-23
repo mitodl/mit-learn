@@ -20,4 +20,28 @@ describe("fenceDisplayMath", () => {
       "\n\n$$\na\n$$\n\n and \n\n$$\nb\n$$\n\n",
     )
   })
+
+  test("leaves display math in table cells alone", () => {
+    const markdown =
+      "Before $$a$$.\n\n| Quantity | Formula |\n| --- | --- |\n| Energy | $$E=mc^2$$ |\n\nAfter."
+    expect(fenceDisplayMath(markdown)).toBe(
+      "Before \n\n$$\na\n$$\n\n.\n\n| Quantity | Formula |\n| --- | --- |\n| Energy | $$E=mc^2$$ |\n\nAfter.",
+    )
+  })
+
+  test("leaves display math in fenced code alone", () => {
+    const markdown = "```\nprint('$$x$$')\n```\n\n~~~~tex\n$$y$$\n~~~~"
+    expect(fenceDisplayMath(markdown)).toBe(markdown)
+  })
+
+  test("leaves an unclosed code fence alone to the end", () => {
+    const markdown = "$$a$$\n```\n$$b$$"
+    expect(fenceDisplayMath(markdown)).toBe("\n\n$$\na\n$$\n\n\n```\n$$b$$")
+  })
+
+  test("leaves display math in inline code alone", () => {
+    expect(fenceDisplayMath("Write `$$x$$` or ``$$y$$`` for $$z$$.")).toBe(
+      "Write `$$x$$` or ``$$y$$`` for \n\n$$\nz\n$$\n\n.",
+    )
+  })
 })
