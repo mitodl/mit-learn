@@ -6,7 +6,7 @@ import type { VideoResource } from "api/v1"
 import { videoDetailPath } from "@/common/urls"
 import { stripAnchorTags } from "@/common/utils"
 import * as Styled from "./VideoDetailPage.styled"
-import { ShortCards, isShortsList } from "./ShortsGrid"
+import { ShortCards } from "./ShortsGrid"
 
 /** One row of shorts cards on desktop, two rows of two on phones. */
 const SHORTS_LIMIT = 4
@@ -19,6 +19,11 @@ type MoreFromPlaylistProps = {
   playlistHref: string
   /** Sibling videos to list, already filtered and capped by the caller. */
   videos: VideoResource[]
+  /**
+   * Whether the playlist is a shorts playlist, decided by the caller from the
+   * whole playlist rather than these few siblings.
+   */
+  shorts?: boolean
   /** Total videos in the playlist, used to decide whether to link to the rest. */
   totalVideos: number
   isLoading: boolean
@@ -87,6 +92,7 @@ const MoreFromPlaylist: React.FC<MoreFromPlaylistProps> = ({
   playlistLabel,
   playlistHref,
   videos,
+  shorts = false,
   totalVideos,
   isLoading,
 }) => {
@@ -114,7 +120,6 @@ const MoreFromPlaylist: React.FC<MoreFromPlaylistProps> = ({
 
   if (videos.length === 0) return null
 
-  const shorts = isShortsList(videos)
   const shown = shorts ? videos.slice(0, SHORTS_LIMIT) : videos
   // +1 accounts for the video currently being watched, which is excluded from
   // `videos` — without it a fully-listed playlist would still offer "View all".

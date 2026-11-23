@@ -16,8 +16,9 @@ import { formatDurationClockTime } from "ol-utilities"
 import { absoluteUrl, videoDetailPath, videoPlaylistPath } from "@/common/urls"
 import { buildVideoStructuredData } from "./videoStructuredData"
 import type { VideoPlayerHandle } from "@/page-components/VideoPlayer/VideoResourcePlayer"
-import { addExternalLinkTargets } from "@/common/utils"
+import { addExternalLinkTargets, isOcwPlaylist } from "@/common/utils"
 import * as Styled from "./VideoDetailPage.styled"
+import { isShortsList } from "./ShortsGrid"
 
 /** How many sibling videos the "More from" list shows at most. */
 const MORE_FROM_LIMIT = 5
@@ -61,17 +62,18 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
 
   const playlistLabel = playlist?.title || "Video Collection"
 
-  const otherVideos = (playlistItems ?? [])
-    .filter(
-      (item): item is VideoResource =>
-        item.resource_type === VideoResourceResourceTypeEnum.Video &&
-        item.id !== videoId,
-    )
+  const playlistVideos = (playlistItems ?? []).filter(
+    (item): item is VideoResource =>
+      item.resource_type === VideoResourceResourceTypeEnum.Video,
+  )
+  const otherVideos = playlistVideos
+    .filter((item) => item.id !== videoId)
     .slice(0, MORE_FROM_LIMIT)
-
-  const totalPlaylistVideos = (playlistItems ?? []).filter(
-    (item) => item.resource_type === VideoResourceResourceTypeEnum.Video,
-  ).length
+  const totalPlaylistVideos = playlistVideos.length
+  // Same rule as the playlist page, applied to the same first page of the
+  // playlist (the current video included), so both pages agree on the layout.
+  const isShortsPlaylist =
+    !isOcwPlaylist(playlist) && isShortsList(playlistVideos)
 
   const isLoading = videoLoading || (!!playlistId && playlistLoading)
 
@@ -242,6 +244,7 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
                     : videoPlaylistPath(playlistId, undefined)
                 }
                 videos={otherVideos}
+                shorts={isShortsPlaylist}
                 totalVideos={totalPlaylistVideos}
                 isLoading={itemsLoading}
               />

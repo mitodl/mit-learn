@@ -73,6 +73,9 @@ const ShortCard: React.FC<{ video: VideoResource; href: string }> = ({
     unoptimized,
     onError,
   } = useImageWithFallback(video.image?.url, PLACEHOLDER_IMG)
+  // The fallback is a wide logo: shown whole, small and white on the black
+  // card, rather than cropped to fill it.
+  const isPlaceholder = imageUrl === PLACEHOLDER_IMG
   const duration = video.video?.duration
     ? formatDurationClockTime(video.video.duration)
     : null
@@ -87,7 +90,16 @@ const ShortCard: React.FC<{ video: VideoResource; href: string }> = ({
             alt=""
             fill
             sizes="(max-width: 600px) 50vw, (max-width: 900px) 33vw, 240px"
-            style={{ objectFit: "cover" }}
+            style={
+              isPlaceholder
+                ? {
+                    objectFit: "contain",
+                    padding: "0 20%",
+                    boxSizing: "border-box",
+                    filter: "brightness(0) invert(1)",
+                  }
+                : { objectFit: "cover" }
+            }
             unoptimized={unoptimized}
             onError={onError}
           />

@@ -155,6 +155,26 @@ describe("VideoDetailPage", () => {
     within(section).getByRole("link", { name: /^View all videos in / })
   })
 
+  test("'more from this playlist' keeps rows when the current video is the playlist's only regular one", async () => {
+    const current = makeVideo()
+    const shorts = Array.from({ length: 3 }, () =>
+      makeVideo({ resource_category: VIDEO_SHORT_CATEGORY }),
+    )
+    renderPage({
+      video: current,
+      playlistId: 99,
+      playlistItems: [current, ...shorts],
+    })
+
+    const section = document.getElementById("more-from-playlist")!
+    for (const short of shorts) {
+      await within(section).findByRole("link", {
+        name: `Open video ${short.title}`,
+      })
+    }
+    expect(within(section).queryAllByRole("listitem")).toHaveLength(0)
+  })
+
   test("renders the video title once data is loaded", async () => {
     const video = makeVideo({ title: "Introduction to Machine Learning" })
     renderPage({ video })

@@ -107,7 +107,13 @@ const VideoPlaylistCollectionPage: React.FC<
       item.resource_type === VideoResourceResourceTypeEnum.Video,
   )
   const playlistType = isOcwPlaylist(playlist)
-  const isShortsPlaylist = !playlistType && isShortsList(videos)
+  // Decided from the first page only, so the layout doesn't switch when "Load
+  // more" brings in later videos. The video detail page uses the same page.
+  const firstPageIds = new Set(
+    itemsData?.pages[0]?.results.map((rel) => rel.resource.id),
+  )
+  const firstPageVideos = videos.filter((video) => firstPageIds.has(video.id))
+  const isShortsPlaylist = !playlistType && isShortsList(firstPageVideos)
 
   const totalVideoSeconds = videos.reduce((acc, video) => {
     const duration = video.video?.duration ?? ""

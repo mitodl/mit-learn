@@ -1,7 +1,7 @@
 import React from "react"
 import { setMockResponse, urls, factories } from "api/test-utils"
 import { videoDetailPath } from "@/common/urls"
-import { renderWithProviders, screen, within } from "@/test-utils"
+import { renderWithProviders, screen, user, within } from "@/test-utils"
 import VideoPage from "./VideoPlaylistCollectionPage"
 import { ResourceTypeEnum } from "api/v1"
 import type { VideoResource } from "api/v1"
@@ -308,6 +308,48 @@ describe("VideoPage", () => {
       expect(
         screen.queryByRole("region", { name: "Videos" }),
       ).not.toBeInTheDocument()
+    })
+
+    test("keeps the grid when 'Load more' brings in a regular video", async () => {
+      const playlist = makePlaylist()
+      const firstPage = Array.from({ length: VIDEOS_PAGE_SIZE }, (_, i) =>
+        makeShort(`Short ${i + 1}`),
+      )
+      const regular = makeVideo({ title: "Regular Video" })
+      const itemsUrl = urls.learningResources.items({ id: playlist.id })
+      const nextUrl = `${itemsUrl}?limit=${VIDEOS_PAGE_SIZE}&offset=${VIDEOS_PAGE_SIZE}`
+      const relationship = (
+        resource: ReturnType<typeof makeVideo>,
+        position: number,
+      ) => ({
+        id: position,
+        child: resource.id,
+        parent: playlist.id,
+        position,
+        resource,
+      })
+      setupApis({ playlistId: playlist.id, videos: [], playlist })
+      setMockResponse.get(`${itemsUrl}?limit=${VIDEOS_PAGE_SIZE}`, {
+        count: VIDEOS_PAGE_SIZE + 1,
+        next: nextUrl,
+        previous: null,
+        results: firstPage.map((short, i) => relationship(short, i + 1)),
+      })
+      setMockResponse.get(nextUrl, {
+        count: VIDEOS_PAGE_SIZE + 1,
+        next: null,
+        previous: null,
+        results: [relationship(regular, VIDEOS_PAGE_SIZE + 1)],
+      })
+
+      renderWithProviders(<VideoPage playlistId={playlist.id} />)
+
+      const grid = await screen.findByRole("region", { name: "Videos" })
+      await user.click(screen.getByRole("button", { name: /Load more videos/ }))
+      await within(grid).findByText(regular.title)
+      expect(within(grid).getAllByRole("listitem")).toHaveLength(
+        VIDEOS_PAGE_SIZE + 1,
+      )
     })
   })
 
