@@ -401,6 +401,10 @@ class _BlockScan(NamedTuple):
     """What one walk of a course's blocks finds, see OlxArchive._block_scan"""
 
     staff_only: set[Path]
+    # Transcripts of visible videos besides the one each video keeps (see
+    # _transcript_rank). A file one video keeps stays, even if another video
+    # drops it. Staff-only videos choose nothing: their transcripts are
+    # excluded unless something visible names them.
     unselected_transcripts: set[Path]
 
 
@@ -460,9 +464,9 @@ class OlxArchive:
         # A hidden video's transcript may also be a visible video's, so put
         # back anything a reachable block still links.
         excluded.difference_update(referenced)
-        # One transcript per video. The video XML names every language's file,
-        # so this comes after the references have put them all back.
-        excluded.update(self._unselected_transcripts)
+        # One transcript per video: the others stay out even when something
+        # names them, as the video XML names every language's file
+        excluded.update(self._block_scan.unselected_transcripts)
         # Settings rather than content, but what they name (textbooks, the
         # course image) is shown, so they were still read as references above
         excluded.update(self.root.glob("policies/**/*"))
@@ -664,14 +668,22 @@ class OlxArchive:
                 }
             files.update(bodies)
         if tag == "video":
-            # a transcript the export doesn't have is skipped
             files.update(
-                path
-                for transcript in element.iter("transcript")
-                if transcript.get("src")
-                and (path := self.root / "static" / transcript.get("src")).is_file()
+                transcript.path for transcript in self._transcript_files(element)
             )
         return files
+
+    def _transcript_files(self, video: Element) -> list[_Transcript]:
+        """
+        Return the files a video's <transcript> elements name, skipping any the
+        export doesn't have
+        """
+        return [
+            _Transcript(path, _language_code(transcript.get("language")), legacy=False)
+            for transcript in video.iter("transcript")
+            if transcript.get("src")
+            and (path := self.root / "static" / transcript.get("src")).is_file()
+        ]
 
     def _files_named(self, folder: str, name: str) -> set[Path]:
         """
@@ -705,18 +717,8 @@ class OlxArchive:
         return self._block_scan.staff_only
 
     @cached_property
-    def _unselected_transcripts(self) -> set[Path]:
-        """
-        Transcripts of visible videos besides the one each video keeps (see
-        _transcript_rank). A file one video keeps stays, even if it is a
-        language another video drops. Staff-only videos choose nothing: their
-        transcripts are excluded unless something visible names them.
-        """
-        return self._block_scan.unselected_transcripts
-
-    @cached_property
     def _block_scan(self) -> _BlockScan:
-        """_staff_only and _unselected_transcripts, from one walk of _blocks"""
+        """_staff_only and the transcripts videos drop, from one walk of _blocks"""
         staff_files: dict[tuple[str, str], set[Path]] = {}
         reachable: set[tuple[str, str]] = set()
         declared: set[Path] = set()
@@ -725,17 +727,14 @@ class OlxArchive:
             if staff_only:
                 staff_files[tag, url_name] = self._block_files(tag, url_name, element)
                 continue
-            # a block reached by several paths chooses once
-            if tag == "video" and (tag, url_name) not in reachable:
-                transcripts = self._video_transcripts(element)
-                declared.update(transcript.path for transcript in transcripts)
-                if transcripts:
-                    best = min(
-                        transcripts,
-                        key=lambda t: _transcript_rank(t, self._course_language),
-                    )
-                    kept.add(best.path)
             reachable.add((tag, url_name))
+            if tag == "video" and (transcripts := self._video_transcripts(element)):
+                declared.update(transcript.path for transcript in transcripts)
+                best = min(
+                    transcripts,
+                    key=lambda t: _transcript_rank(t, self._course_language),
+                )
+                kept.add(best.path)
         return _BlockScan(
             staff_only={
                 path
@@ -748,33 +747,15 @@ class OlxArchive:
 
     def _video_transcripts(self, video: Element) -> list[_Transcript]:
         """
-        Return the transcripts a video block declares that the export has: each
-        file its <transcript> elements or transcripts attribute name, and each
-        legacy .srt.sjson named for one of its video ids
+        Return the transcripts a video block declares that the export has: its
+        <transcript> files, and each legacy .srt.sjson named for one of its
+        video ids
         """
-        languages: dict[str, str | None] = {}
-        try:
-            mapping = json.loads(video.get("transcripts") or "{}")
-        except ValueError:
-            mapping = {}
-        if isinstance(mapping, dict):
-            languages.update(
-                (src, language)
-                for language, src in mapping.items()
-                if isinstance(src, str) and src
-            )
-        # the elements name the same files as the attribute; edX reads these
-        for transcript in video.iter("transcript"):
-            if transcript.get("src"):
-                languages[transcript.get("src")] = transcript.get("language")
-        transcripts = [
-            _Transcript(path, _language_code(language), legacy=False)
-            for src, language in languages.items()
-            if (path := self._in_tree(f"static/{src}")) is not None and path.is_file()
+        return self._transcript_files(video) + [
+            transcript
+            for video_id in self._video_ids_of(video)
+            for transcript in self._legacy_transcripts.get(video_id, ())
         ]
-        for video_id in self._video_ids_of(video):
-            transcripts.extend(self._legacy_transcripts.get(video_id, ()))
-        return transcripts
 
     @cached_property
     def _legacy_transcripts(self) -> dict[str, list[_Transcript]]:
@@ -1205,17 +1186,17 @@ class OlxArchive:
                 if tag == "problem"
                 else UnitContentFile.Relation.CORE
             )
-            # the block's own file, then its html body, then the transcript it
-            # keeps
+            # the block's own file, then its html body, then its transcripts
             paths = sorted(
-                (
-                    path
-                    for path in self._block_files(tag, block_name, element)
-                    if path not in self._unselected_transcripts
-                ),
+                self._block_files(tag, block_name, element),
                 key=lambda path: (path.parent.name == "static", str(path)),
             )
-            files = [] if tag in OLX_STRUCTURE_TAGS else [(p, relation) for p in paths]
+            # only the ingested ones, so a video links the one transcript it keeps
+            files = (
+                []
+                if tag in OLX_STRUCTURE_TAGS
+                else [(p, relation) for p in paths if p not in self.excluded]
+            )
             # an inline component's text is in the file that holds it, unless
             # it is an html block whose body has a file of its own
             has_body = tag == "html" and any(

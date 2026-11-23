@@ -1451,15 +1451,13 @@ def test_process_olx_path_filters_by_the_runs_platform(
         ("x" * 25, None),
     ],
 )
-def test_process_olx_path_yields_one_transcript_per_video(
+def test_process_olx_path_records_the_transcript_language(
     mocker, tmp_path, language, content_language
 ):
-    """The video's kept transcript is yielded with its video's title and language"""
+    """A transcript is yielded with its video's title and its own language"""
     run = LearningResourceRunFactory.create(run_id="course-v1:test_run")
     olx = _video_olx(
-        tmp_path,
-        [(language, "vid.srt"), ("zz", "vid-zz.srt")],
-        video_attrs='display_name="Lecture 1"',
+        tmp_path, [(language, "vid.srt")], video_attrs='display_name="Lecture 1"'
     )
     mocker.patch(
         "learning_resources.etl.utils._extract_content",
@@ -1471,8 +1469,6 @@ def test_process_olx_path_yields_one_transcript_per_video(
         for result in utils.process_olx_path(str(olx), run, overwrite=True)
     }
 
-    # every language listed outranks zz, the one transcript left out
-    assert "vid-zz.srt" not in results
     transcript = results["vid.srt"]
     assert transcript["title"] == "Lecture 1"
     assert transcript["url"].endswith("/jump_to_id/vid")
