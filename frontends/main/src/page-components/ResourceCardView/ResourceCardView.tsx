@@ -66,11 +66,6 @@ type ResourceCardContent = {
   imageSrc: string | null
   /** Replaces the default image when there is no `imageSrc`. */
   placeholderIcon?: React.ReactNode
-  /**
-   * Replaces the default image, ahead of `placeholderIcon`, when there is no
-   * `imageSrc`: a short label over a value, e.g. a problem's set and topic.
-   */
-  placeholderDetails?: { label?: string; value: string }
   metadata: MetadataItem[]
   price: PricePanel
   lang?: string
@@ -209,31 +204,6 @@ const PlaceholderIcon = styled.div(({ theme }) => ({
   height: "100%",
   color: theme.custom.colors.darkGray2,
   svg: { width: "32px", height: "32px" },
-}))
-
-const PlaceholderDetails = styled.div({
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: "4px",
-  height: "100%",
-  padding: "12px",
-  boxSizing: "border-box",
-  textAlign: "center",
-  overflow: "hidden",
-})
-
-const PlaceholderLabel = styled.span(({ theme }) => ({
-  ...theme.typography.body2,
-  color: theme.custom.colors.silverGrayDark,
-  [NARROW]: { ...theme.typography.body3 },
-}))
-
-const PlaceholderValue = styled.span(({ theme }) => ({
-  ...theme.typography.subtitle1,
-  color: theme.custom.colors.darkGray1,
-  [NARROW]: { ...theme.typography.subtitle2 },
 }))
 
 const Image = styled(NextImage)({
@@ -524,7 +494,6 @@ const ResourceCardView: React.FC<ResourceCardViewProps> = ({
   parentCourseName,
   imageSrc,
   placeholderIcon,
-  placeholderDetails,
   metadata,
   price,
   lang,
@@ -561,14 +530,7 @@ const ResourceCardView: React.FC<ResourceCardViewProps> = ({
     >
       <Grid priceColumn={!priceEmpty}>
         <ImageFrame>
-          {!imageSrc && placeholderDetails ? (
-            <PlaceholderDetails>
-              {placeholderDetails.label && (
-                <PlaceholderLabel>{placeholderDetails.label}</PlaceholderLabel>
-              )}
-              <PlaceholderValue>{placeholderDetails.value}</PlaceholderValue>
-            </PlaceholderDetails>
-          ) : !imageSrc && placeholderIcon ? (
+          {!imageSrc && placeholderIcon ? (
             <PlaceholderIcon aria-hidden>{placeholderIcon}</PlaceholderIcon>
           ) : (
             <Image

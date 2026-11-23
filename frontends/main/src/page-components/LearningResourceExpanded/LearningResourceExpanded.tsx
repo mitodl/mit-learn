@@ -9,7 +9,6 @@ import type { User } from "api/hooks/user"
 import TitleSection from "./TitleSection"
 import CallToActionSection from "./CallToActionSection"
 import ResourceDescription from "./ResourceDescription"
-import PracticeProblemSection from "./PracticeProblemSection"
 import { FeatureFlags } from "@/common/feature_flags"
 import AiSyllabusBotSlideDown, {
   AiChatSyllabusOpener,
@@ -271,36 +270,24 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
       {!(syllabusOnlyMode && chatEnabled) ? (
         <ContentSection chatTransitionState={chatTransitionState}>
           <TopContainer chatEnabled={!!chatEnabled}>
-            {resource?.resource_type === ResourceTypeEnum.Document &&
-            resource.practice_problem ? (
-              <PracticeProblemSection
-                resource={{
-                  ...resource,
-                  practice_problem: resource.practice_problem,
-                }}
-                inUserList={inUserList}
-                onAddToUserListClick={onAddToUserListClick}
-              />
-            ) : (
-              <ContentContainer>
-                <ContentLeft>
-                  <ResourceDescription resource={resource} />
-                  <InfoSection resource={resource} />
-                </ContentLeft>
-                <ContentRight>
-                  <CallToActionSection
-                    imgConfig={imgConfig}
-                    resource={resource}
-                    user={user}
-                    shareUrl={shareUrl}
-                    inLearningPath={inLearningPath}
-                    inUserList={inUserList}
-                    onAddToLearningPathClick={onAddToLearningPathClick}
-                    onAddToUserListClick={onAddToUserListClick}
-                  />
-                </ContentRight>
-              </ContentContainer>
-            )}
+            <ContentContainer>
+              <ContentLeft>
+                <ResourceDescription resource={resource} />
+                <InfoSection resource={resource} />
+              </ContentLeft>
+              <ContentRight>
+                <CallToActionSection
+                  imgConfig={imgConfig}
+                  resource={resource}
+                  user={user}
+                  shareUrl={shareUrl}
+                  inLearningPath={inLearningPath}
+                  inUserList={inUserList}
+                  onAddToLearningPathClick={onAddToLearningPathClick}
+                  onAddToUserListClick={onAddToUserListClick}
+                />
+              </ContentRight>
+            </ContentContainer>
             {topCarousels && (
               <TopCarouselContainer>
                 {topCarousels?.map((carousel, index) => (

@@ -1,9 +1,4 @@
-import type {
-  DocumentResource,
-  LearningResource,
-  LearningResourceRun,
-  PracticeProblem,
-} from "api"
+import type { LearningResource, LearningResourceRun } from "api"
 import { DeliveryEnum, ResourceTypeEnum } from "api"
 import { capitalize } from "lodash"
 import { formatDate } from "../date/utils"
@@ -159,17 +154,7 @@ const resourceContentFilesImageSrc = (
   return null
 }
 
-/**
- * Whether a resource is a practice problem read from a problem set or exam.
- */
-const isPracticeProblem = (
-  resource: LearningResource,
-): resource is DocumentResource & { practice_problem: PracticeProblem } =>
-  resource.resource_type === ResourceTypeEnum.Document &&
-  !!resource.practice_problem
-
 export {
-  isPracticeProblem,
   DEFAULT_RESOURCE_IMG,
   getReadableResourceType,
   formatRunDate,
