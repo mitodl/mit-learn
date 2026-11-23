@@ -41,9 +41,11 @@ from learning_resources.etl.utils import (
 from learning_resources.factories import (
     ContentFileFactory,
     LearningResourceFactory,
+    LearningResourceImageFactory,
     LearningResourceOfferorFactory,
     LearningResourceRunFactory,
     LearningResourceTopicFactory,
+    PracticeProblemFactory,
     TutorProblemFileFactory,
 )
 
@@ -1239,7 +1241,19 @@ def test_delete_unlinked_figure_versions(figure_storage):
     """Only other versions no saved row links to are deleted"""
     folders = {
         name: figure_storage / f"figures/file/{name}"
-        for name in ("new", "linked", "tutor", "unlinked")
+        for name in (
+            "new",
+            "linked",
+            "tutor",
+            "statement",
+            "context",
+            "solution",
+            "parts",
+            "image",
+            "unpublished",
+            "unpublished_image",
+            "unlinked",
+        )
     }
     for folder in folders.values():
         folder.mkdir(parents=True)
@@ -1251,11 +1265,51 @@ def test_delete_unlinked_figure_versions(figure_storage):
         run=LearningResourceRunFactory.create(),
         content="![a](https://cdn.test/figures/file/tutor/p1_1.png)",
     )
+    # promoted problems still on an older version keep its figures
+    PracticeProblemFactory.create(
+        statement="![a](https://cdn.test/figures/file/statement/p1_1.png)"
+    )
+    PracticeProblemFactory.create(
+        context="![a](https://cdn.test/figures/file/context/p1_1.png)"
+    )
+    PracticeProblemFactory.create(
+        solution="![a](https://cdn.test/figures/file/solution/p1_1.png)"
+    )
+    PracticeProblemFactory.create(
+        parts=[
+            {"label": "a", "body": "![a](https://cdn.test/figures/file/parts/p1_1.png)"}
+        ]
+    )
+    LearningResourceFactory.create(
+        image=LearningResourceImageFactory.create(
+            url="https://cdn.test/figures/file/image/p1_1.png"
+        )
+    )
+    # an unpublished problem doesn't keep its version, by its text or its image
+    PracticeProblemFactory.create(
+        learning_resource__published=False,
+        statement="![a](https://cdn.test/figures/file/unpublished/p1_1.png)",
+    )
+    LearningResourceFactory.create(
+        published=False,
+        image=LearningResourceImageFactory.create(
+            url="https://cdn.test/figures/file/unpublished_image/p1_1.png"
+        ),
+    )
     utils._delete_unlinked_figure_versions("figures/file/new")  # noqa: SLF001
-    assert (folders["new"] / "p1_1.png").exists()
-    assert (folders["linked"] / "p1_1.png").exists()
-    assert (folders["tutor"] / "p1_1.png").exists()
-    assert not (folders["unlinked"] / "p1_1.png").exists()
+    for name in (
+        "new",
+        "linked",
+        "tutor",
+        "statement",
+        "context",
+        "solution",
+        "parts",
+        "image",
+    ):
+        assert (folders[name] / "p1_1.png").exists(), name
+    for name in ("unpublished", "unpublished_image", "unlinked"):
+        assert not (folders[name] / "p1_1.png").exists(), name
 
 
 def test_extract_content_ocr_failure_falls_back_to_tika(
@@ -1877,6 +1931,44 @@ def test_extract_pdf_bytes_with_ocr(  # noqa: PLR0913
     )
 
     assert utils.extract_pdf_bytes_with_ocr(pdf_bytes) == expected
+
+
+@pytest.mark.parametrize("converted", [True, False])
+def test_extract_pdf_bytes_with_ocr_saves_figures(mocker, settings, converted):
+    """With its key, an in-memory PDF's figures are saved for its version"""
+    settings.OCR_MODEL = "model"
+    settings.OCR_SAVE_FIGURES = True
+    settings.OCR_PDF_MAX_PAGE_THRESHOLD = 0
+    to_markdown = mocker.patch(
+        "learning_resources.etl.utils._pdf_to_markdown",
+        return_value="# OCR" if converted else "",
+    )
+    cleanup = mocker.patch(
+        "learning_resources.etl.utils._delete_unlinked_figure_versions"
+    )
+    utils.extract_pdf_bytes_with_ocr(_blank_pdf(), key="key", version="etag")
+    folder = utils._figure_folder("key", {"archive_checksum": "etag"})  # noqa: SLF001
+    assert folder.endswith("/etag")
+    assert to_markdown.call_args.args[1] == folder
+    if converted:
+        cleanup.assert_called_once_with(folder)
+    else:
+        cleanup.assert_not_called()
+
+
+def test_extract_pdf_bytes_with_ocr_without_key(mocker, settings):
+    """Without a key, an in-memory PDF's figures are placeholders"""
+    settings.OCR_MODEL = "model"
+    settings.OCR_SAVE_FIGURES = True
+    to_markdown = mocker.patch(
+        "learning_resources.etl.utils._pdf_to_markdown", return_value="# OCR"
+    )
+    cleanup = mocker.patch(
+        "learning_resources.etl.utils._delete_unlinked_figure_versions"
+    )
+    assert utils.extract_pdf_bytes_with_ocr(_blank_pdf()) == {"content": "# OCR"}
+    assert to_markdown.call_args.args[1] is None
+    cleanup.assert_not_called()
 
 
 @pytest.mark.django_db

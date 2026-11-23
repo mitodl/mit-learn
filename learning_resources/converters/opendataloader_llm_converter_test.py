@@ -1020,6 +1020,43 @@ def test_structure_export_tags_document_and_problems():
     assert tag["number"] == "1"
     assert tag["statement_available"] is True
     assert "topics" not in tag
+    # no section: none is tagged
+    assert "section" not in tag
+
+
+def test_structure_export_tags_sections():
+    """A problem's tag carries its section, whose numbering its number is in"""
+    text = "## Problem 1\n\nFirst task.\n\n## Problem 1\n\nSecond task."
+    plan, _ = prepare_structure(text)
+    first, second = [e for e in plan["elements"] if e["text"].startswith("##")]
+    segments = [
+        {
+            "start": heading["id"],
+            "end": next(e for e in plan["elements"] if e["text"].startswith(word))[
+                "id"
+            ],
+            "role": "problem",
+            "confidence": "high",
+            "problem": "1",
+            "section": section,
+        }
+        for heading, word, section in (
+            (first, "First", "Part A"),
+            (second, "Second", "Part B"),
+        )
+    ]
+    result = assemble_structure(text, plan, [_answer(segments)])
+    assert result["status"] == "validated", result["check"]
+    tags = [
+        json.loads(line.removeprefix("<!-- node: ").removesuffix(" -->"))
+        for line in export_structure_markdown(text, result).split("\n")
+        if line.startswith("<!-- node: ")
+    ]
+    assert [(t["number"], t["section"]) for t in tags] == [
+        ("1", "Part A"),
+        ("1", "Part B"),
+    ]
+    assert tags[0]["id"] != tags[1]["id"]
 
 
 def test_structure_export_tags_problems_without_statements():
