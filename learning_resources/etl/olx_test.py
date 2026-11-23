@@ -1317,7 +1317,7 @@ def _video_olx(
     return olx
 
 
-def _ingested_transcripts(olx):
+def _ingested_static_files(olx):
     """Return the names of the static files the archive ingests, sorted"""
     return [
         path.removeprefix("static/")
@@ -1357,7 +1357,7 @@ def test_olx_archive_keeps_one_transcript_per_video(
         [(language, f"vid-{language}.srt") for language in languages],
         course_language=course_language,
     )
-    assert _ingested_transcripts(olx) == [f"vid-{kept}.srt"]
+    assert _ingested_static_files(olx) == [f"vid-{kept}.srt"]
 
 
 def test_olx_archive_excludes_a_videos_other_languages(tmp_path):
@@ -1377,7 +1377,7 @@ def test_olx_archive_reads_the_course_language_from_its_policy(tmp_path):
         "policies/run/policy.json",
         json.dumps({"course/run": {"language": "fr"}}),
     )
-    assert _ingested_transcripts(olx) == ["vid-fr.srt"]
+    assert _ingested_static_files(olx) == ["vid-fr.srt"]
 
 
 @pytest.mark.parametrize(
@@ -1412,7 +1412,7 @@ def test_olx_archive_ranks_legacy_transcripts(
         video_attrs='sub="AbC123"',
         **dict.fromkeys(legacy_names, "{}"),
     )
-    assert _ingested_transcripts(olx) == [kept]
+    assert _ingested_static_files(olx) == [kept]
 
 
 def test_olx_archive_keeps_a_transcript_any_video_keeps(tmp_path):
@@ -1427,14 +1427,14 @@ def test_olx_archive_keeps_a_transcript_any_video_keeps(tmp_path):
         "video/vid_es.xml",
         f'<video url_name="vid_es">{_transcript_element("es", "shared-es.srt")}</video>',
     )
-    assert _ingested_transcripts(olx) == ["shared-es.srt", "vid-en.srt"]
+    assert _ingested_static_files(olx) == ["shared-es.srt", "vid-en.srt"]
 
 
 def test_olx_archive_drops_a_linked_transcript_in_another_language(tmp_path):
     """A page linking a video's Spanish transcript doesn't keep it"""
     olx = _video_olx(tmp_path, [("en", "vid-en.srt"), ("es", "vid-es.srt")])
     _write_html(olx, "h", '<a href="/static/vid-es.srt">Spanish transcript</a>')
-    assert _ingested_transcripts(olx) == ["vid-en.srt"]
+    assert _ingested_static_files(olx) == ["vid-en.srt"]
 
 
 def test_olx_archive_chooses_among_the_transcripts_the_export_has(tmp_path):
@@ -1443,7 +1443,7 @@ def test_olx_archive_chooses_among_the_transcripts_the_export_has(tmp_path):
         tmp_path, [("en", "vid-en.srt"), ("es", "vid-es.srt"), ("fr", "vid-fr.srt")]
     )
     (olx / "static/vid-en.srt").unlink()
-    assert _ingested_transcripts(olx) == ["vid-es.srt"]
+    assert _ingested_static_files(olx) == ["vid-es.srt"]
 
 
 def test_olx_archive_staff_only_videos_choose_no_transcript(tmp_path):
@@ -1462,7 +1462,7 @@ def test_olx_archive_staff_only_videos_choose_no_transcript(tmp_path):
         f"{_transcript_element('en', 'hidden-en.srt')}"
         f"{_transcript_element('es', 'hidden-es.srt')}</video>",
     )
-    assert _ingested_transcripts(olx) == ["hidden-es.srt", "vid-en.srt"]
+    assert _ingested_static_files(olx) == ["hidden-es.srt", "vid-en.srt"]
 
 
 @pytest.mark.parametrize(

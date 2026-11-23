@@ -46,7 +46,7 @@ LEGACY_TRANSCRIPT_RE = re.compile(
     re.IGNORECASE,
 )
 # A video can have a transcript per language; only one is ingested, in English
-# when the video has one (see _transcript_rank)
+# when the video has one (see _transcript_sort_key)
 ENGLISH = "en"
 
 # edX writes any character in an asset name but a letter, digit, ., - or % as
@@ -277,20 +277,20 @@ def _refers_to(
     )
 
 
-def _language_code(code: str | None) -> str:
+def _normalize_language(code: str | None) -> str:
     """Return a language code as transcripts compare it: lowercase, - for _"""
     return (code or "").strip().lower().replace("_", "-")
 
 
 class _Transcript(NamedTuple):
-    """A transcript file a video declares"""
+    """A video's transcript file and its language"""
 
     path: Path
-    language: str  # see _language_code; "" when the OLX doesn't say
-    legacy: bool  # a .srt.sjson named for the video id, not a <transcript> file
+    language: str  # see _normalize_language; "" when the OLX doesn't say
+    is_legacy: bool  # a .srt.sjson named for the video id, not a <transcript> file
 
 
-def _transcript_rank(transcript: _Transcript, course_language: str) -> tuple:
+def _transcript_sort_key(transcript: _Transcript, course_language: str) -> tuple:
     """
     Sort key of a video's transcripts; the lowest is the one ingested. English
     comes first, then a regional English, the course's language and any other.
@@ -307,7 +307,7 @@ def _transcript_rank(transcript: _Transcript, course_language: str) -> tuple:
         rank = 2
     else:
         rank = 3
-    return rank, transcript.legacy, language, transcript.path.name
+    return rank, transcript.is_legacy, language, transcript.path.name
 
 
 def _parse_video_transcripts(
@@ -337,7 +337,7 @@ def _parse_video_transcripts(
                     # colon-named video's path doesn't spell
                     "module_id": get_edx_module_id(f"video/{video_url_name}.xml", run),
                     "title": video_title,
-                    "language": _language_code(transcript.get("language")),
+                    "language": _normalize_language(transcript.get("language")),
                 }
     except ElementTree.ParseError:
         log.debug("xml parsing error for %s", path)
@@ -402,10 +402,10 @@ class _BlockScan(NamedTuple):
 
     staff_only: set[Path]
     # Transcripts of visible videos besides the one each video keeps (see
-    # _transcript_rank). A file one video keeps stays, even if another video
+    # _transcript_sort_key). A file one video keeps stays, even if another video
     # drops it. Staff-only videos choose nothing: their transcripts are
     # excluded unless something visible names them.
-    unselected_transcripts: set[Path]
+    dropped_transcripts: set[Path]
 
 
 class OlxArchive:
@@ -466,7 +466,7 @@ class OlxArchive:
         excluded.difference_update(referenced)
         # One transcript per video: the others stay out even when something
         # names them, as the video XML names every language's file
-        excluded.update(self._block_scan.unselected_transcripts)
+        excluded.update(self._block_scan.dropped_transcripts)
         # Settings rather than content, but what they name (textbooks, the
         # course image) is shown, so they were still read as references above
         excluded.update(self.root.glob("policies/**/*"))
@@ -669,17 +669,19 @@ class OlxArchive:
             files.update(bodies)
         if tag == "video":
             files.update(
-                transcript.path for transcript in self._transcript_files(element)
+                transcript.path for transcript in self._declared_transcripts(element)
             )
         return files
 
-    def _transcript_files(self, video: Element) -> list[_Transcript]:
+    def _declared_transcripts(self, video: Element) -> list[_Transcript]:
         """
-        Return the files a video's <transcript> elements name, skipping any the
-        export doesn't have
+        Return the transcripts a video's <transcript> elements declare,
+        skipping any whose file the export doesn't have
         """
         return [
-            _Transcript(path, _language_code(transcript.get("language")), legacy=False)
+            _Transcript(
+                path, _normalize_language(transcript.get("language")), is_legacy=False
+            )
             for transcript in video.iter("transcript")
             if transcript.get("src")
             and (path := self.root / "static" / transcript.get("src")).is_file()
@@ -721,20 +723,21 @@ class OlxArchive:
         """_staff_only and the transcripts videos drop, from one walk of _blocks"""
         staff_files: dict[tuple[str, str], set[Path]] = {}
         reachable: set[tuple[str, str]] = set()
-        declared: set[Path] = set()
+        candidates: set[Path] = set()
         kept: set[Path] = set()
         for tag, url_name, element, staff_only, _release, _inline in self._blocks:
             if staff_only:
                 staff_files[tag, url_name] = self._block_files(tag, url_name, element)
                 continue
             reachable.add((tag, url_name))
-            if tag == "video" and (transcripts := self._video_transcripts(element)):
-                declared.update(transcript.path for transcript in transcripts)
-                best = min(
-                    transcripts,
-                    key=lambda t: _transcript_rank(t, self._course_language),
+            if tag == "video" and (transcripts := self._transcript_candidates(element)):
+                candidates.update(transcript.path for transcript in transcripts)
+                kept.add(
+                    min(
+                        transcripts,
+                        key=lambda t: _transcript_sort_key(t, self._course_language),
+                    ).path
                 )
-                kept.add(best.path)
         return _BlockScan(
             staff_only={
                 path
@@ -742,23 +745,22 @@ class OlxArchive:
                 if block not in reachable
                 for path in files
             },
-            unselected_transcripts=declared - kept,
+            dropped_transcripts=candidates - kept,
         )
 
-    def _video_transcripts(self, video: Element) -> list[_Transcript]:
+    def _transcript_candidates(self, video: Element) -> list[_Transcript]:
         """
-        Return the transcripts a video block declares that the export has: its
-        <transcript> files, and each legacy .srt.sjson named for one of its
-        video ids
+        Return the transcripts a video block chooses from: its declared ones,
+        and each legacy .srt.sjson named for one of its video ids
         """
-        return self._transcript_files(video) + [
+        return self._declared_transcripts(video) + [
             transcript
             for video_id in self._video_ids_of(video)
-            for transcript in self._legacy_transcripts.get(video_id, ())
+            for transcript in self._legacy_transcripts_by_video_id.get(video_id, ())
         ]
 
     @cached_property
-    def _legacy_transcripts(self) -> dict[str, list[_Transcript]]:
+    def _legacy_transcripts_by_video_id(self) -> dict[str, list[_Transcript]]:
         """Legacy transcripts in static/, by the normalized video id they name"""
         by_video_id = defaultdict(list)
         for path in self._static_files:
@@ -766,7 +768,9 @@ class OlxArchive:
             if legacy:
                 by_video_id[_normalize_asset_ref(legacy["video_id"])].append(
                     _Transcript(
-                        path, _language_code(legacy["language"]) or ENGLISH, legacy=True
+                        path,
+                        _normalize_language(legacy["language"]) or ENGLISH,
+                        is_legacy=True,
                     )
                 )
         return by_video_id
@@ -774,14 +778,14 @@ class OlxArchive:
     @cached_property
     def _course_language(self) -> str:
         """
-        The course's language (Studio's Course Language) as _language_code
-        writes it, from the course block or else its policy; "" when unset
+        The course's language (Studio's Course Language), normalized, from the
+        course block or else its policy; "" when unset
         """
         course = self._course
         language = self._resolve(course).get("language") if course is not None else None
         if not language:
             language = (self._course_policy or {}).get("language")
-        return _language_code(language) if isinstance(language, str) else ""
+        return _normalize_language(language) if isinstance(language, str) else ""
 
     @cached_property
     def _course_policy(self) -> dict | None:
