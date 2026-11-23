@@ -3,7 +3,7 @@ import type {
   UserlistsApiUserlistsItemsListRequest as ItemsListRequest,
   UserlistsApiUserlistsListRequest as ListRequest,
   PaginatedUserListRelationshipList,
-} from "../../generated/v1"
+} from "@mitodl/mit-learn-api-axios/v1"
 import { userListsApi } from "../../clients"
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query"
 import { toRelativeApiUrl } from "../../runtime/urls"

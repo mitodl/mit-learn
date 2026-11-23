@@ -1,6 +1,6 @@
 import { queryOptions } from "@tanstack/react-query"
 import { newsEventsApi } from "../../clients"
-import type { NewsEventsApiNewsEventsListRequest } from "../../generated/v0"
+import type { NewsEventsApiNewsEventsListRequest } from "@mitodl/mit-learn-api-axios/v0"
 
 const newsEventsKeys = {
   root: ["newsEvents"],

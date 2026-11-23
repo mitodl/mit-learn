@@ -17,7 +17,7 @@ import type {
   LearningResourcesApiLearningResourcesLearningPathsPartialUpdateRequest,
   LearningResourcesApiLearningResourcesItemsListRequest as ItemsListRequest,
   LearningResource,
-} from "../../generated/v1"
+} from "@mitodl/mit-learn-api-axios/v1"
 // import learningResources from "./keyFactory"
 import {
   learningResourceQueries,

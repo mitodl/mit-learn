@@ -3,7 +3,7 @@ import { channelsApi } from "../../clients"
 import type {
   ChannelsApiChannelsListRequest as FieldsApiListRequest,
   ChannelsApiChannelsTypeFeaturedListRequest as ChannelFeaturedListRequest,
-} from "../../generated/v0"
+} from "@mitodl/mit-learn-api-axios/v0"
 
 const channelKeys = {
   root: ["channel"],

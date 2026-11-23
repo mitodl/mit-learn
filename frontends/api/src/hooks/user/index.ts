@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import type { CurrentUser, User } from "../../generated/v0/api"
+import type { CurrentUser, User } from "@mitodl/mit-learn-api-axios/v0"
 import { userQueries } from "./queries"
 
 enum Permission {

@@ -1,7 +1,7 @@
 import { faker } from "@faker-js/faker/locale/en"
 import { makePaginatedFactory } from "ol-test-utilities"
 import type { Factory } from "ol-test-utilities"
-import type { WebsiteContent } from "../../generated/v1"
+import type { WebsiteContent } from "@mitodl/mit-learn-api-axios/v1"
 
 const websiteContent: Factory<WebsiteContent> = (overrides = {}) => {
   const title =
