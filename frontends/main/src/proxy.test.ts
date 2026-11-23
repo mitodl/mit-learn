@@ -13,6 +13,9 @@ describe("isPageRoute", () => {
     // Sitemaps are dynamically generated and tagged for purge-on-deploy.
     "/sitemaps/resources/sitemap/0.xml",
     "/sitemaps/sitemap-index.xml",
+    // The OCW course sitemap index has to sit at the site root, not under
+    // /sitemaps/, to list the sitemaps under /courses/o/.
+    "/sitemap-index-courses-o.xml",
   ])("treats %s as a page route", (pathname) => {
     expect(isPageRoute(pathname)).toBe(true)
   })
@@ -24,6 +27,8 @@ describe("isPageRoute", () => {
     "/favicon.ico",
     "/images/mit-dome-2.jpg",
     "/static/app.css",
+    // Only the known sitemap index is a page among root .xml files.
+    "/sitemap-index-other.xml",
     // Anything under the Next.js internals tree, regardless of extension —
     // including extensionless endpoints like the image optimizer.
     "/_next/static/chunk.js",
@@ -141,6 +146,16 @@ describe("proxy", () => {
     // s-maxage is in seconds, and comes from the configured CDN TTL.
     expect(response.headers.get("Cache-Control")).toBe(
       `s-maxage=${S_MAXAGE_SECONDS}, stale-if-error=86400, stale-while-revalidate=86400`,
+    )
+  })
+
+  test("caches the OCW course sitemap index like a page", () => {
+    const response = proxy(makeRequest("/sitemap-index-courses-o.xml"))
+    expect(response.headers.get("Cache-Control")).toBe(
+      `s-maxage=${S_MAXAGE_SECONDS}, stale-if-error=86400, stale-while-revalidate=86400`,
+    )
+    expect(response.headers.get("Surrogate-Key")).toBe(
+      "html-pages path:/sitemap-index-courses-o.xml",
     )
   })
 

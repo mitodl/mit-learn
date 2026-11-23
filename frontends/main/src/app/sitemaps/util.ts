@@ -27,7 +27,7 @@ export const dangerouslyDetectProductionBuildPhase = () => {
  * NOTE: this relies on NextJS emitting the url verbatim. If NextJS ever
  * starts escaping <loc> itself, this would double-escape.
  */
-const escapeSitemapUrl = (url: string) =>
+export const escapeSitemapUrl = (url: string) =>
   url
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
