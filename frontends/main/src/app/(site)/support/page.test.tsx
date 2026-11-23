@@ -44,7 +44,7 @@ describe("support page.tsx", () => {
   test("renders the Support page when the flag is on", async () => {
     enableFlag(true)
     renderWithProviders(await Page())
-    screen.getByRole("heading", { level: 1, name: "Support free education." })
+    screen.getByRole("heading", { level: 1, name: "Support open education." })
   })
 
   test("renders nothing until the flags have loaded", async () => {
@@ -76,9 +76,9 @@ describe("support page.tsx", () => {
   })
 
   test("sets the title and description metadata", () => {
-    expect(String(metadata.title)).toContain("Support free education")
+    expect(String(metadata.title)).toContain("Support open education")
     expect(metadata.description).toBe(
-      "Help MIT keep high-quality educational resources available to learners everywhere.",
+      "Help keep MIT’s high-quality educational resources available to learners everywhere.",
     )
   })
 })

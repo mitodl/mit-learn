@@ -46,13 +46,14 @@ const expectSameTab = (link: HTMLElement) => {
 const sectionOf = (name: string) =>
   screen.getByRole("heading", { level: 2, name }).closest("section")!
 
+/** In page order. */
 const SECTION_TITLES = {
-  initiatives:
-    "Learn more about how you can support MIT Open Learning’s transformative initiatives",
   letter: "A little support can open a world of possibility.",
   testimonial: "The impact of open education",
   metrics: "Opening education to the world.",
   reports: "Explore Open Learning's impact reports",
+  initiatives:
+    "Learn more about how you can support MIT Open Learning’s transformative initiatives",
 }
 
 const INITIATIVES = [
@@ -79,7 +80,7 @@ describe("SupportPage", () => {
       renderWithProviders(<SupportPage />)
       const h1s = screen.getAllByRole("heading", { level: 1 })
       expect(h1s).toHaveLength(1)
-      expect(h1s[0]).toHaveTextContent("Support free education.")
+      expect(h1s[0]).toHaveTextContent("Support open education.")
     })
 
     test("renders the sections in the design's order", () => {
@@ -87,8 +88,8 @@ describe("SupportPage", () => {
       const h2s = screen
         .getAllByRole("heading", { level: 2 })
         .map((el) => el.textContent)
-      // "Donate" is the hero's option card; the rest title the sections.
-      expect(h2s).toEqual(["Donate", ...Object.values(SECTION_TITLES)])
+      // "Give" is the hero's option card; the rest title the sections.
+      expect(h2s).toEqual(["Give", ...Object.values(SECTION_TITLES)])
     })
 
     test("every image has alt text, or an empty alt when decorative", () => {
@@ -113,7 +114,7 @@ describe("SupportPage", () => {
   describe("hero", () => {
     test("shows the subtitle and the captioned photo", () => {
       renderWithProviders(<SupportPage />)
-      screen.getByText(/Help MIT keep high-quality educational resources/)
+      screen.getByText(/Help keep MIT’s high-quality educational resources/)
       const photo = screen.getByRole("img", {
         name: "MIT learners working together at a whiteboard",
       })
@@ -124,7 +125,7 @@ describe("SupportPage", () => {
     test("the Donate option links to the giving fund in the same tab", () => {
       renderWithProviders(<SupportPage />)
       const option = screen
-        .getByRole("heading", { level: 2, name: "Donate" })
+        .getByRole("heading", { level: 2, name: "Give" })
         .closest("li")!
       within(option).getByText(
         "Support the continued availability of free and open MIT education.",
@@ -138,7 +139,7 @@ describe("SupportPage", () => {
       process.env.NEXT_PUBLIC_SUPPORT_SHARE_STORY_URL = SHARE_STORY_URL
       renderWithProviders(<SupportPage />)
       const donate = screen
-        .getByRole("heading", { level: 2, name: "Donate" })
+        .getByRole("heading", { level: 2, name: "Give" })
         .closest("li")!
       const options = within(donate.parentElement!).getAllByRole("listitem")
       expect(options).toHaveLength(2)
@@ -481,7 +482,7 @@ describe("SupportPage", () => {
         screen.queryByText("Has MIT helped you learn?"),
       ).not.toBeInTheDocument()
       // The rest of the page still renders.
-      screen.getByRole("heading", { level: 2, name: "Donate" })
+      screen.getByRole("heading", { level: 2, name: "Give" })
       screen.getByRole("link", { name: FREESIA_EXTRAS.storyLabel })
     })
   })
