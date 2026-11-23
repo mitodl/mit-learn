@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react"
+import dynamic from "next/dynamic"
 import styled from "@emotion/styled"
 import type { ImageConfig, LearningResourceCardProps } from "ol-components"
 import { ResourceTypeEnum } from "api"
@@ -9,7 +10,6 @@ import type { User } from "api/hooks/user"
 import TitleSection from "./TitleSection"
 import CallToActionSection from "./CallToActionSection"
 import ResourceDescription from "./ResourceDescription"
-import PracticeProblemSection from "./PracticeProblemSection"
 import { FeatureFlags } from "@/common/feature_flags"
 import AiSyllabusBotSlideDown, {
   AiChatSyllabusOpener,
@@ -17,6 +17,12 @@ import AiSyllabusBotSlideDown, {
 } from "./AiChatSyllabusSlideDown"
 import { RESOURCE_DRAWER_PARAMS } from "@/common/urls"
 import { useFeatureFlag } from "@/common/useFeatureFlag"
+
+/**
+ * Loaded on demand: it pulls in KaTeX, rehype-katex, remark-gfm and the KaTeX
+ * CSS, which only practice problems need.
+ */
+const PracticeProblemSection = dynamic(() => import("./PracticeProblemSection"))
 
 const Outer = styled.div(({ theme }) => ({
   display: "flex",
