@@ -293,10 +293,11 @@ class _Transcript(NamedTuple):
 def _transcript_sort_key(transcript: _Transcript, course_language: str) -> tuple:
     """
     Sort key of a video's transcripts; the lowest is the one ingested. English
-    comes first, then a regional English, the course's language and any other.
-    In each of those, a <transcript> file comes before a legacy .sjson, which
-    edX leaves behind from before edx-val. Ties go to the lower language code,
-    then filename, so every load keeps the same file.
+    comes first, then a regional English, the course's language, a regional or
+    script variant of it (es-419 in an es course, zh in a zh-hans one) and any
+    other. In each of those, a <transcript> file comes before a legacy .sjson,
+    which edX leaves behind from before edx-val. Ties go to the lower language
+    code, then filename, so every load keeps the same file.
     """
     language = transcript.language
     if language == ENGLISH:
@@ -305,8 +306,14 @@ def _transcript_sort_key(transcript: _Transcript, course_language: str) -> tuple
         rank = 1
     elif language and language == course_language:
         rank = 2
-    else:
+    elif (
+        language
+        and course_language
+        and language.partition("-")[0] == course_language.partition("-")[0]
+    ):
         rank = 3
+    else:
+        rank = 4
     return rank, transcript.is_legacy, language, transcript.path.name
 
 

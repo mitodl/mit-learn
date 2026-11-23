@@ -1336,6 +1336,12 @@ def _ingested_static_files(olx):
         # then the course's own language
         (["de", "fr"], "fr", "fr"),
         (["de", "fr", "en"], "fr", "en"),
+        # then a regional or script variant of it, either way round
+        (["de", "es_419"], "es", "es_419"),
+        (["de", "es"], "es-419", "es"),
+        (["ar", "zh"], "zh_HANS", "zh"),
+        (["es_419", "es"], "es", "es"),
+        (["es_419", "en"], "es", "en"),
         # then the lowest code, so every load keeps the same file
         (["fr", "de"], "", "de"),
         (["fr", "de"], "pt", "de"),
