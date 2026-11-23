@@ -20,6 +20,7 @@ import type { VideoResource } from "api/v1"
 import type { VideoJsPlayerProps } from "./VideoJsPlayer"
 import { analytics } from "@/common/analytics"
 import type Player from "video.js/dist/types/player"
+import { VIDEO_SHORT_CATEGORY } from "@/common/constants"
 
 const VideoJsPlayer = dynamic<VideoJsPlayerProps>(
   () => import("./VideoJsPlayer"),
@@ -43,7 +44,7 @@ const Wrapper = styled("div", {
 })<{ videoAspectRatio?: number }>(({ theme, videoAspectRatio }) => ({
   width: "100%",
   aspectRatio: "16/9",
-  // Once the video reports its size, match it. Set as a class rather than an
+  // The expected or reported shape of the video. Set as a class rather than an
   // inline style so pages that size the player themselves (the embed page)
   // still override it.
   ...(videoAspectRatio ? { aspectRatio: String(videoAspectRatio) } : {}),
@@ -156,13 +157,21 @@ const VideoResourcePlayer = React.forwardRef<
     ref,
   ) => {
     const vjsPlayerRef = useRef<Player | null>(null)
-    // Keyed by video so a new video starts at 16:9 again until it reports.
+    // Keyed by video so a new video starts at its expected shape again until
+    // it reports its own.
     const [measured, setMeasured] = useState<{
       videoId: number
       aspectRatio: number
     } | null>(null)
+    // The API doesn't carry a video's dimensions, so before it reports them,
+    // shorts start at 9:16 and everything else at 16:9. That avoids a layout
+    // shift for the videos we have; a wrong guess is corrected on report.
     const videoAspectRatio =
-      measured?.videoId === videoId ? measured.aspectRatio : undefined
+      measured?.videoId === videoId
+        ? measured.aspectRatio
+        : video?.resource_category === VIDEO_SHORT_CATEGORY
+          ? 9 / 16
+          : undefined
     const onVideoDimensions = useCallback(
       (width: number, height: number) =>
         setMeasured({ videoId, aspectRatio: width / height }),
@@ -218,7 +227,6 @@ const VideoResourcePlayer = React.forwardRef<
         aria-describedby={ariaDescribedBy}
         className={className}
         videoAspectRatio={videoAspectRatio}
-        data-video-aspect-ratio={videoAspectRatio}
       >
         {isLoading ? (
           <div

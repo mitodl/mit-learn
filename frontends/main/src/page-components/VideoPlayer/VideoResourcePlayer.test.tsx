@@ -3,6 +3,7 @@ import { factories } from "api/test-utils"
 import { act, renderWithProviders, screen } from "@/test-utils"
 import { ResourceTypeEnum } from "api/v1"
 import type { VideoResource } from "api/v1"
+import { VIDEO_SHORT_CATEGORY } from "@/common/constants"
 import VideoResourcePlayer from "./VideoResourcePlayer"
 
 // Stub VideoJsPlayer to avoid loading video.js in the test environment.
@@ -46,8 +47,9 @@ const playerFor = (video: VideoResource) => (
 const renderPlayer = (video: VideoResource) =>
   renderWithProviders(playerFor(video))
 
-const makeStreamingVideo = () =>
+const makeStreamingVideo = (overrides: Partial<VideoResource> = {}) =>
   makeVideo({
+    ...overrides,
     video: {
       id: 1,
       caption_urls: [],
@@ -213,49 +215,76 @@ describe("VideoResourcePlayer", () => {
   })
 
   describe("sizing to the video", () => {
-    // happy-dom doesn't compute aspect-ratio or min() widths, so these check
-    // the ratio the player is sized to rather than the resulting CSS.
-    const sizedTo = () => playerRegion().getAttribute("data-video-aspect-ratio")
+    /** The player's own rules, joined, e.g. to match its aspect-ratio. */
+    const ownRules = () => playerRules().own.join("\n")
+    const aspectRatio = () => ownRules().match(/aspect-ratio: ([^;]+);/)?.[1]
+    const PORTRAIT_WIDTH =
+      /width: min\(100%, max\(240px, calc\(80vh \* 0\.5625\)\)\)/
 
     beforeEach(() => {
       reportDimensions = undefined
     })
 
-    test("stays at the default 16:9 until the video reports its size", async () => {
+    test("starts at 16:9 until the video reports its size", async () => {
       renderPlayer(makeStreamingVideo())
       await screen.findByTestId("video-js-player")
-      expect(sizedTo()).toBeNull()
+      expect(aspectRatio()).toBe("16/9")
+      expect(ownRules()).not.toMatch(/80vh/)
     })
 
-    test("takes a vertical video's shape once it reports", async () => {
+    test("starts a video short at 9:16, height-capped, before it reports", async () => {
+      renderPlayer(
+        makeStreamingVideo({ resource_category: VIDEO_SHORT_CATEGORY }),
+      )
+      await screen.findByTestId("video-js-player")
+      expect(reportDimensions).toBeDefined()
+      expect(aspectRatio()).toBe("0.5625")
+      expect(ownRules()).toMatch(PORTRAIT_WIDTH)
+    })
+
+    test("a video short that reports landscape takes the reported shape", async () => {
+      renderPlayer(
+        makeStreamingVideo({ resource_category: VIDEO_SHORT_CATEGORY }),
+      )
+      await screen.findByTestId("video-js-player")
+      act(() => reportDimensions!(1920, 1080))
+      expect(aspectRatio()).toBe(String(1920 / 1080))
+      expect(ownRules()).not.toMatch(/80vh/)
+    })
+
+    test("caps a reported portrait player's height, with a minimum width", async () => {
       renderPlayer(makeStreamingVideo())
       await screen.findByTestId("video-js-player")
-      const before = playerRegion().className
       act(() => reportDimensions!(540, 960))
-      expect(sizedTo()).toBe(String(540 / 960))
-      // The new size comes from a class, not an inline style, so pages that
-      // size the player themselves can still override it.
-      expect(playerRegion().className).not.toBe(before)
+      expect(aspectRatio()).toBe("0.5625")
+      // At most 80vh tall, but never narrow enough for video.js's "tiny"
+      // layout, which drops the progress bar.
+      expect(ownRules()).toMatch(PORTRAIT_WIDTH)
+      expect(ownRules()).toMatch(/margin-inline: auto/)
+      // The size comes from a class, not an inline style, so pages that size
+      // the player themselves can still override it.
       expect(playerRegion()).not.toHaveAttribute("style")
     })
 
-    test("takes a landscape video's own ratio", async () => {
+    test("keeps a reported landscape player full width at its own ratio", async () => {
       renderPlayer(makeStreamingVideo())
       await screen.findByTestId("video-js-player")
       act(() => reportDimensions!(1440, 1080))
-      expect(sizedTo()).toBe(String(1440 / 1080))
+      expect(aspectRatio()).toBe(String(1440 / 1080))
+      expect(ownRules()).not.toMatch(/80vh/)
+      expect(ownRules()).not.toMatch(/margin-inline/)
     })
 
-    test("goes back to 16:9 for the next video until it reports", async () => {
+    test("goes back to the expected shape for the next video until it reports", async () => {
       const first = makeStreamingVideo()
       const { view } = renderPlayer(first)
       await screen.findByTestId("video-js-player")
       act(() => reportDimensions!(540, 960))
-      expect(sizedTo()).not.toBeNull()
+      expect(aspectRatio()).toBe("0.5625")
 
       view.rerender(playerFor({ ...makeStreamingVideo(), id: first.id + 1 }))
       await screen.findByTestId("video-js-player")
-      expect(sizedTo()).toBeNull()
+      expect(aspectRatio()).toBe("16/9")
     })
 
     test("keeps the progress bar on narrow players", async () => {
@@ -274,30 +303,6 @@ describe("VideoResourcePlayer", () => {
           ),
         ]),
       )
-    })
-
-    test("caps a portrait player's height, with a minimum width", async () => {
-      renderPlayer(makeStreamingVideo())
-      await screen.findByTestId("video-js-player")
-      act(() => reportDimensions!(540, 960))
-      const own = playerRules().own.join("\n")
-      expect(own).toMatch(/aspect-ratio: 0\.5625/)
-      // At most 80vh tall, but never narrow enough for video.js's "tiny"
-      // layout, which drops the progress bar.
-      expect(own).toMatch(
-        /width: min\(100%, max\(240px, calc\(80vh \* 0\.5625\)\)\)/,
-      )
-      expect(own).toMatch(/margin-inline: auto/)
-    })
-
-    test("keeps a landscape player full width", async () => {
-      renderPlayer(makeStreamingVideo())
-      await screen.findByTestId("video-js-player")
-      act(() => reportDimensions!(1440, 1080))
-      const own = playerRules().own.join("\n")
-      expect(own).toMatch(new RegExp(`aspect-ratio: ${1440 / 1080}`))
-      expect(own).not.toMatch(/80vh/)
-      expect(own).not.toMatch(/margin-inline/)
     })
 
     test("YouTube videos stay 16:9", async () => {
@@ -320,7 +325,7 @@ describe("VideoResourcePlayer", () => {
       )
       await screen.findByTitle(/^Video: /)
       expect(reportDimensions).toBeUndefined()
-      expect(sizedTo()).toBeNull()
+      expect(aspectRatio()).toBe("16/9")
     })
   })
 })
