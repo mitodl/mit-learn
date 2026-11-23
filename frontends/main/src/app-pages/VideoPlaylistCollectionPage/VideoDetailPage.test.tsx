@@ -2,12 +2,13 @@ import React from "react"
 import user from "@testing-library/user-event"
 import { setMockResponse, urls, factories } from "api/test-utils"
 import { absoluteUrl, videoDetailPath } from "@/common/urls"
-import { renderWithProviders, screen } from "@/test-utils"
+import { renderWithProviders, screen, within } from "@/test-utils"
 import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import VideoDetailPage from "./VideoDetailPage"
 import { ResourceTypeEnum } from "api/v1"
 import type { VideoResource, VideoPlaylistResource } from "api/v1"
+import { VIDEO_SHORT_CATEGORY } from "@/common/constants"
 
 jest.mock("@/common/useFeatureFlag")
 const mockedUseFeatureFlag = jest.mocked(useFeatureFlag)
@@ -120,6 +121,38 @@ describe("VideoDetailPage", () => {
       "href",
       videoDetailPath(sibling.id, 99, sibling.url_slug),
     )
+  })
+
+  test("'more from this playlist' shows shorts as a grid of four cards", async () => {
+    const makeShort = () =>
+      makeVideo({ resource_category: VIDEO_SHORT_CATEGORY })
+    const [current, ...siblings] = Array.from({ length: 7 }, makeShort)
+    renderPage({
+      video: current,
+      playlistId: 99,
+      playlistItems: [current, ...siblings],
+    })
+
+    await screen.findByText(siblings[0].title)
+    const section = document.getElementById("more-from-playlist")!
+    const cards = within(section).getAllByRole("listitem")
+    expect(cards).toHaveLength(4)
+    cards.forEach((card, i) => {
+      expect(
+        within(card).getByRole("link", {
+          name: new RegExp(`^${siblings[i].title}`),
+        }),
+      ).toHaveAttribute(
+        "href",
+        videoDetailPath(siblings[i].id, 99, siblings[i].url_slug),
+      )
+    })
+    // The rows used for regular videos aren't shown.
+    expect(
+      within(section).queryByRole("link", { name: /^Open video / }),
+    ).not.toBeInTheDocument()
+    // 7 videos: the current one and four cards leave two unseen.
+    within(section).getByRole("link", { name: /^View all videos in / })
   })
 
   test("renders the video title once data is loaded", async () => {

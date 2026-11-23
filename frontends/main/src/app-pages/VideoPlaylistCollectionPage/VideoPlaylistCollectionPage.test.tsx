@@ -1,9 +1,12 @@
 import React from "react"
 import { setMockResponse, urls, factories } from "api/test-utils"
 import { videoDetailPath } from "@/common/urls"
-import { renderWithProviders, screen } from "@/test-utils"
+import { renderWithProviders, screen, within } from "@/test-utils"
 import VideoPage from "./VideoPlaylistCollectionPage"
 import { ResourceTypeEnum } from "api/v1"
+import type { VideoResource } from "api/v1"
+import { VIDEO_SHORT_CATEGORY } from "@/common/constants"
+import { formatDurationClockTime } from "ol-utilities"
 
 jest.mock("next-nprogress-bar", () => ({
   useRouter: () => ({}),
@@ -22,7 +25,9 @@ const makeSeriesPlaylist = () =>
     offered_by: { code: "ocw", name: "OCW", channel_url: null },
   })
 
-const makeVideo = (overrides: { title?: string } = {}) =>
+const makeVideo = (
+  overrides: { title?: string; resource_category?: string } = {},
+) =>
   factories.learningResources.resource({
     resource_type: ResourceTypeEnum.Video,
     ...overrides,
@@ -254,6 +259,55 @@ describe("VideoPage", () => {
         "href",
         videoDetailPath(featured.id, playlist.id, featured.url_slug),
       )
+    })
+  })
+
+  describe("shorts playlist", () => {
+    const makeShort = (title: string) =>
+      makeVideo({ title, resource_category: VIDEO_SHORT_CATEGORY })
+
+    test("shows every short as a card in a grid, without a featured video", async () => {
+      const playlist = makePlaylist()
+      const shorts = [makeShort("Short One"), makeShort("Short Two")]
+      setupApis({ playlistId: playlist.id, videos: shorts, playlist })
+
+      renderWithProviders(<VideoPage playlistId={playlist.id} />)
+
+      const grid = await screen.findByRole("region", { name: "Videos" })
+      const cards = within(grid).getAllByRole("listitem")
+      expect(cards).toHaveLength(2)
+      shorts.forEach((short, i) => {
+        // Each short appears once: in its card, not also as a featured video.
+        expect(screen.getAllByText(short.title)).toHaveLength(1)
+        // Named by its title, then its duration.
+        expect(
+          within(cards[i]).getByRole("link", {
+            name: `${short.title} (${formatDurationClockTime((short as VideoResource).video!.duration!)})`,
+          }),
+        ).toHaveAttribute(
+          "href",
+          videoDetailPath(short.id, playlist.id, short.url_slug),
+        )
+      })
+    })
+
+    test("a playlist mixing shorts and regular videos keeps the regular layout", async () => {
+      const playlist = makePlaylist()
+      const featured = makeVideo({ title: "Featured Video" })
+      setupApis({
+        playlistId: playlist.id,
+        videos: [featured, makeShort("A Short")],
+        playlist,
+      })
+
+      renderWithProviders(<VideoPage playlistId={playlist.id} />)
+
+      await screen.findByText("A Short")
+      // desktop-title + mobile-title spans of the featured video
+      expect(screen.getAllByText(featured.title)).toHaveLength(2)
+      expect(
+        screen.queryByRole("region", { name: "Videos" }),
+      ).not.toBeInTheDocument()
     })
   })
 

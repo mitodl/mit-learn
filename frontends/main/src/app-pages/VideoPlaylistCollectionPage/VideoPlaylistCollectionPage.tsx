@@ -21,6 +21,7 @@ import FeaturedVideo from "./FeaturedVideo"
 import VideoCollection from "./VideoCollection"
 import RelatedPlaylist from "./RelatedPlaylist"
 import VideoContainer from "./VideoContainer"
+import ShortsGrid, { isShortsList } from "./ShortsGrid"
 
 const Page = styled.div(({ theme }) => ({
   backgroundColor: theme.custom.colors.lightGray1,
@@ -106,6 +107,7 @@ const VideoPlaylistCollectionPage: React.FC<
       item.resource_type === VideoResourceResourceTypeEnum.Video,
   )
   const playlistType = isOcwPlaylist(playlist)
+  const isShortsPlaylist = !playlistType && isShortsList(videos)
 
   const totalVideoSeconds = videos.reduce((acc, video) => {
     const duration = video.video?.duration ?? ""
@@ -135,6 +137,8 @@ const VideoPlaylistCollectionPage: React.FC<
 
       {isLoading ? (
         <Skeleton variant="rectangular" width="100%" height={460} />
+      ) : isShortsPlaylist ? (
+        <ShortsGrid videos={videos} getHref={getVideoHref} />
       ) : videos.length > 0 ? (
         <FeaturedVideo
           video={videos[0]}
@@ -144,7 +148,7 @@ const VideoPlaylistCollectionPage: React.FC<
           totalTime={totalTime}
         />
       ) : null}
-      {!playlistType && (
+      {!playlistType && !isShortsPlaylist && (
         <VideoCollection
           videos={videos.slice(1)} // 0th video is featured prominently
           isLoading={isLoading}
