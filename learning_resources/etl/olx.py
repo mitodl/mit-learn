@@ -290,31 +290,21 @@ class _Transcript(NamedTuple):
     is_legacy: bool  # a .srt.sjson named for the video id, not a <transcript> file
 
 
-def _transcript_sort_key(transcript: _Transcript, course_language: str) -> tuple:
+def _transcript_sort_key(transcript: _Transcript) -> tuple:
     """
-    Sort key of a video's transcripts; the lowest is the one ingested. English
-    comes first, then a regional English, the course's language, a regional or
-    script variant of it (es-419 in an es course, zh in a zh-hans one) and any
-    other. In each of those, a <transcript> file comes before a legacy .sjson,
-    which edX leaves behind from before edx-val. Ties go to the lower language
-    code, then filename, so every load keeps the same file.
+    Sort key of a video's transcripts; the lowest is the one ingested. English,
+    regional or not, comes first. Then a <transcript> file comes before a legacy
+    .sjson, which edX leaves behind from before edx-val. Ties go to the lower
+    language code (en before en-gb), then filename, so every load keeps the
+    same file.
     """
-    language = transcript.language
-    if language == ENGLISH:
-        rank = 0
-    elif language.startswith(f"{ENGLISH}-"):
-        rank = 1
-    elif language and language == course_language:
-        rank = 2
-    elif (
-        language
-        and course_language
-        and language.partition("-")[0] == course_language.partition("-")[0]
-    ):
-        rank = 3
-    else:
-        rank = 4
-    return rank, transcript.is_legacy, language, transcript.path.name
+    is_english = transcript.language.partition("-")[0] == ENGLISH
+    return (
+        not is_english,
+        transcript.is_legacy,
+        transcript.language,
+        transcript.path.name,
+    )
 
 
 def _parse_video_transcripts(
@@ -739,12 +729,7 @@ class OlxArchive:
             reachable.add((tag, url_name))
             if tag == "video" and (transcripts := self._transcript_candidates(element)):
                 candidates.update(transcript.path for transcript in transcripts)
-                kept.add(
-                    min(
-                        transcripts,
-                        key=lambda t: _transcript_sort_key(t, self._course_language),
-                    ).path
-                )
+                kept.add(min(transcripts, key=_transcript_sort_key).path)
         return _BlockScan(
             staff_only={
                 path
@@ -781,18 +766,6 @@ class OlxArchive:
                     )
                 )
         return by_video_id
-
-    @cached_property
-    def _course_language(self) -> str:
-        """
-        The course's language (Studio's Course Language), normalized, from the
-        course block or else its policy; "" when unset
-        """
-        course = self._course
-        language = self._resolve(course).get("language") if course is not None else None
-        if not language:
-            language = (self._course_policy or {}).get("language")
-        return _normalize_language(language) if isinstance(language, str) else ""
 
     @cached_property
     def _course_policy(self) -> dict | None:

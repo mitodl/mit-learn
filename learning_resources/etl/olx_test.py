@@ -1289,7 +1289,6 @@ def _video_olx(
     transcripts,
     *,
     video_attrs="",
-    course_language="",
     other_videos="",
     **static_files,
 ):
@@ -1300,10 +1299,6 @@ def _video_olx(
     """
     olx = _reference_olx(
         tmp_path, **{name: SRT for _language, name in transcripts}, **static_files
-    )
-    language = f'language="{course_language}"' if course_language else ""
-    _write_olx(
-        olx, "course/run.xml", f'<course {language}><chapter url_name="ch"/></course>'
     )
     _write_olx(
         olx,
@@ -1327,41 +1322,27 @@ def _ingested_static_files(olx):
 
 
 @pytest.mark.parametrize(
-    ("languages", "course_language", "kept"),
+    ("languages", "kept"),
     [
         # English wins wherever edX lists it
-        (["ar", "en", "es", "fr", "zh_HANS"], "", "en"),
+        (["ar", "en", "es", "fr", "zh_HANS"], "en"),
         # then a regional English, the lower code first
-        (["es", "en_US", "en-GB"], "", "en-GB"),
-        # then the course's own language
-        (["de", "fr"], "fr", "fr"),
-        (["de", "fr", "en"], "fr", "en"),
-        # then a regional or script variant of it, either way round
-        (["de", "es_419"], "es", "es_419"),
-        (["de", "es"], "es-419", "es"),
-        (["ar", "zh"], "zh_HANS", "zh"),
-        (["es_419", "es"], "es", "es"),
-        (["es_419", "en"], "es", "en"),
+        (["es", "en_US", "en-GB"], "en-GB"),
         # then the lowest code, so every load keeps the same file
-        (["fr", "de"], "", "de"),
-        (["fr", "de"], "pt", "de"),
+        (["fr", "de"], "de"),
         # a transcript without a language ranks with the other languages, and
         # its empty code sorts first
-        ([None, "pt"], "", None),
-        ([None, "en"], "", "en"),
+        ([None, "pt"], None),
+        ([None, "en"], "en"),
         # a video's only transcript is kept, whatever its language
-        (["ja"], "", "ja"),
-        ([None], "", None),
+        (["ja"], "ja"),
+        ([None], None),
     ],
 )
-def test_olx_archive_keeps_one_transcript_per_video(
-    tmp_path, languages, course_language, kept
-):
+def test_olx_archive_keeps_one_transcript_per_video(tmp_path, languages, kept):
     """A video with transcripts in several languages is ingested once"""
     olx = _video_olx(
-        tmp_path,
-        [(language, f"vid-{language}.srt") for language in languages],
-        course_language=course_language,
+        tmp_path, [(language, f"vid-{language}.srt") for language in languages]
     )
     assert _ingested_static_files(olx) == [f"vid-{kept}.srt"]
 
@@ -1373,17 +1354,6 @@ def test_olx_archive_excludes_a_videos_other_languages(tmp_path):
     assert OlxArchive(olx).excluded_keys(run) == {
         get_edx_module_id("static/vid-es.srt", run)
     }
-
-
-def test_olx_archive_reads_the_course_language_from_its_policy(tmp_path):
-    """Studio also saves the course's language in its policy"""
-    olx = _video_olx(tmp_path, [("de", "vid-de.srt"), ("fr", "vid-fr.srt")])
-    _write_olx(
-        olx,
-        "policies/run/policy.json",
-        json.dumps({"course/run": {"language": "fr"}}),
-    )
-    assert _ingested_static_files(olx) == ["vid-fr.srt"]
 
 
 @pytest.mark.parametrize(
@@ -1406,6 +1376,8 @@ def test_olx_archive_reads_the_course_language_from_its_policy(tmp_path):
         ([("fr", "vid-fr.srt")], ["de_subs_AbC123.srt.sjson"], "vid-fr.srt"),
         # but English, legacy or not, comes first
         ([("fr", "vid-fr.srt")], ["subs_AbC123.srt.sjson"], "subs_AbC123.srt.sjson"),
+        # a regional English is English, so its <transcript> file is current
+        ([("en_GB", "vid-en_GB.srt")], ["subs_AbC123.srt.sjson"], "vid-en_GB.srt"),
     ],
 )
 def test_olx_archive_ranks_legacy_transcripts(
