@@ -7,7 +7,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("learning_resources", "0141_unit_run_position_idx"),
+        ("learning_resources", "0142_drop_learningresourcerun_is_b2b"),
     ]
 
     operations = [

@@ -3,7 +3,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("learning_resources", "0142_practice_problem"),
+        ("learning_resources", "0143_practice_problem"),
     ]
 
     operations = [
