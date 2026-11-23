@@ -243,6 +243,56 @@ describe.each([
     expect(within(getCard()).getByTestId("courseware-button")).toBeDisabled()
   })
 
+  test("CTA is disabled when the displayed run is archived", () => {
+    setupUserApis()
+    // Ended but still open for enrollment, as mitxonline's archived runs are.
+    const archivedRun = mitxonline.factories.courses.courseRun({
+      is_enrollable: true,
+      start_date: moment().subtract(200, "days").toISOString(),
+      end_date: moment().subtract(100, "days").toISOString(),
+    })
+    const course = mitxOnlineCourse({
+      courseruns: [archivedRun],
+      next_run_id: archivedRun.id,
+    })
+
+    renderWithProviders(
+      <UnenrolledCourseCard course={course} displayedRun={archivedRun} />,
+    )
+
+    const card = getCard()
+    expect(within(card).getByTestId("courseware-button")).toBeDisabled()
+    expect(
+      within(card).queryByRole("button", { name: archivedRun.title }),
+    ).not.toBeInTheDocument()
+  })
+
+  test("without a displayed run, offers an upcoming run over an archived next run", () => {
+    setupUserApis()
+    const archivedRun = mitxonline.factories.courses.courseRun({
+      is_enrollable: true,
+      start_date: moment().subtract(200, "days").toISOString(),
+      end_date: moment().subtract(100, "days").toISOString(),
+    })
+    const upcomingRun = mitxonline.factories.courses.courseRun({
+      is_enrollable: true,
+      start_date: moment().add(30, "days").toISOString(),
+      end_date: moment().add(120, "days").toISOString(),
+    })
+    const course = mitxOnlineCourse({
+      courseruns: [archivedRun, upcomingRun],
+      next_run_id: archivedRun.id,
+    })
+
+    renderWithProviders(<UnenrolledCourseCard course={course} />)
+
+    const card = getCard()
+    expect(within(card).getByTestId("courseware-button")).toBeEnabled()
+    expect(
+      within(card).getByRole("button", { name: upcomingRun.title }),
+    ).toBeInTheDocument()
+  })
+
   test("uses displayedRun title when provided", () => {
     setupUserApis()
     const defaultRun = mitxonline.factories.courses.courseRun({
@@ -865,6 +915,84 @@ describe.each([
       },
     )
 
+    describe("with an archived run", () => {
+      const freeMode = () =>
+        mitxonline.factories.courses.enrollmentMode({ requires_payment: false })
+      // Ended but still open for enrollment, as mitxonline's archived runs are.
+      const archivedRun = () =>
+        mitxonline.factories.courses.courseRun({
+          b2b_contract: null,
+          is_enrollable: true,
+          start_date: moment().subtract(200, "days").toISOString(),
+          end_date: moment().subtract(100, "days").toISOString(),
+          enrollment_modes: [freeMode()],
+        })
+      const upcomingRun = () =>
+        mitxonline.factories.courses.courseRun({
+          b2b_contract: null,
+          is_enrollable: true,
+          start_date: moment().add(30, "days").toISOString(),
+          end_date: moment().add(120, "days").toISOString(),
+          enrollment_modes: [freeMode()],
+        })
+
+      test("enrolls in the only run that hasn't ended, without the dialog", async () => {
+        setMockResponse.get(mitxonline.urls.userMe.get(), mitxUser())
+        const archived = archivedRun()
+        const upcoming = upcomingRun()
+        const course = mitxOnlineCourse({
+          courseruns: [archived, upcoming],
+          next_run_id: archived.id,
+        })
+        const enrollmentUrl = mitxonline.urls.enrollment.enrollmentsListV1()
+        setMockResponse.post(enrollmentUrl, {})
+        setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
+
+        renderWithProviders(<UnenrolledCourseCard course={course} />)
+        await user.click(within(getCard()).getByTestId("courseware-button"))
+
+        await waitFor(() => {
+          expect(makeRequest).toHaveBeenCalledWith(
+            expect.objectContaining({
+              method: "post",
+              url: enrollmentUrl,
+              body: expect.objectContaining({ run_id: upcoming.id }),
+            }),
+          )
+        })
+        expect(
+          screen.queryByRole("dialog", { name: course.title }),
+        ).not.toBeInTheDocument()
+      })
+
+      test("leaves the archived run out of the enrollment dialog", async () => {
+        setMockResponse.get(mitxonline.urls.userMe.get(), mitxUser())
+        const archived = archivedRun()
+        const upcoming = upcomingRun()
+        const later = {
+          ...upcomingRun(),
+          start_date: moment().add(200, "days").toISOString(),
+          end_date: moment().add(300, "days").toISOString(),
+        }
+        const course = mitxOnlineCourse({
+          courseruns: [archived, upcoming, later],
+          next_run_id: archived.id,
+        })
+
+        renderWithProviders(<UnenrolledCourseCard course={course} />)
+        await user.click(within(getCard()).getByTestId("courseware-button"))
+        const dialog = await screen.findByRole("dialog", {
+          name: course.title,
+        })
+        await user.click(
+          within(dialog).getByRole("combobox", { name: /choose a date/i }),
+        )
+
+        // "Please Select" plus the two runs that haven't ended.
+        expect(await screen.findAllByRole("option")).toHaveLength(3)
+      })
+    })
+
     test.each(START_DATE_CASES)(
       "Free single-run enrollment $case",
       async ({ startDate, expectRedirect }) => {
@@ -1459,5 +1587,66 @@ describe.each([
       card.queryByRole("button", { name: run.title }),
     ).not.toBeInTheDocument()
     expect(card.getByTestId("courseware-button")).toBeDisabled()
+  })
+})
+
+describe("UnenrolledCourseCard details menu", () => {
+  setupLocationMock()
+
+  const getDesktopCard = () => screen.getByTestId("enrollment-card-desktop")
+
+  const setupCourse = (pageLive: boolean) => {
+    // Archived, so Start is disabled: the menu is the card's way to the page.
+    const run = mitxonline.factories.courses.courseRun({
+      b2b_contract: null,
+      is_enrollable: true,
+      start_date: moment().subtract(200, "days").toISOString(),
+      end_date: moment().subtract(100, "days").toISOString(),
+    })
+    const course = mitxOnlineCourse({
+      readable_id: "course-v1:MITx+1.00x",
+      courseruns: [run],
+      next_run_id: run.id,
+      include_in_learn_catalog: pageLive,
+    })
+    return {
+      ...course,
+      page: course.page && { ...course.page, live: pageLive },
+    }
+  }
+
+  test("links to the course page when it is live", async () => {
+    setupUserApis()
+    renderWithProviders(<UnenrolledCourseCard course={setupCourse(true)} />)
+
+    expect(
+      within(getDesktopCard()).getByTestId("courseware-button"),
+    ).toBeDisabled()
+    await user.click(
+      within(getDesktopCard()).getByRole("button", { name: "More options" }),
+    )
+    expect(
+      screen.getByRole("menuitem", { name: "View Course Details" }),
+    ).toHaveAttribute("href", "/courses/course-v1:MITx+1.00x")
+  })
+
+  test("has no menu when the course page is not live", () => {
+    setupUserApis()
+    renderWithProviders(<UnenrolledCourseCard course={setupCourse(false)} />)
+
+    expect(
+      within(getDesktopCard()).queryByRole("button", { name: "More options" }),
+    ).not.toBeInTheDocument()
+  })
+
+  test("has no menu on a contract card", () => {
+    setupUserApis()
+    renderWithProviders(
+      <UnenrolledCourseCard course={setupCourse(true)} contractId={7} />,
+    )
+
+    expect(
+      within(getDesktopCard()).queryByRole("button", { name: "More options" }),
+    ).not.toBeInTheDocument()
   })
 })
