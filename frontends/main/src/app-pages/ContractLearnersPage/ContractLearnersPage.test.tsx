@@ -741,6 +741,24 @@ describe("ContractLearnersPage", () => {
       ).toBeInTheDocument()
     })
 
+    test("counts Completed over the selected modules only", async () => {
+      const { contractId } = renderGrid(`/?modules=${encodeURIComponent(M6)}`)
+      mockGridPage(contractId, 0, [
+        ada({ course_readable_id: M5, completion_status: "passed" }),
+        ada({ course_readable_id: M6, completion_status: "in_progress" }),
+      ])
+
+      const dialog = await openSummary()
+
+      const progress = within(dialog).getByRole("region", { name: "Progress" })
+      expect(statValue(progress, "Completed")).toHaveTextContent("0 of 1")
+      expect(
+        within(
+          within(dialog).getByRole("region", { name: "Modules" }),
+        ).getAllByRole("listitem"),
+      ).toHaveLength(1)
+    })
+
     test("shows refetched counts while the panel stays open", async () => {
       const { contractId, queryClient } = renderGrid()
       mockGridPage(contractId, 0, [

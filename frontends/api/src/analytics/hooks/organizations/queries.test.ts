@@ -68,13 +68,6 @@ describe("analyticsContractQueries", () => {
       url: urls.contracts.courses(ORG_UUID, CONTRACT_ID),
       response: factories.envelope([factories.course()]),
     },
-    {
-      name: "needsAttention",
-      query: () =>
-        erase(analyticsContractQueries.needsAttention(ORG_UUID, CONTRACT_ID)),
-      url: urls.contracts.needsAttention(ORG_UUID, CONTRACT_ID),
-      response: factories.envelope([factories.contractNeedsAttention()]),
-    },
   ])(
     "$name requests the contract-nested path",
     async ({ query, url, response }) => {

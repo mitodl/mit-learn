@@ -1,7 +1,6 @@
 import {
   ContractsApi,
   LearnersApi,
-  NeedsAttentionApi,
 } from "@mitodl/ol-analytics-dashboard-api-axios"
 import axiosInstance from "./axios"
 
@@ -14,10 +13,5 @@ const BASE_PATH = ""
 
 const contractsApi = new ContractsApi(undefined, BASE_PATH, axiosInstance)
 const learnersApi = new LearnersApi(undefined, BASE_PATH, axiosInstance)
-const needsAttentionApi = new NeedsAttentionApi(
-  undefined,
-  BASE_PATH,
-  axiosInstance,
-)
 
-export { contractsApi, learnersApi, needsAttentionApi }
+export { contractsApi, learnersApi }

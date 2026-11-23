@@ -5,7 +5,7 @@ import type {
   OrganizationsApiOrganizationsContractUtilizationRetrieveRequest,
   OrgAnalyticsResponseContractUtilization,
 } from "@mitodl/ol-analytics-dashboard-api-axios"
-import { contractsApi, learnersApi, needsAttentionApi } from "../../clients"
+import { contractsApi, learnersApi } from "../../clients"
 
 /**
  * LIMIT/OFFSET paging, shared by every multi-row endpoint. The API caps `limit`
@@ -279,28 +279,6 @@ const analyticsContractQueries = {
         learnersApi
           .learnersCoursesRetrieve(
             { organization_id: orgId, contract_id: contractId, ...page },
-            { signal },
-          )
-          .then((res) => res.data),
-    }),
-
-  /**
-   * On `learnerProgress`'s stale time, not the rollups': it is computed from
-   * the same rows at query time, and the count should not lag the directory a
-   * manager clicks through to.
-   */
-  needsAttention: (orgId: string, contractId: number) =>
-    queryOptions({
-      queryKey: analyticsContractKeys.resource(
-        orgId,
-        contractId,
-        "needs-attention",
-      ),
-      staleTime: LEARNER_PROGRESS_STALE_TIME,
-      queryFn: async ({ signal }) =>
-        needsAttentionApi
-          .contractsNeedsAttentionRetrieve(
-            { organization_id: orgId, contract_id: contractId },
             { signal },
           )
           .then((res) => res.data),
