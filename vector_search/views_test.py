@@ -7,8 +7,15 @@ from django.contrib.auth.models import Group
 from django.urls import reverse
 from django.utils import timezone
 from qdrant_client import models
+from qdrant_client.http.exceptions import UnexpectedResponse
 from qdrant_client.http.models.models import CountResult
-from rest_framework.exceptions import NotAuthenticated, PermissionDenied
+from rest_framework.exceptions import (
+    NotAuthenticated,
+    NotFound,
+    PermissionDenied,
+    Throttled,
+    ValidationError,
+)
 
 from learning_resources.constants import GROUP_CONTENT_FILE_CONTENT_VIEWERS
 from learning_resources.factories import (
@@ -307,16 +314,85 @@ def test_content_file_vector_search_filters(
             ]
         )
 
-    elif user_role == "anonymous":
-        with pytest.raises(NotAuthenticated):
-            client.get(
-                reverse("vector_search:v0:vector_content_files_search"), data=params
-            )
-    elif user_role == "normal":
-        with pytest.raises(PermissionDenied):
-            client.get(
-                reverse("vector_search:v0:vector_content_files_search"), data=params
-            )
+    else:
+        response = client.get(
+            reverse("vector_search:v0:vector_content_files_search"), data=params
+        )
+        # SessionAuthentication sends no WWW-Authenticate challenge, so DRF
+        # answers an anonymous caller with 403 rather than 401.
+        assert response.status_code == 403
+        assert response.json()["error_type"] == (
+            NotAuthenticated.__name__
+            if user_role == "anonymous"
+            else PermissionDenied.__name__
+        )
+        mock_qdrant.query_points.assert_not_called()
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize(
+    ("exc", "status_code"),
+    [
+        (ValidationError({"q": ["Invalid."]}), 400),
+        (NotFound(), 404),
+        (Throttled(wait=30), 429),
+    ],
+)
+def test_vector_search_drf_exceptions_get_their_status(
+    mocker, client, exc, status_code
+):
+    """A DRF exception raised in a Qdrant view gets DRF's response, not a 500."""
+    mocker.patch.object(
+        QdrantView, "async_vector_search", new=mocker.AsyncMock(side_effect=exc)
+    )
+
+    response = client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"),
+        data={"q": "test"},
+    )
+
+    assert response.status_code == status_code
+    assert response.json()["error_type"] == type(exc).__name__
+    if isinstance(exc, Throttled):
+        assert response["Retry-After"] == "30"
+
+
+def _qdrant_error(status_code):
+    return UnexpectedResponse(
+        status_code=status_code,
+        reason_phrase="",
+        content=b"{}",
+        headers={},
+    )
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("status_code", [400, 404, 422])
+def test_vector_search_qdrant_4xx_returns_its_status(client, mock_qdrant, status_code):
+    """A 4xx from Qdrant is passed on to the caller with the same status."""
+    mock_qdrant.query_points.side_effect = _qdrant_error(status_code)
+
+    response = client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"),
+        data={"q": "test"},
+    )
+
+    assert response.status_code == status_code
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize(
+    "exc", [RuntimeError("boom"), _qdrant_error(500), _qdrant_error(503)]
+)
+def test_vector_search_unexpected_errors_propagate(client, mock_qdrant, exc):
+    """Errors DRF doesn't know how to answer still reach Django's error handling."""
+    mock_qdrant.query_points.side_effect = exc
+
+    with pytest.raises(type(exc)):
+        client.get(
+            reverse("vector_search:v0:vector_learning_resources_search"),
+            data={"q": "test"},
+        )
 
 
 @pytest.mark.django_db(transaction=True)

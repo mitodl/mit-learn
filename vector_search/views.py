@@ -727,7 +727,9 @@ class QdrantView(AsyncAPIView):
         ):
             log.exception("Received a 4xx error from Qdrant")
             return Response(status=exc.status_code)
-        raise exc
+        # DRF maps its own exceptions (NotAuthenticated, ValidationError,
+        # Throttled, ...) to responses and re-raises anything else.
+        return super().handle_exception(exc)
 
 
 @method_decorator(blocked_ip_exempt, name="dispatch")
