@@ -142,7 +142,7 @@ const Tile: React.FC<{
 )
 
 const LearnerProgressCard: React.FC<{
-  /** Learners on the contract (`all`), or with at least one enrollment in each status. */
+  /** Learners who shared their progress with at least one enrollment (`all`), or with one in each status. */
   learnerCounts: Record<ContractLearnersStatus | "all", number>
   isLoading: boolean
   isError?: boolean

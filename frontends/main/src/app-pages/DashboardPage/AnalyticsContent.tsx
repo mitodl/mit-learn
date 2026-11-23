@@ -158,7 +158,7 @@ const PAGE_SIZE = 200
  */
 const MAX_PAGE_SIZE = 1000
 
-const LEARNER_TILES = ["all", ...CONTRACT_LEARNERS_STATUSES] as const
+const LEARNER_COUNTS = ["all", ...CONTRACT_LEARNERS_STATUSES] as const
 
 type SectionKey = "utilization" | "trend" | "courses" | "content"
 
@@ -296,12 +296,12 @@ const AnalyticsContent: React.FC<AnalyticsContentProps> = ({
    * attention is shown.
    */
   const learnerCounts = useQueries({
-    queries: LEARNER_TILES.map((tile) => ({
+    queries: LEARNER_COUNTS.map((key) => ({
       ...analyticsContractQueries.learners(orgUuid ?? "", contractId ?? 0, {
         limit: 1,
         offset: 0,
         completion_status: completionStatusFilter(
-          tile === "all" ? undefined : tile,
+          key === "all" ? undefined : key,
         ),
       }),
       enabled: analyticsAvailable && !!contractId && !!learnerAnalyticsFlag,
@@ -309,12 +309,12 @@ const AnalyticsContent: React.FC<AnalyticsContentProps> = ({
     })),
     combine: (results) => ({
       counts: Object.fromEntries(
-        LEARNER_TILES.map((tile, index) => [
-          tile,
+        LEARNER_COUNTS.map((key, index) => [
+          key,
           results[index].data?.total_count ?? 0,
         ]),
-      ) as Record<(typeof LEARNER_TILES)[number], number>,
-      asOf: results[LEARNER_TILES.indexOf("all")].data?.as_of,
+      ) as Record<(typeof LEARNER_COUNTS)[number], number>,
+      asOf: results[LEARNER_COUNTS.indexOf("all")].data?.as_of,
       isPending: results.some((result) => result.isPending),
       isError: results.some((result) => result.isError),
       error: results.find((result) => result.error)?.error ?? null,
