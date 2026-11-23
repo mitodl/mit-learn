@@ -1293,6 +1293,12 @@ describe("ContractLearnersPage", () => {
       await user.click(box)
       expect(box).not.toBeChecked()
       expect(location.current.search).toBe("?status=not_enrolled")
+
+      await user.hover(box)
+      expect(await screen.findByRole("tooltip")).toHaveTextContent(
+        "Learners who haven't enrolled have no activity to flag.",
+      )
+      expect(box).toHaveAccessibleName(NEEDS_ATTENTION)
     })
   })
 

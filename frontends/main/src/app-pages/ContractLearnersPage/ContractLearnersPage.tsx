@@ -15,6 +15,7 @@ import {
   Skeleton,
   Stack,
   styled,
+  Tooltip,
   Typography,
 } from "ol-components"
 import { Alert, Button, VisuallyHidden } from "@mitodl/smoot-design"
@@ -366,15 +367,24 @@ const CheckboxLabel = styled("label", {
     padding: "0 4px 0 0",
     color: "inherit",
   },
+  /** MUI hides the focused input and its root isn't focusable, so the outline goes on the box drawn in its place. */
+  ".MuiCheckbox-root:has(input:focus-visible) svg": {
+    outline: `2px solid ${theme.custom.colors.darkGray2}`,
+    borderRadius: "2px",
+  },
 }))
 
 const NEEDS_ATTENTION_LABEL = "Not started or inactive 30+ days"
 const NEEDS_ATTENTION_HINT_ID = "learner-needs-attention-hint"
+const NEEDS_ATTENTION_REASON =
+  "Learners who haven't enrolled have no activity to flag."
 
 /**
  * Unavailable is `aria-disabled` rather than `disabled`, as in `StatusSelect`,
- * so a keyboard or screen reader user can still reach the reason. MUI's
- * checkbox stands in for smoot-design's, which can't carry `aria-disabled`.
+ * so a keyboard or screen reader user can still reach the reason, which the
+ * tooltip shows on hover and focus. MUI's checkbox stands in for
+ * smoot-design's, which can't carry `aria-disabled`. `describeChild` keeps
+ * the tooltip from renaming the checkbox.
  */
 const NeedsAttentionCheckbox: React.FC<{
   checked: boolean
@@ -382,28 +392,30 @@ const NeedsAttentionCheckbox: React.FC<{
   unavailable: boolean
 }> = ({ checked, onChange, unavailable }) => (
   <CheckboxField>
-    <CheckboxLabel $unavailable={unavailable}>
-      <MuiCheckbox
-        size="small"
-        disableRipple
-        checked={checked}
-        onChange={(event) => {
-          if (!unavailable) onChange(event.target.checked)
-        }}
-        inputProps={
-          unavailable
-            ? {
-                "aria-disabled": "true",
-                "aria-describedby": NEEDS_ATTENTION_HINT_ID,
-              }
-            : undefined
-        }
-      />
-      {NEEDS_ATTENTION_LABEL}
-    </CheckboxLabel>
+    <Tooltip describeChild title={unavailable ? NEEDS_ATTENTION_REASON : ""}>
+      <CheckboxLabel $unavailable={unavailable}>
+        <MuiCheckbox
+          size="small"
+          disableRipple
+          checked={checked}
+          onChange={(event) => {
+            if (!unavailable) onChange(event.target.checked)
+          }}
+          inputProps={
+            unavailable
+              ? {
+                  "aria-disabled": "true",
+                  "aria-describedby": NEEDS_ATTENTION_HINT_ID,
+                }
+              : undefined
+          }
+        />
+        {NEEDS_ATTENTION_LABEL}
+      </CheckboxLabel>
+    </Tooltip>
     {unavailable ? (
       <VisuallyHidden id={NEEDS_ATTENTION_HINT_ID}>
-        Learners who haven&apos;t enrolled have no activity to flag.
+        {NEEDS_ATTENTION_REASON}
       </VisuallyHidden>
     ) : null}
   </CheckboxField>
