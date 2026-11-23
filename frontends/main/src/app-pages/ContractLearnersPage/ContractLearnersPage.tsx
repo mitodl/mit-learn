@@ -19,6 +19,7 @@ import {
 import { Alert, Button, Checkbox, VisuallyHidden } from "@mitodl/smoot-design"
 import {
   analyticsContractQueries,
+  type LearnerStatusFilter,
   type LearnerWithEnrollments,
 } from "api/analytics-hooks/organizations"
 import { managerOrganizationQueries } from "api/mitxonline-hooks/organizations"
@@ -51,7 +52,11 @@ import {
   gridLearnersQuery,
   ProgressGrid,
 } from "./ProgressGrid"
-import { ALL_MODULES, completionStatusFilter } from "@/common/urls"
+import {
+  ALL_MODULES,
+  type LearnersPageStatus,
+  STATUS_FILTER_COMPLETION_STATUS,
+} from "@/common/urls"
 import {
   ALL,
   MAX_GRID_MODULES,
@@ -60,8 +65,8 @@ import {
 } from "./useLearnerFilters"
 
 /**
- * The B2B learner directory: one row per learner, one column per course run
- * under a contract.
+ * The B2B learner directory: one row per contract member, one column per
+ * course the learner dashboard shows for the contract.
  *
  * Routed outside `/dashboard` (see `CONTRACT_LEARNERS_VIEW`) so it gets no
  * sidebar and can use the full width this table needs.
@@ -192,10 +197,15 @@ const SelectedValue = styled.span({
 
 const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: ALL, label: "All learners" },
+  { value: "not_enrolled", label: "Not enrolled" },
   { value: "not_started", label: "Not started" },
   { value: "in_progress", label: "In progress" },
   { value: "passed", label: "Completed" },
 ]
+const STATUS_FILTER: Record<LearnersPageStatus, LearnerStatusFilter[]> = {
+  ...STATUS_FILTER_COMPLETION_STATUS,
+  not_enrolled: ["not_enrolled"],
+}
 const STATUS_HINT_ID = "learner-status-hint"
 /** The keys MUI's select opens on. */
 const OPEN_KEYS = [" ", "ArrowUp", "ArrowDown", "Enter"]
@@ -412,22 +422,23 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   const contractId = contract?.id ?? null
   const canQuery = isAnalyticsConfigured() && !!orgUuid && !!contractId
 
-  const courseRunsQuery = useQuery({
-    ...analyticsContractQueries.courseRuns(orgUuid ?? "", contractId ?? 0, {
+  const coursesQuery = useQuery({
+    ...analyticsContractQueries.courses(orgUuid ?? "", contractId ?? 0, {
       limit: 1000,
     }),
     enabled: canQuery,
   })
 
-  const courseRunOptions = useMemo(
+  const courseOptions = useMemo(
     () =>
-      (courseRunsQuery.data?.data ?? [])
-        .map((run) => ({ value: run.courserun_id, label: run.courserun_title }))
-        .sort((a, b) => a.label.localeCompare(b.label)),
-    [courseRunsQuery.data],
+      (coursesQuery.data?.data ?? []).map((course) => ({
+        value: course.course_readable_id,
+        label: course.course_title,
+      })),
+    [coursesQuery.data],
   )
   /** Kept while loading or on error, so its error text can show. */
-  const showModuleFilter = !courseRunsQuery.data || courseRunOptions.length > 1
+  const showModuleFilter = !coursesQuery.data || courseOptions.length > 1
   /**
    * Every module asks for the same learners as no module filter, so only a
    * partial selection is held to the API's cap; that keeps a dashboard link on
@@ -436,31 +447,25 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   const activeGridModules = useMemo(() => {
     if (!showModuleFilter) return []
     const everyModule = gridModules.includes(ALL_MODULES)
-    const selected = courseRunOptions
+    const selected = courseOptions
       .filter((option) => everyModule || gridModules.includes(option.value))
       .map((option) => option.value)
-    return selected.length < courseRunOptions.length
+    return selected.length < courseOptions.length
       ? selected.slice(0, MAX_GRID_MODULES)
       : selected
-  }, [showModuleFilter, gridModules, courseRunOptions])
+  }, [showModuleFilter, gridModules, courseOptions])
 
   /** Status is per module, so it needs one selected, unless the contract has only one. */
   const statusAvailable = !showModuleFilter || activeGridModules.length > 0
   const activeStatus = statusAvailable ? statusFilter : ALL
-  const completionStatus = completionStatusFilter(
-    activeStatus === ALL ? undefined : activeStatus,
-  )
+  const completionStatus =
+    activeStatus === ALL ? undefined : STATUS_FILTER[activeStatus]
 
   useEffect(() => {
-    if (courseRunsQuery.isSuccess && !statusAvailable && statusFilter !== ALL) {
+    if (coursesQuery.isSuccess && !statusAvailable && statusFilter !== ALL) {
       setStatusFilter(ALL)
     }
-  }, [
-    courseRunsQuery.isSuccess,
-    statusAvailable,
-    statusFilter,
-    setStatusFilter,
-  ])
+  }, [coursesQuery.isSuccess, statusAvailable, statusFilter, setStatusFilter])
 
   /**
    * Every module is stored as `ALL_MODULES`, so the URL's 50-module cap can't
@@ -472,34 +477,38 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
       !values.length && activeStatus !== ALL ? "Status filter cleared." : "",
     )
     setGridModules(
-      values.length > 0 && values.length === courseRunOptions.length
+      values.length > 0 && values.length === courseOptions.length
         ? [ALL_MODULES]
         : values,
     )
   }
 
-  const courseRunsSettled = courseRunsQuery.isSuccess || courseRunsQuery.isError
+  const coursesSettled = coursesQuery.isSuccess || coursesQuery.isError
   /** Whether modules and status in the URL apply depends on the contract's modules. */
   const filtersResolved =
-    (gridModules.length === 0 && statusFilter === ALL) || courseRunsSettled
+    (gridModules.length === 0 && statusFilter === ALL) || coursesSettled
 
+  /**
+   * Modules narrow learners only through a status or needs attention: with
+   * neither, every learner has a status in every module, Not enrolled
+   * included, so the selection only picks the columns.
+   */
   const requestModules = useMemo(
     () =>
-      activeGridModules.length < courseRunOptions.length
+      (completionStatus || needsAttentionOnly) &&
+      activeGridModules.length < courseOptions.length
         ? activeGridModules
         : [],
-    [activeGridModules, courseRunOptions],
+    [completionStatus, needsAttentionOnly, activeGridModules, courseOptions],
   )
 
   const gridFilters = useMemo(
     () => ({
       ...(debouncedSearch ? { search: debouncedSearch } : {}),
-      completion_status: completionStatus,
+      ...(completionStatus ? { completion_status: completionStatus } : {}),
       /** Only ever sent as `true`: no control here asks for the learners who are fine. */
       ...(needsAttentionOnly ? { needs_attention: true } : {}),
-      ...(requestModules.length
-        ? { courserun_readable_id: requestModules }
-        : {}),
+      ...(requestModules.length ? { course_readable_id: requestModules } : {}),
     }),
     [debouncedSearch, completionStatus, needsAttentionOnly, requestModules],
   )
@@ -514,7 +523,6 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     ...analyticsContractQueries.learners(orgUuid ?? "", contractId ?? 0, {
       limit: 1,
       offset: 0,
-      completion_status: completionStatusFilter(),
     }),
     enabled: canQuery,
   })
@@ -532,14 +540,18 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
    * The contract exists in MITx Online but the warehouse has not loaded it
    * yet. Not an error a retry can fix, so it gets its own message.
    */
-  const notLoaded = [gridQuery, learnerTotalQuery, courseRunsQuery].some(
-    (query) => isAnalyticsNotLoaded(query.error),
+  const notLoaded = [gridQuery, learnerTotalQuery, coursesQuery].some((query) =>
+    isAnalyticsNotLoaded(query.error),
   )
 
-  const courseRuns = courseRunsQuery.data?.data
-  const courseRunsFailed = courseRunsQuery.isError && !courseRuns
+  const courses = coursesQuery.data?.data
+  const columns = useMemo(
+    () => courses && gridColumns(courses, activeGridModules),
+    [courses, activeGridModules],
+  )
+  const coursesFailed = coursesQuery.isError && !courses
   const exportUnavailable =
-    !canQuery || notLoaded || noLearners || !filtersResolved || !courseRuns
+    !canQuery || notLoaded || noLearners || !filtersResolved || !columns
 
   const handleExport = useCallback(async () => {
     if (isExporting || exportUnavailable || !orgUuid || !contractId) return
@@ -567,10 +579,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
         )
         learners.push(...batch.flatMap((response) => response.data))
       }
-      const csv = buildGridCsv(
-        learners,
-        gridColumns(courseRuns, activeGridModules),
-      )
+      const csv = buildGridCsv(learners, columns)
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
       const url = URL.createObjectURL(blob)
       const anchor = document.createElement("a")
@@ -600,8 +609,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     contractSlug,
     queryClient,
     gridFilters,
-    courseRuns,
-    activeGridModules,
+    columns,
   ])
 
   if (isLoadingOrgs) {
@@ -692,7 +700,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                     ? NOT_LOADED_MESSAGE_ID
                     : noLearners
                       ? NO_LEARNERS_MESSAGE_ID
-                      : courseRunsFailed
+                      : coursesFailed
                         ? MODULES_FAILED_MESSAGE_ID
                         : undefined
               }
@@ -700,13 +708,13 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                 isExporting ||
                 (canQuery &&
                   !notLoaded &&
-                  (!filtersResolved || courseRunsQuery.isPending))
+                  (!filtersResolved || coursesQuery.isPending))
               }
               onClick={handleExport}
             >
               {isExporting ? "Exporting…" : "Export learners"}
             </Button>
-            {courseRunsFailed ? (
+            {coursesFailed ? (
               <VisuallyHidden id={MODULES_FAILED_MESSAGE_ID}>
                 Export needs this contract&apos;s modules, which couldn&apos;t
                 load.
@@ -745,8 +753,8 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
           </Alert>
         ) : noLearners ? (
           <Typography id={NO_LEARNERS_MESSAGE_ID} variant="body1">
-            No learners are enrolled in {contract.name} yet. They&apos;ll appear
-            here once they enroll.
+            No learners have joined {contract.name} yet. They&apos;ll appear
+            here once they join.
           </Typography>
         ) : (
           <ResultsSection>
@@ -765,7 +773,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                   gridQuery.isError || learnerTotalQuery.isError
                     ? undefined
                     : gridQuery.data && totalLearners !== null
-                      ? `${gridQuery.data.total_count} of ${totalLearners} enrolled learners`
+                      ? `${gridQuery.data.total_count} of ${totalLearners} learners`
                       : "Loading…"
                 }
                 asOfPlacement="external"
@@ -785,10 +793,10 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                 />
                 {showModuleFilter ? (
                   <ModulesSelect
-                    options={courseRunOptions}
+                    options={courseOptions}
                     value={activeGridModules}
                     onChange={handleModulesChange}
-                    error={courseRunsFailed}
+                    error={coursesFailed}
                   />
                 ) : null}
                 <StatusSelect
@@ -797,9 +805,9 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                   unavailable={
                     statusAvailable
                       ? undefined
-                      : courseRunsQuery.isPending
+                      : coursesQuery.isPending
                         ? "loading"
-                        : courseRunsFailed
+                        : coursesFailed
                           ? "modulesFailed"
                           : "noModule"
                   }
@@ -842,10 +850,10 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
             <ProgressGrid
               filters={gridFilters}
               query={gridQuery}
-              courseRuns={courseRuns}
-              courseRunsFailed={courseRunsFailed}
-              courseRunsFetching={courseRunsQuery.isFetching}
-              onRetryCourseRuns={() => courseRunsQuery.refetch()}
+              columns={columns}
+              coursesFailed={coursesFailed}
+              coursesFetching={coursesQuery.isFetching}
+              onRetryCourses={() => coursesQuery.refetch()}
               page={page}
               onPageChange={setPage}
               emptyMessage={emptyMessage}

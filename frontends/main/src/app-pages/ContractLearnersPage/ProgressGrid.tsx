@@ -23,7 +23,7 @@ import { Alert, Button, VisuallyHidden } from "@mitodl/smoot-design"
 import { formatDate, initials } from "ol-utilities"
 import {
   analyticsContractQueries,
-  type CourseRun,
+  type Course,
   type LearnersParams,
   type LearnersResponse,
   type LearnerWithEnrollments,
@@ -62,11 +62,11 @@ const gridLearnersQuery = (
     offset: (page - 1) * pageSize,
   })
 
-/** Every run, or only the selected ones. */
-const gridColumns = (courseRuns: CourseRun[], courserunIds: string[]) =>
-  courserunIds.length
-    ? courseRuns.filter((run) => courserunIds.includes(run.courserun_id))
-    : courseRuns
+/** Every course, or only the selected ones. */
+const gridColumns = (courses: Course[], courseIds: string[]) =>
+  courseIds.length
+    ? courses.filter((course) => courseIds.includes(course.course_readable_id))
+    : courses
 
 const LEARNER_COLUMN_WIDTH = 280
 const MODULE_COLUMN_WIDTH = 160
@@ -206,21 +206,14 @@ const LastActive = styled(Typography)(({ theme }) => ({
 })) as typeof Typography
 
 /**
- * The learner's most recent activity, limited to `courserunIds` when set: the
- * API returns a matched learner's other enrollments too, and their dates would
- * read against columns the filter hid. Null when never active. Dates are
- * `YYYY-MM-DD`, so they compare as strings.
+ * The learner's most recent activity in the `courseIds` columns: the API
+ * returns a learner's other courses too, and their dates would read against
+ * columns the filter hid. Null when never active. Dates are `YYYY-MM-DD`, so
+ * they compare as strings.
  */
-const latestActivity = (
-  learner: LearnerWithEnrollments,
-  courserunIds: string[],
-) =>
+const latestActivity = (learner: LearnerWithEnrollments, courseIds: string[]) =>
   learner.enrollments
-    .filter(
-      (enrollment) =>
-        !courserunIds.length ||
-        courserunIds.includes(enrollment.courserun_readable_id),
-    )
+    .filter((enrollment) => courseIds.includes(enrollment.course_readable_id))
     .reduce<string | null>(
       (max, enrollment) =>
         enrollment.last_active_on && (!max || enrollment.last_active_on > max)
@@ -231,36 +224,36 @@ const latestActivity = (
 
 const lastActiveText = (
   learner: LearnerWithEnrollments,
-  courserunIds: string[],
+  courseIds: string[],
 ) => {
-  const latest = latestActivity(learner, courserunIds)
+  const latest = latestActivity(learner, courseIds)
   return latest ? `Last active ${formatDate(latest)}` : "No activity"
 }
 
 const buildGridCsv = (
   learners: LearnerWithEnrollments[],
-  columns: CourseRun[],
+  columns: Course[],
 ) => {
-  const courserunIds = columns.map((run) => run.courserun_id)
+  const courseIds = columns.map((course) => course.course_readable_id)
   const header = buildCsvRow([
     "Name",
     "Email",
     "Last activity",
-    ...columns.flatMap((run) => [
-      `${run.courserun_title} status`,
-      `${run.courserun_title} progress`,
+    ...columns.flatMap((course) => [
+      `${course.course_title} status`,
+      `${course.course_title} progress`,
     ]),
   ])
   const body = learners.map((learner) =>
     buildCsvRow([
       learner.full_name,
       learner.email,
-      latestActivity(learner, courserunIds),
-      ...columns.flatMap((run) => {
+      latestActivity(learner, courseIds),
+      ...columns.flatMap((course) => {
         const enrollment = learner.enrollments.find(
-          (item) => item.courserun_readable_id === run.courserun_id,
+          (item) => item.course_readable_id === course.course_readable_id,
         )
-        if (!enrollment) return ["N/A", ""]
+        if (!enrollment) return ["Not enrolled", ""]
         const status = getDisplayStatus(enrollment)
         const label = DISPLAY_STATUS_LABEL[status]
         const progress = contentProgressPercent(enrollment, status)
@@ -377,15 +370,14 @@ const Muted = styled.span(({ theme }) => ({
 }))
 
 type ProgressGridProps = {
-  /** `courserun_readable_id` narrows columns as well as rows. */
   filters: GridFilters
   /** The page's `gridLearnersQuery`, which it also reads for its "N of M" line. */
   query: UseQueryResult<LearnersResponse>
-  /** From the page's own course-runs query: one grid column per run. */
-  courseRuns: CourseRun[] | undefined
-  courseRunsFailed: boolean
-  courseRunsFetching: boolean
-  onRetryCourseRuns: () => void
+  /** One column per course: the page's courses, narrowed to the selected modules. */
+  columns: Course[] | undefined
+  coursesFailed: boolean
+  coursesFetching: boolean
+  onRetryCourses: () => void
   page: number
   onPageChange: (page: number) => void
   emptyMessage: string
@@ -471,17 +463,17 @@ const ModuleHeader: React.FC<{ title: string }> = ({ title }) => {
 const ProgressGrid: React.FC<ProgressGridProps> = ({
   filters,
   query,
-  courseRuns,
-  courseRunsFailed,
-  courseRunsFetching,
-  onRetryCourseRuns,
+  columns,
+  coursesFailed,
+  coursesFetching,
+  onRetryCourses,
   page,
   onPageChange,
   emptyMessage,
 }) => {
-  const courserunIds = useMemo(
-    () => filters.courserun_readable_id ?? [],
-    [filters.courserun_readable_id],
+  const courseIds = useMemo(
+    () => (columns ?? []).map((course) => course.course_readable_id),
+    [columns],
   )
 
   const learners = useMemo(
@@ -493,13 +485,13 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
         },
         enrollments: new Map(
           learner.enrollments.map((enrollment) => [
-            enrollment.courserun_readable_id,
+            enrollment.course_readable_id,
             enrollment,
           ]),
         ),
-        lastActive: lastActiveText(learner, courserunIds),
+        lastActive: lastActiveText(learner, courseIds),
       })),
-    [query.data, courserunIds],
+    [query.data, courseIds],
   )
   const totalPages = Math.ceil((query.data?.total_count ?? 0) / PAGE_SIZE)
   const isStale = query.isPlaceholderData || query.isFetching
@@ -554,8 +546,8 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
     lastFilters.current = key
   }, [isBusy, query.data, filters, page, totalPages])
 
-  const hasError = query.isError || courseRunsFailed
-  const isRetrying = query.isFetching || courseRunsFetching
+  const hasError = query.isError || coursesFailed
+  const isRetrying = query.isFetching || coursesFetching
 
   const regionRef = useRef<HTMLDivElement>(null)
   const restoreFocus = useRef(false)
@@ -594,7 +586,7 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
               if (isRetrying) return
               restoreFocus.current = true
               if (query.isError) query.refetch()
-              if (courseRunsFailed) onRetryCourseRuns()
+              if (coursesFailed) onRetryCourses()
             }}
           >
             {isRetrying ? "Retrying…" : "Try again"}
@@ -604,8 +596,7 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
     )
   }
 
-  const columns = gridColumns(courseRuns ?? [], courserunIds)
-  const width = LEARNER_COLUMN_WIDTH + columns.length * MODULE_COLUMN_WIDTH
+  const width = LEARNER_COLUMN_WIDTH + courseIds.length * MODULE_COLUMN_WIDTH
 
   return (
     <>
@@ -655,10 +646,10 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
                 <HeaderLearnerCell role="columnheader" $scrolled={scrolled}>
                   Learner
                 </HeaderLearnerCell>
-                {columns.map((run) => (
+                {columns?.map((course) => (
                   <ModuleHeader
-                    key={run.courserun_id}
-                    title={run.courserun_title}
+                    key={course.course_readable_id}
+                    title={course.course_title}
                   />
                 ))}
               </HeaderRow>
@@ -670,7 +661,7 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
                 transition: isStale ? "opacity 150ms ease 150ms" : "none",
               }}
             >
-              {query.isPending || !courseRuns ? (
+              {query.isPending || !columns ? (
                 [1, 2, 3].map((key) => (
                   <GridRow key={key} role="row">
                     <div role="cell" style={{ width: "100%" }}>
@@ -701,11 +692,16 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
                         setSummaryOpen(true)
                       }}
                     />
-                    {columns.map((run) => {
-                      const enrollment = enrollments.get(run.courserun_id)
+                    {columns.map((course) => {
+                      const enrollment = enrollments.get(
+                        course.course_readable_id,
+                      )
                       if (!enrollment) {
                         return (
-                          <ModuleCell key={run.courserun_id} role="cell">
+                          <ModuleCell
+                            key={course.course_readable_id}
+                            role="cell"
+                          >
                             <StatusLine>
                               <Muted>
                                 N/A
@@ -721,7 +717,7 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
                         status,
                       )
                       return (
-                        <ModuleCell key={run.courserun_id} role="cell">
+                        <ModuleCell key={course.course_readable_id} role="cell">
                           <CellContent>
                             <StatusLine>
                               <StatusSymbol status={status} />
@@ -774,7 +770,7 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
       </TableCard>
       <LearnerSummaryPanel
         learner={summaryLearner}
-        courseRuns={columns}
+        courses={columns ?? []}
         open={summaryOpen}
         onClose={() => setSummaryOpen(false)}
       />

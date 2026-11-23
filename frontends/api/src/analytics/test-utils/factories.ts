@@ -6,8 +6,9 @@ import type {
   ContractMonthlyEngagementTrend,
   ContractNeedsAttention,
   ContractUtilization,
-  CourseRun,
+  Course,
   EnrollmentCompletionFunnel,
+  LearnerEnrollment,
   LearnerProgress,
   LearnerProgressResponse,
   MonthlyEngagementTrend,
@@ -219,15 +220,20 @@ const learnerProgress = (
   ...overrides,
 })
 
-/**
- * `courserun_id` holds a readable id, matching the API's own alias — see
- * `CourseRun`. Pair with `envelope` for a `CourseRunsResponse`.
- */
-const courseRun = (overrides: Partial<CourseRun> = {}): CourseRun => ({
-  courserun_id: `course-v1:MITxT+${faker.string.alphanumeric(6)}+2T2026`,
-  courserun_title: faker.company.catchPhrase(),
-  courserun_start_on: "2026-02-01T00:00:00Z",
-  courserun_end_on: "2026-08-01T00:00:00Z",
+/** Pair with `envelope` for a `CoursesResponse`. */
+const course = (overrides: Partial<Course> = {}): Course => ({
+  course_readable_id: `course-v1:MITxT+${faker.string.alphanumeric(6)}`,
+  course_title: faker.company.catchPhrase(),
+  ...overrides,
+})
+
+/** A `/learners` entry with its learner's fields, as `learnersFromRows` takes them. */
+type LearnerRow = LearnerProgress &
+  Pick<LearnerEnrollment, "course_readable_id" | "course_title">
+
+const learnerRow = (overrides: Partial<LearnerRow> = {}): LearnerRow => ({
+  ...learnerProgress(),
+  ...course(),
   ...overrides,
 })
 
@@ -280,13 +286,10 @@ const learnerProgressEnvelope = (
 })
 
 /**
- * Splits `LearnerProgress` rows sharing a `learner_id` into one learner with
- * its enrollments, in first-seen order, as the `/learners` endpoint returns
- * them.
+ * Splits rows sharing a `learner_id` into one learner with its enrollments, in
+ * first-seen order, as the `/learners` endpoint returns them.
  */
-const learnersFromRows = (
-  rows: LearnerProgress[],
-): LearnerWithEnrollments[] => {
+const learnersFromRows = (rows: LearnerRow[]): LearnerWithEnrollments[] => {
   const byId = new Map<string, LearnerWithEnrollments>()
   for (const row of rows) {
     const { learner_id: id, email, full_name: name, ...enrollment } = row
@@ -323,11 +326,12 @@ export {
   contractMonthlyEngagementTrend,
   contractNeedsAttention,
   contractUtilization,
-  courseRun,
+  course,
   enrollmentCompletionFunnel,
   envelope,
   learnerProgress,
   learnerProgressEnvelope,
+  learnerRow,
   learnersEnvelope,
   learnersFromRows,
   monthlyEngagementTrend,

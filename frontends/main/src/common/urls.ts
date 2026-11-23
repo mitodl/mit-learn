@@ -129,6 +129,12 @@ export const CONTRACT_LEARNERS_STATUSES = [
   "passed",
 ] as const
 export type ContractLearnersStatus = (typeof CONTRACT_LEARNERS_STATUSES)[number]
+/** The Learners page's own Status values: the dashboard's, plus Not enrolled, which has no tile. */
+export const LEARNERS_PAGE_STATUSES = [
+  "not_enrolled",
+  ...CONTRACT_LEARNERS_STATUSES,
+] as const
+export type LearnersPageStatus = (typeof LEARNERS_PAGE_STATUSES)[number]
 
 /**
  * "Completed" queries both `passed` and `certified`, matching the count

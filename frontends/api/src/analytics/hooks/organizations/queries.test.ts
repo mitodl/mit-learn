@@ -62,11 +62,11 @@ describe("analyticsContractQueries", () => {
       ]),
     },
     {
-      name: "courseRuns",
+      name: "courses",
       query: () =>
-        erase(analyticsContractQueries.courseRuns(ORG_UUID, CONTRACT_ID)),
-      url: urls.contracts.courseRuns(ORG_UUID, CONTRACT_ID),
-      response: factories.envelope([factories.courseRun()]),
+        erase(analyticsContractQueries.courses(ORG_UUID, CONTRACT_ID)),
+      url: urls.contracts.courses(ORG_UUID, CONTRACT_ID),
+      response: factories.envelope([factories.course()]),
     },
     {
       name: "needsAttention",

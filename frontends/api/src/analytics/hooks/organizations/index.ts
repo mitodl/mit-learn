@@ -45,9 +45,10 @@ export type {
  * the parts instead. Read `needs_attention` rather than re-deriving it from
  * `last_active_on`: the 30-day cutoff is resolved in the warehouse's timezone.
  *
- * `CourseRun.courserun_id` carries the readable id (the API aliases
- * `courserun_readable_id AS courserun_id`), so it is what goes back as the
- * `courserun_readable_id` filter despite the different name.
+ * `LearnerWithEnrollments.enrollments` has one entry per course in `/courses`,
+ * so key it on `course_readable_id`, not `courserun_readable_id`: the run a
+ * learner's entry shows can differ from another learner's run of the same
+ * course.
  *
  * `CompletionStatusCounts` sums to `total_count` minus
  * `outcomes_withheld_count`, not `total_count` itself: a consent-withheld
@@ -63,13 +64,14 @@ export type {
   ContractMonthlyEngagementTrend,
   ContractNeedsAttention,
   ContractUtilization,
-  CourseRun,
-  CourseRunsResponse,
+  Course,
+  CoursesResponse,
   EnrollmentCompletionFunnel,
   LearnerEnrollment,
   LearnerProgress,
   LearnerProgressResponse,
   LearnersResponse,
+  LearnerStatusFilter,
   LearnerWithEnrollments,
   MonthlyEngagementTrend,
 } from "@mitodl/ol-analytics-dashboard-api-axios"

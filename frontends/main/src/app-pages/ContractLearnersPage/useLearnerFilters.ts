@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useAppSearchParams } from "@/common/useAppSearchParams"
-import {
-  CONTRACT_LEARNERS_STATUSES,
-  type ContractLearnersStatus,
-} from "@/common/urls"
+import { LEARNERS_PAGE_STATUSES, type LearnersPageStatus } from "@/common/urls"
 
 const ALL = "all" as const
 const SEARCH_DEBOUNCE_MS = 300
@@ -11,11 +8,11 @@ const SEARCH_DEBOUNCE_MS = 300
 const MAX_PAGE = 10_000
 /** Matches the API's cap on `search`; truncated rather than sent as-is, since a long paste would otherwise 422 and read as "Something went wrong loading learner data" — 422 isn't in the error-boundary set. */
 const SEARCH_MAX_LENGTH = 254
-/** The `/learners` endpoint rejects more `courserun_readable_id` values than this. */
+/** The `/learners` endpoint rejects more `course_readable_id` values than this. */
 const MAX_GRID_MODULES = 50
 
-const isStatus = (value: string | null): value is ContractLearnersStatus =>
-  (CONTRACT_LEARNERS_STATUSES as readonly (string | null)[]).includes(value)
+const isStatus = (value: string | null): value is LearnersPageStatus =>
+  (LEARNERS_PAGE_STATUSES as readonly (string | null)[]).includes(value)
 
 /**
  * The learner directory's filters and page. Page, status, modules and

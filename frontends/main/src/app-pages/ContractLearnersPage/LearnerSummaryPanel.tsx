@@ -6,7 +6,7 @@ import { Drawer, styled, Typography } from "ol-components"
 import { ActionButton, VisuallyHidden } from "@mitodl/smoot-design"
 import { formatDate } from "ol-utilities"
 import type {
-  CourseRun,
+  Course,
   LearnerEnrollment,
   LearnerWithEnrollments,
 } from "api/analytics-hooks/organizations"
@@ -30,7 +30,7 @@ const ACTIVITY_FIELDS: { field: ActivityField; label: string }[] = [
   { field: "chatbot_interactions", label: "Chatbot interactions" },
 ]
 
-/** Days active are distinct days within one run, so a sum would count a day active in two modules twice. */
+/** Days active are distinct days within one course, so a sum would count a day active in two modules twice. */
 const TOTAL_FIELDS = ACTIVITY_FIELDS.filter(
   ({ field }) => field !== "days_active",
 )
@@ -193,7 +193,7 @@ const moduleStatusText = (enrollment: LearnerEnrollment) => {
 type LearnerSummaryPanelProps = {
   /** Kept set while closing so the content stays through the exit animation. */
   learner: LearnerWithEnrollments | null
-  courseRuns: CourseRun[]
+  courses: Course[]
   open: boolean
   onClose: () => void
 }
@@ -202,18 +202,19 @@ const HEADING_ID = "learner-summary-heading"
 
 const LearnerSummaryPanel: React.FC<LearnerSummaryPanelProps> = ({
   learner,
-  courseRuns,
+  courses,
   open,
   onClose,
 }) => {
   const enrollments = learner?.enrollments ?? []
-  const byRun = new Map(enrollments.map((e) => [e.courserun_readable_id, e]))
-  const completed = enrollments.filter((e) => {
-    const status = getDisplayStatus(e)
+  const byCourse = new Map(enrollments.map((e) => [e.course_readable_id, e]))
+  const completed = courses.filter((course) => {
+    const enrollment = byCourse.get(course.course_readable_id)
+    const status = enrollment && getDisplayStatus(enrollment)
     return status === "completed" || status === "certificate"
   }).length
-  const notEnrolled = courseRuns.filter(
-    (run) => !byRun.has(run.courserun_id),
+  const notEnrolled = courses.filter(
+    (course) => !byCourse.has(course.course_readable_id),
   ).length
   const lastActive = latestActivity(enrollments)
 
@@ -256,7 +257,7 @@ const LearnerSummaryPanel: React.FC<LearnerSummaryPanelProps> = ({
             <StatList>
               <div>
                 <dt>Completed</dt>
-                <dd>{`${completed} of ${courseRuns.length}`}</dd>
+                <dd>{`${completed} of ${courses.length}`}</dd>
               </div>
               <div>
                 <dt>Not enrolled</dt>
@@ -296,11 +297,11 @@ const LearnerSummaryPanel: React.FC<LearnerSummaryPanelProps> = ({
               Modules
             </SectionTitle>
             <ModuleList>
-              {courseRuns.map((run) => {
-                const enrollment = byRun.get(run.courserun_id)
+              {courses.map((course) => {
+                const enrollment = byCourse.get(course.course_readable_id)
                 return (
-                  <ModuleItem key={run.courserun_id}>
-                    <ModuleTitle>{run.courserun_title}</ModuleTitle>
+                  <ModuleItem key={course.course_readable_id}>
+                    <ModuleTitle>{course.course_title}</ModuleTitle>
                     <ModuleStatus>
                       {enrollment ? (
                         moduleStatusText(enrollment)
