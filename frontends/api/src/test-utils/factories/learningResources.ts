@@ -377,7 +377,7 @@ const learningResource: PartialFactory<LearningResource> = (overrides = {}) => {
     case ResourceTypeEnum.Video:
       return video(overrides)
     case ResourceTypeEnum.Document:
-      return document(overrides)
+      return documentResource(overrides)
 
     default:
       throw Error(`Invalid resource type: ${overrides.resource_type}`)
@@ -621,7 +621,7 @@ const podcast: LearningResourceFactory<PodcastResource> = (overrides = {}) => {
 }
 const podcasts = makePaginatedFactory(podcast)
 
-const document: LearningResourceFactory<DocumentResource> = (
+const documentResource: LearningResourceFactory<DocumentResource> = (
   overrides = {},
 ) => {
   return mergeOverrides<DocumentResource>(
@@ -776,7 +776,7 @@ export {
   podcasts,
   podcastEpisode,
   podcastEpisodes,
-  document,
+  documentResource,
   practiceProblem,
   video,
   videos,

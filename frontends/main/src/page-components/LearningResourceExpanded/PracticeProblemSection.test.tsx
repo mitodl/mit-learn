@@ -13,26 +13,37 @@ const setup = (
   practiceProblem: ReturnType<
     typeof factories.learningResources.practiceProblem
   > | null,
-  { inUserList = false } = {},
+  {
+    inUserList = false,
+    inLearningPath = false,
+    isLearningPathEditor = false,
+  } = {},
 ) => {
-  const resource = factories.learningResources.document({
+  const resource = factories.learningResources.documentResource({
     title: "Car and Bicycle Rider",
     resource_category: "Practice & Assignment",
     practice_problem: practiceProblem,
   })
-  setMockResponse.get(urls.userMe.get(), factories.user.user())
+  const currentUser = factories.user.user({
+    is_learning_path_editor: isLearningPathEditor,
+  })
+  setMockResponse.get(urls.userMe.get(), currentUser)
   const onAddToUserListClick = jest.fn()
+  const onAddToLearningPathClick = jest.fn()
   renderWithProviders(
     <LearningResourceExpanded
       resourceId={resource.id}
       resource={resource}
       chatExpanded={false}
       imgConfig={{ width: 385, height: 200 }}
+      user={currentUser}
       inUserList={inUserList}
+      inLearningPath={inLearningPath}
       onAddToUserListClick={onAddToUserListClick}
+      onAddToLearningPathClick={onAddToLearningPathClick}
     />,
   )
-  return { resource, onAddToUserListClick }
+  return { resource, onAddToUserListClick, onAddToLearningPathClick }
 }
 
 describe("PracticeProblemSection", () => {
@@ -131,6 +142,32 @@ describe("PracticeProblemSection", () => {
       )
     },
   )
+
+  test.each([{ inLearningPath: false }, { inLearningPath: true }])(
+    "Learning path editors can add the problem to a learning path (inLearningPath=$inLearningPath)",
+    async ({ inLearningPath }) => {
+      const { resource, onAddToLearningPathClick } = setup(
+        factories.learningResources.practiceProblem(),
+        { isLearningPathEditor: true, inLearningPath },
+      )
+      const button = screen.getByRole("button", {
+        name: "Add to learning path",
+      })
+      expect(button).toHaveAttribute("aria-pressed", String(inLearningPath))
+      await user.click(button)
+      expect(onAddToLearningPathClick).toHaveBeenCalledWith(
+        expect.anything(),
+        resource.id,
+      )
+    },
+  )
+
+  test("Non-editors do not see the learning path action", () => {
+    setup(factories.learningResources.practiceProblem())
+    expect(
+      screen.queryByRole("button", { name: "Add to learning path" }),
+    ).not.toBeInTheDocument()
+  })
 
   test("A document that is not a problem shows the default drawer", () => {
     setup(null)

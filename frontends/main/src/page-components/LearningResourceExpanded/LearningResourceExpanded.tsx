@@ -278,7 +278,10 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
                   ...resource,
                   practice_problem: resource.practice_problem,
                 }}
+                user={user}
+                inLearningPath={inLearningPath}
                 inUserList={inUserList}
+                onAddToLearningPathClick={onAddToLearningPathClick}
                 onAddToUserListClick={onAddToUserListClick}
               />
             ) : (

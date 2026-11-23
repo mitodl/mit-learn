@@ -266,12 +266,12 @@ describe("learningResourceCardContent", () => {
   })
 
   describe("Practice problems", () => {
-    const { document, practiceProblem } = factories.learningResources
+    const { documentResource, practiceProblem } = factories.learningResources
     const problemResource = (
       overrides: Partial<ReturnType<typeof practiceProblem>> = {},
-      image: ReturnType<typeof document>["image"] = null,
+      image: ReturnType<typeof documentResource>["image"] = null,
     ) =>
-      document({
+      documentResource({
         free: true,
         image,
         content_files: [],
@@ -323,7 +323,7 @@ describe("learningResourceCardContent", () => {
 
     test("Other documents keep their price and no details", () => {
       const content = learningResourceCardContent(
-        document({ free: true, practice_problem: null }),
+        documentResource({ free: true, practice_problem: null }),
       )
       expect(content.price.primary).toBe("Free")
       expect(content.placeholderDetails).toBeUndefined()

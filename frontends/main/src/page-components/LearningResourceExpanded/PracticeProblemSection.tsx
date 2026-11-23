@@ -7,8 +7,10 @@ import {
   RiBookmarkLine,
   RiExternalLinkLine,
   RiFilePdf2Line,
+  RiMenuAddLine,
 } from "@remixicon/react"
 import type { DocumentResource } from "api"
+import type { User } from "api/hooks/user"
 import type { LearningResourceCardProps as CardProps } from "ol-components"
 import { resourceDrawerSearch } from "@/common/urls"
 import ProblemMarkdown from "./ProblemMarkdown"
@@ -105,6 +107,12 @@ const SourceActions = styled.div({
   gap: "8px",
 })
 
+const SaveActions = styled.div({
+  display: "flex",
+  flexWrap: "wrap",
+  gap: "8px",
+})
+
 const FinePrint = styled(Typography)(({ theme }) => ({
   ...theme.typography.body3,
   color: theme.custom.colors.silverGrayDark,
@@ -114,7 +122,10 @@ type PracticeProblemSectionProps = {
   resource: DocumentResource & {
     practice_problem: NonNullable<DocumentResource["practice_problem"]>
   }
+  user?: User
+  inLearningPath?: boolean
   inUserList?: boolean
+  onAddToLearningPathClick?: CardProps["onAddToLearningPathClick"]
   onAddToUserListClick?: CardProps["onAddToUserListClick"]
 }
 
@@ -137,7 +148,10 @@ const partsLabel = (count: number) => {
  */
 const PracticeProblemSection: React.FC<PracticeProblemSectionProps> = ({
   resource,
+  user,
+  inLearningPath,
   inUserList,
+  onAddToLearningPathClick,
   onAddToUserListClick,
 }) => {
   const problem = resource.practice_problem
@@ -245,7 +259,7 @@ const PracticeProblemSection: React.FC<PracticeProblemSectionProps> = ({
           ) : null}
         </SourceActions>
       </SourceCard>
-      <div>
+      <SaveActions>
         <Button
           variant="primary"
           startIcon={inUserList ? <RiBookmarkFill /> : <RiBookmarkLine />}
@@ -254,7 +268,17 @@ const PracticeProblemSection: React.FC<PracticeProblemSectionProps> = ({
         >
           {saveLabel}
         </Button>
-      </div>
+        {user?.is_learning_path_editor ? (
+          <Button
+            variant="bordered"
+            startIcon={<RiMenuAddLine />}
+            aria-pressed={!!inLearningPath}
+            onClick={(event) => onAddToLearningPathClick?.(event, resource.id)}
+          >
+            Add to learning path
+          </Button>
+        ) : null}
+      </SaveActions>
       <FinePrint>
         No solutions are shown. Problem from MIT OpenCourseWare
         {source.course_title ? ` ${source.course_title}` : ""}; see the course
