@@ -35,8 +35,9 @@ def _sum(rows, field):
 class Command(BaseCommand):
     """
     Unpublish and deindex the content files each course's current archive
-    excludes (staff-only, asset manifests, unreferenced static files), and
-    date the ones it has not released yet so they stay hidden until then.
+    excludes (staff-only, asset manifests, unreferenced static files, and a
+    video's transcripts besides the one ingested), and date the ones it has
+    not released yet so they stay hidden until then.
     Nothing is re-extracted or re-embedded.
     """
 

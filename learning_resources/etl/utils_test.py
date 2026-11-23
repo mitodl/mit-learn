@@ -29,6 +29,7 @@ from learning_resources.etl.olx_test import (
     _dated_olx,
     _reference_olx,
     _start,
+    _video_olx,
     _write_html,
     _write_olx,
 )
@@ -1437,6 +1438,46 @@ def test_process_olx_path_filters_by_the_runs_platform(
         for result in utils.process_olx_path(str(olx), run, overwrite=True)
     ]
     assert any(path.endswith("about/overview.html") for path in paths) is ingested
+
+
+@pytest.mark.parametrize(
+    ("language", "content_language"),
+    [
+        ("en", "en"),
+        # normalized as the archive compares codes
+        ("zh_HANS", "zh-hans"),
+        # unset, or too long for the column, is left out
+        (None, None),
+        ("x" * 25, None),
+    ],
+)
+def test_process_olx_path_yields_one_transcript_per_video(
+    mocker, tmp_path, language, content_language
+):
+    """The video's kept transcript is yielded with its video's title and language"""
+    run = LearningResourceRunFactory.create(run_id="course-v1:test_run")
+    olx = _video_olx(
+        tmp_path,
+        [(language, "vid.srt"), ("zz", "vid-zz.srt")],
+        video_attrs='display_name="Lecture 1"',
+    )
+    mocker.patch(
+        "learning_resources.etl.utils._extract_content",
+        return_value={"content": "text", "content_title": ""},
+    )
+
+    results = {
+        pathlib.Path(result["source_path"]).name: result
+        for result in utils.process_olx_path(str(olx), run, overwrite=True)
+    }
+
+    # every language listed outranks zz, the one transcript left out
+    assert "vid-zz.srt" not in results
+    transcript = results["vid.srt"]
+    assert transcript["title"] == "Lecture 1"
+    assert transcript["url"].endswith("/jump_to_id/vid")
+    assert transcript.get("content_language") == content_language
+    assert "content_language" not in results["h.html"]
 
 
 def test_extract_content_invalid_pdf_raises(mocker, settings, tmp_path):

@@ -77,6 +77,10 @@ from main.utils import now_in_utc
 
 log = logging.getLogger(__name__)
 
+CONTENT_LANGUAGE_MAX_LENGTH = ContentFile._meta.get_field(  # noqa: SLF001
+    "content_language"
+).max_length
+
 
 class InvalidPDFError(Exception):
     """Raised when a PDF fails pypdf validation before extraction."""
@@ -781,6 +785,11 @@ def _build_result(  # noqa: PLR0913, PLR0917
         "url": get_url_from_module_id(key, run, video_srt_metadata),
         **content_dict,
     }
+    # a transcript's language, as its video declares it; a code too long for
+    # the column would fail the row's save, so it is left out
+    language = (video_srt_metadata or {}).get(key, {}).get("language")
+    if language and len(language) <= CONTENT_LANGUAGE_MAX_LENGTH:
+        data["content_language"] = language
 
     # resolve the title priority: metadata title > extracted title > derived title
     data["title"] = content_dict.get("content_title") or get_title_for_content(
