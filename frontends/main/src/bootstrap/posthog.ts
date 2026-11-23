@@ -4,21 +4,24 @@ import { initPostHog } from "@/common/analytics/posthog"
 
 /**
  * Requests flags now, and resolves once PostHog has answered or the request
- * has failed.
+ * has failed: `true` when PostHog evaluated every flag for this visitor
+ * (posthog-js's `loaded` status). `false` when the request failed, timed out,
+ * was quota-limited, hit errors computing flags, or was skipped (posthog-js
+ * stops sending requests after several in a row get no HTTP response).
  *
  * `cancelled` means posthog-js reset its flags for an identity change (a
  * `reset()`, another tab logging in or out, a back/forward-cache restore) and
  * is reloading for the new identity, so wait for that reload instead.
  */
-const loadFlags = (): Promise<void> => {
+const loadFlags = (): Promise<boolean> => {
   const reload = posthog.featureFlags?.reloadFeatureFlagsAsync()
-  if (!reload) return Promise.resolve()
+  if (!reload) return Promise.resolve(false)
   return reload.then((result) =>
-    result.status === "cancelled" ? loadFlags() : undefined,
+    result.status === "cancelled" ? loadFlags() : result.status === "loaded",
   )
 }
 
-let firstFlagLoad: Promise<void> | undefined
+let firstFlagLoad: Promise<boolean> | undefined
 
 /**
  * Initializes posthog and starts the page's first flag request.

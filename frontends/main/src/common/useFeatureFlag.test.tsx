@@ -6,7 +6,11 @@ import { renderToString } from "react-dom/server.node"
 import posthog from "posthog-js"
 import { FeatureFlags } from "./feature_flags"
 import type { ServerFlags } from "./feature_flags"
-import { ServerFlagsContext, useFeatureFlag } from "./useFeatureFlag"
+import {
+  FlagsSuccessContext,
+  ServerFlagsContext,
+  useFeatureFlag,
+} from "./useFeatureFlag"
 
 jest.mock("posthog-js", () => ({
   __esModule: true,
@@ -18,10 +22,12 @@ jest.mock("posthog-js", () => ({
 const mockIsFeatureEnabled = jest.mocked(posthog.isFeatureEnabled)
 const mockOnFeatureFlags = jest.mocked(posthog.onFeatureFlags)
 
-const wrapper = (serverFlags: ServerFlags) => {
+const wrapper = (serverFlags: ServerFlags, flagsSuccess = false) => {
   const Wrapper = ({ children }: { children: React.ReactNode }) => (
     <ServerFlagsContext.Provider value={serverFlags}>
-      {children}
+      <FlagsSuccessContext.Provider value={flagsSuccess}>
+        {children}
+      </FlagsSuccessContext.Provider>
     </ServerFlagsContext.Provider>
   )
   return Wrapper
@@ -93,6 +99,38 @@ describe("useFeatureFlag", () => {
       { wrapper: wrapper({ [FeatureFlags.UniversalAI]: true }) },
     )
     expect(result.current).toBe(false)
+  })
+
+  test("Once PostHog has answered in full, its value still wins over the env default", () => {
+    mockIsFeatureEnabled.mockReturnValue(true)
+    const { result } = renderHook(
+      () => useFeatureFlag(FeatureFlags.UniversalAI),
+      { wrapper: wrapper({}, true) },
+    )
+    expect(result.current).toBe(true)
+  })
+
+  test("Once PostHog has answered in full, a flag it left out hydrates with the server's value, then reads its env default", async () => {
+    const Flag = () => (
+      <span>{String(useFeatureFlag(FeatureFlags.UniversalAI))}</span>
+    )
+    const Wrapper = wrapper({ [FeatureFlags.UniversalAI]: true }, true)
+    const tree = (
+      <Wrapper>
+        <Flag />
+      </Wrapper>
+    )
+    mockIsFeatureEnabled.mockReturnValue(undefined)
+    const container = document.createElement("div")
+    container.innerHTML = renderToString(tree)
+    expect(container.textContent).toBe("true")
+
+    const onRecoverableError = jest.fn()
+    await act(async () => {
+      hydrateRoot(container, tree, { onRecoverableError })
+    })
+    expect(onRecoverableError).not.toHaveBeenCalled()
+    expect(container.textContent).toBe("false")
   })
 
   test("Hydrates with the server's value when PostHog already has a different one, then switches to it", async () => {

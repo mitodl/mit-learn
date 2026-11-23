@@ -4,6 +4,7 @@ import { PostHogProvider } from "posthog-js/react"
 import { useUserMe } from "api/hooks/user"
 import type { CurrentUser } from "api/hooks/user"
 import { FeatureFlagsSettledContext } from "@/common/useFeatureFlagsSettled"
+import { FlagsSuccessContext } from "@/common/useFeatureFlag"
 import { env } from "@/env"
 import { getFirstFlagLoad, loadFlags } from "@/bootstrap/posthog"
 
@@ -25,7 +26,7 @@ const FLAGS_SETTLED_CAP_MS = 10_000
  *
  * Returns the flag load for the new identity when this changed it, else null.
  */
-const syncIdentity = (user: CurrentUser): Promise<void> | null => {
+const syncIdentity = (user: CurrentUser): Promise<boolean> | null => {
   if (user.is_authenticated) {
     /**
      * Identify by the Keycloak global id rather than our Django user id.
@@ -53,8 +54,15 @@ const KeyedPostHogProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [flagsSettled, setFlagsSettled] = useState(false)
+  /**
+   * Whether PostHog answered the current identity's load in full. A failed
+   * request or the cap leaves it `false`, and a load that identify or reset
+   * starts sets it back to `false` until that load answers, so useFeatureFlag
+   * keeps the server's values meanwhile.
+   */
+  const [flagsSuccess, setFlagsSuccess] = useState(false)
   /** The flag load for the identity this page currently has. */
-  const currentLoad = useRef<Promise<void>>(undefined)
+  const currentLoad = useRef<Promise<boolean>>(undefined)
   const cap = useRef<ReturnType<typeof setTimeout>>(undefined)
   const { data: user, isError } = useUserMe()
 
@@ -99,19 +107,28 @@ const KeyedPostHogProvider: React.FC<{ children: React.ReactNode }> = ({
    */
   useEffect(() => {
     if (!currentLoad.current || (!user && !isError)) return
-    const load = (user ? syncIdentity(user) : null) ?? currentLoad.current
+    const identityLoad = user ? syncIdentity(user) : null
+    /**
+     * `posthog.reset()` drops every flag posthog-js holds, so until the new
+     * load answers, a flag with no value is not one PostHog left out.
+     */
+    if (identityLoad) setFlagsSuccess(false)
+    const load = identityLoad ?? currentLoad.current
     currentLoad.current = load
-    load.then(() => {
+    load.then((success) => {
       if (load !== currentLoad.current) return
       clearTimeout(cap.current)
       setFlagsSettled(true)
+      setFlagsSuccess(success)
     })
   }, [user, isError])
 
   return (
     <PostHogProvider client={posthog}>
       <FeatureFlagsSettledContext.Provider value={flagsSettled}>
-        {children}
+        <FlagsSuccessContext.Provider value={flagsSuccess}>
+          {children}
+        </FlagsSuccessContext.Provider>
       </FeatureFlagsSettledContext.Provider>
     </PostHogProvider>
   )

@@ -31,7 +31,7 @@ export type ServerFlags = Partial<Record<FeatureFlags, boolean>>
  * flag key read as underscores in the env var name. Only "true" (any case) is
  * on; anything else, including unset, is off.
  */
-const flagDefault = (flag: FeatureFlags): boolean => {
+export const flagDefault = (flag: FeatureFlags): boolean => {
   const prefix = env("NEXT_PUBLIC_POSTHOG_FEATURE_PREFIX") ?? "FEATURE_"
   /**
    * fullEnv(), not env(): these keys are built at runtime, and env() only
