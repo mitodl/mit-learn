@@ -301,7 +301,7 @@ describe("ContractLearnersPage", () => {
       expect(screen.queryByText("No learners found.")).not.toBeInTheDocument()
     })
 
-    test("says no one has joined yet in place of the grid when the contract has no members", async () => {
+    test("says there are no learners to show in place of the grid when none are listed", async () => {
       const { contractId, contract } = renderGrid()
       setMockResponse.get(
         learnerTotalUrl(contractId),
@@ -310,7 +310,7 @@ describe("ContractLearnersPage", () => {
       mockGridPage(contractId, 0, [])
 
       const message = await screen.findByText(
-        `No learners have joined ${contract.name} yet. They'll appear here once they join.`,
+        `No learners to show for ${contract.name} yet.`,
       )
       expect(
         screen.queryByRole("table", { name: "Learner progress by module" }),

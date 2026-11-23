@@ -845,8 +845,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
           </Alert>
         ) : noLearners ? (
           <Typography id={NO_LEARNERS_MESSAGE_ID} variant="body1">
-            No learners have joined {contract.name} yet. They&apos;ll appear
-            here once they join.
+            No learners to show for {contract.name} yet.
           </Typography>
         ) : noCourses ? (
           <Typography id={NO_COURSES_MESSAGE_ID} variant="body1">
