@@ -9,6 +9,7 @@ import {
 import Image from "next/image"
 import {
   Container,
+  MuiCheckbox,
   SearchInput,
   SimpleSelectField,
   Skeleton,
@@ -16,7 +17,7 @@ import {
   styled,
   Typography,
 } from "ol-components"
-import { Alert, Button, Checkbox, VisuallyHidden } from "@mitodl/smoot-design"
+import { Alert, Button, VisuallyHidden } from "@mitodl/smoot-design"
 import {
   analyticsContractQueries,
   type LearnerStatusFilter,
@@ -351,6 +352,63 @@ const CheckboxField = styled.div(({ theme }) => ({
   },
 }))
 
+const CheckboxLabel = styled("label", {
+  shouldForwardProp: (prop) => prop !== "$unavailable",
+})<{ $unavailable: boolean }>(({ $unavailable, theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  cursor: $unavailable ? "default" : "pointer",
+  ...theme.typography.body2,
+  color: $unavailable
+    ? theme.custom.colors.silverGrayLight
+    : theme.custom.colors.silverGrayDark,
+  ".MuiCheckbox-root": {
+    padding: "0 4px 0 0",
+    color: "inherit",
+  },
+}))
+
+const NEEDS_ATTENTION_LABEL = "Not started or inactive 30+ days"
+const NEEDS_ATTENTION_HINT_ID = "learner-needs-attention-hint"
+
+/**
+ * Unavailable is `aria-disabled` rather than `disabled`, as in `StatusSelect`,
+ * so a keyboard or screen reader user can still reach the reason. MUI's
+ * checkbox stands in for smoot-design's, which can't carry `aria-disabled`.
+ */
+const NeedsAttentionCheckbox: React.FC<{
+  checked: boolean
+  onChange: (checked: boolean) => void
+  unavailable: boolean
+}> = ({ checked, onChange, unavailable }) => (
+  <CheckboxField>
+    <CheckboxLabel $unavailable={unavailable}>
+      <MuiCheckbox
+        size="small"
+        disableRipple
+        checked={checked}
+        onChange={(event) => {
+          if (!unavailable) onChange(event.target.checked)
+        }}
+        inputProps={
+          unavailable
+            ? {
+                "aria-disabled": "true",
+                "aria-describedby": NEEDS_ATTENTION_HINT_ID,
+              }
+            : undefined
+        }
+      />
+      {NEEDS_ATTENTION_LABEL}
+    </CheckboxLabel>
+    {unavailable ? (
+      <VisuallyHidden id={NEEDS_ATTENTION_HINT_ID}>
+        Learners who haven&apos;t enrolled have no activity to flag.
+      </VisuallyHidden>
+    ) : null}
+  </CheckboxField>
+)
+
 const ErrorRow = styled.div({
   display: "flex",
   alignItems: "center",
@@ -467,6 +525,25 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     }
   }, [coursesQuery.isSuccess, statusAvailable, statusFilter, setStatusFilter])
 
+  /** The API never matches Not enrolled with needs attention: there's no enrollment to judge. */
+  const needsAttentionAvailable = activeStatus !== "not_enrolled"
+  const activeNeedsAttention = needsAttentionAvailable && needsAttentionOnly
+
+  useEffect(() => {
+    if (!needsAttentionAvailable && needsAttentionOnly) {
+      setNeedsAttentionOnly(false)
+    }
+  }, [needsAttentionAvailable, needsAttentionOnly, setNeedsAttentionOnly])
+
+  const handleStatusChange = (value: string) => {
+    setStatusAnnouncement(
+      value === "not_enrolled" && needsAttentionOnly
+        ? `${NEEDS_ATTENTION_LABEL} filter cleared.`
+        : "",
+    )
+    setStatusFilter(value)
+  }
+
   /**
    * Every module is stored as `ALL_MODULES`, so the URL's 50-module cap can't
    * drop one. The announcement is emptied on every other change, so a later
@@ -495,11 +572,11 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
    */
   const requestModules = useMemo(
     () =>
-      (completionStatus || needsAttentionOnly) &&
+      (completionStatus || activeNeedsAttention) &&
       activeGridModules.length < courseOptions.length
         ? activeGridModules
         : [],
-    [completionStatus, needsAttentionOnly, activeGridModules, courseOptions],
+    [completionStatus, activeNeedsAttention, activeGridModules, courseOptions],
   )
 
   const gridFilters = useMemo(
@@ -507,10 +584,10 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
       ...(debouncedSearch ? { search: debouncedSearch } : {}),
       ...(completionStatus ? { completion_status: completionStatus } : {}),
       /** Only ever sent as `true`: no control here asks for the learners who are fine. */
-      ...(needsAttentionOnly ? { needs_attention: true } : {}),
+      ...(activeNeedsAttention ? { needs_attention: true } : {}),
       ...(requestModules.length ? { course_readable_id: requestModules } : {}),
     }),
-    [debouncedSearch, completionStatus, needsAttentionOnly, requestModules],
+    [debouncedSearch, completionStatus, activeNeedsAttention, requestModules],
   )
   const gridQuery = useQuery({
     ...gridLearnersQuery(orgUuid ?? "", contractId ?? 0, gridFilters, page),
@@ -661,11 +738,11 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     !!searchQuery ||
     activeStatus !== ALL ||
     hasModuleFilter ||
-    needsAttentionOnly
+    activeNeedsAttention
 
   const emptyMessage = debouncedSearch
     ? "No learners match your search."
-    : activeStatus !== ALL || hasModuleFilter || needsAttentionOnly
+    : activeStatus !== ALL || hasModuleFilter || activeNeedsAttention
       ? "No learners match this filter."
       : "No learners found."
 
@@ -801,7 +878,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                 ) : null}
                 <StatusSelect
                   value={activeStatus}
-                  onChange={setStatusFilter}
+                  onChange={handleStatusChange}
                   unavailable={
                     statusAvailable
                       ? undefined
@@ -815,15 +892,14 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                 <VisuallyHidden role="status" aria-atomic="true">
                   {statusAnnouncement}
                 </VisuallyHidden>
-                <CheckboxField>
-                  <Checkbox
-                    label="Not started or inactive 30+ days"
-                    checked={needsAttentionOnly}
-                    onChange={(event) =>
-                      setNeedsAttentionOnly(event.target.checked)
-                    }
-                  />
-                </CheckboxField>
+                <NeedsAttentionCheckbox
+                  checked={activeNeedsAttention}
+                  onChange={(checked) => {
+                    setStatusAnnouncement("")
+                    setNeedsAttentionOnly(checked)
+                  }}
+                  unavailable={!needsAttentionAvailable}
+                />
                 <Button
                   variant="tertiary"
                   size="medium"

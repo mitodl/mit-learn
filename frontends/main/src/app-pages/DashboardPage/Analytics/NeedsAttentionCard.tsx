@@ -4,17 +4,16 @@ import React from "react"
 import { RiArrowRightLine } from "@remixicon/react"
 import { Skeleton, styled, Typography } from "ol-components"
 import { ButtonLink } from "@mitodl/smoot-design"
-import type { ContractNeedsAttention } from "api/analytics-hooks/organizations"
-import { SuppressibleValue } from "./format"
+import { formatCount } from "./format"
 import SectionError from "./SectionError"
 
 /**
  * The "Needs attention" count and the follow-up it calls for, for one contract.
  *
- * Reads `ContractNeedsAttention`, a distinct-learner count. The CTA lands on
- * the learner directory's progress grid with its needs-attention filter on,
- * which applies the same server-side rule and lists one row per learner, with
- * each module behind flagged.
+ * `count` is the `total_count` of the same `/learners` request the CTA's
+ * Learners page makes, so the number matches the list it opens, one row per
+ * learner with each module behind flagged. It has no anonymity floor: the
+ * manager can open that list.
  *
  * The copy promises review, not sending: there is no reminder action yet.
  */
@@ -70,11 +69,11 @@ const Action = styled.div(({ theme }) => ({
 const learners = (count: number) => (count === 1 ? "learner" : "learners")
 
 const NeedsAttentionCard: React.FC<{
-  row: ContractNeedsAttention | undefined
+  count: number | undefined
   isLoading: boolean
   isError?: boolean
   learnersHref: string
-}> = ({ row, isLoading, isError, learnersHref }) => {
+}> = ({ count, isLoading, isError, learnersHref }) => {
   if (isError) {
     return (
       <Card role="group" aria-label="Needs attention">
@@ -84,7 +83,7 @@ const NeedsAttentionCard: React.FC<{
     )
   }
 
-  if (isLoading) {
+  if (isLoading || count === undefined) {
     return (
       <Card role="group" aria-label="Needs attention" aria-busy="true">
         <Eyebrow component="p">Needs attention</Eyebrow>
@@ -94,21 +93,14 @@ const NeedsAttentionCard: React.FC<{
     )
   }
 
-  /** No row means the contract is under the anonymity floor; a null count means the count itself is. */
-  const count = row?.learners_needing_attention ?? null
-
   return (
     <Card role="group" aria-label="Needs attention">
       <Eyebrow component="p">Needs attention</Eyebrow>
       <Count component="p">
-        <SuppressibleValue value={count} />
-        {count === null ? null : <Unit> {learners(count)}</Unit>}
+        {formatCount(count)}
+        <Unit> {learners(count)}</Unit>
       </Count>
-      {count === null ? (
-        <Body component="p">
-          Too few learners to report how many need attention.
-        </Body>
-      ) : count === 0 ? (
+      {count === 0 ? (
         <Body component="p">No learners need attention right now.</Body>
       ) : (
         <Body component="p">Not started, or inactive for 30+ days.</Body>

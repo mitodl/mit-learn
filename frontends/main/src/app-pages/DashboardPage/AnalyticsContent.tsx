@@ -321,9 +321,17 @@ const AnalyticsContent: React.FC<AnalyticsContentProps> = ({
     }),
   })
 
-  /** Matches `LearnerProgressCard`, which renders it only when someone is counted. */
+  /**
+   * The same request the card's link makes on the Learners page, so the count
+   * matches the list it opens. Enabled like `LearnerProgressCard`, which
+   * renders it only when someone is counted.
+   */
   const needsAttention = useQuery({
-    ...analyticsContractQueries.needsAttention(orgUuid ?? "", contractId ?? 0),
+    ...analyticsContractQueries.learners(orgUuid ?? "", contractId ?? 0, {
+      limit: 1,
+      offset: 0,
+      needs_attention: true,
+    }),
     enabled: learnerCounts.counts.all > 0,
   })
 
@@ -519,7 +527,7 @@ const AnalyticsContent: React.FC<AnalyticsContentProps> = ({
             }
             aside={
               <NeedsAttentionCard
-                row={needsAttention.data?.data[0]}
+                count={needsAttention.data?.total_count}
                 isLoading={needsAttention.isPending}
                 isError={needsAttention.isError}
                 learnersHref={contractLearnersView(orgSlug, contract.slug, {

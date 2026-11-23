@@ -1251,6 +1251,49 @@ describe("ContractLearnersPage", () => {
       await user.click(await checkbox())
       await screen.findByText("Stale And In Progress")
     })
+
+    /** The API never matches the two together, so the pair would always list nobody. */
+    test("is cleared, and unavailable but still reachable, while Status is Not enrolled", async () => {
+      const { contractId, location } = renderGrid("/", oneModule())
+      mockGridPage(contractId, 0, [learnerNamed("Everyone")])
+      mockGridPage(
+        contractId,
+        0,
+        [learnerNamed("Stale")],
+        {},
+        { needs_attention: true },
+      )
+      mockGridPage(
+        contractId,
+        0,
+        [],
+        {},
+        { completion_status: ["not_enrolled"] },
+        [memberNamed("Bob Barker")],
+      )
+
+      await screen.findByText("Everyone")
+      await user.click(await checkbox())
+      await screen.findByText("Stale")
+      await pickStatus("Not enrolled")
+
+      await screen.findByText("Bob Barker")
+      const box = await checkbox()
+      expect(box).not.toBeChecked()
+      expect(box).toHaveAttribute("aria-disabled", "true")
+      expect(box).not.toBeDisabled()
+      expect(box).toHaveAccessibleDescription(
+        "Learners who haven't enrolled have no activity to flag.",
+      )
+      expect(location.current.search).toBe("?status=not_enrolled")
+      expect(
+        screen.getByText(`${NEEDS_ATTENTION} filter cleared.`),
+      ).toHaveAttribute("role", "status")
+
+      await user.click(box)
+      expect(box).not.toBeChecked()
+      expect(location.current.search).toBe("?status=not_enrolled")
+    })
   })
 
   describe("URL state", () => {
