@@ -14,7 +14,7 @@ import type { CompletionStatusFilter } from "api/analytics-hooks/organizations"
 import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { allowConsoleErrors } from "ol-test-utilities"
 import { ForbiddenError } from "@/common/errors"
-import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
+import { useFeatureFlagsSettled } from "@/common/useFeatureFlagsSettled"
 import { ALL_MODULES, contractAnalyticsView } from "@/common/urls"
 import ContractLearnersPage from "./ContractLearnersPage"
 
@@ -25,8 +25,8 @@ jest.mock("@/common/analytics/posthog", () => ({
   initPostHog: jest.fn(),
 }))
 
-jest.mock("@/common/useFeatureFlagsLoaded")
-const mockedUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
+jest.mock("@/common/useFeatureFlagsSettled")
+const mockedUseFeatureFlagsSettled = jest.mocked(useFeatureFlagsSettled)
 const mockedUseFeatureFlag = jest.mocked(useFeatureFlag)
 
 const ORG_UUID = "11111111-2222-3333-4444-555555555555"
@@ -189,7 +189,7 @@ const oneModule = () => [
 
 describe("ContractLearnersPage", () => {
   beforeEach(() => {
-    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
+    mockedUseFeatureFlagsSettled.mockReturnValue(true)
     mockedUseFeatureFlag.mockReturnValue(true)
     setMockResponse.get(
       mitxUrls.userMe.get(),

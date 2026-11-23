@@ -4,15 +4,15 @@ import { setMockResponse, urls, factories } from "api/test-utils"
 import { absoluteUrl, videoDetailPath } from "@/common/urls"
 import { renderWithProviders, screen } from "@/test-utils"
 import { useFeatureFlag } from "@/common/useFeatureFlag"
-import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
+import { useFeatureFlagsSettled } from "@/common/useFeatureFlagsSettled"
 import VideoDetailPage from "./VideoDetailPage"
 import { ResourceTypeEnum } from "api/v1"
 import type { VideoResource, VideoPlaylistResource } from "api/v1"
 
 jest.mock("@/common/useFeatureFlag")
 const mockedUseFeatureFlag = jest.mocked(useFeatureFlag)
-jest.mock("@/common/useFeatureFlagsLoaded")
-const mockedUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
+jest.mock("@/common/useFeatureFlagsSettled")
+const mockedUseFeatureFlagsSettled = jest.mocked(useFeatureFlagsSettled)
 
 jest.mock("next-nprogress-bar", () => ({
   useRouter: () => ({}),
@@ -101,7 +101,7 @@ describe("VideoDetailPage", () => {
     jest.clearAllMocks()
     // VideoDetailPage renders when the flag is enabled
     mockedUseFeatureFlag.mockReturnValue(true)
-    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
+    mockedUseFeatureFlagsSettled.mockReturnValue(true)
   })
 
   test("'more from this playlist' rows keep the browsed playlist and take only the backend slug", async () => {

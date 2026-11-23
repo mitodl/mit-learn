@@ -14,21 +14,21 @@ import { assertHeadings, getByImageSrc } from "ol-test-utilities"
 import invariant from "tiny-invariant"
 import ChannelPage from "./ChannelPage"
 import { useFeatureFlag } from "@/common/useFeatureFlag"
-import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
+import { useFeatureFlagsSettled } from "@/common/useFeatureFlagsSettled"
 import { FeatureFlags } from "@/common/feature_flags"
 import { DEPARTMENTS_LABEL, TOPICS_LABEL } from "./ChannelPageTemplate"
 
 jest.mock("@/common/useFeatureFlag")
-jest.mock("@/common/useFeatureFlagsLoaded")
+jest.mock("@/common/useFeatureFlagsSettled")
 
 /* Every flag off. The topic cases below are the redesigned page, which is no
    longer behind one; the department cases turn theirs on for themselves. */
 beforeEach(() => {
   jest.mocked(useFeatureFlag).mockImplementation(() => false)
   /* The page holds a spinner until the flags are in rather than render on a
-     fallback value, so without this every case here waits on one. Loaded
+     fallback value, so without this every case here waits on one. Settled
      is the state these tests are about; the waiting is its own case below. */
-  jest.mocked(useFeatureFlagsLoaded).mockReturnValue(true)
+  jest.mocked(useFeatureFlagsSettled).mockReturnValue(true)
 })
 
 jest.mock("./ChannelSearch", () => {
@@ -386,7 +386,7 @@ describe.each(NON_UNIT_CHANNEL_TYPES)(
  */
 describe("while the feature flags are still loading", () => {
   beforeEach(() => {
-    jest.mocked(useFeatureFlagsLoaded).mockReturnValue(false)
+    jest.mocked(useFeatureFlagsSettled).mockReturnValue(false)
   })
 
   /**

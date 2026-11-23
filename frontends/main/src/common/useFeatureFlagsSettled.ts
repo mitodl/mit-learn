@@ -7,7 +7,7 @@ import { createContext, useContext } from "react"
  * `true` by default: without a PostHog api key, and outside the provider, the
  * server's values and env defaults are the final values.
  */
-const FeatureFlagsLoadedContext = createContext(true)
+const FeatureFlagsSettledContext = createContext(true)
 
 /**
  * Returns `true` once PostHog's feature flags are final for this visitor, or
@@ -26,6 +26,6 @@ const FeatureFlagsLoadedContext = createContext(true)
  * 2. It never goes back to `false`. Later flag updates (another tab's load,
  *    an identity change) change flag values, not this.
  */
-const useFeatureFlagsLoaded = () => useContext(FeatureFlagsLoadedContext)
+const useFeatureFlagsSettled = () => useContext(FeatureFlagsSettledContext)
 
-export { useFeatureFlagsLoaded, FeatureFlagsLoadedContext }
+export { useFeatureFlagsSettled, FeatureFlagsSettledContext }

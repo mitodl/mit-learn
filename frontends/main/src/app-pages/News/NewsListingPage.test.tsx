@@ -11,18 +11,18 @@ import {
   within,
 } from "@/test-utils"
 import { useFeatureFlag } from "@/common/useFeatureFlag"
-import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
+import { useFeatureFlagsSettled } from "@/common/useFeatureFlagsSettled"
 
 jest.mock("@/common/useFeatureFlag")
-jest.mock("@/common/useFeatureFlagsLoaded")
+jest.mock("@/common/useFeatureFlagsSettled")
 
 const mockedUseFeatureFlag = jest.mocked(useFeatureFlag)
-const mockedUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
+const mockedUseFeatureFlagsSettled = jest.mocked(useFeatureFlagsSettled)
 
 describe("NewsListingPage", () => {
   beforeEach(() => {
     mockedUseFeatureFlag.mockReturnValue(true)
-    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
+    mockedUseFeatureFlagsSettled.mockReturnValue(true)
     setMockResponse.get(urls.userMe.get(), { is_authenticated: false })
   })
 
@@ -416,7 +416,7 @@ describe("NewsListingPage story actions", () => {
   /* A sibling describe, so it does not inherit the suite's own beforeEach. */
   beforeEach(() => {
     mockedUseFeatureFlag.mockReturnValue(true)
-    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
+    mockedUseFeatureFlagsSettled.mockReturnValue(true)
   })
 
   afterEach(() => {

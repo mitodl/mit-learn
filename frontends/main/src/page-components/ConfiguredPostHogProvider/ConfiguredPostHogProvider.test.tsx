@@ -5,7 +5,7 @@ import posthog from "posthog-js"
 import ConfiguredPostHogProvider from "./ConfiguredPostHogProvider"
 import { renderWithProviders } from "@/test-utils"
 import type { TestAppOptions } from "@/test-utils"
-import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
+import { useFeatureFlagsSettled } from "@/common/useFeatureFlagsSettled"
 import { setMockResponse, urls, factories } from "api/test-utils"
 import { userQueries } from "api/hooks/user"
 import type { User } from "api/hooks/user"
@@ -44,10 +44,10 @@ let reloads: Array<(status: ReloadStatus) => void> = []
 const settleReload = (index: number, status: ReloadStatus = "loaded") =>
   act(() => reloads[index](status))
 
-const FlagsLoaded = () => (
-  <div data-testid="flags-loaded">{String(useFeatureFlagsLoaded())}</div>
+const FlagsSettled = () => (
+  <div data-testid="flags-settled">{String(useFeatureFlagsSettled())}</div>
 )
-const flagsLoaded = () => screen.getByTestId("flags-loaded").textContent
+const flagsSettled = () => screen.getByTestId("flags-settled").textContent
 
 /** Has identify switch posthog's distinct id, as the real one does. */
 const identifyChangesId = () =>
@@ -75,7 +75,7 @@ const renderProvider = ({
   mockGetFirstFlagLoad.mockReturnValue(posthogRunning ? loadFlags() : undefined)
   return renderWithProviders(
     <ConfiguredPostHogProvider>
-      <FlagsLoaded />
+      <FlagsSettled />
     </ConfiguredPostHogProvider>,
     options,
   )
@@ -118,12 +118,12 @@ describe("ConfiguredPostHogProvider", () => {
     delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
   })
 
-  test("When posthog isn't running on the page, flags count as loaded and nobody is identified or reset", async () => {
+  test("When posthog isn't running on the page, flags count as settled and nobody is identified or reset", async () => {
     // Not "anonymous", so a reset would happen if the identity were synced.
     mockPosthog.get_property.mockReturnValue("identified")
     const { queryClient } = setup({}, { posthogRunning: false })
     await waitForMe(queryClient, "success")
-    expect(flagsLoaded()).toBe("true")
+    expect(flagsSettled()).toBe("true")
     expect(mockPosthog.identify).not.toHaveBeenCalled()
     expect(mockPosthog.reset).not.toHaveBeenCalled()
     expect(mockReload).not.toHaveBeenCalled()
@@ -132,9 +132,9 @@ describe("ConfiguredPostHogProvider", () => {
   test("An anonymous visitor's flags load with the first request", async () => {
     setup({ is_authenticated: false })
     await waitFor(() => expect(mockPosthog.get_property).toHaveBeenCalled())
-    expect(flagsLoaded()).toBe("false")
+    expect(flagsSettled()).toBe("false")
     await settleReload(0)
-    expect(flagsLoaded()).toBe("true")
+    expect(flagsSettled()).toBe("true")
     expect(mockPosthog.reset).not.toHaveBeenCalled()
     expect(mockPosthog.identify).not.toHaveBeenCalled()
   })
@@ -143,7 +143,7 @@ describe("ConfiguredPostHogProvider", () => {
     setup({ is_authenticated: false })
     await waitFor(() => expect(mockPosthog.get_property).toHaveBeenCalled())
     await settleReload(0, "error")
-    expect(flagsLoaded()).toBe("true")
+    expect(flagsSettled()).toBe("true")
     expect(mockReload).toHaveBeenCalledOnce()
   })
 
@@ -152,9 +152,9 @@ describe("ConfiguredPostHogProvider", () => {
     setup({ is_authenticated: false })
     await waitFor(() => expect(mockPosthog.reset).toHaveBeenCalledOnce())
     await settleReload(0)
-    expect(flagsLoaded()).toBe("false")
+    expect(flagsSettled()).toBe("false")
     await settleReload(1)
-    expect(flagsLoaded()).toBe("true")
+    expect(flagsSettled()).toBe("true")
   })
 
   test.each([
@@ -170,9 +170,9 @@ describe("ConfiguredPostHogProvider", () => {
       await waitFor(() => expect(mockReload).toHaveBeenCalledTimes(2))
       const [first, second] = settleOrder
       await settleReload(first)
-      expect(flagsLoaded()).toBe(first === 1 ? "true" : "false")
+      expect(flagsSettled()).toBe(first === 1 ? "true" : "false")
       await settleReload(second)
-      expect(flagsLoaded()).toBe("true")
+      expect(flagsSettled()).toBe("true")
     },
   )
 
@@ -183,9 +183,9 @@ describe("ConfiguredPostHogProvider", () => {
     await refetchMe(queryClient, { ...user, first_name: "Changed" })
     await waitFor(() => expect(mockPosthog.identify).toHaveBeenCalledTimes(2))
     await settleReload(0)
-    expect(flagsLoaded()).toBe("false")
+    expect(flagsSettled()).toBe("false")
     await settleReload(1)
-    expect(flagsLoaded()).toBe("true")
+    expect(flagsSettled()).toBe("true")
     expect(mockReload).toHaveBeenCalledTimes(2)
   })
 
@@ -198,7 +198,7 @@ describe("ConfiguredPostHogProvider", () => {
       ),
     )
     await settleReload(0)
-    expect(flagsLoaded()).toBe("true")
+    expect(flagsSettled()).toBe("true")
     expect(mockReload).toHaveBeenCalledOnce()
   })
 
@@ -207,9 +207,9 @@ describe("ConfiguredPostHogProvider", () => {
     setMockResponse.get(urls.userMe.get(), user)
     renderProvider({ user })
     await waitFor(() => expect(mockPosthog.identify).toHaveBeenCalled())
-    expect(flagsLoaded()).toBe("false")
+    expect(flagsSettled()).toBe("false")
     await settleReload(0)
-    expect(flagsLoaded()).toBe("true")
+    expect(flagsSettled()).toBe("true")
   })
 
   test("Under Strict Mode, a cached user whom identify switches to waits for the identified request", async () => {
@@ -224,9 +224,9 @@ describe("ConfiguredPostHogProvider", () => {
     }
     await waitFor(() => expect(mockReload).toHaveBeenCalledTimes(2))
     await settleReload(0)
-    expect(flagsLoaded()).toBe("false")
+    expect(flagsSettled()).toBe("false")
     await settleReload(1)
-    expect(flagsLoaded()).toBe("true")
+    expect(flagsSettled()).toBe("true")
   })
 
   test("A user with no global id is neither identified nor reset", async () => {
@@ -234,9 +234,9 @@ describe("ConfiguredPostHogProvider", () => {
     mockPosthog.get_property.mockReturnValue("identified")
     const { queryClient } = setup({ global_id: null })
     await waitForMe(queryClient, "success")
-    expect(flagsLoaded()).toBe("false")
+    expect(flagsSettled()).toBe("false")
     await settleReload(0)
-    expect(flagsLoaded()).toBe("true")
+    expect(flagsSettled()).toBe("true")
     expect(mockPosthog.identify).not.toHaveBeenCalled()
     expect(mockPosthog.reset).not.toHaveBeenCalled()
   })
@@ -245,18 +245,18 @@ describe("ConfiguredPostHogProvider", () => {
     setup({ is_authenticated: false })
     await waitFor(() => expect(mockPosthog.get_property).toHaveBeenCalled())
     await settleReload(0, "cancelled")
-    expect(flagsLoaded()).toBe("false")
+    expect(flagsSettled()).toBe("false")
     await settleReload(1)
-    expect(flagsLoaded()).toBe("true")
+    expect(flagsSettled()).toBe("true")
   })
 
   test("A failed /me waits only for the first request", async () => {
     setMockResponse.get(urls.userMe.get(), {}, { code: 500 })
     const { queryClient } = renderProvider()
     await waitForMe(queryClient, "error")
-    expect(flagsLoaded()).toBe("false")
+    expect(flagsSettled()).toBe("false")
     await settleReload(0)
-    expect(flagsLoaded()).toBe("true")
+    expect(flagsSettled()).toBe("true")
     expect(mockPosthog.identify).not.toHaveBeenCalled()
     expect(mockPosthog.reset).not.toHaveBeenCalled()
   })
@@ -282,10 +282,10 @@ describe("ConfiguredPostHogProvider", () => {
     try {
       setup()
       await act(() => jest.advanceTimersByTime(9_999))
-      expect(flagsLoaded()).toBe("false")
+      expect(flagsSettled()).toBe("false")
       expect(warn).not.toHaveBeenCalled()
       await act(() => jest.advanceTimersByTime(1))
-      expect(flagsLoaded()).toBe("true")
+      expect(flagsSettled()).toBe("true")
       expect(warn).toHaveBeenCalledOnce()
     } finally {
       warn.mockRestore()
@@ -293,9 +293,9 @@ describe("ConfiguredPostHogProvider", () => {
     }
   })
 
-  test("Without an api key, flags count as loaded", () => {
+  test("Without an api key, flags count as settled", () => {
     delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
     setup({}, { posthogRunning: false })
-    expect(flagsLoaded()).toBe("true")
+    expect(flagsSettled()).toBe("true")
   })
 })

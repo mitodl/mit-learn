@@ -31,7 +31,7 @@ import {
   isForbiddenResponse,
 } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
-import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
+import { useFeatureFlagsSettled } from "@/common/useFeatureFlagsSettled"
 import { useFeatureFlag } from "@/common/useFeatureFlag"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
 import ContractManagerNav from "@/components/ContractManagerNav/ContractManagerNav"
@@ -858,10 +858,10 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
 }
 
 const ContractLearnersPage: React.FC<ContractLearnersPageProps> = (props) => {
-  const flagsLoaded = useFeatureFlagsLoaded()
+  const flagsSettled = useFeatureFlagsSettled()
   const enabled = useFeatureFlag(FeatureFlags.B2BLearnerAnalytics)
 
-  if (!flagsLoaded) {
+  if (!flagsSettled) {
     return (
       <Page>
         <Stack gap="24px">

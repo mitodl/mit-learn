@@ -4,13 +4,13 @@ import React from "react"
 import { ContactUsLauncher } from "@mitodl/smoot-design/contact-us"
 import { useUserMe } from "api/hooks/user"
 import { FeatureFlags } from "@/common/feature_flags"
-import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
+import { useFeatureFlagsSettled } from "@/common/useFeatureFlagsSettled"
 import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { isContactUsEnabled, getContactUsSettings } from "./contactUsConfig"
 
 const ContactUsLauncherGate: React.FC = () => {
   const enabled = useFeatureFlag(FeatureFlags.ContactUs)
-  const flagsLoaded = useFeatureFlagsLoaded()
+  const flagsSettled = useFeatureFlagsSettled()
   const { data: user } = useUserMe()
   const authed = user?.is_authenticated ? user : undefined
   const email = authed?.email
@@ -21,7 +21,7 @@ const ContactUsLauncherGate: React.FC = () => {
     [email, name, username],
   )
 
-  if (!flagsLoaded || !enabled || !isContactUsEnabled()) {
+  if (!flagsSettled || !enabled || !isContactUsEnabled()) {
     return null
   }
 
