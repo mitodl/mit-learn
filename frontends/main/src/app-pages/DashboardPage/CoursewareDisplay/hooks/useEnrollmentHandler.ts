@@ -3,6 +3,7 @@ import {
   CourseRunV2,
   CourseWithCourseRunsSerializerV2,
 } from "@mitodl/mitxonline-api-axios/v2"
+import type { BaseCourseRun } from "@mitodl/mitxonline-api-axios/v3"
 import {
   useCreateB2bEnrollment,
   useCreateEnrollment,
@@ -13,6 +14,9 @@ import NiceModal from "@ebay/nice-modal-react"
 import { getCourseEnrollmentAction } from "@/common/mitxonline"
 import { useComplianceGate } from "@/common/mitxonline/useComplianceGate"
 import CourseEnrollmentDialog from "@/page-components/EnrollmentDialogs/CourseEnrollmentDialog"
+import { ProgramCourseStartDialog } from "../ProgramCourseStartDialog"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
+import { FeatureFlags } from "@/common/feature_flags"
 import { analytics } from "@/common/analytics"
 import { canOpenCourseware } from "../courseDateUtils"
 import { runHasEnded } from "../model/dashboardViewModel"
@@ -40,6 +44,31 @@ const CHECKOUT_META = Object.freeze({
   contactSupport: true,
 })
 
+/**
+ * Runs a learner can start from the dashboard: open for enrollment and not
+ * ended, ordered by start date. The displayed run is always included, since a
+ * variant run may be missing from `course.courseruns`.
+ */
+const getStartableRuns = (
+  course: CourseWithCourseRunsSerializerV2,
+  displayedRun?: BaseCourseRun,
+): BaseCourseRun[] => {
+  const runs: BaseCourseRun[] = (course.courseruns ?? []).filter(
+    (run) => run.is_enrollable && !runHasEnded(run),
+  )
+  if (
+    displayedRun &&
+    displayedRun.is_enrollable &&
+    !runHasEnded(displayedRun) &&
+    !runs.some((run) => run.id === displayedRun.id)
+  ) {
+    runs.push(displayedRun)
+  }
+  return runs.sort((a, b) =>
+    (a.start_date ?? "").localeCompare(b.start_date ?? ""),
+  )
+}
+
 export const useEnrollmentHandler = () => {
   const createB2bEnrollment = useCreateB2bEnrollment({
     meta: COURSE_ENROLL_META,
@@ -48,6 +77,9 @@ export const useEnrollmentHandler = () => {
   const createVerifiedProgramEnrollment = useCreateVerifiedProgramEnrollment({
     meta: PROGRAM_ENROLL_META,
   })
+  const startDialogEnabled = useFeatureFlag(
+    FeatureFlags.ProgramCourseStartDialog,
+  )
   const replaceBasketItem = useReplaceBasketItem({ meta: CHECKOUT_META })
   const { mutateWithCompliance } = useComplianceGate()
   const mitxOnlineUser = useQuery(mitxUserQueries.me())
@@ -56,6 +88,7 @@ export const useEnrollmentHandler = () => {
   const enroll = React.useCallback(
     async ({
       course,
+      displayedRun,
       readableId,
       href,
       selectedCoursewareUrl,
@@ -67,6 +100,8 @@ export const useEnrollmentHandler = () => {
       startDate,
     }: {
       course: CourseWithCourseRunsSerializerV2
+      /** The run the card shows, preselected when the learner picks a run. */
+      displayedRun?: BaseCourseRun
       readableId?: string
       href?: string
       selectedCoursewareUrl?: string
@@ -128,39 +163,64 @@ export const useEnrollmentHandler = () => {
         )
       } else if (
         isVerifiedProgram &&
-        readableId &&
         (programReadableIds?.length || programCoursewareId)
       ) {
-        if (!href) {
-          console.warn(
-            "Cannot enroll in verified program course: missing href",
-            { href },
+        const requestBody = programReadableIds?.length
+          ? programReadableIds
+          : [programCoursewareId!]
+        if (!startDialogEnabled) {
+          if (!readableId || !href) {
+            console.warn(
+              "Cannot enroll in verified program course: missing run",
+              { readableId, href },
+            )
+            return
+          }
+          // See the B2B note above: the displayed run may be absent from
+          // course.courseruns, so selectedCoursewareUrl/href must take
+          // precedence over this find().
+          const verifiedDestination =
+            selectedCoursewareUrl ??
+            (course.courseruns ?? []).find(
+              (run) => run.courseware_id === readableId,
+            )?.courseware_url ??
+            href
+          await mutateWithCompliance(
+            createVerifiedProgramEnrollment,
+            { courserun_id: readableId, request_body: requestBody },
+            {
+              onSuccess: () => {
+                finishEnrollment(verifiedDestination, startDate)
+              },
+            },
           )
           return
         }
-        // See the B2B note above: the displayed run may be absent from
-        // course.courseruns, so selectedCoursewareUrl/href must take precedence
-        // over this find().
-        const verifiedDestination =
-          selectedCoursewareUrl ??
-          (course.courseruns ?? []).find(
-            (run) => run.courseware_id === readableId,
-          )?.courseware_url ??
-          href
-        const requestBody = programReadableIds?.length
-          ? programReadableIds
-          : programCoursewareId
-            ? [programCoursewareId]
-            : []
-        await mutateWithCompliance(
-          createVerifiedProgramEnrollment,
-          { courserun_id: readableId, request_body: requestBody },
-          {
-            onSuccess: () => {
-              finishEnrollment(verifiedDestination ?? href, startDate)
-            },
+        // The program purchase covers a certificate enrollment, but a learner
+        // gets one graded attempt per course, so let them pick a run and
+        // choose between that and practice mode (audit) first.
+        const runs = getStartableRuns(course, displayedRun)
+        if (runs.length === 0) {
+          console.warn("Cannot start verified program course: no open runs", {
+            readableId,
+          })
+          return
+        }
+        NiceModal.show(ProgramCourseStartDialog, {
+          course,
+          runs,
+          initialRunId: displayedRun?.id,
+          programReadableIds: requestBody,
+          onEnrolled: (run: BaseCourseRun) => {
+            // See the B2B note above: a displayed variant run may be absent
+            // from course.courseruns, so the card's own URL wins for it.
+            const url =
+              run.id === displayedRun?.id
+                ? (selectedCoursewareUrl ?? run.courseware_url ?? href)
+                : run.courseware_url
+            if (url) finishEnrollment(url, run.start_date)
           },
-        )
+        })
       } else {
         // Archived runs (ended, still enrollable) can't be started from the
         // dashboard, so leave them out of both the action and the dialog.
@@ -222,6 +282,7 @@ export const useEnrollmentHandler = () => {
       createEnrollment,
       createVerifiedProgramEnrollment,
       replaceBasketItem,
+      startDialogEnabled,
       isStaff,
     ],
   )

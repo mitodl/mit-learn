@@ -99,6 +99,7 @@ export const UnenrolledCourseCard = ({
 
     enrollment.enroll({
       course: course,
+      displayedRun: courseRun,
       readableId: readableId,
       href: coursewareUrl ?? undefined,
       selectedCoursewareUrl: coursewareUrl ?? undefined,
@@ -114,10 +115,10 @@ export const UnenrolledCourseCard = ({
     })
   }, [
     course,
+    courseRun,
     ancestorContext,
     readableId,
     coursewareUrl,
-    courseRun?.start_date,
     isContractPageResource,
     enrollment,
   ])
