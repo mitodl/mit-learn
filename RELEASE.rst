@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+Version 0.88.8
+--------------
+
+- Bump smoot-design to 6.43.0 for the Contact Us review and new-thread changes (#4392)
+- Show practice problems in the learning resource drawer and cards (#4381)
+
 Version 0.88.7
 --------------
 
