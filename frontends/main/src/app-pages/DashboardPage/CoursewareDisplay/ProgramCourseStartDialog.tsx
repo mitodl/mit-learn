@@ -117,8 +117,13 @@ const ProgramCourseStartDialogInner: React.FC<
   const activeMutation =
     mode === "certificate" ? createVerifiedEnrollment : createAuditEnrollment
   const { mutateWithCompliance } = useComplianceGate()
+  // Covers the compliance check that runs before the mutation, too: closing
+  // then would still enroll the learner, but skip the redirect.
+  const [submitting, setSubmitting] = React.useState(false)
   const isPending =
-    createVerifiedEnrollment.isPending || createAuditEnrollment.isPending
+    submitting ||
+    createVerifiedEnrollment.isPending ||
+    createAuditEnrollment.isPending
 
   const onSuccess = (enrolledRun: BaseCourseRun) => {
     modal.hide()
@@ -128,23 +133,28 @@ const ProgramCourseStartDialogInner: React.FC<
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
     if (!run || isPending) return
-    if (mode === "certificate") {
-      await mutateWithCompliance(
-        createVerifiedEnrollment,
-        { courserun_id: run.courseware_id, request_body: programReadableIds },
-        { onSuccess: () => onSuccess(run) },
-      )
-    } else {
-      await mutateWithCompliance(
-        createAuditEnrollment,
-        { run_id: run.id },
-        {
-          onSuccess: () => {
-            analytics.courseEnrolled(course.title)
-            onSuccess(run)
+    setSubmitting(true)
+    try {
+      if (mode === "certificate") {
+        await mutateWithCompliance(
+          createVerifiedEnrollment,
+          { courserun_id: run.courseware_id, request_body: programReadableIds },
+          { onSuccess: () => onSuccess(run) },
+        )
+      } else {
+        await mutateWithCompliance(
+          createAuditEnrollment,
+          { run_id: run.id },
+          {
+            onSuccess: () => {
+              analytics.courseEnrolled(course.title)
+              onSuccess(run)
+            },
           },
-        },
-      )
+        )
+      }
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -153,6 +163,9 @@ const ProgramCourseStartDialogInner: React.FC<
     value: String(r.id),
   }))
   const singleRun = runs.length === 1
+  const otherRunHasCertificate = runs.some(
+    (r) => r.is_upgradable && r.id !== run?.id,
+  )
 
   return (
     <FormDialog
@@ -160,8 +173,6 @@ const ProgramCourseStartDialogInner: React.FC<
       fullWidth
       onSubmit={handleSubmit}
       {...muiDialogV5(modal)}
-      // Closing mid-request would still enroll the learner, but skip the
-      // redirect and leave them unaware, so stay open until it settles.
       onClose={isPending ? () => {} : () => modal.hide()}
       actions={
         <DialogActions>
@@ -268,9 +279,9 @@ const ProgramCourseStartDialogInner: React.FC<
                   ) : (
                     <span>
                       A certificate isn't available for this date.
-                      {singleRun
-                        ? null
-                        : " Choose another date to work toward a certificate."}
+                      {otherRunHasCertificate
+                        ? " Choose another date to work toward a certificate."
+                        : null}
                     </span>
                   )}
                 </Note>

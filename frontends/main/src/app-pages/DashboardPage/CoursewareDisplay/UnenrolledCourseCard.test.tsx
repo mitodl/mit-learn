@@ -1466,7 +1466,9 @@ describe.each([
         within(dialog).getByRole("radio", { name: "Try the course first" }),
       ).toBeChecked()
       expect(
-        within(dialog).getByText(/A certificate isn't available for this date/),
+        within(dialog).getByText(
+          /A certificate isn't available for this date. Choose another date/,
+        ),
       ).toBeInTheDocument()
       expect(
         within(dialog).queryByText(/Your program purchase includes/),
@@ -1483,6 +1485,58 @@ describe.each([
             body: expect.objectContaining({ run_id: later.id }),
           }),
         )
+      })
+    })
+
+    test("Doesn't suggest another date when no other run has a certificate", async () => {
+      const runs = [
+        startedRun({ is_upgradable: false }),
+        startedRun({
+          is_upgradable: false,
+          start_date: moment().add(30, "days").toISOString(),
+        }),
+      ]
+      const { course } = renderVerifiedCard(runs)
+
+      const dialog = await openStartDialog(course)
+
+      expect(
+        within(dialog).getByText(
+          "A certificate isn't available for this date.",
+        ),
+      ).toBeInTheDocument()
+      expect(
+        within(dialog).queryByText(/Choose another date/),
+      ).not.toBeInTheDocument()
+    })
+
+    test("The dialog can't be dismissed during the compliance check", async () => {
+      const run = startedRun()
+      const { course } = renderVerifiedCard([run])
+      const dialog = await openStartDialog(course)
+
+      // Continue refetches the user for the compliance check first.
+      const userFetch = deferredResponse<unknown>()
+      setMockResponse.get(mitxonline.urls.userMe.get(), userFetch.promise)
+      const endpoint = mitxonline.urls.verifiedProgramEnrollments.create(
+        run.courseware_id,
+      )
+      setMockResponse.post(endpoint, {})
+      await user.click(within(dialog).getByRole("button", { name: "Continue" }))
+
+      const cancel = within(dialog).getByRole("button", { name: "Cancel" })
+      await waitFor(() => expect(cancel).toBeDisabled())
+      await user.keyboard("{Escape}")
+      expect(
+        screen.getByRole("dialog", { name: course.title }),
+      ).toBeInTheDocument()
+      expect(makeRequest).not.toHaveBeenCalledWith(
+        expect.objectContaining({ method: "post", url: endpoint }),
+      )
+
+      userFetch.resolve(mitxUser())
+      await waitFor(() => {
+        expect(window.location.href).toBe(run.courseware_url)
       })
     })
 
