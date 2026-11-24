@@ -7,6 +7,7 @@ import type { BaseCourseRun } from "@mitodl/mitxonline-api-axios/v3"
 import {
   useCreateB2bEnrollment,
   useCreateEnrollment,
+  useCreateVerifiedProgramEnrollment,
 } from "api/mitxonline-hooks/enrollment"
 import React from "react"
 import NiceModal from "@ebay/nice-modal-react"
@@ -14,6 +15,8 @@ import { getCourseEnrollmentAction } from "@/common/mitxonline"
 import { useComplianceGate } from "@/common/mitxonline/useComplianceGate"
 import CourseEnrollmentDialog from "@/page-components/EnrollmentDialogs/CourseEnrollmentDialog"
 import { ProgramCourseStartDialog } from "../ProgramCourseStartDialog"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
+import { FeatureFlags } from "@/common/feature_flags"
 import { analytics } from "@/common/analytics"
 import { canOpenCourseware } from "../courseDateUtils"
 import { runHasEnded } from "../model/dashboardViewModel"
@@ -23,11 +26,17 @@ import { badRequestDetailOr } from "api/mutation-errors"
 
 const ENROLL_COURSE_ERROR =
   "Something went wrong enrolling you in this course. Please try again."
+const ENROLL_PROGRAM_ERROR =
+  "Something went wrong enrolling you in this program. Please try again."
 
 // Prefer the server's own 400 explanation over the static copy. The bare
 // `badRequestDetailOr()` falls through to the global handler's generic message.
 const COURSE_ENROLL_META = Object.freeze({
   getErrorMessage: badRequestDetailOr(ENROLL_COURSE_ERROR),
+  contactSupport: true,
+})
+const PROGRAM_ENROLL_META = Object.freeze({
+  getErrorMessage: badRequestDetailOr(ENROLL_PROGRAM_ERROR),
   contactSupport: true,
 })
 const CHECKOUT_META = Object.freeze({
@@ -65,6 +74,12 @@ export const useEnrollmentHandler = () => {
     meta: COURSE_ENROLL_META,
   })
   const createEnrollment = useCreateEnrollment({ meta: COURSE_ENROLL_META })
+  const createVerifiedProgramEnrollment = useCreateVerifiedProgramEnrollment({
+    meta: PROGRAM_ENROLL_META,
+  })
+  const startDialogEnabled = useFeatureFlag(
+    FeatureFlags.ProgramCourseStartDialog,
+  )
   const replaceBasketItem = useReplaceBasketItem({ meta: CHECKOUT_META })
   const { mutateWithCompliance } = useComplianceGate()
   const mitxOnlineUser = useQuery(mitxUserQueries.me())
@@ -150,6 +165,37 @@ export const useEnrollmentHandler = () => {
         isVerifiedProgram &&
         (programReadableIds?.length || programCoursewareId)
       ) {
+        const requestBody = programReadableIds?.length
+          ? programReadableIds
+          : [programCoursewareId!]
+        if (!startDialogEnabled) {
+          if (!readableId || !href) {
+            console.warn(
+              "Cannot enroll in verified program course: missing run",
+              { readableId, href },
+            )
+            return
+          }
+          // See the B2B note above: the displayed run may be absent from
+          // course.courseruns, so selectedCoursewareUrl/href must take
+          // precedence over this find().
+          const verifiedDestination =
+            selectedCoursewareUrl ??
+            (course.courseruns ?? []).find(
+              (run) => run.courseware_id === readableId,
+            )?.courseware_url ??
+            href
+          await mutateWithCompliance(
+            createVerifiedProgramEnrollment,
+            { courserun_id: readableId, request_body: requestBody },
+            {
+              onSuccess: () => {
+                finishEnrollment(verifiedDestination, startDate)
+              },
+            },
+          )
+          return
+        }
         // The program purchase covers a certificate enrollment, but a learner
         // gets one graded attempt per course, so let them pick a run and
         // choose between that and practice mode (audit) first.
@@ -164,9 +210,7 @@ export const useEnrollmentHandler = () => {
           course,
           runs,
           initialRunId: displayedRun?.id,
-          programReadableIds: programReadableIds?.length
-            ? programReadableIds
-            : [programCoursewareId!],
+          programReadableIds: requestBody,
           onEnrolled: (run: BaseCourseRun) => {
             // See the B2B note above: a displayed variant run may be absent
             // from course.courseruns, so the card's own URL wins for it.
@@ -236,7 +280,9 @@ export const useEnrollmentHandler = () => {
       mutateWithCompliance,
       createB2bEnrollment,
       createEnrollment,
+      createVerifiedProgramEnrollment,
       replaceBasketItem,
+      startDialogEnabled,
       isStaff,
     ],
   )
@@ -246,6 +292,7 @@ export const useEnrollmentHandler = () => {
     isPending:
       createB2bEnrollment.isPending ||
       createEnrollment.isPending ||
+      createVerifiedProgramEnrollment.isPending ||
       replaceBasketItem.isPending,
   }
 }

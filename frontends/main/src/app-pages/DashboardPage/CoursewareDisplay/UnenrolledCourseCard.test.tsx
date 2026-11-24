@@ -21,10 +21,20 @@ import moment from "moment"
 import { cartesianProduct } from "ol-test-utilities"
 import { UnenrolledCourseCard } from "./UnenrolledCourseCard"
 import { trackCourseEnrolled, trackBeginCheckout } from "@/common/analytics/gtm"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
+import { FeatureFlags } from "@/common/feature_flags"
+
+jest.mock("@/common/useFeatureFlag")
+const mockedUseFeatureFlag = jest.mocked(useFeatureFlag)
+const enableStartDialog = (enabled: boolean) =>
+  mockedUseFeatureFlag.mockImplementation(
+    (flag) => enabled && flag === FeatureFlags.ProgramCourseStartDialog,
+  )
 
 // The paid path checks enrollment eligibility before the cart.
 beforeEach(() => {
   mitxonline.mockEnrollmentEligible()
+  enableStartDialog(false)
 })
 
 jest.mock("@/common/analytics/gtm", () => ({
@@ -1103,7 +1113,132 @@ describe.each([
   // Verified Program Enrollment
   // ---------------------------------------------------------------------------
 
+  describe("Verified Program Enrollment without the start dialog flag", () => {
+    test.each(
+      ENROLLMENT_TRIGGERS.flatMap(({ trigger }) =>
+        PAID_PROGRAM_ENROLLMENT_MODES.map((enrollmentMode) => ({
+          trigger,
+          enrollmentMode,
+        })),
+      ),
+    )(
+      "Clicking $trigger on course in $enrollmentMode program does one-click enrollment",
+      async ({ trigger, enrollmentMode }) => {
+        const userData = mitxUser()
+        setMockResponse.get(mitxonline.urls.userMe.get(), userData)
+
+        const run = mitxonline.factories.courses.courseRun({
+          b2b_contract: null,
+          is_enrollable: true,
+          start_date: moment().subtract(7, "days").toISOString(),
+          courseware_url: faker.internet.url(),
+        })
+        const course = mitxOnlineCourse({
+          courseruns: [run],
+          next_run_id: run.id,
+        })
+
+        const programEnrollment =
+          mitxonline.factories.enrollment.programEnrollmentV3({
+            enrollment_mode: enrollmentMode,
+          })
+
+        const programEnrollmentEndpoint =
+          mitxonline.urls.verifiedProgramEnrollments.create(run.courseware_id)
+        setMockResponse.post(programEnrollmentEndpoint, {})
+
+        renderWithProviders(
+          <UnenrolledCourseCard
+            course={course}
+            ancestorContext={{ programEnrollment }}
+          />,
+        )
+
+        const card = getCard()
+        const triggerElement =
+          trigger === "button"
+            ? within(card).getByTestId("courseware-button")
+            : within(card).getByRole("button", { name: run.title })
+
+        await user.click(triggerElement)
+
+        await waitFor(() => {
+          expect(makeRequest).toHaveBeenCalledWith(
+            expect.objectContaining({
+              method: "post",
+              url: programEnrollmentEndpoint,
+            }),
+          )
+        })
+
+        await waitFor(() => {
+          expect(window.location.href).toBe(run.courseware_url)
+        })
+
+        expect(
+          screen.queryByRole("dialog", { name: course.title }),
+        ).not.toBeInTheDocument()
+        expect(
+          screen.queryByRole("dialog", { name: "Just a Few More Details" }),
+        ).not.toBeInTheDocument()
+      },
+    )
+
+    test.each(START_DATE_CASES)(
+      "Verified program enrollment $case",
+      async ({ startDate, expectRedirect }) => {
+        setMockResponse.get(mitxonline.urls.userMe.get(), mitxUser())
+
+        const coursewareUrl = faker.internet.url()
+        const run = mitxonline.factories.courses.courseRun({
+          b2b_contract: null,
+          is_enrollable: true,
+          start_date: startDate,
+          end_date: moment(startDate).add(60, "days").toISOString(),
+          courseware_url: coursewareUrl,
+        })
+        const course = mitxOnlineCourse({
+          courseruns: [run],
+          next_run_id: run.id,
+        })
+        const programEnrollment =
+          mitxonline.factories.enrollment.programEnrollmentV3({
+            enrollment_mode: "verified",
+          })
+        const programEnrollmentEndpoint =
+          mitxonline.urls.verifiedProgramEnrollments.create(run.courseware_id)
+        const enroll = deferredResponse<unknown>()
+        setMockResponse.post(programEnrollmentEndpoint, enroll.promise)
+
+        const { location } = renderWithProviders(
+          <UnenrolledCourseCard
+            course={course}
+            ancestorContext={{ programEnrollment }}
+          />,
+        )
+        const pathnameBefore = location.current.pathname
+        const hrefBefore = window.location.href
+
+        await enrollAndSettle(getCard(), () => enroll.resolve({}))
+
+        expect(makeRequest).toHaveBeenCalledWith(
+          expect.objectContaining({
+            method: "post",
+            url: programEnrollmentEndpoint,
+          }),
+        )
+        if (expectRedirect) {
+          expect(window.location.href).toBe(coursewareUrl)
+        } else {
+          expectStayedPut(location, pathnameBefore, hrefBefore)
+        }
+      },
+    )
+  })
+
   describe("Verified Program Enrollment", () => {
+    beforeEach(() => enableStartDialog(true))
+
     const startedRun = (
       overrides: Parameters<
         typeof mitxonline.factories.courses.courseRun
@@ -1610,7 +1745,42 @@ describe("UnenrolledCourseCard enrollment error toast", () => {
     )
   })
 
+  test("Failed verified program enrollment surfaces a program-specific error toast", async () => {
+    setupUserApis()
+    const run = mitxonline.factories.courses.courseRun({
+      b2b_contract: null,
+      is_enrollable: true,
+      courseware_url: faker.internet.url(),
+    })
+    const course = mitxOnlineCourse({ courseruns: [run], next_run_id: run.id })
+
+    const programEnrollment =
+      mitxonline.factories.enrollment.programEnrollmentV3({
+        enrollment_mode: "verified",
+      })
+
+    setMockResponse.post(
+      mitxonline.urls.verifiedProgramEnrollments.create(run.courseware_id),
+      {},
+      { code: 500 },
+    )
+
+    renderWithProviders(
+      <UnenrolledCourseCard
+        course={course}
+        ancestorContext={{ programEnrollment }}
+      />,
+    )
+
+    await user.click(within(getCard()).getByTestId("courseware-button"))
+
+    await expectErrorToast(
+      "Something went wrong enrolling you in this program. Please try again.",
+    )
+  })
+
   test("Failed verified program enrollment shows an error in the start dialog", async () => {
+    enableStartDialog(true)
     setupUserApis()
     const run = mitxonline.factories.courses.courseRun({
       b2b_contract: null,
