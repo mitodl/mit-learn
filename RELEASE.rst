@@ -1,6 +1,17 @@
 Release Notes
 =============
 
+Version 0.88.7
+--------------
+
+- Show vertical videos at their own aspect ratio (#4351)
+- Update educator page links and copy, hide Stay connected (#4363)
+- Ability to promote practice problems to searchable learning materials (#4329)
+- Don't offer Start on an archived run on dashboard cards (#4344)
+- Use the published API client instead of a checked-in copy (#4366)
+- Assert uv.lock stays on revision 5 (#4328)
+- Drop the columns left by the is_b2b and SEO override expand migrations (#4341)
+
 Version 0.88.5
 --------------
 

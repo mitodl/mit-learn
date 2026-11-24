@@ -1,6 +1,12 @@
 "use client"
 
-import React, { useImperativeHandle, useMemo, useRef } from "react"
+import React, {
+  useCallback,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 import dynamic from "next/dynamic"
 import Image from "next/image"
 import { Skeleton, styled } from "ol-components"
@@ -14,15 +20,41 @@ import type { VideoResource } from "api/v1"
 import type { VideoJsPlayerProps } from "./VideoJsPlayer"
 import { analytics } from "@/common/analytics"
 import type Player from "video.js/dist/types/player"
+import { VIDEO_SHORT_CATEGORY } from "@/common/constants"
 
 const VideoJsPlayer = dynamic<VideoJsPlayerProps>(
   () => import("./VideoJsPlayer"),
   { ssr: false },
 )
 
-const Wrapper = styled.div(({ theme }) => ({
+/**
+ * Tallest a portrait player gets. A vertical (9:16) video at full width would
+ * be nearly twice as tall as the viewport, so it is narrowed and centred.
+ */
+const MAX_PORTRAIT_HEIGHT = "80vh"
+/**
+ * Narrowest a portrait player gets on a short window (e.g. a phone in
+ * landscape). Below 211px video.js switches to its "tiny" layout, which drops
+ * the progress bar and most controls.
+ */
+const MIN_PORTRAIT_WIDTH = "240px"
+
+const Wrapper = styled("div", {
+  shouldForwardProp: (prop) => prop !== "videoAspectRatio",
+})<{ videoAspectRatio?: number }>(({ theme, videoAspectRatio }) => ({
   width: "100%",
   aspectRatio: "16/9",
+  // The expected or reported shape of the video. Set as a class rather than an
+  // inline style so pages that size the player themselves (the embed page)
+  // still override it.
+  ...(videoAspectRatio ? { aspectRatio: String(videoAspectRatio) } : {}),
+  // Landscape videos stay full width; only portrait ones are height-capped.
+  ...(videoAspectRatio && videoAspectRatio < 1
+    ? {
+        width: `min(100%, max(${MIN_PORTRAIT_WIDTH}, calc(${MAX_PORTRAIT_HEIGHT} * ${videoAspectRatio})))`,
+        marginInline: "auto",
+      }
+    : {}),
   backgroundColor: "#000",
   overflow: "hidden",
   position: "relative",
@@ -53,6 +85,16 @@ const Wrapper = styled.div(({ theme }) => ({
   },
   ".vjs-icon-placeholder": {
     border: "none !important",
+  },
+  // video.js drops the progress bar from players 320px wide or narrower (its
+  // "x-small" layout), which a height-capped vertical video often is. The
+  // remaining controls take ~160px, so the bar still fits; it replaces the
+  // spacer video.js shows in its place.
+  "& .video-js.vjs-layout-x-small .vjs-progress-control": {
+    display: "flex",
+  },
+  "& .video-js.vjs-layout-x-small .vjs-custom-control-spacer": {
+    display: "none",
   },
   "& .vjs-big-play-button": {
     opacity: 1,
@@ -115,6 +157,26 @@ const VideoResourcePlayer = React.forwardRef<
     ref,
   ) => {
     const vjsPlayerRef = useRef<Player | null>(null)
+    // Keyed by video so a new video starts at its expected shape again until
+    // it reports its own.
+    const [measured, setMeasured] = useState<{
+      videoId: number
+      aspectRatio: number
+    } | null>(null)
+    // The API doesn't carry a video's dimensions, so before it reports them,
+    // shorts start at 9:16 and everything else at 16:9. That avoids a layout
+    // shift for the videos we have; a wrong guess is corrected on report.
+    const videoAspectRatio =
+      measured?.videoId === videoId
+        ? measured.aspectRatio
+        : video?.resource_category === VIDEO_SHORT_CATEGORY
+          ? 9 / 16
+          : undefined
+    const onVideoDimensions = useCallback(
+      (width: number, height: number) =>
+        setMeasured({ videoId, aspectRatio: width / height }),
+      [videoId],
+    )
     const ytPlayerRef = useRef<YouTubePlayerHandle | null>(null)
 
     const sources = useMemo(
@@ -164,6 +226,7 @@ const VideoResourcePlayer = React.forwardRef<
         aria-label={`Video player for ${videoTitleLabel}`}
         aria-describedby={ariaDescribedBy}
         className={className}
+        videoAspectRatio={videoAspectRatio}
       >
         {isLoading ? (
           <div
@@ -197,6 +260,7 @@ const VideoResourcePlayer = React.forwardRef<
             onReady={(player) => {
               vjsPlayerRef.current = player
             }}
+            onVideoDimensions={onVideoDimensions}
             onPlay={() => analytics.videoStarted(videoTitleLabel)}
             onHalfProgress={() =>
               analytics.videoReachedHalfway(videoTitleLabel)

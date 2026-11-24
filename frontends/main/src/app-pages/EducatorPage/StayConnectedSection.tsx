@@ -126,6 +126,13 @@ const SignUpButton = styled.button(({ theme }) => ({
   },
 }))
 
+/**
+ * OCW's social links and newsletter signup.
+ *
+ * TODO: not rendered on the educator page while the social media and
+ * newsletter flow is redesigned. Restore it in EducatorPage, or replace it,
+ * once the new designs land.
+ */
 const StayConnectedSection: React.FC = () => (
   <Band>
     <Inner>

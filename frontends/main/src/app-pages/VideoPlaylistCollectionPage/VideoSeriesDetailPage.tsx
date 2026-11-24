@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useRef } from "react"
-import { Skeleton, styled, SkipLink } from "ol-components"
+import { Skeleton, SkipLink } from "ol-components"
 import VideoContainer from "./VideoContainer"
 import { useLearningResourcesDetail } from "api/hooks/learningResources"
 import type { VideoResource, VideoPlaylistResource } from "api/v1"
@@ -17,10 +17,6 @@ import type { VideoPlayerHandle } from "@/page-components/VideoPlayer/VideoResou
 import { addExternalLinkTargets } from "@/common/utils"
 
 import VideoShareButton from "./VideoShareButton"
-
-const StyledVideoResourcePlayer = styled(VideoResourcePlayer)(({ theme }) => ({
-  borderBottom: `3px solid ${theme.custom.colors.darkGray2}`,
-}))
 
 type VideoSeriesDetailPageProps = {
   videoId: number
@@ -190,7 +186,7 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
             )}
           </Styled.VideoShareSection>
           {/* Video player */}
-          <StyledVideoResourcePlayer
+          <VideoResourcePlayer
             ref={playerRef}
             video={video}
             videoId={videoId}
