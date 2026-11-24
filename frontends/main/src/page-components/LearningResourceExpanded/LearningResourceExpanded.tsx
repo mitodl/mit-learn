@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react"
+import dynamic from "next/dynamic"
 import styled from "@emotion/styled"
 import type { ImageConfig, LearningResourceCardProps } from "ol-components"
 import { ResourceTypeEnum } from "api"
@@ -16,6 +17,12 @@ import AiSyllabusBotSlideDown, {
 } from "./AiChatSyllabusSlideDown"
 import { RESOURCE_DRAWER_PARAMS } from "@/common/urls"
 import { useFeatureFlag } from "@/common/useFeatureFlag"
+
+/**
+ * Loaded on demand: it pulls in KaTeX, rehype-katex, remark-gfm and the KaTeX
+ * CSS, which only practice problems need.
+ */
+const PracticeProblemSection = dynamic(() => import("./PracticeProblemSection"))
 
 const Outer = styled.div(({ theme }) => ({
   display: "flex",
@@ -270,24 +277,39 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
       {!(syllabusOnlyMode && chatEnabled) ? (
         <ContentSection chatTransitionState={chatTransitionState}>
           <TopContainer chatEnabled={!!chatEnabled}>
-            <ContentContainer>
-              <ContentLeft>
-                <ResourceDescription resource={resource} />
-                <InfoSection resource={resource} />
-              </ContentLeft>
-              <ContentRight>
-                <CallToActionSection
-                  imgConfig={imgConfig}
-                  resource={resource}
-                  user={user}
-                  shareUrl={shareUrl}
-                  inLearningPath={inLearningPath}
-                  inUserList={inUserList}
-                  onAddToLearningPathClick={onAddToLearningPathClick}
-                  onAddToUserListClick={onAddToUserListClick}
-                />
-              </ContentRight>
-            </ContentContainer>
+            {resource?.resource_type === ResourceTypeEnum.Document &&
+            resource.practice_problem ? (
+              <PracticeProblemSection
+                resource={{
+                  ...resource,
+                  practice_problem: resource.practice_problem,
+                }}
+                user={user}
+                inLearningPath={inLearningPath}
+                inUserList={inUserList}
+                onAddToLearningPathClick={onAddToLearningPathClick}
+                onAddToUserListClick={onAddToUserListClick}
+              />
+            ) : (
+              <ContentContainer>
+                <ContentLeft>
+                  <ResourceDescription resource={resource} />
+                  <InfoSection resource={resource} />
+                </ContentLeft>
+                <ContentRight>
+                  <CallToActionSection
+                    imgConfig={imgConfig}
+                    resource={resource}
+                    user={user}
+                    shareUrl={shareUrl}
+                    inLearningPath={inLearningPath}
+                    inUserList={inUserList}
+                    onAddToLearningPathClick={onAddToLearningPathClick}
+                    onAddToUserListClick={onAddToUserListClick}
+                  />
+                </ContentRight>
+              </ContentContainer>
+            )}
             {topCarousels && (
               <TopCarouselContainer>
                 {topCarousels?.map((carousel, index) => (

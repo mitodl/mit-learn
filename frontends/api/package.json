@@ -35,7 +35,7 @@
     "ol-test-utilities": "0.0.0"
   },
   "dependencies": {
-    "@mitodl/mit-learn-api-axios": "2026.1119.0",
+    "@mitodl/mit-learn-api-axios": "2026.1124.0",
     "@mitodl/mitxonline-api-axios": "2026.11.16",
     "@mitodl/ol-analytics-dashboard-api-axios": "2026.11.5",
     "@tanstack/react-query": "^5.66.0",
