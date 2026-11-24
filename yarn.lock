@@ -3114,13 +3114,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mitodl/mit-learn-api-axios@file:./frontends/api/mit-learn-api-axios-9165276cb458.tgz::locator=mit-learn%40workspace%3A.":
-  version: 0.0.0-branch.g9165276cb458
-  resolution: "@mitodl/mit-learn-api-axios@file:./frontends/api/mit-learn-api-axios-9165276cb458.tgz#./frontends/api/mit-learn-api-axios-9165276cb458.tgz::hash=d9833b&locator=mit-learn%40workspace%3A."
+"@mitodl/mit-learn-api-axios@npm:2026.1124.0, @mitodl/mit-learn-api-axios@npm:^2026.8.19":
+  version: 2026.1124.0
+  resolution: "@mitodl/mit-learn-api-axios@npm:2026.1124.0"
   dependencies:
     "@types/node": "npm:^22.0.0"
     axios: "npm:^1.6.5"
-  checksum: 10/91730de6d1f42e901126c9acd7cd819f3384523664f631a0798a861400b978d70691cb2c14d150e6a39c3075763ac3e5dcaebf341920ff4895523713c88b2f44
+  checksum: 10/45a8b5455c298228a3d8b4539b9e0997ccfdd46de884295ea95072d5368297de796854b3d73542f553f2c202ee7fd693f12b714c7fef93443257ca4b13407466
   languageName: node
   linkType: hard
 
@@ -8495,7 +8495,7 @@ __metadata:
   resolution: "api@workspace:frontends/api"
   dependencies:
     "@faker-js/faker": "npm:^10.5.0"
-    "@mitodl/mit-learn-api-axios": "npm:^2026.1124.0"
+    "@mitodl/mit-learn-api-axios": "npm:2026.1124.0"
     "@mitodl/mitxonline-api-axios": "npm:2026.11.16"
     "@mitodl/ol-analytics-dashboard-api-axios": "npm:2026.11.5"
     "@tanstack/react-query": "npm:^5.66.0"

@@ -31,8 +31,7 @@
   "resolutions": {
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "video.js": "^8.23.7",
-    "@mitodl/mit-learn-api-axios": "file:./frontends/api/mit-learn-api-axios-9165276cb458.tgz"
+    "video.js": "^8.23.7"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.1",
