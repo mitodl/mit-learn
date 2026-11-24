@@ -582,6 +582,63 @@ class VideoSerializer(serializers.ModelSerializer):
         exclude = ("learning_resource", "transcript", *COMMON_IGNORED_FIELDS)
 
 
+class PracticeProblemPartSerializer(serializers.Serializer):
+    """A lettered part of a practice problem"""
+
+    label = serializers.CharField(read_only=True)
+    body = serializers.CharField(read_only=True, help_text="The part as markdown")
+
+
+class PracticeProblemSourceSerializer(serializers.Serializer):
+    """The course and file a practice problem is from"""
+
+    course_id = serializers.IntegerField(allow_null=True)
+    course_title = serializers.CharField(allow_null=True)
+    course_readable_id = serializers.CharField(allow_null=True)
+    semester = serializers.CharField(allow_null=True)
+    year = serializers.IntegerField(allow_null=True)
+    file_title = serializers.CharField(allow_null=True)
+    file_url = serializers.CharField(allow_null=True)
+
+
+class PracticeProblemSerializer(serializers.ModelSerializer):
+    """Serializer for the PracticeProblem model; its solution is not shown"""
+
+    parts = PracticeProblemPartSerializer(many=True, read_only=True)
+    source = serializers.SerializerMethodField()
+
+    @extend_schema_field(PracticeProblemSourceSerializer)
+    def get_source(self, instance) -> dict:
+        """Return the course and file the problem is from"""
+        content_file = instance.content_file
+        run = content_file.run if content_file else None
+        course = run.learning_resource if run else None
+        return {
+            "course_id": course.id if course else None,
+            "course_title": course.title if course else None,
+            "course_readable_id": course.readable_id if course else None,
+            "semester": run.semester if run else None,
+            "year": run.year if run else None,
+            "file_title": content_file.title if content_file else None,
+            "file_url": content_file.url if content_file else None,
+        }
+
+    class Meta:
+        model = models.PracticeProblem
+        fields = (
+            "number",
+            "document_title",
+            "context",
+            "statement",
+            "parts",
+            "pages",
+            "topics",
+            "points",
+            "source",
+        )
+        read_only_fields = fields
+
+
 class VideoPlaylistSerializer(serializers.ModelSerializer):
     """Serializer for the VideoPlaylist model"""
 
@@ -1629,6 +1686,107 @@ class NestedContentFileSerializer(ContentFileSerializer):
         ]
 
 
+# ContentFileSerializer fields that are the same for every file of a run
+CONTENT_FILE_RUN_AND_RESOURCE_FIELDS = frozenset(
+    {
+        "run_id",
+        "run_readable_id",
+        "run_title",
+        "run_slug",
+        "semester",
+        "year",
+        "direct_learning_resource_id",
+        "resource_id",
+        "resource_readable_id",
+        "require_summaries",
+        "course_number",
+        "topics",
+        "departments",
+        "offered_by",
+        "platform",
+    }
+)
+
+
+class UnitNestedContentFileSerializer(NestedContentFileSerializer):
+    """
+    A content file inside a unit, without the run and resource fields, which
+    are the same for every file in the unit and on the unit itself. Admins see
+    hidden files too, so it says whether each one is published and released.
+    """
+
+    checksum = serializers.CharField(read_only=True, allow_null=True)
+    source_path = serializers.CharField(read_only=True, allow_null=True)
+
+    class Meta(NestedContentFileSerializer.Meta):
+        # dict.fromkeys drops the duplicate file_extension, keeping the order
+        fields = [
+            *dict.fromkeys(
+                field
+                for field in NestedContentFileSerializer.Meta.fields
+                if field not in CONTENT_FILE_RUN_AND_RESOURCE_FIELDS
+            ),
+            "published",
+            "release_date",
+        ]
+        read_only_fields = fields
+
+
+class UnitContentFileSerializer(serializers.ModelSerializer):
+    """A content file in a unit, with its place and role in the unit"""
+
+    content_file = UnitNestedContentFileSerializer(read_only=True)
+
+    class Meta:
+        model = models.UnitContentFile
+        fields = ["relation", "position", "content_file"]
+        read_only_fields = fields
+
+
+class UnitSerializer(serializers.ModelSerializer):
+    """Serializer for Units"""
+
+    run_id = serializers.IntegerField(read_only=True)
+    run_readable_id = serializers.CharField(source="run.run_id", read_only=True)
+    resource_id = serializers.IntegerField(
+        source="run.learning_resource_id", read_only=True
+    )
+    resource_readable_id = serializers.CharField(
+        source="run.learning_resource.readable_id", read_only=True
+    )
+    content_file_count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = models.Unit
+        fields = [
+            "id",
+            "run_id",
+            "run_readable_id",
+            "resource_id",
+            "resource_readable_id",
+            "external_id",
+            "kind",
+            "title",
+            "position",
+            "url",
+            "content_file_count",
+            "created_on",
+            "updated_on",
+        ]
+        read_only_fields = fields
+
+
+class UnitDetailSerializer(UnitSerializer):
+    """Serializer for a Unit with its content files, in unit order"""
+
+    content_files = UnitContentFileSerializer(
+        source="unitcontentfile_set", many=True, read_only=True
+    )
+
+    class Meta(UnitSerializer.Meta):
+        fields = [*UnitSerializer.Meta.fields, "content_files"]
+
+
 class VideoResourceSerializer(LearningResourceBaseSerializer):
     """Serializer for video resources"""
 
@@ -1674,6 +1832,7 @@ class DocumentResourceSerializer(LearningResourceBaseSerializer):
 
     content_files = serializers.SerializerMethodField()
     description = serializers.SerializerMethodField()
+    practice_problem = PracticeProblemSerializer(read_only=True, allow_null=True)
 
     @extend_schema_field(NestedContentFileSerializer(many=True, allow_null=True))
     def get_content_files(self, instance):

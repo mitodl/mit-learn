@@ -135,7 +135,8 @@ const SubtitleLink = styled(NextLink)(({ theme }) => ({
 }))
 
 const MenuButton = styled(ActionButton)<{
-  status: EnrollmentStatus
+  /** When given, the menu shows only for enrolled or completed resources. */
+  status?: EnrollmentStatus
 }>(({ theme, status }) => [
   {
     [theme.breakpoints.down("sm")]: {
@@ -145,7 +146,8 @@ const MenuButton = styled(ActionButton)<{
     // The button's display: inline-flex beats the browser's [hidden] rule.
     "&[hidden]": { visibility: "hidden" },
   },
-  status !== EnrollmentStatus.Completed &&
+  status !== undefined &&
+    status !== EnrollmentStatus.Completed &&
     status !== EnrollmentStatus.Enrolled && {
       visibility: "hidden",
     },

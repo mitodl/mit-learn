@@ -1,6 +1,6 @@
 import { queryOptions } from "@tanstack/react-query"
 import { websiteContentApi } from "../../clients"
-import type { WebsiteContentApiWebsiteContentListRequest as WebsiteContentListRequest } from "../../generated/v1"
+import type { WebsiteContentApiWebsiteContentListRequest as WebsiteContentListRequest } from "@mitodl/mit-learn-api-axios/v1"
 
 const websiteContentKeys = {
   root: ["website_content"],

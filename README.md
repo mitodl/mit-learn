@@ -100,11 +100,20 @@ local Keycloak and APISIX containers.
 
 ## Code Generation
 
-MIT Learn uses [drf-spectacular](https://drf-spectacular.readthedocs.io/en/latest/) to generate and OpenAPI spec from Django views. Additionally, we use [OpenAPITools/openapi-generator](https://github.com/OpenAPITools/openapi-generator) to generate Typescript declarations and an API Client. These generated files are checked into source control; CI checks that they are up-to-date. To regenerate these files, run
+MIT Learn uses [drf-spectacular](https://drf-spectacular.readthedocs.io/en/latest/) to generate an OpenAPI spec from Django views. The spec, `openapi/specs/v0.yaml` and `v1.yaml`, is checked into source control, and CI checks that it is up-to-date. To regenerate it, run
 
 ```bash
 ./scripts/generate_openapi.sh
 ```
+
+The frontend's TypeScript API client is not generated in this repository. It is the published npm package [`@mitodl/mit-learn-api-axios`](https://www.npmjs.com/package/@mitodl/mit-learn-api-axios), built from the spec by [mitodl/mit-learn-api-clients](https://github.com/mitodl/mit-learn-api-clients) and pinned in `frontends/api/package.json`. `frontends/api` re-exports it as `api`, `api/v0` and `api/v1`. A new stable version is published when a backend release that changes the spec is finished. A frontend change that needs a backend API change therefore merges after that backend change is released.
+
+### Using an unreleased API client
+
+The `@mitodl/*-api-axios` packages in `frontends/` must be released npm versions before a branch merges; the `api-clients-released` CI job fails otherwise. To build and review a frontend change against a backend API change that isn't released yet, use one of these, and pin a released version before merging:
+
+- After the backend change merges to `main`, a `next` prerelease of `@mitodl/mit-learn-api-axios` is published within minutes: `yarn up -E @mitodl/mit-learn-api-axios@next`.
+- Before that, commit the spec on the backend branch and run `./scripts/generate-branch-client.sh`. It writes `frontends/api/mit-learn-api-axios-<sha>.tgz` (git and Docker only; nothing is pushed or published). From the repository root, run the `npm pkg set 'resolutions.@mitodl/mit-learn-api-axios=file:./frontends/api/mit-learn-api-axios-<sha>.tgz'` and `yarn install` it prints, and commit the tarball, `package.json` and `yarn.lock`. A root `resolutions` entry serves every workspace that depends on the client. Delete the tarball and the resolution (`npm pkg delete 'resolutions.@mitodl/mit-learn-api-axios'`) when you pin the released version.
 
 ## Committing & Formatting
 

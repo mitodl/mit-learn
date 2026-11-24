@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query"
 import { searchSubscriptionQueries, searchSubscriptionKeys } from "./keyFactory"
-import type { LearningResourcesUserSubscriptionApiLearningResourcesUserSubscriptionSubscribeCreateRequest as subscriptionCreateRequest } from "../../generated/v1"
+import type { LearningResourcesUserSubscriptionApiLearningResourcesUserSubscriptionSubscribeCreateRequest as subscriptionCreateRequest } from "@mitodl/mit-learn-api-axios/v1"
 import { searchSubscriptionApi } from "../../clients"
 
 const useSearchSubscriptionCreate = () => {

@@ -285,30 +285,15 @@ const AnalyticsContent: React.FC<AnalyticsContentProps> = ({
   })
 
   /**
-   * Gated on `B2BLearnerAnalytics` for the same reason the contract nav's
-   * Learners link is: every tile links to the Learners page, which throws
-   * `ForbiddenError` without the flag.
-   * One row is enough: only `total_count` and `completion_status_counts` are
-   * read. `completion_status` leaves out learners who haven't consented to
-   * share their progress, as everywhere else they would be counted.
-   * `include_inactive` is deliberately left unset (server default: active
-   * enrollments only) — a deactivated or refunded seat isn't "enrolled" to a
-   * manager, and counting it here would disagree with every other seat/
-   * utilization figure on this page.
-   */
-  const learnerProgress = useQuery({
-    ...analyticsContractQueries.learnerProgress(
-      orgUuid ?? "",
-      contractId ?? 0,
-      { limit: 1, completion_status: completionStatusFilter() },
-    ),
-    enabled: analyticsAvailable && learnerAnalyticsFlag,
-    placeholderData: keepPreviousData,
-  })
-
-  /**
-   * The tiles' learner counts. A learner counts under each status they have in
-   * any module, which is what a tile's link shows by selecting every module.
+   * The Learner progress section's counts, gated on `B2BLearnerAnalytics` for
+   * the same reason the contract nav's Learners link is: every tile links to
+   * the Learners page, which throws `ForbiddenError` without the flag.
+   *
+   * A learner counts under each status they have in any module, which is what
+   * a tile's link shows by selecting every module. `completion_status` leaves
+   * out learners who haven't consented to share their progress. The `all`
+   * query also supplies the section's freshness and decides whether Needs
+   * attention is shown.
    */
   const learnerCounts = useQueries({
     queries: LEARNER_TILES.map((tile) => ({
@@ -329,22 +314,17 @@ const AnalyticsContent: React.FC<AnalyticsContentProps> = ({
           results[index].data?.total_count ?? 0,
         ]),
       ) as Record<(typeof LEARNER_TILES)[number], number>,
+      asOf: results[LEARNER_TILES.indexOf("all")].data?.as_of,
       isPending: results.some((result) => result.isPending),
       isError: results.some((result) => result.isError),
+      error: results.find((result) => result.error)?.error ?? null,
     }),
   })
 
-  /**
-   * The card renders only beside a populated distribution (see
-   * `LearnerProgressCard`'s empty and error states), so it waits for one.
-   */
-  const showsNeedsAttention =
-    learnerProgress.isSuccess &&
-    !!learnerProgress.data.total_count &&
-    !!learnerProgress.data.completion_status_counts
+  /** Matches `LearnerProgressCard`, which renders it only when someone is counted. */
   const needsAttention = useQuery({
     ...analyticsContractQueries.needsAttention(orgUuid ?? "", contractId ?? 0),
-    enabled: showsNeedsAttention,
+    enabled: learnerCounts.counts.all > 0,
   })
 
   /**
@@ -473,13 +453,9 @@ const AnalyticsContent: React.FC<AnalyticsContentProps> = ({
   // Every section reads the same contract, so the first to come back
   // "not loaded" speaks for the page. Rendering four empty sections and a
   // failure notice instead would tell a manager something broke.
-  const notLoaded = [
-    utilization,
-    trend,
-    courses,
-    content,
-    learnerProgress,
-  ].some((query) => isAnalyticsNotLoaded(query.error))
+  const notLoaded = [utilization, trend, courses, content, learnerCounts].some(
+    (query) => isAnalyticsNotLoaded(query.error),
+  )
   if (notLoaded) {
     return (
       <Stack gap="24px">
@@ -492,7 +468,7 @@ const AnalyticsContent: React.FC<AnalyticsContentProps> = ({
     )
   }
 
-  const failed = [utilization, trend, courses, content, learnerProgress].some(
+  const failed = [utilization, trend, courses, content, learnerCounts].some(
     (query) => query.isError,
   )
 
@@ -530,16 +506,14 @@ const AnalyticsContent: React.FC<AnalyticsContentProps> = ({
           <SectionHeader
             title="Learner progress"
             description="Where this contract's learners stand across every active enrollment."
-            asOf={learnerProgress.data?.as_of}
-            isLoading={learnerProgress.isPending}
-            isError={learnerProgress.isError}
+            asOf={learnerCounts.asOf}
+            isLoading={learnerCounts.isPending}
+            isError={learnerCounts.isError}
           />
           <LearnerProgressCard
             learnerCounts={learnerCounts.counts}
-            totalCount={learnerProgress.data?.total_count}
-            statusCounts={learnerProgress.data?.completion_status_counts}
-            isLoading={learnerProgress.isPending || learnerCounts.isPending}
-            isError={learnerProgress.isError || learnerCounts.isError}
+            isLoading={learnerCounts.isPending}
+            isError={learnerCounts.isError}
             learnersHref={(status) =>
               contractLearnersView(orgSlug, contract.slug, { status })
             }
@@ -548,7 +522,6 @@ const AnalyticsContent: React.FC<AnalyticsContentProps> = ({
                 row={needsAttention.data?.data[0]}
                 isLoading={needsAttention.isPending}
                 isError={needsAttention.isError}
-                enrollmentCount={learnerProgress.data?.needs_attention_count}
                 learnersHref={contractLearnersView(orgSlug, contract.slug, {
                   needsAttention: true,
                 })}
@@ -561,7 +534,7 @@ const AnalyticsContent: React.FC<AnalyticsContentProps> = ({
       <Section>
         <SectionHeader
           title="Course performance"
-          description="Enrollment, activity and completion for each course run."
+          description="Enrollment, activity and certification for each course run."
           asOf={courses.data?.as_of}
           isLoading={courses.isPending}
           isError={courses.isError}

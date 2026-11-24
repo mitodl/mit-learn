@@ -42,3 +42,8 @@ export const PostHogEvents = {
 
 export const DigitalCredentialsFAQLink =
   "https://support.learn.mit.edu/hc/en-us/sections/45261233162267-About-Digital-Credentials"
+
+/**
+ * The resource_category of vertical (9:16) video shorts, such as MIT Pulse.
+ */
+export const VIDEO_SHORT_CATEGORY = "Video Short"

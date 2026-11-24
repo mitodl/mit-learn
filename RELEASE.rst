@@ -1,6 +1,57 @@
 Release Notes
 =============
 
+Version 0.88.7
+--------------
+
+- Show vertical videos at their own aspect ratio (#4351)
+- Update educator page links and copy, hide Stay connected (#4363)
+- Ability to promote practice problems to searchable learning materials (#4329)
+- Don't offer Start on an archived run on dashboard cards (#4344)
+- Use the published API client instead of a checked-in copy (#4366)
+- Assert uv.lock stays on revision 5 (#4328)
+- Drop the columns left by the is_b2b and SEO override expand migrations (#4341)
+
+Version 0.88.5
+--------------
+
+- Update Support page copy and move initiatives to the end (#4364)
+- fix: leave prek out of the production image (#4360)
+- Show MITx Online enrollment and checkout messages on the dashboard (#4347)
+- update qdrant version (#4361)
+- Test more kinds of bad cta_link in the OVS webhook (#4224)
+- chore: add a 7-day npm release-age gate to Yarn (#4348)
+- Refuse to merge unreleased API clients, and add a branch-client script (#4359)
+- Clarify the B2B dashboard's Learner progress section and completion labels (#4349)
+- Bump smoot-design to 6.42.0 for Send request and Cancel on the ticket review (#4352)
+- Add the Support page at /support (#4338)
+- Sweep OVS playlists left published with no published video (#4239)
+- Add the extracted_content_files webhook (#4223)
+- Install local-dev's dev deps before the source copy (#4345)
+- Unpublish OVS playlists the webhook empties (#4225)
+- fix(users): set username to the lowercased email where it is something else (#4197)
+- Load a run's units from the warehouse with its content files (#4290)
+- units admin and api (#4339)
+
+Version 0.88.3
+--------------
+
+- Restyle the Cyber Sale banner and simplify its payload (#4357)
+- Update dependency opentelemetry-api to v1.45.2 [SECURITY] (#4354)
+- Upgrade Next.js to 16.4.6 for the 16.4.5 security fixes (#4346)
+- Update dependency oauthlib to v4.0.1 [SECURITY] (#4283)
+- Update dependency pyasn1 to v0.6.5 [SECURITY] (#4284)
+- Update dependency prek to v0.5.9 (#4280)
+
+Version 0.88.2
+--------------
+
+- List only published articles at /articles (#4320)
+- Run the warehouse catalog syncs when the data platform rebuilds their views (#4291)
+- Update the ETL cutover runbook for delivery sensors and RC rehearsals (#4292)
+- Queue a resource's search upsert only after its transaction commits (#4237)
+- Pin LITELLM_CUSTOM_PROVIDER in pytest.ini (#4343)
+
 Version 0.88.1
 --------------
 

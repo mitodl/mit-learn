@@ -60,10 +60,11 @@ const LicensingBanner: React.FC = () => (
         <RiInformation2Line aria-hidden />
       </IconBox>
       <Text>
-        <Heading>Using and adapting these resources</Heading>
+        <Heading>Reuse these materials in your teaching</Heading>
         <Body>
-          Free to view and often free to reuse. Check each course’s license;
-          many OCW courses use CC BY-NC-SA 4.0.
+          Our free and open access materials can often be shared and adapted for
+          non-commercial use, with credit to MIT. Check the license on each
+          resource for details.
         </Body>
       </Text>
       <ButtonLink

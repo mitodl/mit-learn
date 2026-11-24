@@ -18,9 +18,34 @@ const EnrollmentAlertStatus = {
 
 /**
  * Known enrollment error types. Add new values here as new error scenarios arise.
+ *
+ * Values other than INVALID_ENROLLMENT_CODE match MITx Online's user message
+ * types (`USER_MSG_TYPE_*` in mitxonline's `main/constants.py`). MITx Online
+ * passes them as `error_type` when it redirects a learner to the Learn
+ * dashboard after an enrollment or checkout error, since Learn can't read the
+ * `user-message` cookie MITx Online sets for its own pages.
  */
 const EnrollmentErrorType = {
   INVALID_ENROLLMENT_CODE: "invalid-enrollment-code",
+  ENROLL_FAILED: "enroll-failed",
+  ENROLL_BLOCKED: "enroll-blocked",
+  ENROLL_DUPLICATED: "enroll-duplicated",
+  PAYMENT_ERROR_UNKNOWN: "payment-error-unknown",
+} as const
+
+/**
+ * Order states MITx Online can pass as `order_status` when it redirects a
+ * learner to the Learn dashboard after checkout. These match mitxonline's
+ * `OrderStatus` values. A Stripe checkout returns the learner before the
+ * payment webhook arrives, so the order is usually still pending.
+ */
+const OrderAlertStatus = {
+  FULFILLED: "fulfilled",
+  PENDING: "pending",
+  REVIEW: "review",
+  DECLINED: "declined",
+  ERRORED: "errored",
+  CANCELED: "canceled",
 } as const
 
 type EnrollmentErrorTypeValue =
@@ -63,6 +88,7 @@ export {
   enrollmentAlertErrorUrl,
   EnrollmentAlertStatus,
   EnrollmentErrorType,
+  OrderAlertStatus,
   ENROLLMENT_STATUS_PARAM,
   ENROLLMENT_ERROR_TYPE_PARAM,
   ENROLLMENT_TITLE_PARAM,

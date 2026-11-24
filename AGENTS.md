@@ -30,7 +30,7 @@ Key Django apps:
 Located in `frontends/` as a **Yarn workspaces monorepo**:
 
 - `main/` - Next.js 14+ app using App Router (NOT pages router)
-- `api/` - Generated TypeScript API client from OpenAPI spec
+- `api/` - React Query hooks and test utilities around the published TypeScript API client (`@mitodl/mit-learn-api-axios`)
 - `ol-components/` - Shared React components
 - `ol-search-ui/`, `ol-forms/`, `ol-utilities/` - Reusable packages
 - Uses `@mitodl/smoot-design` for design system components
@@ -133,16 +133,20 @@ uv run prek run --all-files
 
 ## Code Generation
 
-### OpenAPI Client Generation
+### OpenAPI Spec Generation
 
-The TypeScript API client in `frontends/api/src/generated/` is auto-generated from the Django API using drf-spectacular:
+The OpenAPI spec in `openapi/specs/` is generated from the Django API using drf-spectacular:
 
 ```bash
-# Regenerate OpenAPI spec and TypeScript client
+# Regenerate the OpenAPI spec
 ./scripts/generate_openapi.sh
 ```
 
-**CI will fail if generated code is out of sync** - always regenerate after changing Django views/serializers.
+**CI will fail if the spec is out of sync** - always regenerate after changing Django views/serializers.
+
+The TypeScript API client is not generated in this repo. It is the published `@mitodl/mit-learn-api-axios` package (built by mitodl/mit-learn-api-clients from the released spec), pinned in `frontends/api/package.json` and re-exported by `frontends/api/src/v0.ts` and `v1.ts` as `api`, `api/v0` and `api/v1`. Outside `frontends/api`, import from those specifiers, not from the package directly. A frontend change that uses a new or changed endpoint merges only after the backend change is released and its client is published.
+
+The published `@mitodl/*-api-axios` packages pinned in `frontends/` must be released npm versions to merge: `scripts/check-api-client-versions.sh` (CI job `api-clients-released`) fails on a `next` prerelease, a `file:` tarball, a GitHub tarball URL, or any tracked `.tgz`. For review before a backend release, pin `@next` (`yarn up -E`) or a tarball from `./scripts/generate-branch-client.sh`; see the README's "Using an unreleased API client".
 
 ## Key Conventions
 

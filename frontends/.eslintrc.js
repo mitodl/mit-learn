@@ -109,7 +109,6 @@ module.exports = {
   plugins: ["testing-library", "import", "styled-components-a11y"],
   ignorePatterns: [
     "**/build/**",
-    "**/src/generated/**",
     "mit-learn",
     "github-pages",
     "storybook-static",

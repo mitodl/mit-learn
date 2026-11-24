@@ -3252,6 +3252,90 @@ def test_transcript_tasks_run_only_while_legacy_owns_transcripts(  # noqa: PLR09
     assert getattr(mock_module, fetch).called is legacy
 
 
+def _ovs_owned_by(playlist_owner, video_owner):
+    """Record which pipelines own OVS playlists and videos"""
+    _owned_by(
+        playlist_owner, ETLSource.ovs.name, LearningResourceType.video_playlist.name
+    )
+    _owned_by(video_owner, ETLSource.ovs.name, LearningResourceType.video.name)
+
+
+@ALL_OWNERS
+def test_sweep_empty_ovs_playlists_runs_only_while_the_webhook_owns_playlists(
+    mocker, owner
+):
+    """The sweep is the webhook's, so it does nothing beside another owner"""
+    _ovs_owned_by(owner, owner)
+    mock_unpublish = mocker.patch(
+        "learning_resources.tasks.loaders.unpublish_empty_ovs_playlists",
+        return_value=[7],
+    )
+
+    result = tasks.sweep_empty_ovs_playlists.delay(allow_mass_unpublish=True).get()
+
+    if owner == ETLSourceOwnership.Pipeline.WEBHOOK:
+        mock_unpublish.assert_called_once_with(allow_mass_unpublish=True)
+        assert result == [7]
+    else:
+        mock_unpublish.assert_not_called()
+        assert result == []
+
+
+@pytest.mark.parametrize(
+    ("playlist_owner", "video_owner"),
+    [
+        (ETLSourceOwnership.Pipeline.WEBHOOK, ETLSourceOwnership.Pipeline.LEGACY),
+        (ETLSourceOwnership.Pipeline.LEGACY, ETLSourceOwnership.Pipeline.WEBHOOK),
+    ],
+)
+def test_sweep_empty_ovs_playlists_needs_the_webhook_to_own_both_pairs(
+    mocker, playlist_owner, video_owner
+):
+    """Like the OVS webhook, the sweep needs both playlists and videos"""
+    _ovs_owned_by(playlist_owner, video_owner)
+    mock_unpublish = mocker.patch(
+        "learning_resources.tasks.loaders.unpublish_empty_ovs_playlists"
+    )
+
+    assert tasks.sweep_empty_ovs_playlists.delay().get() == []
+    mock_unpublish.assert_not_called()
+
+
+def test_sweep_empty_ovs_playlists_skips_with_no_ownership_row(mocker):
+    """With no row, legacy owns OVS playlists and the sweep does nothing"""
+    mock_unpublish = mocker.patch(
+        "learning_resources.tasks.loaders.unpublish_empty_ovs_playlists"
+    )
+
+    assert tasks.sweep_empty_ovs_playlists.delay().get() == []
+    mock_unpublish.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("owner", "expected_published"),
+    [
+        (ETLSourceOwnership.Pipeline.WEBHOOK, False),
+        (ETLSourceOwnership.Pipeline.LEGACY, True),
+    ],
+)
+def test_sweep_empty_ovs_playlists_unpublishes_a_leftover_playlist(
+    mocker, owner, expected_published
+):
+    """An empty OVS playlist the webhook left published is unpublished"""
+    _ovs_owned_by(owner, owner)
+    mocker.patch("learning_resources.etl.loaders.update_index")
+    mocker.patch("learning_resources.etl.loaders.bulk_resources_unpublished_actions")
+    ovs_platform = LearningResourcePlatformFactory.create(code=PlatformType.ovs.name)
+    playlist = factories.VideoPlaylistFactory.create(
+        learning_resource__platform=ovs_platform
+    ).learning_resource
+
+    tasks.sweep_empty_ovs_playlists.delay(allow_mass_unpublish=True).get()
+
+    playlist.refresh_from_db()
+    assert playlist.published is expected_published
+
+
 @pytest.mark.parametrize(
     "resource_type", [LearningResourceType.course.name, CONTENT_FILE]
 )
@@ -3566,12 +3650,14 @@ def content_file_run(mocker, settings):
 
 
 def test_load_warehouse_content_files_reads_one_run(mocker, content_file_run):
-    """A load reads only its run, closes the connection, then writes under its lock"""
+    """A load reads only its run's files and units, then writes under its lock"""
     run = content_file_run.run
     rows = [{"key": "a"}]
+    unit_rows = [{"external_id": "context"}]
     mock_connect = mocker.patch("learning_resources.tasks.connect_to_warehouse")
     mock_iter_rows = mocker.patch(
-        "learning_resources.tasks.iter_rows", return_value=iter(rows)
+        "learning_resources.tasks.iter_rows",
+        side_effect=[iter(rows), iter(unit_rows)],
     )
     mock_load = mocker.patch(
         "learning_resources.tasks.warehouse_content_files.load_run", return_value=1
@@ -3579,14 +3665,28 @@ def test_load_warehouse_content_files_reads_one_run(mocker, content_file_run):
 
     assert load_warehouse_content_files(ETLSource.mitxonline.name, run.run_id, 7) == 1
 
-    mock_iter_rows.assert_called_once_with(
-        mock_connect.return_value,
-        "catalog.schema.integrations__learn__content_files",
-        where={"etl_source": ETLSource.mitxonline.name, "run_readable_id": run.run_id},
-    )
+    where = {"etl_source": ETLSource.mitxonline.name, "run_readable_id": run.run_id}
+    assert mock_iter_rows.call_args_list == [
+        mocker.call(
+            mock_connect.return_value,
+            "catalog.schema.integrations__learn__content_files",
+            where=where,
+        ),
+        mocker.call(
+            mock_connect.return_value,
+            "catalog.schema.integrations__learn__content_file_units",
+            where=where,
+        ),
+    ]
     mock_connect.return_value.close.assert_called_once_with()
     mock_load.assert_called_once_with(
-        run, rows, expected_count=7, allow_mass_unpublish=False, allow_shrink=False
+        run,
+        rows,
+        expected_count=7,
+        allow_mass_unpublish=False,
+        allow_shrink=False,
+        unit_rows=unit_rows,
+        units_unread=False,
     )
     key = f"warehouse_content_files:{ETLSource.mitxonline.name}:{run.run_id}"
     content_file_run.cache.lock.assert_called_once_with(
@@ -3602,7 +3702,7 @@ def test_load_warehouse_content_files_passes_the_unpublish_override(
 ):
     """An operator, or a sync, loosens the run's unpublish limit through the task"""
     mocker.patch("learning_resources.tasks.connect_to_warehouse")
-    mocker.patch("learning_resources.tasks.iter_rows", return_value=iter([]))
+    mocker.patch("learning_resources.tasks.iter_rows", side_effect=lambda *_, **__: [])
     mock_load = mocker.patch(
         "learning_resources.tasks.warehouse_content_files.load_run", return_value=0
     )
@@ -3615,7 +3715,62 @@ def test_load_warehouse_content_files_passes_the_unpublish_override(
         "expected_count": 3,
         "allow_mass_unpublish": override == "allow_mass_unpublish",
         "allow_shrink": override == "allow_shrink",
+        "unit_rows": [],
+        "units_unread": False,
     }
+
+
+def test_load_warehouse_content_files_loads_files_when_units_fail_to_read(
+    mocker, content_file_run
+):
+    """A failed read of the units view still loads the run's files"""
+    rows = [{"key": "a"}]
+    mocker.patch("learning_resources.tasks.connect_to_warehouse")
+    mocker.patch(
+        "learning_resources.tasks.iter_rows",
+        side_effect=[iter(rows), RuntimeError("no such table")],
+    )
+    mock_load = mocker.patch(
+        "learning_resources.tasks.warehouse_content_files.load_run", return_value=1
+    )
+
+    assert (
+        load_warehouse_content_files(
+            ETLSource.mitxonline.name, content_file_run.run.run_id
+        )
+        == 1
+    )
+    assert mock_load.call_args.args[1] == rows
+    assert mock_load.call_args.kwargs["unit_rows"] is None
+    assert mock_load.call_args.kwargs["units_unread"] is True
+
+
+def test_load_warehouse_content_files_reads_no_units_for_ocw(mocker, settings):
+    """OCW runs have no units, so only the files view is read"""
+    settings.WAREHOUSE_CATALOG = "catalog"
+    settings.WAREHOUSE_SCHEMA = "schema"
+    _warehouse_owns_content_files(ETLSource.ocw.name)
+    run = factories.LearningResourceRunFactory.create(
+        learning_resource=factories.LearningResourceFactory.create(
+            is_course=True, etl_source=ETLSource.ocw.name, create_runs=False
+        ),
+        published=True,
+    )
+    mocker.patch("learning_resources.tasks.caches")
+    mocker.patch("learning_resources.tasks.connect_to_warehouse")
+    mock_iter_rows = mocker.patch(
+        "learning_resources.tasks.iter_rows", return_value=iter([])
+    )
+    mock_load = mocker.patch(
+        "learning_resources.tasks.warehouse_content_files.load_run", return_value=0
+    )
+
+    load_warehouse_content_files(ETLSource.ocw.name, run.run_id)
+
+    assert [call.args[1] for call in mock_iter_rows.call_args_list] == [
+        "catalog.schema.integrations__learn__ocw_content_files"
+    ]
+    assert mock_load.call_args.kwargs["unit_rows"] is None
 
 
 def test_load_warehouse_content_files_releases_the_lock_on_failure(
