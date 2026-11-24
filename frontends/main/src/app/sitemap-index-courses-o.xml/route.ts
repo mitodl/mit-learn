@@ -91,7 +91,7 @@ async function buildSitemapIndex(): Promise<string> {
     if (slug === null || entries.has(slug)) continue
     entries.set(slug, {
       loc: `${BASE_URL}/courses/o/${slug}/sitemap.xml`,
-      // The publish time of the course, which is when Hugo rebuilt its sitemap.
+      // Updated when the course is published.
       lastmod: course.last_modified ?? undefined,
     })
   }
@@ -106,7 +106,7 @@ function formatSitemapIndex(entries: Iterable<SitemapIndexEntry>) {
     xml += "<sitemap>"
     xml += `<loc>${escapeSitemapUrl(loc)}</loc>`
     if (lastmod) {
-      xml += `<lastmod>${escapeSitemapUrl(lastmod)}</lastmod>`
+      xml += `<lastmod>${lastmod}</lastmod>`
     }
     xml += "</sitemap>"
   }
