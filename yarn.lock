@@ -8495,7 +8495,7 @@ __metadata:
   resolution: "api@workspace:frontends/api"
   dependencies:
     "@faker-js/faker": "npm:^10.5.0"
-    "@mitodl/mit-learn-api-axios": "npm:2026.1119.0"
+    "@mitodl/mit-learn-api-axios": "npm:^2026.1124.0"
     "@mitodl/mitxonline-api-axios": "npm:2026.11.16"
     "@mitodl/ol-analytics-dashboard-api-axios": "npm:2026.11.5"
     "@tanstack/react-query": "npm:^5.66.0"
