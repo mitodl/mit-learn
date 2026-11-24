@@ -1,20 +1,8 @@
----
-layout: default
-parent: RFCs
-nav_order: 4
-has_toc: true
----
+# Enhanced Search Facets for Courses — Spec
 
-# 0004: Enhanced Search Facets for Courses
-
-{: .no_toc }
-
-## Table of Contents
-
-{: .no_toc .text-delta }
-
-- Table of Contents
-  {:toc}
+Status: **shipped** — history. What it reached is in the code; the checkboxes below record what was planned in 2019, not what is true now.
+Authored: 2019-03-06 by Matt Bertrand
+Basis: migrated from `docs/rfcs/0004-enhanced-facets.md`
 
 ### Abstract
 
