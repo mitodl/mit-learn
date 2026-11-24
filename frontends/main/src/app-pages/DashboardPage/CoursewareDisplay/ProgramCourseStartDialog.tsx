@@ -160,9 +160,16 @@ const ProgramCourseStartDialogInner: React.FC<
       fullWidth
       onSubmit={handleSubmit}
       {...muiDialogV5(modal)}
+      // Closing mid-request would still enroll the learner, but skip the
+      // redirect and leave them unaware, so stay open until it settles.
+      onClose={isPending ? () => {} : () => modal.hide()}
       actions={
         <DialogActions>
-          <Button variant="secondary" onClick={() => modal.hide()}>
+          <Button
+            variant="secondary"
+            onClick={() => modal.hide()}
+            disabled={isPending}
+          >
             Cancel
           </Button>
           <Button
@@ -191,7 +198,7 @@ const ProgramCourseStartDialogInner: React.FC<
           fullWidth
         />
         <Question>
-          <Typography variant="subtitle2" component="h3" id="start-mode-label">
+          <Typography variant="subtitle2" component="h2" id="start-mode-label">
             How would you like to take this course?
           </Typography>
           {certificateAvailable ? (

@@ -1254,6 +1254,31 @@ describe.each([
       expect(enrollmentPosts()).toEqual([])
     })
 
+    test("The dialog can't be dismissed while an enrollment is in flight", async () => {
+      const run = startedRun()
+      const { course } = renderVerifiedCard([run])
+      const endpoint = mitxonline.urls.verifiedProgramEnrollments.create(
+        run.courseware_id,
+      )
+      const enroll = deferredResponse<unknown>()
+      setMockResponse.post(endpoint, enroll.promise)
+
+      const dialog = await openStartDialog(course)
+      await user.click(within(dialog).getByRole("button", { name: "Continue" }))
+
+      const cancel = within(dialog).getByRole("button", { name: "Cancel" })
+      await waitFor(() => expect(cancel).toBeDisabled())
+      await user.keyboard("{Escape}")
+      expect(
+        screen.getByRole("dialog", { name: course.title }),
+      ).toBeInTheDocument()
+
+      enroll.resolve({})
+      await waitFor(() => {
+        expect(window.location.href).toBe(run.courseware_url)
+      })
+    })
+
     test("Practice mode explains the switch deadline for the selected run", async () => {
       const run = startedRun({ upgrade_deadline: "2026-12-11T12:00:00Z" })
       const { course } = renderVerifiedCard([run])
