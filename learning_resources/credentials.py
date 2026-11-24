@@ -233,8 +233,15 @@ def _prepare_marketing_page(content: str) -> str:
 
 
 def _marketing_page_content(resource: LearningResource) -> str:
-    """Return the resource's marketing page content, or an empty string."""
-    return (
+    """
+    Return the resource's marketing page content, or an empty string.
+
+    A test-mode resource is not public, so it has no page to scrape. The ETL
+    builds its full_description from the same MITx Online product page
+    sections (about, what you'll learn, prerequisites, FAQs), refreshed on
+    every run, so that stands in for the page.
+    """
+    page = (
         ContentFile.objects.filter(
             learning_resource=resource,
             file_type=MARKETING_PAGE_FILE_TYPE,
@@ -244,8 +251,10 @@ def _marketing_page_content(resource: LearningResource) -> str:
         .exclude(content__isnull=True)
         .values_list("content", flat=True)
         .first()
-        or ""
     )
+    if page:
+        return page
+    return (resource.full_description or "") if resource.test_mode else ""
 
 
 def _render_chunk(chunk: dict) -> str:
