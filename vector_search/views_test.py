@@ -390,6 +390,39 @@ def test_vector_search_qdrant_client_errors_return_4xx(
 
 
 @pytest.mark.django_db(transaction=True)
+@pytest.mark.usefixtures("content_file_viewer")
+@pytest.mark.parametrize(
+    ("method", "params", "code", "status_code"),
+    [
+        (
+            "query_points",
+            {"collection_name": "does_not_exist"},
+            grpc.StatusCode.NOT_FOUND,
+            404,
+        ),
+        (
+            "query_points_groups",
+            {"group_by": "does_not_exist"},
+            grpc.StatusCode.INVALID_ARGUMENT,
+            400,
+        ),
+    ],
+)
+def test_content_file_vector_search_qdrant_client_errors_return_4xx(  # noqa: PLR0913
+    client, mock_qdrant, method, params, code, status_code
+):
+    """A bad collection_name or group_by on content-file search gets a 4xx."""
+    getattr(mock_qdrant, method).side_effect = _qdrant_error(code)
+
+    response = client.get(
+        reverse("vector_search:v0:vector_content_files_search"),
+        data={"q": "test", **params},
+    )
+
+    assert response.status_code == status_code
+
+
+@pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize(
     "exc",
     [
