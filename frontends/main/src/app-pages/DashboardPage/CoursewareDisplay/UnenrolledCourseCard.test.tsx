@@ -1104,6 +1104,62 @@ describe.each([
   // ---------------------------------------------------------------------------
 
   describe("Verified Program Enrollment", () => {
+    const startedRun = (
+      overrides: Parameters<
+        typeof mitxonline.factories.courses.courseRun
+      >[0] = {},
+    ) =>
+      mitxonline.factories.courses.courseRun({
+        b2b_contract: null,
+        is_enrollable: true,
+        is_upgradable: true,
+        start_date: moment().subtract(7, "days").toISOString(),
+        end_date: moment().add(60, "days").toISOString(),
+        upgrade_deadline: moment().add(30, "days").toISOString(),
+        courseware_url: faker.internet.url(),
+        ...overrides,
+      })
+
+    const renderVerifiedCard = (
+      runs: ReturnType<typeof startedRun>[],
+      enrollmentMode: (typeof PAID_PROGRAM_ENROLLMENT_MODES)[number] = "verified",
+      nextRunId = runs[0].id,
+    ) => {
+      setMockResponse.get(mitxonline.urls.userMe.get(), mitxUser())
+      const course = mitxOnlineCourse({
+        courseruns: runs,
+        next_run_id: nextRunId,
+      })
+      const programEnrollment =
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          enrollment_mode: enrollmentMode,
+        })
+      const { location } = renderWithProviders(
+        <UnenrolledCourseCard
+          course={course}
+          ancestorContext={{ programEnrollment }}
+        />,
+      )
+      return { course, programEnrollment, location }
+    }
+
+    /** Clicks Start, or the card title when `titleText` is given. */
+    const openStartDialog = async (
+      course: { title: string },
+      titleText?: string,
+    ) => {
+      const card = getCard()
+      await user.click(
+        titleText
+          ? within(card).getByRole("button", { name: titleText })
+          : within(card).getByTestId("courseware-button"),
+      )
+      return screen.findByRole("dialog", { name: course.title })
+    }
+
+    const enrollmentPosts = () =>
+      makeRequest.mock.calls.filter(([req]) => req.method === "post")
+
     test.each(
       ENROLLMENT_TRIGGERS.flatMap(({ trigger }) =>
         PAID_PROGRAM_ENROLLMENT_MODES.map((enrollmentMode) => ({
@@ -1112,113 +1168,204 @@ describe.each([
         })),
       ),
     )(
-      "Clicking $trigger on course in $enrollmentMode program does one-click enrollment",
+      "Clicking $trigger on course in $enrollmentMode program opens the start dialog without enrolling",
       async ({ trigger, enrollmentMode }) => {
-        const userData = mitxUser()
-        setMockResponse.get(mitxonline.urls.userMe.get(), userData)
-
-        const run = mitxonline.factories.courses.courseRun({
-          b2b_contract: null,
-          is_enrollable: true,
-          start_date: moment().subtract(7, "days").toISOString(),
-          courseware_url: faker.internet.url(),
-        })
-        const course = mitxOnlineCourse({
-          courseruns: [run],
-          next_run_id: run.id,
-        })
-
-        const programEnrollment =
-          mitxonline.factories.enrollment.programEnrollmentV3({
-            enrollment_mode: enrollmentMode,
-          })
-
-        const programEnrollmentEndpoint =
-          mitxonline.urls.verifiedProgramEnrollments.create(run.courseware_id)
-        setMockResponse.post(programEnrollmentEndpoint, {})
-
-        renderWithProviders(
-          <UnenrolledCourseCard
-            course={course}
-            ancestorContext={{ programEnrollment }}
-          />,
+        const run = startedRun()
+        const { course } = renderVerifiedCard([run], enrollmentMode)
+        const dialog = await openStartDialog(
+          course,
+          trigger === "title-link" ? run.title : undefined,
         )
 
-        const card = getCard()
-        const triggerElement =
-          trigger === "button"
-            ? within(card).getByTestId("courseware-button")
-            : within(card).getByRole("button", { name: run.title })
+        expect(
+          within(dialog).getByRole("radio", {
+            name: "Work toward a certificate",
+          }),
+        ).toBeChecked()
+        expect(
+          within(dialog).getByRole("radio", { name: "Try the course first" }),
+        ).not.toBeChecked()
+        expect(enrollmentPosts()).toEqual([])
+      },
+    )
 
-        await user.click(triggerElement)
+    test("Continuing with the certificate option creates the verified enrollment", async () => {
+      const run = startedRun()
+      const { course, programEnrollment } = renderVerifiedCard([run])
+      const endpoint = mitxonline.urls.verifiedProgramEnrollments.create(
+        run.courseware_id,
+      )
+      setMockResponse.post(endpoint, {})
 
-        await waitFor(() => {
-          expect(makeRequest).toHaveBeenCalledWith(
-            expect.objectContaining({
-              method: "post",
-              url: programEnrollmentEndpoint,
-            }),
-          )
-        })
+      const dialog = await openStartDialog(course)
+      await user.click(within(dialog).getByRole("button", { name: "Continue" }))
 
-        await waitFor(() => {
-          expect(window.location.href).toBe(run.courseware_url)
-        })
+      await waitFor(() => {
+        expect(window.location.href).toBe(run.courseware_url)
+      })
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "post",
+          url: endpoint,
+          body: [programEnrollment.program.readable_id],
+        }),
+      )
+      expect(enrollmentPosts()).toHaveLength(1)
+    })
 
+    test("Continuing with practice mode creates an audit enrollment", async () => {
+      const run = startedRun()
+      const { course } = renderVerifiedCard([run])
+      const auditUrl = mitxonline.urls.enrollment.enrollmentsListV1()
+      setMockResponse.post(auditUrl, {})
+
+      const dialog = await openStartDialog(course)
+      await user.click(
+        within(dialog).getByRole("radio", { name: "Try the course first" }),
+      )
+      await user.click(within(dialog).getByRole("button", { name: "Continue" }))
+
+      await waitFor(() => {
+        expect(window.location.href).toBe(run.courseware_url)
+      })
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "post",
+          url: auditUrl,
+          body: expect.objectContaining({ run_id: run.id }),
+        }),
+      )
+      expect(enrollmentPosts()).toHaveLength(1)
+      expect(trackCourseEnrolled).toHaveBeenCalledWith(course.title)
+    })
+
+    test("Cancelling the dialog creates no enrollment", async () => {
+      const run = startedRun()
+      const { course } = renderVerifiedCard([run])
+
+      const dialog = await openStartDialog(course)
+      await user.click(within(dialog).getByRole("button", { name: "Cancel" }))
+
+      await waitFor(() => {
         expect(
           screen.queryByRole("dialog", { name: course.title }),
         ).not.toBeInTheDocument()
-        expect(
-          screen.queryByRole("dialog", { name: "Just a Few More Details" }),
-        ).not.toBeInTheDocument()
-      },
-    )
+      })
+      expect(enrollmentPosts()).toEqual([])
+    })
+
+    test("Practice mode explains the switch deadline for the selected run", async () => {
+      const run = startedRun({ upgrade_deadline: "2026-12-11T12:00:00Z" })
+      const { course } = renderVerifiedCard([run])
+
+      const dialog = await openStartDialog(course)
+
+      expect(
+        within(dialog).getByText(/you must switch by Dec 11, 2026/),
+      ).toBeInTheDocument()
+    })
+
+    test("The run dropdown is read-only with one run and selectable with several", async () => {
+      const first = startedRun({
+        start_date: moment().subtract(7, "days").toISOString(),
+      })
+      const later = startedRun({
+        start_date: moment().add(30, "days").toISOString(),
+        end_date: moment().add(90, "days").toISOString(),
+        is_upgradable: false,
+      })
+      // Out of date order, to check the dropdown sorts by start date.
+      const { course } = renderVerifiedCard(
+        [later, first],
+        "verified",
+        first.id,
+      )
+
+      const dialog = await openStartDialog(course)
+      const select = within(dialog).getByRole("combobox", {
+        name: "Choose a date",
+      })
+      expect(select).not.toHaveAttribute("aria-disabled")
+      expect(select).toHaveTextContent("(Certificate available)")
+
+      await user.click(select)
+      const options = screen.getAllByRole("option")
+      expect(options.map((o) => o.textContent)).toEqual([
+        expect.stringContaining("(Certificate available)"),
+        expect.stringContaining("(No certificate available)"),
+      ])
+      await user.click(options[1])
+
+      // A run without a certificate can only be taken in practice mode.
+      expect(
+        within(dialog).queryByRole("radio", {
+          name: "Work toward a certificate",
+        }),
+      ).not.toBeInTheDocument()
+      expect(
+        within(dialog).getByRole("radio", { name: "Try the course first" }),
+      ).toBeChecked()
+      expect(
+        within(dialog).getByText(/A certificate isn't available for this date/),
+      ).toBeInTheDocument()
+      expect(
+        within(dialog).queryByText(/Your program purchase includes/),
+      ).not.toBeInTheDocument()
+
+      const auditUrl = mitxonline.urls.enrollment.enrollmentsListV1()
+      setMockResponse.post(auditUrl, {})
+      await user.click(within(dialog).getByRole("button", { name: "Continue" }))
+      await waitFor(() => {
+        expect(makeRequest).toHaveBeenCalledWith(
+          expect.objectContaining({
+            method: "post",
+            url: auditUrl,
+            body: expect.objectContaining({ run_id: later.id }),
+          }),
+        )
+      })
+    })
+
+    test("A single run's dropdown is read-only", async () => {
+      const run = startedRun()
+      const { course } = renderVerifiedCard([run])
+
+      const dialog = await openStartDialog(course)
+      expect(
+        within(dialog).getByRole("combobox", { name: "Choose a date" }),
+      ).toHaveAttribute("aria-disabled", "true")
+    })
 
     test.each(START_DATE_CASES)(
       "Verified program enrollment $case",
       async ({ startDate, expectRedirect }) => {
-        setMockResponse.get(mitxonline.urls.userMe.get(), mitxUser())
-
-        const coursewareUrl = faker.internet.url()
-        const run = mitxonline.factories.courses.courseRun({
-          b2b_contract: null,
-          is_enrollable: true,
+        const run = startedRun({
           start_date: startDate,
           end_date: moment(startDate).add(60, "days").toISOString(),
-          courseware_url: coursewareUrl,
         })
-        const course = mitxOnlineCourse({
-          courseruns: [run],
-          next_run_id: run.id,
-        })
-        const programEnrollment =
-          mitxonline.factories.enrollment.programEnrollmentV3({
-            enrollment_mode: "verified",
-          })
-        const programEnrollmentEndpoint =
-          mitxonline.urls.verifiedProgramEnrollments.create(run.courseware_id)
-        const enroll = deferredResponse<unknown>()
-        setMockResponse.post(programEnrollmentEndpoint, enroll.promise)
-
-        const { location } = renderWithProviders(
-          <UnenrolledCourseCard
-            course={course}
-            ancestorContext={{ programEnrollment }}
-          />,
+        const { course, location } = renderVerifiedCard([run])
+        const endpoint = mitxonline.urls.verifiedProgramEnrollments.create(
+          run.courseware_id,
         )
+        setMockResponse.post(endpoint, {})
         const pathnameBefore = location.current.pathname
         const hrefBefore = window.location.href
 
-        await enrollAndSettle(getCard(), () => enroll.resolve({}))
+        const dialog = await openStartDialog(course)
+        await user.click(
+          within(dialog).getByRole("button", { name: "Continue" }),
+        )
+        await waitFor(() => {
+          expect(
+            screen.queryByRole("dialog", { name: course.title }),
+          ).not.toBeInTheDocument()
+        })
 
         expect(makeRequest).toHaveBeenCalledWith(
-          expect.objectContaining({
-            method: "post",
-            url: programEnrollmentEndpoint,
-          }),
+          expect.objectContaining({ method: "post", url: endpoint }),
         )
         if (expectRedirect) {
-          expect(window.location.href).toBe(coursewareUrl)
+          expect(window.location.href).toBe(run.courseware_url)
         } else {
           expectStayedPut(location, pathnameBefore, hrefBefore)
         }
@@ -1438,11 +1585,12 @@ describe("UnenrolledCourseCard enrollment error toast", () => {
     )
   })
 
-  test("Failed verified program enrollment surfaces a program-specific error toast", async () => {
+  test("Failed verified program enrollment shows an error in the start dialog", async () => {
     setupUserApis()
     const run = mitxonline.factories.courses.courseRun({
       b2b_contract: null,
       is_enrollable: true,
+      is_upgradable: true,
       courseware_url: faker.internet.url(),
     })
     const course = mitxOnlineCourse({ courseruns: [run], next_run_id: run.id })
@@ -1466,10 +1614,14 @@ describe("UnenrolledCourseCard enrollment error toast", () => {
     )
 
     await user.click(within(getCard()).getByTestId("courseware-button"))
+    const dialog = await screen.findByRole("dialog", { name: course.title })
+    await user.click(within(dialog).getByRole("button", { name: "Continue" }))
 
-    await expectErrorToast(
-      "Something went wrong enrolling you in this program. Please try again.",
-    )
+    expect(
+      await within(dialog).findByText(
+        "There was a problem enrolling you in this course. Please try again later.",
+      ),
+    ).toBeInTheDocument()
   })
 })
 

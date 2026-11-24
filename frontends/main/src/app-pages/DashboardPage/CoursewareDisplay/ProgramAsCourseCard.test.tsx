@@ -489,6 +489,7 @@ describe("ProgramAsCourseCard", () => {
       // Create a run we control for the first module
       const run = mitxonline.factories.courses.courseRun({
         is_enrollable: true,
+        is_upgradable: true,
         courseware_url: "https://courses.example.com/run1",
       })
       const moduleWithRun = mitxonline.factories.courses.course({
@@ -521,6 +522,10 @@ describe("ProgramAsCourseCard", () => {
       )
       const startButton = within(card).getByTestId("courseware-button")
       await user.click(startButton)
+      const dialog = await screen.findByRole("dialog", {
+        name: moduleWithRun.title,
+      })
+      await user.click(within(dialog).getByRole("button", { name: "Continue" }))
 
       await waitFor(() => {
         expect(makeRequest).toHaveBeenCalledWith(

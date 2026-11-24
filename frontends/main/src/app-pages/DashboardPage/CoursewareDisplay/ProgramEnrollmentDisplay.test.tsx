@@ -1619,6 +1619,7 @@ describe("ProgramEnrollmentDisplay", () => {
       title: "Verified Child Course",
       b2b_contract: null,
       is_enrollable: true,
+      is_upgradable: true,
       courseware_url: faker.internet.url(),
     })
     const childCourse = mitxonline.factories.courses.course({
@@ -1632,6 +1633,7 @@ describe("ProgramEnrollmentDisplay", () => {
       title: "Verified Module Course",
       b2b_contract: null,
       is_enrollable: true,
+      is_upgradable: true,
       courseware_url: faker.internet.url(),
     })
     const moduleCourse = mitxonline.factories.courses.course({
@@ -1743,7 +1745,7 @@ describe("ProgramEnrollmentDisplay", () => {
   }
 
   test.each(PAID_PROGRAM_ENROLLMENT_MODES)(
-    "Clicking 'Start' on a regular course in a %s program does one-click enrollment",
+    "Clicking 'Start' on a regular course in a %s program enrolls verified through the start dialog",
     async (enrollmentMode) => {
       const {
         parentProgram,
@@ -1774,6 +1776,8 @@ describe("ProgramEnrollmentDisplay", () => {
 
       const startButton = within(card).getByTestId("courseware-button")
       await user.click(startButton)
+      const dialog = await screen.findByRole("dialog")
+      await user.click(within(dialog).getByRole("button", { name: "Continue" }))
 
       await waitFor(() => {
         expect(makeRequest).toHaveBeenCalledWith(
@@ -1785,7 +1789,9 @@ describe("ProgramEnrollmentDisplay", () => {
         )
       })
 
-      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+      await waitFor(() => {
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+      })
     },
   )
 
@@ -1822,6 +1828,8 @@ describe("ProgramEnrollmentDisplay", () => {
 
       const startButton = within(card).getByTestId("courseware-button")
       await user.click(startButton)
+      const dialog = await screen.findByRole("dialog")
+      await user.click(within(dialog).getByRole("button", { name: "Continue" }))
 
       await waitFor(() => {
         expect(makeRequest).toHaveBeenCalledWith(
@@ -1836,7 +1844,9 @@ describe("ProgramEnrollmentDisplay", () => {
         )
       })
 
-      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+      await waitFor(() => {
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+      })
     },
   )
 
