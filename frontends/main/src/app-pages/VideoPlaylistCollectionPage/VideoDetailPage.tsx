@@ -213,7 +213,6 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
             videoThumbnailAlt={videoThumbnailAlt}
             startTime={startTime}
           />
-          <Styled.BorderLine />
 
           {!isLoading && video?.description && (
             <Styled.DescriptionText

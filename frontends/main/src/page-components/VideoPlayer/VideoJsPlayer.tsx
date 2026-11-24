@@ -29,6 +29,11 @@ export type VideoJsPlayerProps = {
   onReady?: (player: Player) => void
   onPlay?: () => void
   onHalfProgress?: () => void
+  /**
+   * Called with the video's natural size once its metadata has loaded, so the
+   * caller can size the player to the video (e.g. a vertical short).
+   */
+  onVideoDimensions?: (width: number, height: number) => void
 }
 
 /**
@@ -51,6 +56,7 @@ const VideoJsPlayer: React.FC<VideoJsPlayerProps> = ({
   onReady,
   onPlay,
   onHalfProgress,
+  onVideoDimensions,
 }) => {
   const videoRef = useRef<HTMLDivElement>(null)
   const playerRef = useRef<Player | null>(null)
@@ -151,6 +157,15 @@ const VideoJsPlayer: React.FC<VideoJsPlayerProps> = ({
             }
           })
         }
+        if (onVideoDimensions) {
+          // `on`, not `one`: a later source change loads new metadata too.
+          this.on("loadedmetadata", () => {
+            const width = this.videoWidth()
+            const height = this.videoHeight()
+            // Audio-only and YouTube sources report 0×0.
+            if (width > 0 && height > 0) onVideoDimensions(width, height)
+          })
+        }
         if (startTime && startTime > 0) {
           // Seek only after metadata (duration/seekable range) is available.
           // Calling currentTime() in ready() runs before metadata loads, so the
@@ -179,6 +194,7 @@ const VideoJsPlayer: React.FC<VideoJsPlayerProps> = ({
     onHalfProgress,
     onPlay,
     onReady,
+    onVideoDimensions,
     playsinline,
     poster,
     sources,
