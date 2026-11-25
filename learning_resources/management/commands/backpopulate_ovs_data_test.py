@@ -50,13 +50,15 @@ def ovs_videos(settings, mocker):
     )
 
 
-def _own_ovs(owner):
+def _own_ovs():
     for resource_type in (
         LearningResourceType.video_playlist.name,
         LearningResourceType.video.name,
     ):
         ETLSourceOwnershipFactory.create(
-            etl_source=ETLSource.ovs.name, resource_type=resource_type, owner=owner
+            etl_source=ETLSource.ovs.name,
+            resource_type=resource_type,
+            owner=ETLSourceOwnership.Pipeline.WEBHOOK,
         )
 
 
@@ -65,13 +67,17 @@ def test_load_follows_pages_and_skips_bad_videos(ovs_videos, mocker):
     mock_clear_cache = mocker.patch(
         "learning_resources.management.commands.backpopulate_ovs_data.clear_views_cache"
     )
-    _own_ovs(ETLSourceOwnership.Pipeline.WEBHOOK)
+    _own_ovs()
     stdout, stderr = StringIO(), StringIO()
 
     call_command("backpopulate_ovs_data", "--load", stdout=stdout, stderr=stderr)
 
     assert "include_in_learn=true" in ovs_videos.call_args_list[0].args[0]
     assert ovs_videos.call_count == 2
+    assert (
+        ovs_videos.call_args_list[1].args[0]
+        == f"{OVS_BASE_URL}/api/v0/public/videos/?page=2"
+    )
     videos = LearningResource.objects.filter(
         etl_source=ETLSource.ovs.name, resource_type=LearningResourceType.video.name
     )

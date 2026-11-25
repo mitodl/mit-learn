@@ -28,6 +28,7 @@ from learning_resources.etl.loaders import (
     load_videos,
     prune_ovs_playlists,
 )
+from learning_resources.etl.ovs import OVS_TYPES
 from learning_resources.etl.ownership import (
     Pipeline,
     RunMode,
@@ -160,10 +161,6 @@ class ExtractedContentFilesWebhookView(BaseWebhookView):
         return self.success(
             {"message": f"Queued {queued} run(s), skipped {len(courses) - queued}"}
         )
-
-
-# An upsert writes the video and its collection's playlist together.
-OVS_TYPES = [LearningResourceType.video_playlist.name, LearningResourceType.video.name]
 
 
 @extend_schema_view(

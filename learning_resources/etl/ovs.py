@@ -25,6 +25,10 @@ from main.utils import clean_data
 
 log = logging.getLogger(__name__)
 
+# The ownership pairs the OVS webhook needs: an upsert writes the video and its
+# collection's playlist together.
+OVS_TYPES = [LearningResourceType.video_playlist.name, LearningResourceType.video.name]
+
 
 def allowed_media_hosts() -> set[str]:
     """

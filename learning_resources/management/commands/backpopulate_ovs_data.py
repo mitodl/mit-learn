@@ -7,6 +7,7 @@ from django.core.management import BaseCommand, CommandError
 from learning_resources.constants import LearningResourceType, PlatformType
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.loaders import load_ovs_video_from_webhook
+from learning_resources.etl.ovs import OVS_TYPES
 from learning_resources.etl.ownership import Pipeline, may_write, writing_as
 from learning_resources.management.commands.mixins import ConfirmDeleteMixin
 from learning_resources.models import LearningResource
@@ -14,8 +15,6 @@ from learning_resources.tasks import get_ovs_transcripts
 from learning_resources.utils import resource_delete_actions
 from main.utils import clear_views_cache, now_in_utc
 from webhooks.serializers import OVSVideoWebhookRequestSerializer
-
-OVS_TYPES = [LearningResourceType.video_playlist.name, LearningResourceType.video.name]
 
 
 class Command(ConfirmDeleteMixin, BaseCommand):
@@ -110,7 +109,7 @@ class Command(ConfirmDeleteMixin, BaseCommand):
                             f"Skipping invalid video: {serializer.errors}"
                         )
                         skipped += 1
-                    # the removed legacy extract's filter; the webhook has none
+                    # only public, finished videos belong in Learn; the loader takes any
                     elif (
                         video.get("is_public")
                         and video.get("status") == "Complete"
