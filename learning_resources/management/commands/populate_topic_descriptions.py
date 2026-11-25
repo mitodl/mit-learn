@@ -2,6 +2,7 @@
 
 import csv
 import io
+import logging
 import re
 from collections import Counter
 
@@ -12,6 +13,8 @@ from django.core.management import BaseCommand, CommandError
 from channels.api import clear_featured_caches
 from learning_resources.models import LearningResourceTopic
 from main.utils import clear_views_cache
+
+log = logging.getLogger(__name__)
 
 # The topic page copy sheet, exported as CSV. It has to be shared as "anyone
 # with the link can view" for the export to work without credentials.
@@ -113,8 +116,16 @@ class Command(BaseCommand):
         if updated_channels and not dry_run:
             # As the channel admin does on save: clear the cached API
             # responses, then purge the updated topic pages from Fastly, which
-            # would otherwise keep serving the old description.
-            clear_views_cache()
+            # would otherwise keep serving the old description. The changes are
+            # already saved, so a re-run finds nothing to update and clears
+            # nothing: a failed Redis clear mustn't skip the purge.
+            # clear_featured_caches logs its own failures and carries on.
+            try:
+                clear_views_cache()
+                views_cleared = True
+            except Exception:
+                log.exception("Failed to clear the views cache")
+                views_cleared = False
             clear_featured_caches(
                 [
                     channel.channel_url
@@ -122,6 +133,14 @@ class Command(BaseCommand):
                     if channel.channel_url
                 ]
             )
+            if not views_cleared:
+                msg = (
+                    "The descriptions were saved and the topic pages purged, "
+                    "but clearing the cached API responses failed (see the log "
+                    "above). They will show the old descriptions until they "
+                    "expire."
+                )
+                raise CommandError(msg)
 
     def _apply_row(
         self, row, description_index, topics_by_name, updated_channels, *, dry_run

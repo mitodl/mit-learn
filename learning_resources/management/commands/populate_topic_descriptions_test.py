@@ -208,3 +208,20 @@ def test_missing_page_column_fails_and_points_at_sharing(mocked_responses):
 
     channel.refresh_from_db()
     assert channel.public_description == "old"
+
+
+def test_failed_redis_clear_still_purges_pages(mocked_responses, cache_clears):
+    """
+    The descriptions are saved before the caches are cleared, so a re-run
+    would find nothing to update: a failed Redis clear still purges the pages,
+    then fails the command so the operator knows.
+    """
+    channel = _topic_channel("Music", "old")
+    cache_clears.views.side_effect = ConnectionError("Redis is down")
+
+    with pytest.raises(CommandError, match="cached API responses failed"):
+        _run(mocked_responses, ("Music", "New."))
+
+    channel.refresh_from_db()
+    assert channel.public_description == "New."
+    cache_clears.pages.assert_called_once_with([channel.channel_url])
