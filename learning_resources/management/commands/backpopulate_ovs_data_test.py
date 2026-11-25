@@ -21,7 +21,7 @@ OVS_BASE_URL = "https://video.odl.mit.edu"
 
 @pytest.fixture
 def ovs_videos(settings, mocker):
-    """Serve test_json/ovs_videos.json as two pages, the first with two to skip"""
+    """Serve test_json/ovs_videos.json as two pages, the first with three to skip"""
     settings.OVS_API_BASE_URL = OVS_BASE_URL
     settings.OVS_ALLOWED_MEDIA_HOSTS = [".cloudfront.net"]
     mocker.patch("learning_resources.etl.loaders.update_index")
@@ -38,6 +38,7 @@ def ovs_videos(settings, mocker):
                 first,
                 {**second, "key": "f" * 32, "is_public": False},
                 {**second, "key": "e" * 32, "status": "Processing"},
+                {**second, "key": "d" * 32, "collection": "not an object"},
             ],
         },
         {"next": None, "results": [second]},
@@ -59,12 +60,15 @@ def _own_ovs(owner):
         )
 
 
-def test_load_follows_pages_and_skips_non_public_or_incomplete(ovs_videos):
-    """--load loads each public, Complete video on every page"""
+def test_load_follows_pages_and_skips_bad_videos(ovs_videos, mocker):
+    """--load loads each valid, public, Complete video on every page"""
+    mock_clear_cache = mocker.patch(
+        "learning_resources.management.commands.backpopulate_ovs_data.clear_views_cache"
+    )
     _own_ovs(ETLSourceOwnership.Pipeline.WEBHOOK)
-    stdout = StringIO()
+    stdout, stderr = StringIO(), StringIO()
 
-    call_command("backpopulate_ovs_data", "--load", stdout=stdout)
+    call_command("backpopulate_ovs_data", "--load", stdout=stdout, stderr=stderr)
 
     assert "include_in_learn=true" in ovs_videos.call_args_list[0].args[0]
     assert ovs_videos.call_count == 2
@@ -75,7 +79,9 @@ def test_load_follows_pages_and_skips_non_public_or_incomplete(ovs_videos):
         "96fb932aa5644d8e8f6a5fafe42caa87",
         "abcdef1234567890abcdef1234567890",
     ]
-    assert "Loaded 2 OVS videos, skipped 2" in stdout.getvalue()
+    assert "Loaded 2 OVS videos, skipped 3" in stdout.getvalue()
+    mock_clear_cache.assert_called_once()
+    assert "collection must be an object" in stderr.getvalue()
 
 
 def test_load_refuses_unless_webhook_owns_ovs(ovs_videos):

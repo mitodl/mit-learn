@@ -12,7 +12,8 @@ from learning_resources.management.commands.mixins import ConfirmDeleteMixin
 from learning_resources.models import LearningResource
 from learning_resources.tasks import get_ovs_transcripts
 from learning_resources.utils import resource_delete_actions
-from main.utils import now_in_utc
+from main.utils import clear_views_cache, now_in_utc
+from webhooks.serializers import OVSVideoWebhookRequestSerializer
 
 OVS_TYPES = [LearningResourceType.video_playlist.name, LearningResourceType.video.name]
 
@@ -92,8 +93,9 @@ class Command(ConfirmDeleteMixin, BaseCommand):
         with writing_as(Pipeline.WEBHOOK):
             if not may_write(ETLSource.ovs.name, OVS_TYPES):
                 msg = (
-                    f"The webhook does not own ovs/{', '.join(OVS_TYPES)}. Set "
-                    "those ETLSourceOwnership rows' owner to webhook in Django admin."
+                    f"The webhook does not own ovs/{', '.join(OVS_TYPES)}. In "
+                    "Django admin, add or set an ETLSourceOwnership row for each "
+                    "with owner webhook."
                 )
                 raise CommandError(msg)
             while url:
@@ -101,8 +103,15 @@ class Command(ConfirmDeleteMixin, BaseCommand):
                 response.raise_for_status()
                 data = response.json()
                 for video in data.get("results", []):
+                    # the checks the webhook makes before it loads
+                    serializer = OVSVideoWebhookRequestSerializer(data=video)
+                    if not serializer.is_valid():
+                        self.stderr.write(
+                            f"Skipping invalid video: {serializer.errors}"
+                        )
+                        skipped += 1
                     # the removed legacy extract's filter; the webhook has none
-                    if (
+                    elif (
                         video.get("is_public")
                         and video.get("status") == "Complete"
                         and load_ovs_video_from_webhook(video)
@@ -111,4 +120,5 @@ class Command(ConfirmDeleteMixin, BaseCommand):
                     else:
                         skipped += 1
                 url = data.get("next")
+        clear_views_cache()
         self.stdout.write(f"Loaded {loaded} OVS videos, skipped {skipped}")
