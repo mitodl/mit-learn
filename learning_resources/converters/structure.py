@@ -1262,6 +1262,12 @@ def export_structure_markdown(markdown: str, result: dict) -> str:
             "parent_id": n["parent_id"],
             "problem": n["metadata"].get("problem"),
             "part": n["metadata"].get("part"),
+            # a problem's number is unique only within its section
+            **(
+                {"section": n["metadata"]["section"]}
+                if n["metadata"].get("section")
+                else {}
+            ),
             "pages": n["pages"],
             **({"depends_on": n["depends_on"]} if n.get("depends_on") else {}),
         }

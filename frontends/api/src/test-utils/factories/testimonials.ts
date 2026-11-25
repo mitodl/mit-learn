@@ -1,7 +1,7 @@
 import { faker } from "@faker-js/faker/locale/en"
 import { makePaginatedFactory } from "ol-test-utilities"
 import type { Factory } from "ol-test-utilities"
-import type { Attestation } from "../../generated/v0"
+import type { Attestation } from "@mitodl/mit-learn-api-axios/v0"
 
 const testimonial: Factory<Attestation> = (overrides = {}) => ({
   id: faker.number.int(),

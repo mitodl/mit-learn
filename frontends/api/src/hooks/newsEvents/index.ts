@@ -3,7 +3,7 @@ import { newsEventsQueries, newsEventsKeys } from "./queries"
 import {
   NewsEventsApiNewsEventsListRequest,
   NewsEventsListFeedTypeEnum,
-} from "../../generated/v0/api"
+} from "@mitodl/mit-learn-api-axios/v0"
 
 const useNewsEventsList = (params: NewsEventsApiNewsEventsListRequest) => {
   return useQuery({

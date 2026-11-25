@@ -7,7 +7,6 @@ import SelectedCoursesSection from "./SelectedCoursesSection"
 import LicensingBanner from "./LicensingBanner"
 import TeachingPracticesSection from "./TeachingPracticesSection"
 import SupportShareSection from "./SupportShareSection"
-import StayConnectedSection from "./StayConnectedSection"
 
 const LearningResourceDrawer = dynamic(
   () =>
@@ -26,7 +25,6 @@ const EducatorPage: React.FC = () => (
     <LicensingBanner />
     <TeachingPracticesSection />
     <SupportShareSection />
-    <StayConnectedSection />
   </>
 )
 

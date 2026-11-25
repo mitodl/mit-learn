@@ -1,7 +1,7 @@
 import { faker } from "@faker-js/faker/locale/en"
 import { makePaginatedFactory } from "ol-test-utilities"
 import type { Factory } from "ol-test-utilities"
-import type { FeedItem } from "../../generated/v0"
+import type { FeedItem } from "@mitodl/mit-learn-api-axios/v0"
 
 const newsItem: Factory<FeedItem> = () => ({
   resource_type: "news",

@@ -233,6 +233,8 @@ export const HONOR_CODE = "/honor_code"
 
 export const TERMS = "/terms"
 
+export const SUPPORT = "/support"
+
 export const UNITS = "/units"
 
 export const CONTACT = "https://support.learn.mit.edu/"

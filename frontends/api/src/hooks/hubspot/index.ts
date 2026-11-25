@@ -7,7 +7,7 @@ import type {
   HubspotApiHubspotFormsDetailRetrieveRequest,
   HubspotApiHubspotFormsListRequest,
   HubspotFormSubmitResponse,
-} from "../../generated/v1"
+} from "@mitodl/mit-learn-api-axios/v1"
 import type { HubspotFormDetailResponse } from "./queries"
 import { hubspotKeys, hubspotQueries } from "./queries"
 import type { MutationHookOptions } from "../../mutations/mutationMeta"
