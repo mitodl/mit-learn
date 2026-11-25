@@ -7,7 +7,6 @@ from django.conf import settings
 from django.utils.decorators import method_decorator
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from qdrant_client import models
-from qdrant_client.http.exceptions import UnexpectedResponse
 from rest_framework.decorators import action
 from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
@@ -720,16 +719,6 @@ class QdrantView(AsyncAPIView):
             "hits": hits,
             **counts,
         }
-
-    def handle_exception(self, exc):
-        if isinstance(exc, UnexpectedResponse) and (
-            isinstance(exc.status_code, int) and 400 <= exc.status_code < 500  # noqa: PLR2004
-        ):
-            log.exception("Received a 4xx error from Qdrant")
-            return Response(status=exc.status_code)
-        # DRF maps its own exceptions (NotAuthenticated, ValidationError,
-        # Throttled, ...) to responses and re-raises anything else.
-        return super().handle_exception(exc)
 
 
 @method_decorator(blocked_ip_exempt, name="dispatch")

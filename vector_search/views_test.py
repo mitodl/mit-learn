@@ -367,22 +367,9 @@ def _qdrant_error(status_code):
 
 
 @pytest.mark.django_db(transaction=True)
-@pytest.mark.parametrize("status_code", [400, 404, 422])
-def test_vector_search_qdrant_4xx_returns_its_status(client, mock_qdrant, status_code):
-    """A 4xx from Qdrant is passed on to the caller with the same status."""
-    mock_qdrant.query_points.side_effect = _qdrant_error(status_code)
-
-    response = client.get(
-        reverse("vector_search:v0:vector_learning_resources_search"),
-        data={"q": "test"},
-    )
-
-    assert response.status_code == status_code
-
-
-@pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize(
-    "exc", [RuntimeError("boom"), _qdrant_error(500), _qdrant_error(503)]
+    "exc",
+    [RuntimeError("boom"), _qdrant_error(404), _qdrant_error(500), _qdrant_error(503)],
 )
 def test_vector_search_unexpected_errors_propagate(client, mock_qdrant, exc):
     """Errors DRF doesn't know how to answer still reach Django's error handling."""
