@@ -19,10 +19,15 @@ import type { VideoPlayerHandle } from "@/page-components/VideoPlayer/VideoResou
 import { addExternalLinkTargets, isOcwPlaylist } from "@/common/utils"
 import * as Styled from "./VideoDetailPage.styled"
 import { isShortsList } from "./ShortsGrid"
-import { VIDEO_SHORT_CATEGORY } from "@/common/constants"
+import {
+  VIDEO_PLAYLIST_PAGE_SIZE,
+  VIDEO_SHORT_CATEGORY,
+} from "@/common/constants"
 
 /** How many sibling videos the "More from" list shows at most. */
 const MORE_FROM_LIMIT = 5
+/** Shorts show as cards: one row of 4 on desktop, two rows of 2 on phones. */
+const MORE_FROM_SHORTS_LIMIT = 4
 
 type VideoDetailPageProps = {
   videoId: number
@@ -48,6 +53,8 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
   const { data: playlistItems, isLoading: itemsLoading } = useQuery({
     ...learningResourceQueries.items(playlistId ?? 0, {
       learning_resource_id: playlistId ?? 0,
+      // The playlist page's first page, which decides a shorts playlist.
+      limit: VIDEO_PLAYLIST_PAGE_SIZE,
     }),
     enabled: !!playlistId,
   })
@@ -67,14 +74,14 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
     (item): item is VideoResource =>
       item.resource_type === VideoResourceResourceTypeEnum.Video,
   )
-  const otherVideos = playlistVideos
-    .filter((item) => item.id !== videoId)
-    .slice(0, MORE_FROM_LIMIT)
   const totalPlaylistVideos = playlistVideos.length
   // Same rule as the playlist page, applied to the same first page of the
   // playlist (the current video included), so both pages agree on the layout.
   const isShortsPlaylist =
     !isOcwPlaylist(playlist) && isShortsList(playlistVideos)
+  const otherVideos = playlistVideos
+    .filter((item) => item.id !== videoId)
+    .slice(0, isShortsPlaylist ? MORE_FROM_SHORTS_LIMIT : MORE_FROM_LIMIT)
 
   const isLoading = videoLoading || (!!playlistId && playlistLoading)
 

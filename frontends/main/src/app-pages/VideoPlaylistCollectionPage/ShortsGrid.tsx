@@ -56,7 +56,7 @@ const Thumbnail = styled.div(({ theme }) => ({
   backgroundColor: theme.custom.colors.black,
 }))
 
-const Title = styled.h2(({ theme }) => ({
+const Title = styled.p(({ theme }) => ({
   ...theme.typography.subtitle2,
   color: theme.custom.colors.darkGray2,
   margin: 0,
@@ -73,10 +73,14 @@ const ShortDurationBadge = styled(DurationBadge)({
   borderBottomRightRadius: "8px",
 })
 
-const ShortCard: React.FC<{ video: VideoResource; href: string }> = ({
-  video,
-  href,
-}) => {
+const ShortCard: React.FC<{
+  video: VideoResource
+  href: string
+  /** Load the thumbnail right away, for cards that start in view. */
+  eager?: boolean
+  /** Ask for this thumbnail first: the page's largest image. */
+  highPriority?: boolean
+}> = ({ video, href, eager, highPriority }) => {
   const {
     src: imageUrl,
     unoptimized,
@@ -111,6 +115,8 @@ const ShortCard: React.FC<{ video: VideoResource; href: string }> = ({
             }
             unoptimized={unoptimized}
             onError={onError}
+            loading={eager ? "eager" : "lazy"}
+            fetchPriority={highPriority ? "high" : undefined}
           />
           {duration && <ShortDurationBadge>{duration}</ShortDurationBadge>}
           <PlayOverlay className="play-overlay">
@@ -129,7 +135,15 @@ const ShortCard: React.FC<{ video: VideoResource; href: string }> = ({
 type ShortCardsProps = {
   videos: VideoResource[]
   getHref: (video: VideoResource) => string
+  /**
+   * Whether the first row starts in view, so its thumbnails load right away
+   * and the first, the page's largest image, is fetched first.
+   */
+  aboveFold?: boolean
 }
+
+/** The desktop row: four cards. */
+const FIRST_ROW = 4
 
 /**
  * Whether these are all vertical shorts (e.g. MIT Pulse), which show as 9:16
@@ -140,10 +154,20 @@ const isShortsList = (videos: VideoResource[]) =>
   videos.every((video) => video.resource_category === VIDEO_SHORT_CATEGORY)
 
 /** A grid of 9:16 cards, sized to its container. */
-const ShortCards: React.FC<ShortCardsProps> = ({ videos, getHref }) => (
+const ShortCards: React.FC<ShortCardsProps> = ({
+  videos,
+  getHref,
+  aboveFold = false,
+}) => (
   <Grid>
-    {videos.map((video) => (
-      <ShortCard key={video.id} video={video} href={getHref(video)} />
+    {videos.map((video, i) => (
+      <ShortCard
+        key={video.id}
+        video={video}
+        href={getHref(video)}
+        eager={aboveFold && i < FIRST_ROW}
+        highPriority={aboveFold && i === 0}
+      />
     ))}
   </Grid>
 )
@@ -155,7 +179,7 @@ const ShortCards: React.FC<ShortCardsProps> = ({ videos, getHref }) => (
 const ShortsGrid: React.FC<ShortCardsProps> = (props) => (
   <section aria-label="Videos">
     <VideoContainer>
-      <ShortCards {...props} />
+      <ShortCards aboveFold {...props} />
     </VideoContainer>
   </section>
 )

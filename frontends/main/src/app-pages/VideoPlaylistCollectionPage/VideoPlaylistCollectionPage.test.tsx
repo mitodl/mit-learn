@@ -1,11 +1,14 @@
 import React from "react"
-import { setMockResponse, urls, factories } from "api/test-utils"
+import { makeRequest, setMockResponse, urls, factories } from "api/test-utils"
 import { videoDetailPath } from "@/common/urls"
 import { renderWithProviders, screen, user, within } from "@/test-utils"
 import VideoPage from "./VideoPlaylistCollectionPage"
 import { ResourceTypeEnum } from "api/v1"
 import type { VideoResource } from "api/v1"
-import { VIDEO_SHORT_CATEGORY } from "@/common/constants"
+import {
+  VIDEO_PLAYLIST_PAGE_SIZE as VIDEOS_PAGE_SIZE,
+  VIDEO_SHORT_CATEGORY,
+} from "@/common/constants"
 import { formatDurationClockTime } from "ol-utilities"
 
 jest.mock("next-nprogress-bar", () => ({
@@ -32,8 +35,6 @@ const makeVideo = (
     resource_type: ResourceTypeEnum.Video,
     ...overrides,
   })
-
-const VIDEOS_PAGE_SIZE = 10
 
 const setupApis = ({
   playlistId,
@@ -308,6 +309,41 @@ describe("VideoPage", () => {
 
       await screen.findByRole("region", { name: "Videos" })
       expect(screen.queryByText("Other Collections")).not.toBeInTheDocument()
+      // Nor are they fetched.
+      expect(
+        makeRequest.mock.calls.some(([args]) =>
+          args.url.startsWith(
+            urls.learningResources.vectorSimilar({ id: playlist.id }),
+          ),
+        ),
+      ).toBe(false)
+    })
+
+    test("loads the first row of thumbnails eagerly, the first one first", async () => {
+      const playlist = makePlaylist()
+      setupApis({
+        playlistId: playlist.id,
+        videos: Array.from({ length: 6 }, (_, i) =>
+          makeShort(`Short ${i + 1}`),
+        ),
+        playlist,
+      })
+
+      renderWithProviders(<VideoPage playlistId={playlist.id} />)
+
+      const grid = await screen.findByRole("region", { name: "Videos" })
+      const images = grid.querySelectorAll("img")
+      expect(Array.from(images, (img) => img.getAttribute("loading"))).toEqual([
+        "eager",
+        "eager",
+        "eager",
+        "eager",
+        "lazy",
+        "lazy",
+      ])
+      expect(
+        Array.from(images, (img) => img.getAttribute("fetchpriority")),
+      ).toEqual(["high", null, null, null, null, null])
     })
 
     test("a playlist mixing shorts and regular videos keeps the regular layout", async () => {

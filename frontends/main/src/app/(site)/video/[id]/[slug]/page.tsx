@@ -20,6 +20,7 @@ import {
   videoPlaylistIds,
 } from "@/common/slugs"
 import { carrySearchParams, videoDetailPath } from "@/common/urls"
+import { VIDEO_PLAYLIST_PAGE_SIZE } from "@/common/constants"
 
 type Props = AppPageProps<"/video/[id]/[slug]">
 
@@ -92,6 +93,7 @@ const Page: React.FC<Props> = async ({ params, searchParams }) => {
       queryClient.prefetchQuery(
         learningResourceQueries.items(playlistId, {
           learning_resource_id: playlistId,
+          limit: VIDEO_PLAYLIST_PAGE_SIZE,
         }),
       ),
     ])

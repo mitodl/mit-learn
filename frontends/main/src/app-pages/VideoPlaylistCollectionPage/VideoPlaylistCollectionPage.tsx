@@ -22,6 +22,7 @@ import VideoCollection from "./VideoCollection"
 import RelatedPlaylist from "./RelatedPlaylist"
 import VideoContainer from "./VideoContainer"
 import ShortsGrid, { isShortsList } from "./ShortsGrid"
+import { VIDEO_PLAYLIST_PAGE_SIZE } from "@/common/constants"
 
 const Page = styled.div<{ $shorts?: boolean }>(({ theme, $shorts }) => ({
   backgroundColor: theme.custom.colors.lightGray1,
@@ -72,7 +73,6 @@ const ShowMoreButton = styled(Button, {
   },
 }))
 
-const VIDEOS_PAGE_SIZE = 10
 type VideoPlaylistCollectionPageProps = {
   playlistId: number
 }
@@ -97,20 +97,9 @@ const VideoPlaylistCollectionPage: React.FC<
     fetchNextPage,
   } = useInfiniteLearningResourceItems(playlistId, {
     learning_resource_id: playlistId,
-    limit: VIDEOS_PAGE_SIZE,
+    limit: VIDEO_PLAYLIST_PAGE_SIZE,
   })
 
-  const { data: similarData, isLoading: similarLoading } = useQuery({
-    ...learningResourceQueries.vectorSimilar({
-      id: playlistId,
-      limit: 6,
-      resource_type: [ResourceTypeEnum.VideoPlaylist],
-    }),
-  })
-
-  if (isError) {
-    return notFound()
-  }
   const isLoading = playlistLoading || itemsLoading
   const totalCount = itemsData?.pages[0]?.count ?? 0
   const videos = (
@@ -129,6 +118,22 @@ const VideoPlaylistCollectionPage: React.FC<
   )
   const firstPageVideos = videos.filter((video) => firstPageIds.has(video.id))
   const isShortsPlaylist = !playlistType && isShortsList(firstPageVideos)
+
+  // A shorts playlist doesn't show related playlists, so they're only fetched
+  // once the playlist and its first page show it isn't one.
+  // Pending, not loading: a query waiting to be enabled still shows skeletons.
+  const { data: similarData, isPending: similarLoading } = useQuery({
+    ...learningResourceQueries.vectorSimilar({
+      id: playlistId,
+      limit: 6,
+      resource_type: [ResourceTypeEnum.VideoPlaylist],
+    }),
+    enabled: !isLoading && !isShortsPlaylist,
+  })
+
+  if (isError) {
+    return notFound()
+  }
 
   const totalVideoSeconds = videos.reduce((acc, video) => {
     const duration = video.video?.duration ?? ""

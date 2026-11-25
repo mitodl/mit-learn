@@ -8,7 +8,10 @@ import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import VideoDetailPage from "./VideoDetailPage"
 import { ResourceTypeEnum } from "api/v1"
 import type { VideoResource, VideoPlaylistResource } from "api/v1"
-import { VIDEO_SHORT_CATEGORY } from "@/common/constants"
+import {
+  VIDEO_PLAYLIST_PAGE_SIZE,
+  VIDEO_SHORT_CATEGORY,
+} from "@/common/constants"
 
 jest.mock("@/common/useFeatureFlag")
 const mockedUseFeatureFlag = jest.mocked(useFeatureFlag)
@@ -49,18 +52,21 @@ const setupVideoApi = (video: VideoResource) => {
 }
 
 const setupItemsApi = (playlistId: number, items: VideoResource[]) => {
-  setMockResponse.get(urls.learningResources.items({ id: playlistId }), {
-    count: items.length,
-    next: null,
-    previous: null,
-    results: items.map((item, i) => ({
-      id: i + 1,
-      child: item.id,
-      parent: playlistId,
-      position: i + 1,
-      resource: item,
-    })),
-  })
+  setMockResponse.get(
+    `${urls.learningResources.items({ id: playlistId })}?limit=${VIDEO_PLAYLIST_PAGE_SIZE}`,
+    {
+      count: items.length,
+      next: null,
+      previous: null,
+      results: items.map((item, i) => ({
+        id: i + 1,
+        child: item.id,
+        parent: playlistId,
+        position: i + 1,
+        resource: item,
+      })),
+    },
+  )
 }
 
 // ── Default render helper ────────────────────────────────────────────────────

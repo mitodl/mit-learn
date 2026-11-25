@@ -8,9 +8,6 @@ import { stripAnchorTags } from "@/common/utils"
 import * as Styled from "./VideoDetailPage.styled"
 import { ShortCards } from "./ShortsGrid"
 
-/** One row of shorts cards on desktop, two rows of two on phones. */
-const SHORTS_LIMIT = 4
-
 type MoreFromPlaylistProps = {
   playlistId: number
   /** Display name of the playlist, used in headings and labels. */
@@ -120,24 +117,23 @@ const MoreFromPlaylist: React.FC<MoreFromPlaylistProps> = ({
 
   if (videos.length === 0) return null
 
-  const shown = shorts ? videos.slice(0, SHORTS_LIMIT) : videos
   // +1 accounts for the video currently being watched, which is excluded from
   // `videos` — without it a fully-listed playlist would still offer "View all".
-  const hasMore = totalVideos > shown.length + 1
+  const hasMore = totalVideos > videos.length + 1
 
   return (
     <>
       <Styled.MoreFromTitle>More from {playlistLabel}</Styled.MoreFromTitle>
       {shorts ? (
         <ShortCards
-          videos={shown}
+          videos={videos}
           getHref={(video) =>
             videoDetailPath(video.id, playlistId, video.url_slug)
           }
         />
       ) : (
         <Styled.MoreFromList>
-          {shown.map((video) => (
+          {videos.map((video) => (
             <React.Fragment key={video.id}>
               <MoreFromPlaylistItem video={video} playlistId={playlistId} />
               <Styled.SpacerBlock className="spacer-block" />
