@@ -23,9 +23,12 @@ import RelatedPlaylist from "./RelatedPlaylist"
 import VideoContainer from "./VideoContainer"
 import ShortsGrid, { isShortsList } from "./ShortsGrid"
 
-const Page = styled.div(({ theme }) => ({
+const Page = styled.div<{ $shorts?: boolean }>(({ theme, $shorts }) => ({
   backgroundColor: theme.custom.colors.lightGray1,
   minHeight: "100vh",
+  // A shorts playlist ends with its grid (and "Load more"), not related
+  // playlists, so it needs its own space above the footer.
+  ...($shorts && { paddingBottom: "80px" }),
 }))
 
 const EpisodeListSection = styled.section(({ theme }) => ({
@@ -49,9 +52,21 @@ const ShowMoreContainer = styled("div")({
   justifyContent: "center",
 })
 
-const ShowMoreButton = styled(Button)(({ theme }) => ({
+const ShowMoreButton = styled(Button, {
+  shouldForwardProp: (prop) => prop !== "$shorts",
+})<{ $shorts?: boolean }>(({ theme, $shorts }) => ({
   minWidth: "140px",
   margin: "40px 0 0px 0",
+  // Shorts playlists: the "bordered" button, 48px tall with dark red text.
+  ...($shorts && {
+    height: "48px",
+    padding: "0 32px",
+    borderWidth: "1px",
+    color: theme.custom.colors.darkRed,
+    "&:hover:not(:disabled)": {
+      color: theme.custom.colors.darkRed,
+    },
+  }),
   [theme.breakpoints.down("sm")]: {
     width: "100%",
   },
@@ -134,10 +149,11 @@ const VideoPlaylistCollectionPage: React.FC<
     .filter((resource) => resource.id !== playlistId)
     .slice(0, 6)
   return (
-    <Page>
+    <Page $shorts={isShortsPlaylist}>
       <VideoPageHeader
         playlist={playlist}
         isSeries={playlistType}
+        isShorts={isShortsPlaylist}
         totalVideos={totalCount}
       />
 
@@ -180,7 +196,9 @@ const VideoPlaylistCollectionPage: React.FC<
       {hasNextPage && (
         <ShowMoreContainer>
           <ShowMoreButton
-            variant="secondary"
+            variant={isShortsPlaylist ? "bordered" : "secondary"}
+            size={isShortsPlaylist ? "large" : "medium"}
+            $shorts={isShortsPlaylist}
             onClick={() => fetchNextPage()}
             disabled={isFetchingNextPage}
           >
@@ -193,10 +211,12 @@ const VideoPlaylistCollectionPage: React.FC<
           No videos found.
         </Typography>
       )}
-      <RelatedPlaylist
-        collections={otherCollections}
-        isLoading={similarLoading}
-      />
+      {!isShortsPlaylist && (
+        <RelatedPlaylist
+          collections={otherCollections}
+          isLoading={similarLoading}
+        />
+      )}
     </Page>
   )
 }

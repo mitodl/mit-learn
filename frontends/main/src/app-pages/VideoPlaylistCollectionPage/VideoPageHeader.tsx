@@ -25,28 +25,35 @@ const StyledBreadcrumbs = styled(Breadcrumbs)(() => ({
   },
 }))
 
-const HeaderSection = styled.div<{ isSeries?: boolean }>(
-  ({ theme, isSeries }) => ({
-    padding: "56px 0 72px",
+const HeaderSection = styled.div<{ isSeries?: boolean; $shorts?: boolean }>(
+  ({ theme, isSeries, $shorts }) => ({
+    // A shorts grid starts 24px below the description.
+    padding: $shorts ? "56px 0 24px" : "56px 0 72px",
     [theme.breakpoints.down("md")]: {
-      padding: "32px 0 40px",
+      padding: $shorts ? "32px 0 24px" : "32px 0 40px",
     },
     [theme.breakpoints.down("sm")]: {
-      padding: isSeries ? "32px 0 16px" : "32px 0 40px",
+      padding: isSeries
+        ? "32px 0 16px"
+        : $shorts
+          ? "32px 0 24px"
+          : "32px 0 40px",
     },
   }),
 )
 
-const CollectionLabel = styled.span(({ theme }) => ({
-  display: "block",
-  textTransform: "uppercase",
-  ...theme.typography.body3,
-  fontWeight: theme.typography.fontWeightBold,
-  color: theme.custom.colors.black,
-  marginBottom: "8px",
-  lineHeight: "150%" /* 18px */,
-  letterSpacing: "1.92px",
-}))
+const CollectionLabel = styled.span<{ $shorts?: boolean }>(
+  ({ theme, $shorts }) => ({
+    display: "block",
+    textTransform: "uppercase",
+    ...theme.typography.body3,
+    fontWeight: theme.typography.fontWeightBold,
+    color: $shorts ? theme.custom.colors.darkRed : theme.custom.colors.black,
+    marginBottom: "8px",
+    lineHeight: "150%" /* 18px */,
+    letterSpacing: "1.92px",
+  }),
+)
 
 const CollectionHeader = styled.div(({ theme }) => ({
   display: "flex",
@@ -79,10 +86,14 @@ const PageTitle = styled.h1<{ isSeries?: boolean }>(({ theme, isSeries }) => ({
  * The Pick<TypographyProps, "component"> generic is what allows
  * component="div" at the call site. A sanitized OVS description contains block elements (<p>, <ul>), which are invalid inside Typography's default element for these variants (<p>).
  */
-const PageDescription = styled(Typography)<Pick<TypographyProps, "component">>(
-  ({ theme }) => ({
+const PageDescription = styled(Typography, {
+  shouldForwardProp: (prop) => prop !== "$shorts",
+})<Pick<TypographyProps, "component"> & { $shorts?: boolean }>(
+  ({ theme, $shorts }) => ({
     ...richTextDescription,
-    color: theme.custom.colors.darkGray1,
+    color: $shorts
+      ? theme.custom.colors.darkGray2
+      : theme.custom.colors.darkGray1,
     ...theme.typography.body1,
     lineHeight: "26px",
     [theme.breakpoints.down("sm")]: {
@@ -92,16 +103,26 @@ const PageDescription = styled(Typography)<Pick<TypographyProps, "component">>(
   }),
 )
 
-const CollectionTitle = styled(Typography)(({ theme }) => ({
+const CollectionTitle = styled(Typography, {
+  shouldForwardProp: (prop) => prop !== "$shorts",
+})<{ $shorts?: boolean }>(({ theme, $shorts }) => ({
   ...theme.typography.body1,
   fontWeight: theme.typography.fontWeightMedium,
   color: theme.custom.colors.black,
   lineHeight: "150%",
+  ...($shorts && {
+    ...theme.typography.body2,
+    fontWeight: theme.typography.fontWeightBold,
+    lineHeight: "22px",
+    marginBottom: "8px",
+  }),
 }))
 
 type VideoPageHeaderProps = {
   playlist?: VideoPlaylistResource
   isSeries?: boolean
+  /** A shorts playlist, whose grid of cards follows the header directly. */
+  isShorts?: boolean
   totalVideos?: number
 }
 
@@ -109,6 +130,7 @@ const VideoPageHeader: React.FC<VideoPageHeaderProps> = ({
   playlist,
   totalVideos,
   isSeries = false,
+  isShorts = false,
 }) => {
   const collectionLabel = playlist
     ? playlist.resource_category?.trim() || "Video Collection"
@@ -126,12 +148,12 @@ const VideoPageHeader: React.FC<VideoPageHeaderProps> = ({
         </VideoContainer>
       </BreadcrumbBar>
 
-      <HeaderSection isSeries={isSeries}>
+      <HeaderSection isSeries={isSeries} $shorts={isShorts}>
         <VideoContainer>
           {collectionLabel === null ? (
             <Skeleton width={140} height={24} style={{ marginBottom: 18 }} />
           ) : (
-            <CollectionLabel>
+            <CollectionLabel $shorts={isShorts}>
               {isSeries ? "Video Series" : collectionLabel}
             </CollectionLabel>
           )}
@@ -141,7 +163,9 @@ const VideoPageHeader: React.FC<VideoPageHeaderProps> = ({
           </PageTitle>
           {!isSeries && (
             <CollectionHeader>
-              <CollectionTitle>{totalVideos} Videos</CollectionTitle>
+              <CollectionTitle $shorts={isShorts}>
+                {totalVideos} Videos
+              </CollectionTitle>
             </CollectionHeader>
           )}
           {playlist === undefined ? (
@@ -149,6 +173,7 @@ const VideoPageHeader: React.FC<VideoPageHeaderProps> = ({
           ) : (
             <PageDescription
               component="div"
+              $shorts={isShorts}
               /* Rich text, sanitized during ETL. Rendered as markup rather
                  than interpolated, or an author's formatting would appear to
                  the learner as visible tags. */

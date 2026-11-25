@@ -11,14 +11,20 @@ import { DurationBadge, PlayIcon, PlayOverlay } from "./shared.styled"
 
 const PLACEHOLDER_IMG = "/images/mit-open-learning-logo.svg"
 
-/** Four vertical cards per row on desktop, three on tablets, two on phones. */
+/**
+ * Four vertical cards per row on desktop (234px wide in the 1080px column),
+ * three on tablets, two on phones.
+ */
 const Grid = styled.ul(({ theme }) => ({
   listStyle: "none",
   margin: 0,
   padding: 0,
   display: "grid",
   gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-  gap: "40px 24px",
+  gap: "56px 48px",
+  [theme.breakpoints.down("lg")]: {
+    gap: "40px 24px",
+  },
   [theme.breakpoints.down("md")]: {
     gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
   },
@@ -31,7 +37,7 @@ const Grid = styled.ul(({ theme }) => ({
 const CardLink = styled(Link)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
-  gap: "12px",
+  gap: "8px",
   textDecoration: "none",
   "&:hover .short-title, &:focus-visible .short-title": {
     color: theme.custom.colors.red,
@@ -51,7 +57,7 @@ const Thumbnail = styled.div(({ theme }) => ({
 }))
 
 const Title = styled.h2(({ theme }) => ({
-  ...theme.typography.subtitle1,
+  ...theme.typography.subtitle2,
   color: theme.custom.colors.darkGray2,
   margin: 0,
   overflow: "hidden",
@@ -59,10 +65,13 @@ const Title = styled.h2(({ theme }) => ({
   WebkitLineClamp: 2,
   WebkitBoxOrient: "vertical",
   transition: "color 0.2s",
-  [theme.breakpoints.down("sm")]: {
-    ...theme.typography.subtitle2,
-  },
 }))
+
+/** Flush with the card's bottom-right corner, which it rounds to match. */
+const ShortDurationBadge = styled(DurationBadge)({
+  lineHeight: "16px",
+  borderBottomRightRadius: "8px",
+})
 
 const ShortCard: React.FC<{ video: VideoResource; href: string }> = ({
   video,
@@ -103,7 +112,7 @@ const ShortCard: React.FC<{ video: VideoResource; href: string }> = ({
             unoptimized={unoptimized}
             onError={onError}
           />
-          {duration && <DurationBadge $dense>{duration}</DurationBadge>}
+          {duration && <ShortDurationBadge>{duration}</ShortDurationBadge>}
           <PlayOverlay className="play-overlay">
             <PlayIcon />
           </PlayOverlay>

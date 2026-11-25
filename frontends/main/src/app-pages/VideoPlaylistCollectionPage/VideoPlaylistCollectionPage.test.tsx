@@ -291,6 +291,25 @@ describe("VideoPage", () => {
       })
     })
 
+    test("ends with the grid, without other collections", async () => {
+      const playlist = makePlaylist()
+      setupApis({
+        playlistId: playlist.id,
+        videos: [makeShort("Short One")],
+        playlist,
+        similarCollections: [
+          factories.learningResources.videoPlaylist({
+            title: "MIT Research Highlights",
+          }),
+        ],
+      })
+
+      renderWithProviders(<VideoPage playlistId={playlist.id} />)
+
+      await screen.findByRole("region", { name: "Videos" })
+      expect(screen.queryByText("Other Collections")).not.toBeInTheDocument()
+    })
+
     test("a playlist mixing shorts and regular videos keeps the regular layout", async () => {
       const playlist = makePlaylist()
       const featured = makeVideo({ title: "Featured Video" })
