@@ -7,8 +7,9 @@ from collections import Counter
 
 import requests
 from django.conf import settings
-from django.core.management import BaseCommand
+from django.core.management import BaseCommand, CommandError
 
+from channels.api import clear_featured_caches
 from learning_resources.models import LearningResourceTopic
 from main.utils import clear_views_cache
 
@@ -66,13 +67,20 @@ class Command(BaseCommand):
         response.raise_for_status()
         rows = list(csv.reader(io.StringIO(response.content.decode("utf-8-sig"))))
         if not rows:
-            self.stderr.write("The sheet is empty")
-            return
+            msg = f"The sheet at {options['url']} is empty"
+            raise CommandError(msg)
 
         header = [column.strip() for column in rows[0]]
         if DESCRIPTION_COLUMN not in header:
-            self.stderr.write(f"The sheet has no '{DESCRIPTION_COLUMN}' column")
-            return
+            # A sheet that isn't shared publicly returns Google's sign-in page
+            # rather than CSV, which reads as a sheet without the column.
+            msg = (
+                f"No '{DESCRIPTION_COLUMN}' column in {options['url']}. If the "
+                "sheet has one, check that it is shared as 'Anyone with the "
+                "link can view': otherwise Google returns its sign-in page "
+                "instead of the CSV."
+            )
+            raise CommandError(msg)
         description_index = header.index(DESCRIPTION_COLUMN)
 
         topics_by_name = {
@@ -83,8 +91,15 @@ class Command(BaseCommand):
         }
 
         dry_run = options["dry_run"]
+        updated_channels = []
         outcomes = Counter(
-            self._apply_row(row, description_index, topics_by_name, dry_run=dry_run)
+            self._apply_row(
+                row,
+                description_index,
+                topics_by_name,
+                updated_channels,
+                dry_run=dry_run,
+            )
             for row in rows[1:]
             # The topic name is in the first, unlabelled column.
             if row and row[0].strip()
@@ -95,11 +110,26 @@ class Command(BaseCommand):
             f"{prefix}{outcomes[UPDATED]} updated, "
             f"{outcomes[UNCHANGED]} already up to date, {outcomes[SKIPPED]} skipped"
         )
-        if outcomes[UPDATED] and not dry_run:
+        if updated_channels and not dry_run:
+            # As the channel admin does on save: clear the cached API
+            # responses, then purge the updated topic pages from Fastly, which
+            # would otherwise keep serving the old description.
             clear_views_cache()
+            clear_featured_caches(
+                [
+                    channel.channel_url
+                    for channel in updated_channels
+                    if channel.channel_url
+                ]
+            )
 
-    def _apply_row(self, row, description_index, topics_by_name, *, dry_run):
-        """Set one row's description on its topic's channel; return the outcome"""
+    def _apply_row(
+        self, row, description_index, topics_by_name, updated_channels, *, dry_run
+    ):
+        """
+        Set one row's description on its topic's channel, adding the channel to
+        `updated_channels` if it changed, and return the outcome.
+        """
         sheet_name = row[0].strip()
         name = sheet_name.removeprefix(PARENT_TOPIC_PREFIX)
         description = (
@@ -124,6 +154,7 @@ class Command(BaseCommand):
         if not dry_run:
             channel.public_description = description
             channel.save(update_fields=["public_description", "updated_on"])
+        updated_channels.append(channel)
         verb = "Would update" if dry_run else "Updated"
         self.stdout.write(f"{verb} '{topic.name}'")
         return UPDATED

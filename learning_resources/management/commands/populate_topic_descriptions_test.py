@@ -3,9 +3,10 @@
 import csv
 import io
 from io import StringIO
+from types import SimpleNamespace
 
 import pytest
-from django.core.management import call_command
+from django.core.management import CommandError, call_command
 
 from channels.factories import ChannelTopicDetailFactory
 from learning_resources.factories import LearningResourceTopicFactory
@@ -14,6 +15,8 @@ from learning_resources.management.commands.populate_topic_descriptions import (
 )
 from learning_resources.models import LearningResourceTopic
 
+COMMAND_MODULE = "learning_resources.management.commands.populate_topic_descriptions"
+
 pytestmark = pytest.mark.django_db
 
 
@@ -21,6 +24,15 @@ pytestmark = pytest.mark.django_db
 def _no_seeded_topics():
     """Remove the real topics that data migrations seed, before each test."""
     LearningResourceTopic.objects.all().delete()
+
+
+@pytest.fixture(autouse=True)
+def cache_clears(mocker):
+    """Patch the Redis clear and the Fastly purge the command runs after saving"""
+    return SimpleNamespace(
+        views=mocker.patch(f"{COMMAND_MODULE}.clear_views_cache"),
+        pages=mocker.patch(f"{COMMAND_MODULE}.clear_featured_caches"),
+    )
 
 
 def _sheet(*rows):
@@ -50,11 +62,8 @@ def _topic_channel(name, description=""):
     ).channel
 
 
-def test_sets_description_on_topic_channel(mocked_responses, mocker):
+def test_sets_description_on_topic_channel(mocked_responses, cache_clears):
     """The 'Page' text becomes the matching topic channel's description"""
-    clear_cache = mocker.patch(
-        "learning_resources.management.commands.populate_topic_descriptions.clear_views_cache"
-    )
     channel = _topic_channel("Architecture", "old")
 
     output = _run(
@@ -64,7 +73,9 @@ def test_sets_description_on_topic_channel(mocked_responses, mocker):
     channel.refresh_from_db()
     assert channel.public_description == "Explore architecture courses."
     assert "Updated 'Architecture'" in output
-    clear_cache.assert_called_once()
+    cache_clears.views.assert_called_once()
+    # The updated topic page is purged from Fastly.
+    cache_clears.pages.assert_called_once_with([channel.channel_url])
 
 
 @pytest.mark.parametrize(
@@ -123,11 +134,8 @@ def test_logs_topic_without_channel(mocked_responses):
     assert "Topic 'Theater' has no channel" in output
 
 
-def test_dry_run_saves_nothing(mocked_responses, mocker):
-    """--dry-run reports the change without saving it"""
-    clear_cache = mocker.patch(
-        "learning_resources.management.commands.populate_topic_descriptions.clear_views_cache"
-    )
+def test_dry_run_saves_nothing(mocked_responses, cache_clears):
+    """--dry-run reports the change without saving or purging anything"""
     channel = _topic_channel("Music", "old")
 
     output = _run(mocked_responses, ("Music", "New."), dry_run=True)
@@ -136,4 +144,67 @@ def test_dry_run_saves_nothing(mocked_responses, mocker):
     assert channel.public_description == "old"
     assert "Would update 'Music'" in output
     assert "[dry run] 1 updated" in output
-    clear_cache.assert_not_called()
+    cache_clears.views.assert_not_called()
+    cache_clears.pages.assert_not_called()
+
+
+def test_no_changes_clears_nothing(mocked_responses, cache_clears):
+    """A run that changes nothing leaves the caches alone"""
+    _topic_channel("Music", "Same.")
+
+    output = _run(mocked_responses, ("Music", "Same."))
+
+    assert "0 updated, 1 already up to date, 0 skipped" in output
+    cache_clears.views.assert_not_called()
+    cache_clears.pages.assert_not_called()
+
+
+def test_purges_only_published_topic_pages(mocked_responses, cache_clears):
+    """An unpublished channel has no page to purge, but is still updated"""
+    published = _topic_channel("Physics")
+    unpublished = _topic_channel("Biology")
+    unpublished.published = False
+    unpublished.save()
+
+    _run(mocked_responses, ("Physics", "Physics."), ("Biology", "Biology."))
+
+    unpublished.refresh_from_db()
+    assert unpublished.public_description == "Biology."
+    cache_clears.pages.assert_called_once_with([published.channel_url])
+
+
+def test_reads_the_sheet_at_url(mocked_responses):
+    """--url reads another CSV export instead of the default sheet"""
+    channel = _topic_channel("Music")
+    url = "https://docs.google.com/spreadsheets/d/other/export?format=csv"
+    mocked_responses.get(url, body=_sheet(("Music", "From the other sheet.")))
+
+    call_command("populate_topic_descriptions", "--url", url, stdout=StringIO())
+
+    channel.refresh_from_db()
+    assert channel.public_description == "From the other sheet."
+
+
+def test_empty_sheet_fails(mocked_responses):
+    """An empty sheet is an error, not a successful run"""
+    mocked_responses.get(DEFAULT_SHEET_CSV_URL, body="")
+
+    with pytest.raises(CommandError, match="is empty"):
+        call_command("populate_topic_descriptions", stdout=StringIO())
+
+
+def test_missing_page_column_fails_and_points_at_sharing(mocked_responses):
+    """
+    Without a 'Page' column, as when a private sheet returns Google's sign-in
+    page, the command fails, mentions sharing, and changes nothing.
+    """
+    channel = _topic_channel("Music", "old")
+    mocked_responses.get(
+        DEFAULT_SHEET_CSV_URL, body="<!doctype html><html>Sign in</html>"
+    )
+
+    with pytest.raises(CommandError, match="Anyone with the link can view"):
+        call_command("populate_topic_descriptions", stdout=StringIO())
+
+    channel.refresh_from_db()
+    assert channel.public_description == "old"
