@@ -100,11 +100,13 @@ local Keycloak and APISIX containers.
 
 ## Code Generation
 
-MIT Learn uses [drf-spectacular](https://drf-spectacular.readthedocs.io/en/latest/) to generate and OpenAPI spec from Django views. Additionally, we use [OpenAPITools/openapi-generator](https://github.com/OpenAPITools/openapi-generator) to generate Typescript declarations and an API Client. These generated files are checked into source control; CI checks that they are up-to-date. To regenerate these files, run
+MIT Learn uses [drf-spectacular](https://drf-spectacular.readthedocs.io/en/latest/) to generate an OpenAPI spec from Django views. The spec, `openapi/specs/v0.yaml` and `v1.yaml`, is checked into source control, and CI checks that it is up-to-date. To regenerate it, run
 
 ```bash
 ./scripts/generate_openapi.sh
 ```
+
+The frontend's TypeScript API client is not generated in this repository. It is the published npm package [`@mitodl/mit-learn-api-axios`](https://www.npmjs.com/package/@mitodl/mit-learn-api-axios), built from the spec by [mitodl/mit-learn-api-clients](https://github.com/mitodl/mit-learn-api-clients) and pinned in `frontends/api/package.json`. `frontends/api` re-exports it as `api`, `api/v0` and `api/v1`. A new stable version is published when a backend release that changes the spec is finished. A frontend change that needs a backend API change therefore merges after that backend change is released.
 
 ### Using an unreleased API client
 

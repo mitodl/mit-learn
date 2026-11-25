@@ -43,6 +43,7 @@ from learning_resources.etl.utils import (
     transform_topics,
 )
 from learning_resources.etl.warehouse_guards import (
+    omitted_test_mode_course_ids,
     refuse_empty,
     refuse_mass_unpublish,
     utc_timestamp,
@@ -222,7 +223,15 @@ def sync_courses(courses: list[dict], *, allow_mass_unpublish: bool = False) -> 
     refuse_empty(courses=courses)
     view_urls = {course[UNIQUE_FIELD] for course in courses}
     if not allow_mass_unpublish:
-        refuse_mass_unpublish(ETLSource.ocw.name, COURSE, view_urls, field=UNIQUE_FIELD)
+        refuse_mass_unpublish(
+            ETLSource.ocw.name,
+            COURSE,
+            view_urls
+            | omitted_test_mode_course_ids(
+                ETLSource.ocw.name, view_urls, field=UNIQUE_FIELD
+            ),
+            field=UNIQUE_FIELD,
+        )
     if is_shadow_run():
         return observe_courses(courses, view_urls)
     # load_course and unpublish_resources write whoever calls them

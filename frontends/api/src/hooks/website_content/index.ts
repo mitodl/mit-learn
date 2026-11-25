@@ -6,7 +6,7 @@ import { websiteContentApi, mediaApi } from "../../clients"
 import type {
   WebsiteContentApiWebsiteContentListRequest as WebsiteContentListRequest,
   WebsiteContent,
-} from "../../generated/v1"
+} from "@mitodl/mit-learn-api-axios/v1"
 import { websiteContentQueries, websiteContentKeys } from "./queries"
 import type { MutationHookOptions } from "../../mutations/mutationMeta"
 

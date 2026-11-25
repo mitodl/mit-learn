@@ -49,8 +49,6 @@ from learning_resources.etl.loaders import (
     load_image,
     load_instructors,
     load_offered_by,
-    load_ovs_playlist,
-    load_ovs_playlists,
     load_ovs_video_from_webhook,
     load_playlist,
     load_podcast,
@@ -79,6 +77,11 @@ from learning_resources.etl.ownership import (
     CONTENT_FILE,
     OwnershipError,
     shadowing,
+)
+from learning_resources.etl.practice_problems_test import (
+    _header,
+    _node,
+    structured_markdown,
 )
 from learning_resources.etl.utils import get_s3_prefix_for_source
 from learning_resources.etl.xpro import _parse_datetime
@@ -110,10 +113,10 @@ from learning_resources.models import (
     LearningResource,
     LearningResourceImage,
     LearningResourceOfferor,
-    LearningResourcePlatform,
     LearningResourceRelationship,
     LearningResourceRun,
     PodcastEpisode,
+    PracticeProblem,
     Program,
     TutorProblemFile,
     Unit,
@@ -3540,246 +3543,6 @@ def test_unpublish_orphaned_videos_sweeps_everything(mock_upsert_tasks):
     assert listed_video.published is True
 
 
-@pytest.mark.parametrize("playlist_exists", [True, False])
-def test_load_ovs_playlist(mocker, playlist_exists, mock_get_similar_topics_qdrant):
-    """Test load_ovs_playlist creates/updates a playlist and its videos"""
-    expected_topics = [{"name": "Biology"}, {"name": "Physics"}]
-    [
-        LearningResourceTopicFactory.create(name=topic["name"])
-        for topic in expected_topics
-    ]
-
-    mock_most_common_topics = mocker.patch(
-        "learning_resources.etl.loaders.most_common_topics",
-        return_value=expected_topics,
-    )
-    mock_bulk_unpublish = mocker.patch(
-        "learning_resources.etl.loaders.bulk_resources_unpublished_actions",
-    )
-
-    if playlist_exists:
-        existing = VideoPlaylistFactory.create().learning_resource
-        existing.platform = LearningResourcePlatform.objects.get(
-            code=PlatformType.ovs.name
-        )
-        existing.save()
-        deleted_video = VideoFactory.create().learning_resource
-        existing.resources.add(
-            deleted_video,
-            through_defaults={
-                "relation_type": LearningResourceRelationTypes.PLAYLIST_VIDEOS,
-                "position": 1,
-            },
-        )
-        playlist_readable_id = existing.readable_id
-    else:
-        playlist_readable_id = "ovs-test-playlist-key"
-
-    video_resources = [video.learning_resource for video in VideoFactory.build_batch(3)]
-    videos_data = [
-        {
-            **model_to_dict(video, exclude=non_transformable_attributes),
-            "platform": PlatformType.ovs.name,
-            "offered_by": {"code": LearningResourceOfferorFactory.create().code},
-        }
-        for video in video_resources
-    ]
-
-    props = {
-        "playlist_id": playlist_readable_id,
-        "platform": PlatformType.ovs.name,
-        "title": "Test OVS Collection",
-        "description": "A test collection",
-        "url": "https://video.odl.mit.edu/collections/test-key",
-        "published": True,
-        "videos": videos_data,
-    }
-
-    result = load_ovs_playlist(props)
-
-    assert isinstance(result, LearningResource)
-    assert result.platform.code == PlatformType.ovs.name
-    assert result.video_playlist.channel.channel_id == "ovs"
-    mock_most_common_topics.assert_called_once()
-    assert result.resources.count() == len(video_resources)
-
-    if playlist_exists:
-        deleted_video.refresh_from_db()
-        assert not deleted_video.published
-        mock_bulk_unpublish.assert_called_once_with(
-            [deleted_video.id],
-            LearningResourceType.video.name,
-        )
-    else:
-        mock_bulk_unpublish.assert_called_once_with(
-            [],
-            LearningResourceType.video.name,
-        )
-
-
-def test_load_ovs_playlists_unpublish(mocker):
-    """Test load_ovs_playlists unpublishes stale playlists and orphaned videos"""
-    mocker.patch("learning_resources_search.tasks.bulk_deindex_learning_resources.si")
-    mock_bulk_unpublish = mocker.patch(
-        "learning_resources.etl.loaders.bulk_resources_unpublished_actions",
-    )
-
-    ovs_platform = LearningResourcePlatform.objects.get(code=PlatformType.ovs.name)
-
-    # Create 3 existing OVS playlists
-    playlists = []
-    for _ in range(3):
-        vp = VideoPlaylistFactory.create()
-        vp.learning_resource.platform = ovs_platform
-        vp.learning_resource.save()
-        playlists.append(vp)
-
-    playlists.sort(key=lambda p: p.id)
-
-    # Add a video to the playlist that will become stale
-    stale_video = VideoFactory.create().learning_resource
-    stale_video.platform = ovs_platform
-    stale_video.save()
-    playlists[1].learning_resource.resources.add(
-        stale_video,
-        through_defaults={
-            "relation_type": LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
-            "position": 0,
-        },
-    )
-
-    # Only include the first playlist in the new data
-    kept = playlists[0]
-    playlists_data = [
-        {
-            "playlist_id": kept.learning_resource.readable_id,
-            "platform": PlatformType.ovs.name,
-            "title": kept.learning_resource.title,
-            "url": "https://video.odl.mit.edu/collections/test",
-            "published": True,
-            "videos": [],
-        }
-    ]
-
-    load_ovs_playlists(playlists_data)
-
-    # Only the kept playlist should remain published
-    assert (
-        LearningResource.objects.filter(
-            resource_type="video_playlist",
-            platform=ovs_platform,
-            published=True,
-        ).count()
-        == 1
-    )
-
-    # Stale playlists should be unpublished
-    for playlist in playlists[1:]:
-        playlist.learning_resource.refresh_from_db()
-        assert playlist.learning_resource.published is False
-
-    # Check bulk_unpublish was called for stale playlists
-    expected_stale_ids = sorted(p.learning_resource.id for p in playlists[1:])
-    playlist_unpublish_call = next(
-        call
-        for call in mock_bulk_unpublish.call_args_list
-        if call[0][1] == LearningResourceType.video_playlist.name
-    )
-    assert sorted(playlist_unpublish_call[0][0]) == expected_stale_ids
-
-    # Orphaned video in stale playlist should be unpublished
-    stale_video.refresh_from_db()
-    assert stale_video.published is False
-
-
-@pytest.mark.django_db
-def test_load_ovs_playlists_shared_video_not_unpublished(
-    mocker, mock_get_similar_topics_qdrant
-):
-    """A video in both a kept and a stale playlist should stay published"""
-    mocker.patch("learning_resources_search.tasks.bulk_deindex_learning_resources.si")
-    mocker.patch("learning_resources.etl.loaders.bulk_resources_unpublished_actions")
-    mocker.patch("learning_resources.etl.loaders.update_index")
-
-    ovs_platform = LearningResourcePlatform.objects.get(code=PlatformType.ovs.name)
-
-    # Create two OVS playlists
-    kept_vp = VideoPlaylistFactory.create()
-    kept_vp.learning_resource.platform = ovs_platform
-    kept_vp.learning_resource.save()
-
-    stale_vp = VideoPlaylistFactory.create()
-    stale_vp.learning_resource.platform = ovs_platform
-    stale_vp.learning_resource.save()
-
-    # Create a video that belongs to BOTH playlists
-    shared_video = VideoFactory.create().learning_resource
-    shared_video.platform = ovs_platform
-    shared_video.save()
-
-    for vp in [kept_vp, stale_vp]:
-        vp.learning_resource.resources.add(
-            shared_video,
-            through_defaults={
-                "relation_type": LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
-                "position": 0,
-            },
-        )
-
-    # Include the kept playlist with the shared video in its videos list
-    playlists_data = [
-        {
-            "playlist_id": kept_vp.learning_resource.readable_id,
-            "platform": PlatformType.ovs.name,
-            "title": kept_vp.learning_resource.title,
-            "url": "https://video.odl.mit.edu/collections/test",
-            "published": True,
-            "videos": [
-                {
-                    "readable_id": shared_video.readable_id,
-                    "platform": PlatformType.ovs.name,
-                    "etl_source": "ovs",
-                    "resource_type": LearningResourceType.video.name,
-                    "title": shared_video.title,
-                    "url": "https://video.odl.mit.edu/videos/test",
-                    "published": True,
-                    "video": {"duration": "PT0S"},
-                },
-            ],
-        }
-    ]
-
-    load_ovs_playlists(playlists_data)
-
-    # Stale playlist should be unpublished
-    stale_vp.learning_resource.refresh_from_db()
-    assert stale_vp.learning_resource.published is False
-
-    # Shared video should remain published because it's still in the kept playlist
-    shared_video.refresh_from_db()
-    assert shared_video.published is True
-
-
-def test_load_ovs_playlists_empty_aborts(mocker):
-    """Test load_ovs_playlists returns early when no playlists are provided"""
-    mock_log = mocker.patch("learning_resources.etl.loaders.log")
-
-    ovs_platform = LearningResourcePlatform.objects.get(code=PlatformType.ovs.name)
-
-    # Create an existing published OVS playlist
-    vp = VideoPlaylistFactory.create()
-    vp.learning_resource.platform = ovs_platform
-    vp.learning_resource.save()
-
-    result = load_ovs_playlists([])
-
-    assert result == []
-    mock_log.warning.assert_called_once()
-    # Existing playlist should NOT be unpublished
-    vp.learning_resource.refresh_from_db()
-    assert vp.learning_resource.published is True
-
-
 def test_prune_ovs_playlists_unpublishes_only_the_playlists_it_checked(mocker):
     """A video removed after the check leaves that playlist to its own prune."""
     mocker.patch("learning_resources.etl.loaders.update_index")
@@ -4654,33 +4417,23 @@ def test_load_learning_materials(
     )
 
     if create_hidden_ocw_learning_materials:
-        # Programming assignments and Open Textbooks are promoted
-        assert load_learning_materials_spy.call_count == 2
-        load_learning_materials_spy.assert_any_call(
-            ocw_course.learning_resource.runs.first(),
-            assignments_content_file,
-            {"Programming Assignments"},
-        )
+        # Open Textbooks are promoted; the assignment was not converted to
+        # structured markdown, so it has no problems and is not promoted
+        assert load_learning_materials_spy.call_count == 1
         load_learning_materials_spy.assert_any_call(
             ocw_course.learning_resource.runs.first(),
             textbook_content_file,
             {"Open Textbooks"},
         )
         resource_relationships = ocw_course.learning_resource.children.all()
-        assert resource_relationships.count() == 2
-
-        # Verify resource categories
-        categories = set(
+        assert resource_relationships.count() == 1
+        assert set(
             resource_relationships.values_list("child__resource_category", flat=True)
-        )
-        assert categories == {
-            OCW_CONTENT_CATEGORY_OPEN_TEXTBOOKS,
-            "Practice & Assignment",
-        }
+        ) == {OCW_CONTENT_CATEGORY_OPEN_TEXTBOOKS}
 
-        # 2 load_learning_material calls (each calls update_index)
+        # 1 load_learning_material call (which calls update_index)
         # + 1 for unpublishing no_longer_relevant_resource
-        assert mock_index.call_count == 3
+        assert mock_index.call_count == 2
 
         no_longer_relevant_resource.refresh_from_db()
         assert no_longer_relevant_resource.published is False
@@ -4791,6 +4544,207 @@ def test_load_learning_materials_preserves_videos(mocker, settings):
 
     # update_index should not have been called (no changes needed)
     mock_index.assert_not_called()
+
+
+def _practice_problem_setup(
+    content=None, tag="Problem Sets", extension=".pdf", **file_kwargs
+):
+    """Create an OCW course run with a problem set PDF"""
+    ocw = LearningResourcePlatformFactory.create(code=PlatformType.ocw.name)
+    ocw_course = CourseFactory.create(
+        platform=ocw.code,
+        learning_resource__is_course=True,
+    )
+    run = ocw_course.learning_resource.runs.first()
+    content_file = ContentFileFactory.create(
+        run=run,
+        content_tags=[LearningResourceContentTagFactory.create(name=tag)],
+        content_type=CONTENT_TYPE_FILE,
+        file_extension=extension,
+        title="Problem Set 1",
+        url="https://ocw.mit.edu/courses/x/resources/ps1.pdf",
+        image_src=None,
+        content=structured_markdown() if content is None else content,
+        **file_kwargs,
+    )
+    return run, content_file
+
+
+@pytest.mark.django_db
+def test_load_learning_materials_practice_problems(mocker, settings):
+    """A structured problem set PDF becomes a learning material per problem"""
+    settings.CREATE_HIDDEN_OCW_LEARNING_MATERIALS = True
+    whole_file = LearningResourceFactory.create(
+        resource_type=LearningResourceType.document.name, published=True
+    )
+    run, content_file = _practice_problem_setup(direct_learning_resource=whole_file)
+    mock_index = mocker.patch("learning_resources.etl.loaders.update_index")
+
+    loaders.load_learning_materials(run, [content_file.id])
+
+    problems = PracticeProblem.objects.filter(content_file=content_file).order_by(
+        "number"
+    )
+    assert [p.number for p in problems] == ["1", "2"]
+    first, second = problems
+    resource = first.learning_resource
+    assert resource.readable_id == f"{run.run_id}-{content_file.key}#problem-1"
+    assert resource.resource_type == LearningResourceType.document.name
+    assert resource.resource_category == "Practice & Assignment"
+    assert resource.title == "Car and Bicycle Rider"
+    assert resource.url == f"{content_file.url}#page=1"
+    assert resource.published is True
+    assert resource.platform == run.learning_resource.platform
+    assert resource.offered_by == run.learning_resource.offered_by
+    assert resource.description.startswith("A car moves at speed $v_0$. Find")
+    assert list(resource.resource_tags.values_list("name", flat=True)) == [
+        "Problem Sets"
+    ]
+    assert first.statement == "A car moves at speed $v_0$."
+    assert [part["label"] for part in first.parts] == ["a", "b"]
+    assert first.solution
+    assert first.pages == [1, 2]
+    assert first.document_title == "Problem Set 1"
+    # no friendly title: the file's title names the problem
+    assert second.learning_resource.title == "Problem Set 1: Problem 2"
+    # a problem's image is its first figure, if it has one
+    assert resource.image.url == "https://example.com/p1_1.png"
+    assert resource.image.alt == "a velocity plot"
+    assert second.learning_resource.image is None
+
+    assert set(
+        run.learning_resource.children.filter(
+            relation_type=LearningResourceRelationTypes.COURSE_LEARNING_MATERIALS
+        ).values_list("child_id", flat=True)
+    ) == {first.learning_resource_id, second.learning_resource_id}
+
+    # the whole file is no longer a learning material
+    whole_file.refresh_from_db()
+    assert whole_file.published is False
+    content_file.refresh_from_db()
+    assert content_file.direct_learning_resource is None
+    mock_index.assert_any_call(whole_file, newly_created=False)
+    mock_index.assert_any_call(first.learning_resource, True)  # noqa: FBT003
+
+
+@pytest.mark.django_db
+def test_load_learning_materials_practice_problems_reloaded(mocker, settings):
+    """Loading again keeps problems' ids and unpublishes problems that are gone"""
+    settings.CREATE_HIDDEN_OCW_LEARNING_MATERIALS = True
+    run, content_file = _practice_problem_setup()
+    mocker.patch("learning_resources.etl.loaders.update_index")
+    loaders.load_learning_materials(run, [content_file.id])
+    ids = dict(PracticeProblem.objects.values_list("number", "learning_resource_id"))
+
+    # converted again without problem 2
+    content_file.content = structured_markdown().split('<!-- node: {"id": "n6"')[0]
+    content_file.save()
+    loaders.load_learning_materials(run, [content_file.id])
+
+    assert PracticeProblem.objects.get(number="1").learning_resource_id == ids["1"]
+    assert LearningResource.objects.get(id=ids["1"]).published is True
+    assert LearningResource.objects.get(id=ids["2"]).published is False
+    assert list(run.learning_resource.children.values_list("child_id", flat=True)) == [
+        ids["1"]
+    ]
+
+    # the file failed to load: it stays published, and so do its problems
+    loaders.load_learning_materials(run, [])
+    assert LearningResource.objects.get(id=ids["1"]).published is True
+
+    # the file is gone from the run
+    content_file.published = False
+    content_file.save()
+    loaders.load_learning_materials(run, [])
+    assert LearningResource.objects.get(id=ids["1"]).published is False
+
+
+@pytest.mark.django_db
+def test_load_learning_materials_practice_problems_sections(mocker, settings):
+    """Problems sharing a printed number are told apart by their section"""
+    settings.CREATE_HIDDEN_OCW_LEARNING_MATERIALS = True
+    content = (
+        _header()
+        + _node("a1", "problem", problem="1", number="1", section="Part A")
+        + "## Problem 1\n\nFirst.\n"
+        + _node("b1", "problem", problem="1", number="1", section="Part B")
+        + "## Problem 1\n\nSecond.\n"
+        + _node("c1", "problem", problem="1", number="1")
+        + "## Problem 1\n\nThird.\n"
+    )
+    run, content_file = _practice_problem_setup(content=content)
+    mocker.patch("learning_resources.etl.loaders.update_index")
+
+    loaders.load_learning_materials(run, [content_file.id])
+
+    prefix = f"{run.run_id}-{content_file.key}#"
+    assert dict(
+        PracticeProblem.objects.values_list("node_id", "learning_resource__readable_id")
+    ) == {
+        "a1": f"{prefix}problem-1",
+        "b1": f"{prefix}problem-part-b-1",
+        # no section to tell it apart
+        "c1": f"{prefix}problem-1-c1",
+    }
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("hidden_materials", "content", "tag", "extension"),
+    [
+        # prod: Practice & Assignment files are not promoted
+        (False, None, "Problem Sets", ".pdf"),
+        # not converted, or structuring failed its checks
+        (True, "Plain text from tika", "Problem Sets", ".pdf"),
+        (True, structured_markdown(status="needs_review"), "Exams", ".pdf"),
+        # a solutions file, by its kind or its tag
+        (True, structured_markdown(kind="solutions"), "Problem Sets", ".pdf"),
+        (True, None, "Problem Set Solutions", ".pdf"),
+        # not a practice and assignment file, or not a pdf
+        (True, None, "Lecture Notes", ".pdf"),
+        (True, None, "Problem Sets", ".docx"),
+    ],
+    ids=[
+        "setting-off",
+        "unstructured",
+        "needs-review",
+        "solutions-kind",
+        "solutions-tag",
+        "tag",
+        "docx",
+    ],
+)
+def test_load_learning_materials_no_practice_problems(  # noqa: PLR0913
+    mocker, settings, hidden_materials, content, tag, extension
+):
+    """Files with no problems to read, or with the setting off, get no problems"""
+    settings.CREATE_HIDDEN_OCW_LEARNING_MATERIALS = hidden_materials
+    run, content_file = _practice_problem_setup(
+        content=content, tag=tag, extension=extension
+    )
+    mocker.patch("learning_resources.etl.loaders.update_index")
+
+    loaders.load_learning_materials(run, [content_file.id])
+
+    assert not PracticeProblem.objects.exists()
+    assert not run.learning_resource.children.exists()
+
+
+@pytest.mark.django_db
+def test_load_learning_materials_problems_with_solutions(mocker, settings):
+    """A file tagged as a problem set and its solutions has its problems read"""
+    settings.CREATE_HIDDEN_OCW_LEARNING_MATERIALS = True
+    run, content_file = _practice_problem_setup()
+    content_file.content_tags.add(
+        LearningResourceContentTagFactory.create(name="Problem Set Solutions")
+    )
+    mocker.patch("learning_resources.etl.loaders.update_index")
+
+    loaders.load_learning_materials(run, [content_file.id])
+
+    problems = PracticeProblem.objects.filter(content_file=content_file)
+    assert sorted(p.number for p in problems) == ["1", "2"]
+    assert all(p.learning_resource.published for p in problems)
 
 
 @pytest.mark.django_db

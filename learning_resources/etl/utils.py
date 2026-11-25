@@ -27,6 +27,8 @@ from defusedxml import ElementTree
 from django.conf import settings
 from django.core.files import File
 from django.core.files.storage import default_storage
+from django.db.models import Q, TextField
+from django.db.models.functions import Cast
 from django.utils.dateparse import parse_duration
 from django.utils.text import slugify
 from PIL import Image
@@ -68,6 +70,7 @@ from learning_resources.models import (
     LearningResourceRun,
     LearningResourceTopic,
     LearningResourceTopicMapping,
+    PracticeProblem,
     TutorProblemFile,
 )
 from main.utils import now_in_utc
@@ -519,9 +522,18 @@ def _extract_content_with_ocr(
     }
 
 
-def extract_pdf_bytes_with_ocr(pdf_bytes: bytes) -> dict | None:
+def extract_pdf_bytes_with_ocr(
+    pdf_bytes: bytes, key: str | None = None, version: str | None = None
+) -> dict | None:
     """
-    Extract the text of an in-memory PDF with LLM OCR.
+    Extract the text of an in-memory PDF with LLM OCR. With the key of its
+    ContentFile, its figures are saved to the default storage (see
+    _figure_folder), in a folder for this version of the file.
+
+    Args:
+        pdf_bytes (bytes): the PDF
+        key (str): the key of the PDF's ContentFile
+        version (str): what changes when the PDF does, such as its S3 ETag
 
     Returns:
         dict: {"content": markdown}, or None if OCR is off, the PDF is invalid
@@ -534,13 +546,18 @@ def extract_pdf_bytes_with_ocr(pdf_bytes: bytes) -> dict | None:
         pdf_path.write_bytes(pdf_bytes)
         if not pdf_is_valid(pdf_path):
             return None
+        figure_folder = _figure_folder(key, {"archive_checksum": version})
         try:
-            content_dict = _extract_content_with_ocr(pdf_path, is_tutor_problem=False)
+            content_dict = _extract_content_with_ocr(
+                pdf_path, is_tutor_problem=False, figure_folder=figure_folder
+            )
         except Exception:
             log.warning("OCR extraction failed for in-memory PDF", exc_info=True)
             return None
     if not content_dict or not (content_dict.get("content") or "").strip():
         return None
+    if figure_folder:
+        _delete_unlinked_figure_versions(figure_folder)
     return {"content": content_dict["content"]}
 
 
@@ -1478,11 +1495,30 @@ def _store_figures(markdown: str, figures: list, folder: str) -> str:
 
 
 def _figure_version_linked(folder: str) -> bool:
-    """Whether a saved ContentFile or TutorProblemFile still links to a folder."""
+    """
+    Whether a saved row still links to a folder: a ContentFile or
+    TutorProblemFile, or a published PracticeProblem (its text, its parts, or
+    its resource's image). A promotion can fail after its file is converted
+    again, leaving published problems on an older version's figures. An
+    unpublished problem gets the current version's text if it is published
+    again.
+    """
     link = f"{folder}/"
     return (
         ContentFile.objects.filter(content__contains=link).exists()
         or TutorProblemFile.objects.filter(content__contains=link).exists()
+        or PracticeProblem.objects.filter(learning_resource__published=True)
+        .annotate(parts_text=Cast("parts", TextField()))
+        .filter(
+            Q(statement__contains=link)
+            | Q(context__contains=link)
+            | Q(solution__contains=link)
+            | Q(parts_text__contains=link)
+        )
+        .exists()
+        or LearningResource.objects.filter(
+            published=True, image__url__contains=link
+        ).exists()
     )
 
 

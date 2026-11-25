@@ -11,13 +11,15 @@ import ImpactReportsSection from "./ImpactReportsSection"
 
 /**
  * On phones the sections below the hero are separated by 40px of white, as
- * in the mobile design; elsewhere they sit edge to edge.
+ * in the mobile design, and the first is 40px below the hero (white sections
+ * have no vertical padding there); elsewhere they sit edge to edge.
  */
 const Body = styled.div(({ theme }) => ({
   [theme.breakpoints.down("sm")]: {
     display: "flex",
     flexDirection: "column",
     gap: "40px",
+    paddingTop: "40px",
     backgroundColor: theme.custom.colors.white,
   },
 }))
@@ -31,11 +33,11 @@ const SupportPage: React.FC = () => (
   <>
     <HeroSection />
     <Body>
-      <InitiativesSection />
       <LetterSection />
       <TestimonialSection />
       <ImpactMetricsSection />
       <ImpactReportsSection />
+      <InitiativesSection />
     </Body>
   </>
 )

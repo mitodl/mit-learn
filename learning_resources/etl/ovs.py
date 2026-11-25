@@ -1,9 +1,7 @@
 """ODL Video Service (OVS) ETL"""
 
 import logging
-from collections import defaultdict
-from collections.abc import Generator
-from urllib.parse import ParseResult, quote, urlencode, urlparse, urlunparse
+from urllib.parse import ParseResult, quote, urlparse
 
 import requests
 from django.conf import settings
@@ -26,8 +24,6 @@ from main.constants import (
 from main.utils import clean_data
 
 log = logging.getLogger(__name__)
-
-OVS_API_PATH = "/api/v0/public/videos/"
 
 
 def allowed_media_hosts() -> set[str]:
@@ -294,46 +290,6 @@ def _get_resource_url(video_data: dict) -> str:
     return f"{base_url}/videos/{quote(str(video_data['key']))}"
 
 
-def extract(*, url=None) -> Generator[dict, None, None]:
-    """
-    Extract public non-YouTube videos from the OVS API.
-
-    Handles pagination via the `next` field in the response.
-
-    Args:
-        url: optional override for the full API URL
-
-    Yields:
-        dict: individual video data dicts from the API
-    """
-    if not url and not settings.OVS_API_BASE_URL:
-        log.warning("OVS_API_BASE_URL is not configured; skipping OVS ETL")
-        return
-    api_url = url or f"{settings.OVS_API_BASE_URL.rstrip('/')}{OVS_API_PATH}"
-
-    next_url = api_url
-    while next_url:
-        # Ensure include_in_learn=true is on every paginated URL
-        parsed = urlparse(next_url)
-        if "include_in_learn" not in parsed.query:
-            separator = "&" if parsed.query else ""
-            new_query = (
-                f"{parsed.query}{separator}{urlencode({'include_in_learn': 'true'})}"
-            )
-            next_url = urlunparse(parsed._replace(query=new_query))
-
-        log.info("Fetching OVS videos from %s", next_url)
-        response = requests.get(next_url, timeout=settings.REQUESTS_TIMEOUT)
-        response.raise_for_status()
-        data = response.json()
-
-        for video in data.get("results", []):
-            if video.get("is_public") and video.get("status") == "Complete":
-                yield video
-
-        next_url = data.get("next")
-
-
 def transform_video(video_data: dict) -> dict | None:
     """
     Transform a single OVS video into LearningResource format.
@@ -399,39 +355,6 @@ def transform_collection(collection_data: dict) -> dict:
         "url": f"{base_url}/collections/{quote(str(collection_data['key']))}",
         "published": True,
     }
-
-
-def transform(extracted_videos) -> Generator[dict, None, None]:
-    """
-    Transform extracted OVS videos, grouped by collection into playlists.
-
-    Args:
-        extracted_videos: iterable of video dicts from extract()
-
-    Yields:
-        dict: playlist data with nested videos list
-    """
-    collections = {}
-    collection_videos = defaultdict(list)
-
-    for video_data in extracted_videos:
-        collection = video_data.get("collection")
-        if not collection or not collection.get("key"):
-            continue
-        collection_key = collection["key"]
-        transformed_video = transform_video(video_data)
-        if not transformed_video:
-            continue
-        if collection_key not in collections:
-            collections[collection_key] = transform_collection(collection)
-        collection_videos[collection_key].append(transformed_video)
-
-    for collection_key, playlist_data in collections.items():
-        videos = collection_videos[collection_key]
-        if not videos:
-            continue
-        playlist_data["videos"] = videos
-        yield playlist_data
 
 
 def _fetch_transcript(caption_urls: list[dict]) -> str:

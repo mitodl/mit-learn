@@ -10,7 +10,7 @@ import type {
   LearningpathsApiLearningpathsCreateRequest as CreateRequest,
   LearningpathsApiLearningpathsDestroyRequest as DestroyRequest,
   LearningPathResource,
-} from "../../generated/v1"
+} from "@mitodl/mit-learn-api-axios/v1"
 import { learningPathsApi } from "../../clients"
 import { learningPathQueries, learningPathKeys } from "./queries"
 import { learningResourceKeys } from "../learningResources/queries"

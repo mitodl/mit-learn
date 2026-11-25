@@ -32,6 +32,13 @@ const MediaContainer = styled.div({
   aspectRatio: "16 / 9",
   overflow: "hidden",
 
+  // An MIT Learn video sizes its own player to the video (e.g. a vertical
+  // short is taller than 16:9), so the container must not crop it.
+  "&.mit-learn-video": {
+    aspectRatio: "auto",
+    overflow: "visible",
+  },
+
   iframe: {
     width: "100%",
     height: "100%",
@@ -80,7 +87,9 @@ export const MediaEmbedViewer = ({ node }: { node?: MediaEmbedNode }) => {
 
   return (
     <StyledWrapper className={`layout-${layout}`}>
-      <MediaContainer>
+      <MediaContainer
+        className={mitLearnVideoId ? "mit-learn-video" : undefined}
+      >
         {mitLearnVideoId ? (
           <OVSVideoPlayer videoId={mitLearnVideoId} title={caption} />
         ) : (

@@ -17,9 +17,8 @@ import {
   HubspotApi,
   CoursesApi,
   VideosApi,
-} from "./generated/v1/api"
-
-import { UnsubscribeApi } from "@mitodl/mit-learn-api-axios/v1"
+  UnsubscribeApi,
+} from "@mitodl/mit-learn-api-axios/v1"
 
 import {
   ChannelsApi,
@@ -31,7 +30,7 @@ import {
   TestimonialsApi,
   LearningResourcesSearchAdminParamsApi,
   VectorLearningResourcesSearchApi,
-} from "./generated/v0/api"
+} from "@mitodl/mit-learn-api-axios/v0"
 
 import axiosInstance from "./axios"
 

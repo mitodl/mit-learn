@@ -10,6 +10,7 @@ import VideoShortsModal from "./VideoShortsModal"
 import MITOpenLearningLogo from "@/public/images/mit-open-learning-logo.svg"
 import type { VideoResource } from "api/v1"
 import { analytics } from "@/common/analytics"
+import { VIDEO_SHORT_CATEGORY } from "@/common/constants"
 
 const Section = styled.section(({ theme }) => ({
   padding: "80px 0",
@@ -91,7 +92,7 @@ const ImagePlaceholder = styled.div(({ theme }) => ({
 const VideoShortsSection = () => {
   const { data, isLoading } = useQuery({
     ...learningResourceQueries.search({
-      resource_category: ["Video Short"],
+      resource_category: [VIDEO_SHORT_CATEGORY],
       resource_type: [ResourceTypeEnum.Video],
       limit: 50,
       sortby: "new",

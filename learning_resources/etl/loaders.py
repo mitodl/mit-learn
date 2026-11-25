@@ -9,10 +9,12 @@ from django.contrib.auth import get_user_model
 from django.core.cache import caches
 from django.db import transaction
 from django.db.models import Max, Q, QuerySet
+from django.utils.text import slugify
 
 from learning_resources.constants import (
     CONTENT_TYPE_PAGE,
     OCW_CONTENT_CATEGORY_LECTURE_VIDEOS,
+    OCW_CONTENT_CATEGORY_PRACTICE_AND_ASSIGNMENT,
     OCW_COURSE_CONTENT_CATEGORY_MAPPING,
     OCW_INSTRUCTOR_INSIGHTS_TAG,
     OCW_VISIBLE_TAGS,
@@ -42,6 +44,10 @@ from learning_resources.etl.ownership import (
     may_write,
     run_mode,
 )
+from learning_resources.etl.practice_problems import (
+    ParsedDocument,
+    parse_structured_problems,
+)
 from learning_resources.etl.utils import enough_youtube_matches, most_common_topics
 from learning_resources.etl.warehouse_guards import MAX_UNPUBLISH_SHARE
 from learning_resources.models import (
@@ -60,6 +66,7 @@ from learning_resources.models import (
     LearningResourceTopic,
     Podcast,
     PodcastEpisode,
+    PracticeProblem,
     Program,
     RunInstructorRelationship,
     TutorProblemFile,
@@ -1325,18 +1332,37 @@ def load_course_units(
     return unit_ids
 
 
+# a problem's description: its text, up to this many characters
+PRACTICE_PROBLEM_DESCRIPTION_CHARS = 1000
+
+
 def load_learning_materials(
     course_run: LearningResourceRun,
     content_file_ids: list[int],
 ):
     """
-    Create learning material objects from ocw content files
+    Create learning material objects from ocw content files.
+
+    With CREATE_HIDDEN_OCW_LEARNING_MATERIALS, a converted problem set or exam
+    PDF ("Practice & Assignment" tags) becomes a learning material per problem
+    instead of one for the whole file; a file with no problems read from it
+    becomes none.
     """
+    # solutions files restate the problems of their problem set or exam, which
+    # are read from that file instead. A file also tagged as the problem set
+    # holds both, and its problems are read from it.
+    solution_tags = frozenset({"Exams Solutions", "Problem Set Solutions"})
     material_ids = []
     if settings.CREATE_HIDDEN_OCW_LEARNING_MATERIALS:
         promoted_ocw_file_types = set(OCW_COURSE_CONTENT_CATEGORY_MAPPING.keys())
+        practice_problem_tags = frozenset(
+            tag
+            for tag, category in OCW_COURSE_CONTENT_CATEGORY_MAPPING.items()
+            if category == OCW_CONTENT_CATEGORY_PRACTICE_AND_ASSIGNMENT
+        )
     else:
         promoted_ocw_file_types = set(OCW_VISIBLE_TAGS)
+        practice_problem_tags = frozenset()
 
     content_files = (
         ContentFile.objects.filter(id__in=content_file_ids)
@@ -1348,9 +1374,22 @@ def load_learning_materials(
         learning_material_tags = {
             tag.name for tag in content_file.content_tags.all()
         } & promoted_ocw_file_types
-        if content_file.content_type != CONTENT_TYPE_PAGE and learning_material_tags:
+        problem_tags = learning_material_tags & practice_problem_tags
+        whole_file_tags = learning_material_tags - practice_problem_tags
+        problems = (
+            parse_structured_problems(content_file.content)
+            if problem_tags - solution_tags
+            and content_file.content_type != CONTENT_TYPE_PAGE
+            and (content_file.file_extension or "").lower() == ".pdf"
+            else None
+        )
+        if problems and problems.problems:
+            material_ids.extend(
+                load_practice_problems(course_run, content_file, problem_tags, problems)
+            )
+        if content_file.content_type != CONTENT_TYPE_PAGE and whole_file_tags:
             material_ids.append(
-                load_learning_material(course_run, content_file, learning_material_tags)
+                load_learning_material(course_run, content_file, whole_file_tags)
             )
 
         # OCW lecture videos combine youtube and ocw data and are
@@ -1369,12 +1408,139 @@ def load_learning_materials(
             content_file.save()
             update_index(direct_resource, newly_created=False)
 
+    unpublish_stale_practice_problems(course_run, content_file_ids, material_ids)
     course_run.learning_resource.resources.set(
         LearningResource.objects.filter(id__in=material_ids).only("id"),
         through_defaults={
             "relation_type": LearningResourceRelationTypes.COURSE_LEARNING_MATERIALS
         },
     )
+
+
+def _practice_problem_description(statement: str, parts: list[str]) -> str:
+    """Return the problem's text for search and cards, cut at a word"""
+    text = " ".join(" ".join([statement, *parts]).split())
+    if len(text) <= PRACTICE_PROBLEM_DESCRIPTION_CHARS:
+        return text
+    return text[:PRACTICE_PROBLEM_DESCRIPTION_CHARS].rsplit(" ", 1)[0] + "…"
+
+
+def load_practice_problems(
+    course_run: LearningResourceRun,
+    content_file: ContentFile,
+    learning_material_tags: set[str],
+    document: ParsedDocument,
+) -> list[int]:
+    """
+    Create or update a "Practice & Assignment" learning material for each
+    problem read from a content file's structured markdown
+
+    Returns:
+        list[int]: the ids of the problems' learning resources
+    """
+    run_resource = course_run.learning_resource
+    resource_ids = []
+    used_ids = set()
+    for problem in document.problems:
+        # problems are identified by their printed number (and, when numbering
+        # restarts, their section), so a file converted again keeps its
+        # problems' ids (and their places in user lists)
+        suffix = f"problem-{problem.number}" if problem.number else problem.node_id
+        if suffix in used_ids and problem.number and problem.section:
+            suffix = f"problem-{slugify(problem.section)}-{problem.number}"
+        if suffix in used_ids:
+            suffix = f"{suffix}-{problem.node_id}"
+        used_ids.add(suffix)
+        title = problem.display_title
+        if not problem.friendly_title and content_file.title:
+            title = f"{content_file.title}: {title}"
+        parts = [{"label": part.label, "body": part.body} for part in problem.parts]
+        url = content_file.url
+        if url and problem.pages:
+            url = f"{url}#page={problem.pages[0]}"
+
+        with transaction.atomic():
+            learning_resource, created = LearningResource.objects.update_or_create(
+                readable_id=f"{course_run.run_id}-{content_file.key}#{suffix}",
+                platform=run_resource.platform,
+                resource_type=LearningResourceType.document.name,
+                defaults={
+                    "title": title[:256],
+                    "description": _practice_problem_description(
+                        problem.statement, [part["body"] for part in parts]
+                    ),
+                    "url": url,
+                    "etl_source": run_resource.etl_source,
+                    "offered_by": run_resource.offered_by,
+                    "published": True,
+                    "resource_category": OCW_CONTENT_CATEGORY_PRACTICE_AND_ASSIGNMENT,
+                },
+            )
+            PracticeProblem.objects.update_or_create(
+                learning_resource=learning_resource,
+                defaults={
+                    "content_file": content_file,
+                    "node_id": problem.node_id,
+                    "number": problem.number,
+                    "document_title": (document.title or content_file.title or "")[
+                        :256
+                    ],
+                    "statement": problem.statement,
+                    "context": problem.context,
+                    "parts": parts,
+                    "solution": problem.solution,
+                    "pages": problem.pages,
+                    "topics": [topic[:256] for topic in problem.topics],
+                    "points": problem.points[:64],
+                },
+            )
+            load_content_tags(
+                learning_resource, learning_material_tags, is_content_file=False
+            )
+            # the problem's own figure, else none: cards show the problem's
+            # details instead of a generic image
+            load_image(learning_resource, problem.figure)
+
+        update_index(learning_resource, created)
+        resource_ids.append(learning_resource.id)
+
+    # the file is shown as its problems, not as a whole
+    if content_file.direct_learning_resource_id:
+        whole_file = content_file.direct_learning_resource
+        content_file.direct_learning_resource = None
+        content_file.save()
+        if whole_file.resource_type != LearningResourceType.video.name:
+            whole_file.published = False
+            whole_file.save()
+            update_index(whole_file, newly_created=False)
+    return resource_ids
+
+
+def unpublish_stale_practice_problems(
+    course_run: LearningResourceRun,
+    content_file_ids: list[int],
+    material_ids: list[int],
+):
+    """
+    Unpublish the run's practice problems that were not loaded again: their
+    file is gone, was converted again without them, or is no longer promoted.
+    A file left out of content_file_ids but still published failed to load,
+    and keeps its problems, as _unpublish_stale_content_files keeps the file.
+    """
+    stale = (
+        LearningResource.objects.filter(
+            practice_problem__content_file__run=course_run, published=True
+        )
+        .exclude(id__in=material_ids)
+        .exclude(
+            Q(practice_problem__content_file__published=True)
+            & ~Q(practice_problem__content_file_id__in=content_file_ids)
+        )
+    )
+    for learning_resource in stale:
+        learning_resource.published = False
+        learning_resource.save()
+        update_index(learning_resource, newly_created=False)
 
 
 def load_learning_material(
@@ -1946,9 +2112,8 @@ def prune_ovs_playlists(playlist_ids: list[int]) -> list[int]:
     Unpublish the given OVS playlists that have no published videos left, and
     reindex the rest.
 
-    This is the webhook's version of the prune in load_ovs_playlists, which
-    stops running once the webhook owns OVS. The webhook sees one video at a
-    time, so it only checks the playlists that video just left.
+    The webhook sees one video at a time, so it only checks the playlists that
+    video just left.
 
     Returns:
         list[int]: the ids of the playlists it unpublished
@@ -1984,8 +2149,7 @@ def unpublish_empty_ovs_playlists(*, allow_mass_unpublish: bool = False) -> list
     The webhook prunes a playlist after the relationship change commits, so a
     failure between the two leaves an empty playlist published that no retry
     finds, and the same goes for a deleted video. This catches those. OVS
-    playlists carry no etl_source, so they're matched on platform, as
-    load_ovs_playlists matches them.
+    playlists carry no etl_source, so they're matched on platform.
 
     Up to OVS_PLAYLIST_SWEEP_UNPUBLISH_FLOOR playlists are unpublished even
     when that is over MAX_UNPUBLISH_SHARE, because with few OVS playlists the
@@ -2083,93 +2247,6 @@ def load_ovs_video_from_webhook(video_payload: dict) -> LearningResource | None:
         update_index(playlist, newly_created=False)
     update_index(video, newly_created=created)
     return video
-
-
-def load_ovs_playlist(playlist_data: dict) -> LearningResource | None:
-    """
-    Load a single OVS playlist (collection) and its videos into the database.
-
-    Args:
-        playlist_data (dict): playlist data including nested videos list
-
-    Returns:
-        LearningResource | None: the created or updated playlist resource,
-            or None if not all videos could be matched
-    """
-    channel, _ = VideoChannel.objects.update_or_create(
-        channel_id="ovs",
-        defaults={
-            "title": "ODL Video Service",
-            "etl_source": ETLSource.ovs.name,
-            "published": True,
-        },
-    )
-    return load_playlist(channel, playlist_data)
-
-
-def load_ovs_playlists(playlists_data: iter) -> list[LearningResource]:
-    """
-    Load OVS playlists and their videos, then unpublish any OVS playlists
-    that are no longer present and any orphaned OVS videos.
-
-    Args:
-        playlists_data (iter of dict): iterable of playlist dicts from OVS transform
-
-    Returns:
-        list of LearningResource: the loaded playlist resources
-    """
-    if not may_write(
-        ETLSource.ovs.name,
-        [LearningResourceType.video_playlist.name, LearningResourceType.video.name],
-    ):
-        return []
-
-    ovs_platform = LearningResourcePlatform.objects.get(code=PlatformType.ovs.name)
-
-    playlists = [load_ovs_playlist(playlist_data) for playlist_data in playlists_data]
-
-    if not playlists:
-        log.warning(
-            "OVS ETL returned no playlists; aborting to avoid unpublishing all data"
-        )
-        return []
-
-    playlist_ids = [p.id for p in playlists]
-
-    # Unpublish OVS playlists that were not in this load
-    stale_playlists = LearningResource.objects.filter(
-        resource_type=LearningResourceType.video_playlist.name,
-        platform=ovs_platform,
-        published=True,
-    ).exclude(id__in=playlist_ids)
-    stale_playlist_ids = list(stale_playlists.values_list("id", flat=True))
-    stale_playlists.update(published=False)
-    bulk_resources_unpublished_actions(
-        stale_playlist_ids,
-        LearningResourceType.video_playlist.name,
-    )
-
-    # Unpublish OVS videos not in any published OVS playlist
-    videos_in_published_playlists = LearningResourceRelationship.objects.filter(
-        relation_type=LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
-        parent__platform=ovs_platform,
-        parent__published=True,
-    ).values_list("child", flat=True)
-
-    orphaned_videos = LearningResource.objects.filter(
-        resource_type=LearningResourceType.video.name,
-        platform=ovs_platform,
-        published=True,
-    ).exclude(id__in=videos_in_published_playlists)
-
-    orphaned_video_ids = list(orphaned_videos.values_list("id", flat=True))
-    if orphaned_video_ids:
-        orphaned_videos.update(published=False)
-        bulk_resources_unpublished_actions(
-            orphaned_video_ids, LearningResourceType.video.name
-        )
-
-    return playlists
 
 
 def load_playlist(
