@@ -1,12 +1,11 @@
 import { requiredEnv } from "@/env"
-import { NextResponse } from "next/server"
 import { getQueryClient } from "@/app/getQueryClient"
 import { learningResourceQueries } from "api/hooks/learningResources"
 import {
   LearningResourcesSummaryListPlatformEnum,
   LearningResourcesSummaryListResourceTypeEnum,
 } from "api"
-import { escapeSitemapUrl } from "../sitemaps/util"
+import { constructSitemapIndex, type SitemapIndexEntry } from "../sitemaps/util"
 
 const PAGE_SIZE = 1_000
 
@@ -24,13 +23,6 @@ const PAGE_SIZE = 1_000
  * webhooks keep current, so it lists the courses that search shows. A course
  * missing here is missing from search too, which is an ETL problem.
  */
-export async function GET() {
-  const content = await buildSitemapIndex()
-  return new NextResponse(content, {
-    headers: { "Content-Type": "application/xml" },
-  })
-}
-
 /**
  * Every published OCW course. Throws if any page fails: a short index would
  * tell crawlers the missing courses' sitemaps are gone, while an error lets the
@@ -74,9 +66,7 @@ const courseSlug = (url: string): string | null => {
   return COURSE_PATH.exec(pathname)?.[1] ?? null
 }
 
-type SitemapIndexEntry = { loc: string; lastmod?: string }
-
-async function buildSitemapIndex(): Promise<string> {
+export const GET = constructSitemapIndex(async () => {
   // Read at request time so this works in the standalone Docker image where
   // NEXT_PUBLIC_ORIGIN is injected by Kubernetes, not baked at build time.
   // Crawlers only accept child sitemaps on the index's own host, so every
@@ -95,25 +85,8 @@ async function buildSitemapIndex(): Promise<string> {
       lastmod: course.last_modified ?? undefined,
     })
   }
-  return formatSitemapIndex(entries.values())
-}
-
-function formatSitemapIndex(entries: Iterable<SitemapIndexEntry>) {
-  let xml = '<?xml version="1.0" encoding="UTF-8"?>'
-  xml += '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
-
-  for (const { loc, lastmod } of entries) {
-    xml += "<sitemap>"
-    xml += `<loc>${escapeSitemapUrl(loc)}</loc>`
-    if (lastmod) {
-      xml += `<lastmod>${lastmod}</lastmod>`
-    }
-    xml += "</sitemap>"
-  }
-
-  xml += "</sitemapindex>"
-  return xml
-}
+  return entries.values()
+})
 
 /**
  * Rendered for each request, like /sitemaps/sitemap-index.xml. Caching headers

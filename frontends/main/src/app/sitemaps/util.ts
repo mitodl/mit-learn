@@ -1,5 +1,6 @@
 import { PHASE_PRODUCTION_BUILD } from "next/constants"
 import type { MetadataRoute } from "next"
+import { NextResponse } from "next/server"
 import type { GeneratedSitemapArgs } from "./types"
 
 /**
@@ -52,3 +53,30 @@ export const constructSitemap =
       url: escapeSitemapUrl(entry.url),
     }))
   }
+
+export type SitemapIndexEntry = { loc: string; lastmod?: string }
+
+const formatSitemapIndex = (entries: Iterable<SitemapIndexEntry>) => {
+  let xml = '<?xml version="1.0" encoding="UTF-8"?>'
+  xml += '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+  for (const { loc, lastmod } of entries) {
+    xml += "<sitemap>"
+    xml += `<loc>${escapeSitemapUrl(loc)}</loc>`
+    if (lastmod) {
+      xml += `<lastmod>${lastmod}</lastmod>`
+    }
+    xml += "</sitemap>"
+  }
+  xml += "</sitemapindex>"
+  return xml
+}
+
+/**
+ * Construct a sitemap index route's GET handler from the function that loads
+ * its entries, so every index shares the same XML, escaping and headers.
+ */
+export const constructSitemapIndex =
+  (getEntries: () => Promise<Iterable<SitemapIndexEntry>>) => async () =>
+    new NextResponse(formatSitemapIndex(await getEntries()), {
+      headers: { "Content-Type": "application/xml" },
+    })
