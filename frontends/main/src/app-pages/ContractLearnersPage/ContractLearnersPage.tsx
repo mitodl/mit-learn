@@ -553,16 +553,20 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   /**
    * Every module is stored as `ALL_MODULES`, so the URL's 50-module cap can't
    * drop one. The announcement is emptied on every other change, so a later
-   * reset is announced again.
+   * reset is announced again. With no status or needs attention, the change
+   * only picks columns, so the grid has no new results to announce and the
+   * page stays.
    */
   const handleModulesChange = (values: string[]) => {
+    const statusCleared = !values.length && activeStatus !== ALL
     setStatusAnnouncement(
-      !values.length && activeStatus !== ALL ? "Status filter cleared." : "",
+      `${statusCleared ? "Status filter cleared. " : ""}Showing ${values.length || courseOptions.length} of ${courseOptions.length} modules.`,
     )
     setGridModules(
       values.length > 0 && values.length === courseOptions.length
         ? [ALL_MODULES]
         : values,
+      { keepPage: !completionStatus && !activeNeedsAttention },
     )
   }
 

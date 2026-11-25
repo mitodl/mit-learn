@@ -1088,17 +1088,58 @@ describe("ContractLearnersPage", () => {
       await screen.findByText("Everyone")
       expect(location.current.search).toBe("")
       expect(statusField()).toHaveAttribute("aria-disabled", "true")
-      expect(screen.getByText("Status filter cleared.")).toHaveAttribute(
-        "role",
-        "status",
-      )
+      expect(
+        screen.getByText("Status filter cleared. Showing 2 of 2 modules."),
+      ).toHaveAttribute("role", "status")
 
       await toggleModule("Module 6")
-      await waitFor(() =>
-        expect(
-          screen.queryByText("Status filter cleared."),
-        ).not.toBeInTheDocument(),
+      expect(
+        await screen.findByText("Showing 1 of 2 modules."),
+      ).toHaveAttribute("role", "status")
+    })
+
+    /** With no status, the rows don't change, so the grid has nothing new to announce. */
+    test("announces a module change and keeps the page when it only picks columns", async () => {
+      const { contractId, location } = renderGrid("/?page=2")
+      mockGridPage(contractId, GRID_PAGE_SIZE, [learnerNamed("Second Page")], {
+        total_count: 30,
+      })
+
+      await screen.findByText("Second Page")
+      await toggleModule("Module 6")
+
+      expect(
+        await screen.findByText("Showing 1 of 2 modules."),
+      ).toHaveAttribute("role", "status")
+      expect(location.current.searchParams.get("page")).toBe("2")
+      expect(location.current.searchParams.getAll("modules")).toEqual([M6])
+      expect(screen.getByText("Second Page")).toBeInTheDocument()
+    })
+
+    test("sends the page back to 1 when a module change narrows the learners", async () => {
+      const { contractId, location } = renderGrid(
+        "/?page=2&needs_attention=true",
       )
+      mockGridPage(
+        contractId,
+        GRID_PAGE_SIZE,
+        [learnerNamed("Second Page")],
+        { total_count: 30 },
+        { needs_attention: true },
+      )
+      mockGridPage(
+        contractId,
+        0,
+        [learnerNamed("Stale In Module 6")],
+        {},
+        { needs_attention: true, course_readable_id: [M6] },
+      )
+
+      await screen.findByText("Second Page")
+      await toggleModule("Module 6")
+
+      await screen.findByText("Stale In Module 6")
+      expect(location.current.searchParams.get("page")).toBeNull()
     })
 
     /** An old link or bookmark, from before Status needed a module. */

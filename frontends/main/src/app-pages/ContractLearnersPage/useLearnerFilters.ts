@@ -22,7 +22,8 @@ const isStatus = (value: string | null): value is LearnersPageStatus =>
  * param. Every URL change is one `history.replaceState`, which Next feeds into
  * `useSearchParams` without a server round trip (the app is `force-dynamic`,
  * so `router.replace` would re-render the route on every filter change). A
- * changed filter or search always lands on page 1.
+ * changed filter or search lands on page 1, unless it leaves the rows as they
+ * were.
  */
 const useLearnerFilters = () => {
   const params = useAppSearchParams()
@@ -96,8 +97,11 @@ const useLearnerFilters = () => {
       update({ needs_attention: value ? "true" : null, page: null }),
     gridModules,
     /** shortcut: past the API's cap, a partial selection silently loses modules; limit the selection in the UI if a contract ever has more than 50. */
-    setGridModules: (values: string[]) =>
-      update({ modules: values.slice(0, MAX_GRID_MODULES), page: null }),
+    setGridModules: (values: string[], { keepPage = false } = {}) =>
+      update({
+        modules: values.slice(0, MAX_GRID_MODULES),
+        ...(keepPage ? {} : { page: null }),
+      }),
     clearAll: () => {
       setSearchQuery("")
       setDebouncedSearch("")
