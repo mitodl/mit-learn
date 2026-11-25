@@ -21,7 +21,7 @@ OVS_BASE_URL = "https://video.odl.mit.edu"
 
 @pytest.fixture
 def ovs_videos(settings, mocker):
-    """Serve test_json/ovs_videos.json as two pages, the first with one bad video"""
+    """Serve test_json/ovs_videos.json as two pages, the first with two to skip"""
     settings.OVS_API_BASE_URL = OVS_BASE_URL
     settings.OVS_ALLOWED_MEDIA_HOSTS = [".cloudfront.net"]
     mocker.patch("learning_resources.etl.loaders.update_index")
@@ -34,7 +34,11 @@ def ovs_videos(settings, mocker):
     pages = [
         {
             "next": f"{OVS_BASE_URL}/api/v0/public/videos/?page=2",
-            "results": [first, {**second, "key": "f" * 32, "is_public": False}],
+            "results": [
+                first,
+                {**second, "key": "f" * 32, "is_public": False},
+                {**second, "key": "e" * 32, "status": "Processing"},
+            ],
         },
         {"next": None, "results": [second]},
     ]
@@ -55,7 +59,7 @@ def _own_ovs(owner):
         )
 
 
-def test_load_follows_pages_and_skips_non_public(ovs_videos):
+def test_load_follows_pages_and_skips_non_public_or_incomplete(ovs_videos):
     """--load loads each public, Complete video on every page"""
     _own_ovs(ETLSourceOwnership.Pipeline.WEBHOOK)
     stdout = StringIO()
@@ -71,7 +75,7 @@ def test_load_follows_pages_and_skips_non_public(ovs_videos):
         "96fb932aa5644d8e8f6a5fafe42caa87",
         "abcdef1234567890abcdef1234567890",
     ]
-    assert "Loaded 2 OVS videos, skipped 1" in stdout.getvalue()
+    assert "Loaded 2 OVS videos, skipped 2" in stdout.getvalue()
 
 
 def test_load_refuses_unless_webhook_owns_ovs(ovs_videos):
