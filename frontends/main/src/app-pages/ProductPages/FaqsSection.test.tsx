@@ -45,7 +45,10 @@ test("Renders the answer HTML", async () => {
   renderWithProviders(<FaqsSection faqs={[faq]} />)
 
   const raws = (await screen.findAllByTestId("raw")).map((el) => el.innerHTML)
-  expect(raws).toContain(faq.answer)
+  // External links in CMS HTML open in a new tab.
+  expect(raws).toContain(
+    '<p>See the <a href="https://x.test" target="_blank">docs</a>.</p>',
+  )
 })
 
 test("Emits FAQPage structured data", () => {
