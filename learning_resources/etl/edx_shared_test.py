@@ -1733,8 +1733,17 @@ def _staff_only_archive(tmp_path) -> Path:
         "chapter/ok.xml": '<chapter><sequential url_name="seq_ok"/></chapter>',
         "sequential/seq_ok.xml": '<sequential><vertical url_name="v_ok"/></sequential>',
         "vertical/v_ok.xml": (
-            '<vertical><html url_name="h_ok"/><video url_name="vid"/></vertical>'
+            '<vertical><html url_name="h_ok"/><video url_name="vid"/>'
+            '<video url_name="lecture"/></vertical>'
         ),
+        # one video, two languages: only the English transcript is kept
+        "video/lecture.xml": (
+            '<video url_name="lecture">'
+            '<transcript language="en" src="lecture-en.srt"/>'
+            '<transcript language="es" src="lecture-es.srt"/></video>'
+        ),
+        "static/lecture-en.srt": "1\n00:00:00,000 --> 00:00:01,000\nhi\n",
+        "static/lecture-es.srt": "1\n00:00:00,000 --> 00:00:01,000\nhola\n",
         "html/h_ok.xml": '<html filename="h_ok"/>',
         # undated: references the underscore-spelled twin of the shared asset
         "html/h_ok.html": '<p>ok</p><a href="/static/foo_bar.pdf">f</a>',
@@ -2033,6 +2042,26 @@ def test_unpublish_excluded_content_files_drops_unreferenced_static(
     assert not ContentFile.objects.filter(
         run=run, key=stale_key, published=True
     ).exists()
+
+
+def test_unpublish_excluded_content_files_drops_other_languages(
+    staff_only_run, mock_deindex_tasks
+):
+    """A video's transcripts in other languages are unpublished; English stays"""
+    run = staff_only_run.run
+    english, spanish = (
+        _content_file(run, f"static/lecture-{language}.srt", published=True)
+        for language in ("en", "es")
+    )
+
+    rows = _unpublish(staff_only_run)
+
+    assert rows == [_row(run, total=2, excluded=1, unpublished=1)]
+    english.refresh_from_db()
+    spanish.refresh_from_db()
+    assert (english.published, spanish.published) == (True, False)
+    mock_deindex_tasks.opensearch.assert_called_once_with(run.id, unpublished_only=True)
+    mock_deindex_tasks.qdrant.assert_called_once_with(run.id)
 
 
 def test_unpublish_excluded_content_files_keeps_colliding_key(

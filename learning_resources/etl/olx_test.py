@@ -55,6 +55,9 @@ def _write_html(root, name, body):
     _write_olx(root, f"html/{name}.html", body)
 
 
+SRT = "1\n00:00:00,000 --> 00:00:01,000\nhi\n"
+
+
 def test_olx_archive_skips_staff_only_subtrees(tmp_path):
     """Files under visible_to_staff_only subtrees (and their transcripts) are skipped"""
     olx = tmp_path / "course"
@@ -920,8 +923,26 @@ def test_excluded_keys_spares_a_key_an_ingested_path_shares(tmp_path):
                 f"asset-v1:test_run+type@asset+block@test_transcript{n}.srt": {
                     "module_id": "block-v1:test_run+type@video+block@test_video",
                     "title": "A video",
+                    "language": "",
                 }
                 for n in (1, 2)
+            },
+        ),
+        # every language maps, with its code as transcripts compare it; which
+        # one is ingested is up to OlxArchive.excluded
+        (
+            (
+                '<video url_name="test_video" display_name="A video">'
+                '<transcript language="en" src="en.srt"/>'
+                '<transcript language="zh_HANS" src="zh.srt"/></video>'
+            ),
+            {
+                f"asset-v1:test_run+type@asset+block@{name}.srt": {
+                    "module_id": "block-v1:test_run+type@video+block@test_video",
+                    "title": "A video",
+                    "language": language,
+                }
+                for name, language in (("en", "en"), ("zh", "zh-hans"))
             },
         ),
         # no url_name, no transcripts, malformed: nothing to map
@@ -933,7 +954,7 @@ def test_excluded_keys_spares_a_key_an_ingested_path_shares(tmp_path):
     ],
 )
 def test_video_metadata(tmp_path, video_xml, expected):
-    """Each transcript a video declares maps to the video's key and title"""
+    """Each transcript a video declares maps to the video's key, title, language"""
     run = LearningResourceRun(run_id="course-v1:test_run")
     olx = _reference_olx(tmp_path)
     if video_xml:
@@ -1214,17 +1235,14 @@ def test_olx_archive_drafts_do_not_keep_assets(tmp_path):
         '<video url_name="vid" youtube_id_1_0="AbC123"/>',
     ],
 )
-def test_olx_archive_keeps_legacy_transcripts(tmp_path, video_xml):
+@pytest.mark.parametrize("prefix", ["", "es_", "pt_br_"])
+def test_olx_archive_keeps_legacy_transcripts(tmp_path, video_xml, prefix):
     """subs_<id>.srt.sjson is named for the video id, never for its own filename"""
-    olx = _reference_olx(
-        tmp_path,
-        **{"subs_AbC123.srt.sjson": "{}", "es_subs_AbC123.srt.sjson": "{}"},
-    )
+    name = f"{prefix}subs_AbC123.srt.sjson"
+    olx = _reference_olx(tmp_path, **{name: "{}"})
     _write_olx(olx, "vertical/v.xml", '<vertical><video url_name="vid"/></vertical>')
     _write_olx(olx, "video/vid.xml", video_xml)
-    paths = _ingested(olx)
-    assert "static/subs_AbC123.srt.sjson" in paths
-    assert "static/es_subs_AbC123.srt.sjson" in paths
+    assert f"static/{name}" in _ingested(olx)
 
 
 def test_olx_archive_drops_orphaned_legacy_transcripts(tmp_path):
@@ -1258,6 +1276,171 @@ def test_olx_archive_malformed_xml_keeps_legacy_transcripts(tmp_path, broken):
     (olx / "tabs").mkdir()
     (olx / "tabs/broken.xml").write_bytes(broken)
     assert "static/subs_AbC123.srt.sjson" in _ingested(olx)
+
+
+def _transcript_element(language, name):
+    """Return a <transcript> element, with no language attribute for None"""
+    language_attribute = f' language="{language}"' if language else ""
+    return f'<transcript{language_attribute} src="{name}"/>'
+
+
+def _video_olx(
+    tmp_path,
+    transcripts,
+    *,
+    video_attrs="",
+    other_videos="",
+    **static_files,
+):
+    """
+    _reference_olx with a visible video, vid, after the html block h. vid has a
+    <transcript> for each (language, filename) of transcripts, each file written
+    under static/. other_videos is markup for more blocks after vid.
+    """
+    olx = _reference_olx(
+        tmp_path, **{name: SRT for _language, name in transcripts}, **static_files
+    )
+    _write_olx(
+        olx,
+        "vertical/v.xml",
+        f'<vertical><html url_name="h"/><video url_name="vid"/>{other_videos}</vertical>',
+    )
+    elements = "".join(_transcript_element(*transcript) for transcript in transcripts)
+    _write_olx(
+        olx, "video/vid.xml", f'<video url_name="vid" {video_attrs}>{elements}</video>'
+    )
+    return olx
+
+
+def _ingested_static_files(olx):
+    """Return the names of the static files the archive ingests, sorted"""
+    return [
+        path.removeprefix("static/")
+        for path in _ingested(olx)
+        if path.startswith("static/")
+    ]
+
+
+@pytest.mark.parametrize(
+    ("languages", "kept"),
+    [
+        # English wins wherever edX lists it
+        (["ar", "en", "es", "fr", "zh_HANS"], "en"),
+        # then a regional English, the lower code first
+        (["es", "en_US", "en-GB"], "en-GB"),
+        # then the lowest code, so every load keeps the same file
+        (["fr", "de"], "de"),
+        # a transcript without a language ranks with the other languages, and
+        # its empty code sorts first
+        ([None, "pt"], None),
+        ([None, "en"], "en"),
+        # a video's only transcript is kept, whatever its language
+        (["ja"], "ja"),
+        ([None], None),
+    ],
+)
+def test_olx_archive_keeps_one_transcript_per_video(tmp_path, languages, kept):
+    """A video with transcripts in several languages is ingested once"""
+    olx = _video_olx(
+        tmp_path, [(language, f"vid-{language}.srt") for language in languages]
+    )
+    assert _ingested_static_files(olx) == [f"vid-{kept}.srt"]
+
+
+def test_olx_archive_excludes_a_videos_other_languages(tmp_path):
+    """The other languages are excluded, so a load or the backfill unpublishes them"""
+    run = LearningResourceRun(run_id="course-v1:test_run")
+    olx = _video_olx(tmp_path, [("en", "vid-en.srt"), ("es", "vid-es.srt")])
+    assert OlxArchive(olx).excluded_keys(run) == {
+        get_edx_module_id("static/vid-es.srt", run)
+    }
+
+
+@pytest.mark.parametrize(
+    ("transcripts", "legacy_names", "kept"),
+    [
+        # legacy transcripts are a video's languages too, English unprefixed
+        (
+            [],
+            [
+                "es_subs_AbC123.srt.sjson",
+                "subs_AbC123.srt.sjson",
+                "zh_cn_subs_AbC123.srt.sjson",
+            ],
+            "subs_AbC123.srt.sjson",
+        ),
+        # in one language, the <transcript> file is current, and the .sjson is
+        # left over from before edx-val
+        ([("en", "vid-en.srt")], ["subs_AbC123.srt.sjson"], "vid-en.srt"),
+        # and so it is among the other languages too
+        ([("fr", "vid-fr.srt")], ["de_subs_AbC123.srt.sjson"], "vid-fr.srt"),
+        # but English, legacy or not, comes first
+        ([("fr", "vid-fr.srt")], ["subs_AbC123.srt.sjson"], "subs_AbC123.srt.sjson"),
+        # a regional English is English, so its <transcript> file is current
+        ([("en_GB", "vid-en_GB.srt")], ["subs_AbC123.srt.sjson"], "vid-en_GB.srt"),
+    ],
+)
+def test_olx_archive_ranks_legacy_transcripts(
+    tmp_path, transcripts, legacy_names, kept
+):
+    """A video keeps one legacy transcript, which loses ties to <transcript> files"""
+    olx = _video_olx(
+        tmp_path,
+        transcripts,
+        video_attrs='sub="AbC123"',
+        **dict.fromkeys(legacy_names, "{}"),
+    )
+    assert _ingested_static_files(olx) == [kept]
+
+
+def test_olx_archive_keeps_a_transcript_any_video_keeps(tmp_path):
+    """A file one video keeps stays, though another video drops it for English"""
+    olx = _video_olx(
+        tmp_path,
+        [("en", "vid-en.srt"), ("es", "shared-es.srt")],
+        other_videos='<video url_name="vid_es"/>',
+    )
+    _write_olx(
+        olx,
+        "video/vid_es.xml",
+        f'<video url_name="vid_es">{_transcript_element("es", "shared-es.srt")}</video>',
+    )
+    assert _ingested_static_files(olx) == ["shared-es.srt", "vid-en.srt"]
+
+
+def test_olx_archive_drops_a_linked_transcript_in_another_language(tmp_path):
+    """A page linking a video's Spanish transcript doesn't keep it"""
+    olx = _video_olx(tmp_path, [("en", "vid-en.srt"), ("es", "vid-es.srt")])
+    _write_html(olx, "h", '<a href="/static/vid-es.srt">Spanish transcript</a>')
+    assert _ingested_static_files(olx) == ["vid-en.srt"]
+
+
+def test_olx_archive_chooses_among_the_transcripts_the_export_has(tmp_path):
+    """A transcript missing from the export can't be kept, so the next one is"""
+    olx = _video_olx(
+        tmp_path, [("en", "vid-en.srt"), ("es", "vid-es.srt"), ("fr", "vid-fr.srt")]
+    )
+    (olx / "static/vid-en.srt").unlink()
+    assert _ingested_static_files(olx) == ["vid-es.srt"]
+
+
+def test_olx_archive_staff_only_videos_choose_no_transcript(tmp_path):
+    """A hidden video's transcript stays as before: kept only if a page names it"""
+    olx = _video_olx(
+        tmp_path,
+        [("en", "vid-en.srt")],
+        other_videos='<video url_name="hidden" visible_to_staff_only="true"/>',
+        **{"hidden-en.srt": SRT, "hidden-es.srt": SRT},
+    )
+    _write_html(olx, "h", '<a href="/static/hidden-es.srt">Spanish transcript</a>')
+    _write_olx(
+        olx,
+        "video/hidden.xml",
+        '<video url_name="hidden">'
+        f"{_transcript_element('en', 'hidden-en.srt')}"
+        f"{_transcript_element('es', 'hidden-es.srt')}</video>",
+    )
+    assert _ingested_static_files(olx) == ["hidden-es.srt", "vid-en.srt"]
 
 
 @pytest.mark.parametrize(
@@ -1465,8 +1648,9 @@ def test_olx_archive_units(tmp_path):
         (key("html/h1_body.html"), "core"),
         (key("static/notes_1.pdf"), "supplementary"),
         (key("video/vid1.xml"), "core"),
+        # subs_ABC123.srt.sjson is the same English transcript, left over from
+        # before edx-val, so the video keeps only this one
         (key("static/vid1.srt"), "core"),
-        (key("static/subs_ABC123.srt.sjson"), "core"),
         (key("problem/p_shared.xml"), "assessment"),
     ]
     assert list(problem_set["content_files"].items()) == [
@@ -1529,6 +1713,32 @@ def test_olx_archive_units_missing_transcript(tmp_path):
 
     assert get_edx_module_id(f"{olx}/static/vid1.srt", run) in lecture["content_files"]
     assert not any("missing.srt" in key for key in lecture["content_files"])
+
+
+def test_olx_archive_units_link_one_transcript_per_video(tmp_path):
+    """A lecture's unit links the transcript its video keeps, not the others"""
+    olx = tmp_path / "course"
+    _write_unit_olx(olx)
+    _write_olx(
+        olx,
+        "video/vid1.xml",
+        '<video url_name="vid1" youtube="1.00:ABC123">'
+        '<transcript language="es" src="vid1-es.srt"/>'
+        '<transcript language="en" src="vid1.srt"/></video>',
+    )
+    _write_olx(olx, "static/vid1-es.srt", SRT)
+    run = LearningResourceRunFactory.create(
+        run_id="course-v1:MITx+1+run",
+        learning_resource=LearningResourceFactory.create(
+            etl_source=ETLSource.mitxonline.name, create_runs=False
+        ),
+    )
+
+    lecture = _units(olx, run)[0]
+
+    assert [key for key in lecture["content_files"] if ".srt" in key] == [
+        get_edx_module_id(f"{olx}/static/vid1.srt", run)
+    ]
 
 
 def test_olx_archive_units_url_name_with_glob_characters(tmp_path):
@@ -2149,6 +2359,7 @@ def test_olx_archive_colon_url_names(tmp_path):
         "asset-v1:MITx+1+run+type@asset+block@v1.srt": {
             "module_id": f"{block}video+block@vid:1",
             "title": "V",
+            "language": "en",
         }
     }
 

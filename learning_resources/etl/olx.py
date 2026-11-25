@@ -39,10 +39,15 @@ NON_CONTENT_OLX_FILES = (
 
 # A legacy transcript is named for its video's id rather than for anything the
 # course text contains, so the id is the only link back to the block using it.
+# Its language prefix is missing for English.
 VIDEO_ID_ATTRIBUTES = ("sub", "youtube", "youtube_id_1_0")
 LEGACY_TRANSCRIPT_RE = re.compile(
-    r"^(?:[a-z]{2}(?:[-_][a-z]{2})?_)?subs_(.+)\.srt\.sjson$", re.IGNORECASE
+    r"^(?:(?P<language>[a-z]{2}(?:[-_][a-z]{2})?)_)?subs_(?P<video_id>.+)\.srt\.sjson$",
+    re.IGNORECASE,
 )
+# A video can have a transcript per language; only one is ingested, in English
+# when the video has one (see _transcript_sort_key)
+ENGLISH = "en"
 
 # edX writes any character in an asset name but a letter, digit, ., - or % as
 # _, so a run of them, or of _, compares equal to one _. A run with anything
@@ -268,14 +273,47 @@ def _refers_to(
         return True
     legacy = LEGACY_TRANSCRIPT_RE.match(path.name)
     return legacy is not None and (
-        guess or _normalize_asset_ref(legacy.group(1)) in video_ids
+        guess or _normalize_asset_ref(legacy["video_id"]) in video_ids
+    )
+
+
+def _normalize_language(code: str | None) -> str:
+    """Return a language code as transcripts compare it: lowercase, - for _"""
+    return (code or "").strip().lower().replace("_", "-")
+
+
+class _Transcript(NamedTuple):
+    """A video's transcript file and its language"""
+
+    path: Path
+    language: str  # see _normalize_language; "" when the OLX doesn't say
+    is_legacy: bool  # a .srt.sjson named for the video id, not a <transcript> file
+
+
+def _transcript_sort_key(transcript: _Transcript) -> tuple:
+    """
+    Sort key of a video's transcripts; the lowest is the one ingested. English,
+    regional or not, comes first. Then a <transcript> file comes before a legacy
+    .sjson, which edX leaves behind from before edx-val. Ties go to the lower
+    language code (en before en-gb), then filename, so every load keeps the
+    same file.
+    """
+    is_english = transcript.language.partition("-")[0] == ENGLISH
+    return (
+        not is_english,
+        transcript.is_legacy,
+        transcript.language,
+        transcript.path.name,
     )
 
 
 def _parse_video_transcripts(
     run: LearningResourceRun, xml_content: str, path: Path
 ) -> dict:
-    """Parse a video block's XML into transcript key -> {video key, title}"""
+    """
+    Parse a video block's XML into transcript key -> {video key, title,
+    language}
+    """
     transcript_mapping = {}
     try:
         root = ElementTree.fromstring(xml_content)
@@ -296,6 +334,7 @@ def _parse_video_transcripts(
                     # colon-named video's path doesn't spell
                     "module_id": get_edx_module_id(f"video/{video_url_name}.xml", run),
                     "title": video_title,
+                    "language": _normalize_language(transcript.get("language")),
                 }
     except ElementTree.ParseError:
         log.debug("xml parsing error for %s", path)
@@ -355,6 +394,17 @@ class _StaticTarget(NamedTuple):
     legacy_video_id: str | None  # normalized video id of a legacy transcript
 
 
+class _BlockScan(NamedTuple):
+    """What one walk of a course's blocks finds, see OlxArchive._block_scan"""
+
+    staff_only: set[Path]
+    # Transcripts of visible videos besides the one each video keeps (see
+    # _transcript_sort_key). A file one video keeps stays, even if another video
+    # drops it. Staff-only videos choose nothing: their transcripts are
+    # excluded unless something visible names them.
+    dropped_transcripts: set[Path]
+
+
 class OlxArchive:
     """
     An OLX tree's ingestable files (paths), the ones learners can't reach
@@ -394,7 +444,10 @@ class OlxArchive:
 
     @cached_property
     def excluded(self) -> set[Path]:
-        """Files no learner can reach, plus settings and manifests (not content)"""
+        """
+        Files no learner can reach, settings and manifests (not content), and
+        the transcripts a video has besides the one ingested
+        """
         if not self.is_olx:
             return set()
         excluded = set(self._unreachable)
@@ -408,6 +461,9 @@ class OlxArchive:
         # A hidden video's transcript may also be a visible video's, so put
         # back anything a reachable block still links.
         excluded.difference_update(referenced)
+        # One transcript per video: the others stay out even when something
+        # names them, as the video XML names every language's file
+        excluded.update(self._block_scan.dropped_transcripts)
         # Settings rather than content, but what they name (textbooks, the
         # course image) is shown, so they were still read as references above
         excluded.update(self.root.glob("policies/**/*"))
@@ -480,7 +536,7 @@ class OlxArchive:
         return dates
 
     def video_metadata(self, run: LearningResourceRun) -> dict:
-        """Transcript key -> its video's key and title"""
+        """Transcript key -> its video's key and title, and its language"""
         mapping = {}
         # yields nothing when there is no video/ dir
         for path in (self.root / "video").rglob("*"):
@@ -609,14 +665,24 @@ class OlxArchive:
                 }
             files.update(bodies)
         if tag == "video":
-            # a transcript the export doesn't have is skipped
             files.update(
-                path
-                for transcript in element.iter("transcript")
-                if transcript.get("src")
-                and (path := self.root / "static" / transcript.get("src")).is_file()
+                transcript.path for transcript in self._declared_transcripts(element)
             )
         return files
+
+    def _declared_transcripts(self, video: Element) -> list[_Transcript]:
+        """
+        Return the transcripts a video's <transcript> elements declare,
+        skipping any whose file the export doesn't have
+        """
+        return [
+            _Transcript(
+                path, _normalize_language(transcript.get("language")), is_legacy=False
+            )
+            for transcript in video.iter("transcript")
+            if transcript.get("src")
+            and (path := self.root / "static" / transcript.get("src")).is_file()
+        ]
 
     def _files_named(self, folder: str, name: str) -> set[Path]:
         """
@@ -647,19 +713,59 @@ class OlxArchive:
     @cached_property
     def _staff_only(self) -> set[Path]:
         """Files of staff-only blocks no visible parent also holds"""
+        return self._block_scan.staff_only
+
+    @cached_property
+    def _block_scan(self) -> _BlockScan:
+        """_staff_only and the transcripts videos drop, from one walk of _blocks"""
         staff_files: dict[tuple[str, str], set[Path]] = {}
         reachable: set[tuple[str, str]] = set()
+        candidates: set[Path] = set()
+        kept: set[Path] = set()
         for tag, url_name, element, staff_only, _release, _inline in self._blocks:
             if staff_only:
                 staff_files[tag, url_name] = self._block_files(tag, url_name, element)
-            else:
-                reachable.add((tag, url_name))
-        return {
-            path
-            for block, files in staff_files.items()
-            if block not in reachable
-            for path in files
-        }
+                continue
+            reachable.add((tag, url_name))
+            if tag == "video" and (transcripts := self._transcript_candidates(element)):
+                candidates.update(transcript.path for transcript in transcripts)
+                kept.add(min(transcripts, key=_transcript_sort_key).path)
+        return _BlockScan(
+            staff_only={
+                path
+                for block, files in staff_files.items()
+                if block not in reachable
+                for path in files
+            },
+            dropped_transcripts=candidates - kept,
+        )
+
+    def _transcript_candidates(self, video: Element) -> list[_Transcript]:
+        """
+        Return the transcripts a video block chooses from: its declared ones,
+        and each legacy .srt.sjson named for one of its video ids
+        """
+        return self._declared_transcripts(video) + [
+            transcript
+            for video_id in self._video_ids_of(video)
+            for transcript in self._legacy_transcripts_by_video_id.get(video_id, ())
+        ]
+
+    @cached_property
+    def _legacy_transcripts_by_video_id(self) -> dict[str, list[_Transcript]]:
+        """Legacy transcripts in static/, by the normalized video id they name"""
+        by_video_id = defaultdict(list)
+        for path in self._static_files:
+            legacy = LEGACY_TRANSCRIPT_RE.match(path.name)
+            if legacy:
+                by_video_id[_normalize_asset_ref(legacy["video_id"])].append(
+                    _Transcript(
+                        path,
+                        _normalize_language(legacy["language"]) or ENGLISH,
+                        is_legacy=True,
+                    )
+                )
+        return by_video_id
 
     @cached_property
     def _course_policy(self) -> dict | None:
@@ -939,7 +1045,7 @@ class OlxArchive:
                 _StaticTarget(
                     path,
                     _normalize_asset_ref(path.name),
-                    _normalize_asset_ref(legacy.group(1)) if legacy else None,
+                    _normalize_asset_ref(legacy["video_id"]) if legacy else None,
                 )
             )
         return targets
@@ -1069,7 +1175,12 @@ class OlxArchive:
                 self._block_files(tag, block_name, element),
                 key=lambda path: (path.parent.name == "static", str(path)),
             )
-            files = [] if tag in OLX_STRUCTURE_TAGS else [(p, relation) for p in paths]
+            # only the ingested ones, so a video links the one transcript it keeps
+            files = (
+                []
+                if tag in OLX_STRUCTURE_TAGS
+                else [(p, relation) for p in paths if p not in self.excluded]
+            )
             # an inline component's text is in the file that holds it, unless
             # it is an html block whose body has a file of its own
             has_body = tag == "html" and any(

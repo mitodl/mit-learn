@@ -494,8 +494,9 @@ def unpublish_excluded_content_files(
     etl_source: str, ids: list[int], keys: list[str], *, dry_run: bool = False
 ) -> list[dict]:
     """
-    Unpublish (and deindex) content files the course does not use and set the
-    release date of the rest, for the runs matching the given archive keys,
+    Unpublish (and deindex) content files the course does not use, and a
+    video's transcripts besides the one ingested, and set the release date of
+    the rest, for the runs matching the given archive keys,
     without re-extracting anything. Unreleased files stay published but hidden.
 
     Args:
