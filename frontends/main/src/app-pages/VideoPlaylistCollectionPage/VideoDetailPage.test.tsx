@@ -175,6 +175,35 @@ describe("VideoDetailPage", () => {
     expect(within(section).queryAllByRole("listitem")).toHaveLength(0)
   })
 
+  test("a video short shows its description under 'About this video'", async () => {
+    const video = makeVideo({
+      resource_category: VIDEO_SHORT_CATEGORY,
+      description: "<p>How rubber acts like a neuron.</p>",
+    })
+    renderPage({ video })
+
+    const heading = await screen.findByRole("heading", {
+      name: "About this video",
+    })
+    expect(heading.parentElement).toHaveTextContent(
+      "How rubber acts like a neuron.",
+    )
+    // The description still describes the player.
+    expect(
+      screen.getByRole("region", { name: /Video player/ }),
+    ).toHaveAccessibleDescription("How rubber acts like a neuron.")
+  })
+
+  test("a regular video has no 'About this video' heading", async () => {
+    const video = makeVideo({ description: "<p>A lecture.</p>" })
+    renderPage({ video })
+
+    await screen.findByText("A lecture.")
+    expect(
+      screen.queryByRole("heading", { name: "About this video" }),
+    ).not.toBeInTheDocument()
+  })
+
   test("renders the video title once data is loaded", async () => {
     const video = makeVideo({ title: "Introduction to Machine Learning" })
     renderPage({ video })

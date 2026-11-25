@@ -38,11 +38,13 @@ export const ContentArea = styled.div(({ theme }) => ({
   },
 }))
 
-export const CategoryLabel = styled(Link)(({ theme }) => ({
+export const CategoryLabel = styled(Link, {
+  shouldForwardProp: (prop) => prop !== "$short",
+})<{ $short?: boolean }>(({ theme, $short }) => ({
   display: "block",
   ...theme.typography.body3,
   fontWeight: theme.typography.fontWeightBold,
-  color: theme.custom.colors.red,
+  color: $short ? theme.custom.colors.darkRed : theme.custom.colors.red,
   textTransform: "uppercase",
   letterSpacing: "1.92px",
   marginBottom: "8px",
@@ -73,12 +75,14 @@ export const MetaRow = styled.div({
   color: theme.custom.colors.darkGray1,
 })
 
-export const TopicText = styled.span(({ theme }) => ({
-  color: theme.custom.colors.silverGrayDark,
-  ...theme.typography.body2,
-  lineHeight: "22px",
-  paddingLeft: "8px",
-}))
+export const TopicText = styled.span<{ $short?: boolean }>(
+  ({ theme, $short }) => ({
+    color: theme.custom.colors.silverGrayDark,
+    ...theme.typography.body2,
+    lineHeight: "22px",
+    paddingLeft: $short ? "24px" : "8px",
+  }),
+)
 
 export const DurationText = styled.span(({ theme }) => ({
   color: theme.custom.colors.black,
@@ -99,19 +103,90 @@ export const StyledVideoResourcePlayer = styled(VideoResourcePlayer)(
   }),
 )
 
-export const DescriptionText = styled(Typography)<
-  Pick<TypographyProps, "component">
->(({ theme }) => ({
-  ...theme.typography.body1,
-  ...richTextDescription,
-  color: theme.custom.colors.darkGray2,
-  marginBottom: "22px",
-  fontSize: "18px",
-  lineHeight: "30px",
-  [theme.breakpoints.down("sm")]: {
-    fontSize: "16px",
-    lineHeight: "28px",
-    marginBottom: "24px",
+export const DescriptionText = styled(Typography, {
+  shouldForwardProp: (prop) => prop !== "$short",
+})<Pick<TypographyProps, "component"> & { $short?: boolean }>(
+  ({ theme, $short }) => ({
+    ...theme.typography.body1,
+    ...richTextDescription,
+    color: theme.custom.colors.darkGray2,
+    marginBottom: "22px",
+    fontSize: "18px",
+    lineHeight: "30px",
+    [theme.breakpoints.down("sm")]: {
+      fontSize: "16px",
+      lineHeight: "28px",
+      marginBottom: "24px",
+    },
+    // Beside a short's player: 16px medium, spaced by its column.
+    ...($short && {
+      ...theme.typography.subtitle1,
+      lineHeight: "26px",
+      margin: 0,
+      [theme.breakpoints.down("sm")]: {
+        lineHeight: "26px",
+        margin: 0,
+      },
+    }),
+  }),
+)
+
+// ── Video short: the player with "About this video" beside it ──
+
+export const ShortBody = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "flex-start",
+  gap: "80px",
+  padding: "24px 0",
+  [theme.breakpoints.down("md")]: {
+    flexDirection: "column",
+    alignItems: "stretch",
+    gap: "24px",
+    paddingTop: 0,
+  },
+}))
+
+/**
+ * 360px wide (640px tall at 9:16) beside the description. Below that the
+ * player keeps its own height-capped width, centred above the description.
+ */
+export const ShortPlayer = styled(VideoResourcePlayer)(({ theme }) => ({
+  flexShrink: 0,
+  borderRadius: "8px",
+  [theme.breakpoints.up("md")]: {
+    width: "360px",
+    marginInline: 0,
+  },
+}))
+
+export const ShortAbout = styled.div(({ theme }) => ({
+  flex: 1,
+  minWidth: 0,
+  display: "flex",
+  flexDirection: "column",
+  gap: "24px",
+  padding: "32px 0",
+  [theme.breakpoints.down("md")]: {
+    padding: 0,
+  },
+}))
+
+/** "About this video", followed by a rule to the column's edge. */
+export const AboutHeading = styled.h2(({ theme }) => ({
+  ...theme.typography.body3,
+  display: "flex",
+  alignItems: "center",
+  gap: "16px",
+  margin: 0,
+  fontWeight: theme.typography.fontWeightBold,
+  color: theme.custom.colors.silverGrayDark,
+  textTransform: "uppercase",
+  letterSpacing: "1.92px",
+  lineHeight: "150%",
+  "&::after": {
+    content: '""',
+    flex: 1,
+    borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
   },
 }))
 
