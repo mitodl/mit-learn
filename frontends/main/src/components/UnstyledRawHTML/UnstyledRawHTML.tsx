@@ -2,6 +2,7 @@ import DOMPurify from "isomorphic-dompurify"
 import type { Config } from "isomorphic-dompurify"
 import React, { memo } from "react"
 import classnames from "classnames"
+import { addExternalLinkTargets } from "@/common/utils"
 
 type UnstyledRawHTMLProps = {
   html: string
@@ -25,6 +26,10 @@ const SANITIZE_CONFIG: Config = {
   ALLOWED_URI_REGEXP: /^(?:(?:https|mailto):)|^(?:data:image\/)/i,
 }
 
+/**
+ * Sanitizes an HTML string and renders it. Render HTML from the mitxonline CMS
+ * through this component; external links in it open in a new tab.
+ */
 const UnstyledRawHTML: React.FC<UnstyledRawHTMLProps> = memo(
   ({ html, className, Component = "div" }) => {
     return (
@@ -32,7 +37,9 @@ const UnstyledRawHTML: React.FC<UnstyledRawHTMLProps> = memo(
         className={classnames("raw-html", className)}
         data-testid="raw"
         dangerouslySetInnerHTML={{
-          __html: DOMPurify.sanitize(html, SANITIZE_CONFIG),
+          __html: addExternalLinkTargets(
+            DOMPurify.sanitize(html, SANITIZE_CONFIG),
+          ),
         }}
       />
     )

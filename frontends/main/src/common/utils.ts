@@ -170,12 +170,13 @@ function externalLinkProps(href: string, extra?: Record<string, unknown>) {
 }
 
 /**
- * Adds target="_blank" to external links within a sanitized HTML string.
- * Backend-sanitized content only allows <a href/title> (and nh3 already sets
- * rel="noopener noreferrer" on every anchor), so this only needs to add the
- * presentation-level target attribute. Intended for HTML fed to
- * dangerouslySetInnerHTML — do not use in a context where the resulting <a>
- * would nest inside another <a> (see stripAnchorTags for that case).
+ * Adds target="_blank" to external links within an already-sanitized HTML
+ * string: nh3 output from the backend, or DOMPurify output in
+ * UnstyledRawHTML, whose sanitizer config strips rel. Only target is added;
+ * browsers imply rel="noopener" for target="_blank".
+ * Intended for HTML fed to dangerouslySetInnerHTML — do not use in a context
+ * where the resulting <a> would nest inside another <a> (see stripAnchorTags
+ * for that case).
  */
 const addExternalLinkTargets = (html: string): string =>
   html.replace(/<a\s+([^>]*)>/g, (fullMatch, attrs) => {

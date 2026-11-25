@@ -13,3 +13,16 @@ test("strips disallowed URI schemes like javascript:", () => {
   const link = screen.getByText("Click")
   expect(link).not.toHaveAttribute("href")
 })
+
+test("opens external links in a new tab", () => {
+  render(<UnstyledRawHTML html='<a href="https://ocw.mit.edu">OCW</a>' />)
+  expect(screen.getByRole("link", { name: "OCW" })).toHaveAttribute(
+    "target",
+    "_blank",
+  )
+})
+
+test("leaves anchors without an href alone", () => {
+  render(<UnstyledRawHTML html='<a href="/relative">Rel</a>' />)
+  expect(screen.getByText("Rel")).not.toHaveAttribute("target")
+})
