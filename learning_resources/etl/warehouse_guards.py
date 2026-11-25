@@ -142,16 +142,17 @@ def omitted_test_mode_course_ids(
     load_documents do prune theirs. ``field`` is the LearningResource field
     ``loaded_ids`` holds, and the one returned.
     """
+    # Subtracting in Python keeps the query to the few published test_mode
+    # courses, where exclude(__in=) sent every loaded id (every OCW url) as a
+    # parameter. A stored NULL is never matched by a load, so it stays in.
     return set(
         LearningResource.objects.filter(
             etl_source=etl_source,
             resource_type=LearningResourceType.course.name,
             published=True,
             test_mode=True,
-        )
-        .exclude(**{f"{field}__in": loaded_ids})
-        .values_list(field, flat=True)
-    )
+        ).values_list(field, flat=True)
+    ) - (loaded_ids - {None})
 
 
 def kept_course_ids(etl_source: str, courses: list[dict]) -> set[str]:
