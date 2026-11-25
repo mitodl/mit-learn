@@ -453,7 +453,6 @@ OWNED_PIPELINES = [
     ("xpro_programs_etl", "xpro.extract_programs", ETLSource.xpro, [PROGRAM]),
     ("oll_etl", "oll.extract", ETLSource.oll, [COURSE]),
     ("sloan_courses_etl", "sloan.extract", ETLSource.see, [COURSE]),
-    ("ovs_etl", "ovs.extract", ETLSource.ovs, [LearningResourceType.video.name]),
     (
         "podcast_etl",
         "podcast.extract",

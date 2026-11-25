@@ -2112,9 +2112,8 @@ def prune_ovs_playlists(playlist_ids: list[int]) -> list[int]:
     Unpublish the given OVS playlists that have no published videos left, and
     reindex the rest.
 
-    This is the webhook's version of the prune in load_ovs_playlists, which
-    stops running once the webhook owns OVS. The webhook sees one video at a
-    time, so it only checks the playlists that video just left.
+    The webhook sees one video at a time, so it only checks the playlists that
+    video just left.
 
     Returns:
         list[int]: the ids of the playlists it unpublished
@@ -2150,8 +2149,7 @@ def unpublish_empty_ovs_playlists(*, allow_mass_unpublish: bool = False) -> list
     The webhook prunes a playlist after the relationship change commits, so a
     failure between the two leaves an empty playlist published that no retry
     finds, and the same goes for a deleted video. This catches those. OVS
-    playlists carry no etl_source, so they're matched on platform, as
-    load_ovs_playlists matches them.
+    playlists carry no etl_source, so they're matched on platform.
 
     Up to OVS_PLAYLIST_SWEEP_UNPUBLISH_FLOOR playlists are unpublished even
     when that is over MAX_UNPUBLISH_SHARE, because with few OVS playlists the
@@ -2249,93 +2247,6 @@ def load_ovs_video_from_webhook(video_payload: dict) -> LearningResource | None:
         update_index(playlist, newly_created=False)
     update_index(video, newly_created=created)
     return video
-
-
-def load_ovs_playlist(playlist_data: dict) -> LearningResource | None:
-    """
-    Load a single OVS playlist (collection) and its videos into the database.
-
-    Args:
-        playlist_data (dict): playlist data including nested videos list
-
-    Returns:
-        LearningResource | None: the created or updated playlist resource,
-            or None if not all videos could be matched
-    """
-    channel, _ = VideoChannel.objects.update_or_create(
-        channel_id="ovs",
-        defaults={
-            "title": "ODL Video Service",
-            "etl_source": ETLSource.ovs.name,
-            "published": True,
-        },
-    )
-    return load_playlist(channel, playlist_data)
-
-
-def load_ovs_playlists(playlists_data: iter) -> list[LearningResource]:
-    """
-    Load OVS playlists and their videos, then unpublish any OVS playlists
-    that are no longer present and any orphaned OVS videos.
-
-    Args:
-        playlists_data (iter of dict): iterable of playlist dicts from OVS transform
-
-    Returns:
-        list of LearningResource: the loaded playlist resources
-    """
-    if not may_write(
-        ETLSource.ovs.name,
-        [LearningResourceType.video_playlist.name, LearningResourceType.video.name],
-    ):
-        return []
-
-    ovs_platform = LearningResourcePlatform.objects.get(code=PlatformType.ovs.name)
-
-    playlists = [load_ovs_playlist(playlist_data) for playlist_data in playlists_data]
-
-    if not playlists:
-        log.warning(
-            "OVS ETL returned no playlists; aborting to avoid unpublishing all data"
-        )
-        return []
-
-    playlist_ids = [p.id for p in playlists]
-
-    # Unpublish OVS playlists that were not in this load
-    stale_playlists = LearningResource.objects.filter(
-        resource_type=LearningResourceType.video_playlist.name,
-        platform=ovs_platform,
-        published=True,
-    ).exclude(id__in=playlist_ids)
-    stale_playlist_ids = list(stale_playlists.values_list("id", flat=True))
-    stale_playlists.update(published=False)
-    bulk_resources_unpublished_actions(
-        stale_playlist_ids,
-        LearningResourceType.video_playlist.name,
-    )
-
-    # Unpublish OVS videos not in any published OVS playlist
-    videos_in_published_playlists = LearningResourceRelationship.objects.filter(
-        relation_type=LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
-        parent__platform=ovs_platform,
-        parent__published=True,
-    ).values_list("child", flat=True)
-
-    orphaned_videos = LearningResource.objects.filter(
-        resource_type=LearningResourceType.video.name,
-        platform=ovs_platform,
-        published=True,
-    ).exclude(id__in=videos_in_published_playlists)
-
-    orphaned_video_ids = list(orphaned_videos.values_list("id", flat=True))
-    if orphaned_video_ids:
-        orphaned_videos.update(published=False)
-        bulk_resources_unpublished_actions(
-            orphaned_video_ids, LearningResourceType.video.name
-        )
-
-    return playlists
 
 
 def load_playlist(

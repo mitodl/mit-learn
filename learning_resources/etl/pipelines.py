@@ -14,7 +14,6 @@ from learning_resources.etl import (
     mitxonline,
     ocw,
     oll,
-    ovs,
     podcast,
     posthog,
     sloan,
@@ -194,12 +193,6 @@ def ocw_courses_etl(
         )
         raise ExtractException(message)
 
-
-ovs_etl = when_owned(
-    ETLSource.ovs.name,
-    [LearningResourceType.video_playlist.name, LearningResourceType.video.name],
-    compose(loaders.load_ovs_playlists, ovs.transform, ovs.extract),
-)
 
 posthog_etl = compose(
     posthog.load_posthog_lrd_view_events,

@@ -465,19 +465,6 @@ def get_podcast_data():
 
 
 @app.task(acks_late=True)
-def get_ovs_data():
-    """
-    Execute the OVS ETL pipeline
-
-    Returns:
-        int:
-            The number of results that were fetched
-    """
-    results = pipelines.ovs_etl()
-    return len(list(results))
-
-
-@app.task(acks_late=True)
 def get_ocw_courses(
     *,
     url_paths,
@@ -797,8 +784,7 @@ def sweep_empty_ovs_playlists(*, allow_mass_unpublish=False):
     Unpublish OVS playlists the webhook left published with no published video.
 
     Runs only while the webhook owns OVS playlists and videos, the pairs the
-    OVS webhook needs before it writes either. Under the legacy OVS ETL,
-    load_ovs_playlists prunes playlists itself.
+    OVS webhook needs before it writes either.
 
     Args:
         allow_mass_unpublish (bool): skip the MAX_UNPUBLISH_SHARE check

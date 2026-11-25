@@ -73,8 +73,7 @@ CELERY_BEAT_SCHEDULE = (
             "schedule": crontab(minute=0, hour="6,23"),  # 2am and 7pm EST
         },
         # 30 minutes after each podcast run, so a new episode's transcript
-        # lands shortly after the episode itself. Same pairing as
-        # update-ovs-videos / update-ovs-transcripts. overwrite defaults to
+        # lands shortly after the episode itself. overwrite defaults to
         # False, so only episodes still missing a transcript are fetched.
         "update-podcast-transcripts": {
             "task": "learning_resources.tasks.get_podcast_transcripts",
@@ -95,10 +94,6 @@ CELERY_BEAT_SCHEDULE = (
         "update-youtube-videos": {
             "task": "learning_resources.tasks.get_youtube_data",
             "schedule": crontab(minute=30, hour=8),  # 4:30am EST
-        },
-        "update-ovs-videos": {
-            "task": "learning_resources.tasks.get_ovs_data",
-            "schedule": crontab(minute=0, hour=9),  # 5:00am EST
         },
         "update-ovs-transcripts": {
             "task": "learning_resources.tasks.get_ovs_transcripts",

@@ -765,14 +765,6 @@ def test_get_youtube_transcripts(mocker):
     )
 
 
-def test_get_ovs_data(mocker):
-    """Verify that get_ovs_data invokes the OVS ETL pipeline"""
-    mock_pipelines = mocker.patch("learning_resources.tasks.pipelines")
-    mock_pipelines.ovs_etl.return_value = iter([])
-    tasks.get_ovs_data.delay()
-    mock_pipelines.ovs_etl.assert_called_once()
-
-
 def test_get_ovs_transcripts(mocker):
     """Verify that get_ovs_transcripts invokes correct OVS ETL functions"""
 

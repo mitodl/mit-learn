@@ -192,8 +192,8 @@ class OVSVideoWebhookView(BaseWebhookView):
         data = serializer.validated_data
 
         # The OVS push is the data platform's webhook path for OVS, so it writes
-        # only once (ovs, video_playlist) and (ovs, video) are cut over to the
-        # webhook, the same flip that stops get_ovs_data.
+        # only while (ovs, video_playlist) and (ovs, video) are owned by the
+        # webhook. Nothing else loads OVS videos.
         with writing_as(Pipeline.WEBHOOK):
             if not may_write(ETLSource.ovs.name, OVS_TYPES):
                 msg = (
