@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation"
 import { factories, setMockResponse, urls } from "api/test-utils"
+import { VIDEO_PLAYLIST_PAGE_SIZE } from "@/common/constants"
 import Page, { generateMetadata } from "./page"
 
 jest.mock("@/app/getQueryClient", () => {
@@ -45,8 +46,9 @@ const mockVideo = (playlists: string[], slug = "beyond-biology") => {
     const pl = factories.learningResources.videoPlaylist({ id: Number(pid) })
     // Playlist detail is a different endpoint from learningResources.details.
     setMockResponse.get(urls.videoPlaylists.details({ id: Number(pid) }), pl)
+    // The playlist page's first page, which decides a shorts playlist.
     setMockResponse.get(
-      urls.learningResources.items({ id: Number(pid) }),
+      `${urls.learningResources.items({ id: Number(pid) })}?limit=${VIDEO_PLAYLIST_PAGE_SIZE}`,
       factories.learningResources.resources({ count: 0 }),
     )
   })
