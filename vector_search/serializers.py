@@ -23,6 +23,7 @@ from learning_resources_search.serializers import (
 )
 from vector_search.constants import (
     MAX_RESULT_WINDOW,
+    QDRANT_CONTENT_FILE_GROUP_BY_FIELDS,
     QDRANT_CONTENT_FILE_PARAM_MAP,
     QDRANT_LEARNING_RESOURCE_SORTBY_FIELDS,
     QDRANT_RESOURCE_PARAM_MAP,
@@ -398,12 +399,14 @@ class ContentFileVectorSearchRequestSerializer(serializers.Serializer):
         required=False,
         help_text=("Manually specify the name of the Qdrant collection to query"),
     )
-    group_by = serializers.CharField(
+    group_by = serializers.ChoiceField(
         required=False,
+        choices=QDRANT_CONTENT_FILE_GROUP_BY_FIELDS,
         help_text=("The attribute to group results by"),
     )
     group_size = serializers.IntegerField(
         required=False,
+        min_value=1,
         help_text=(
             "The number of chunks in each group. Only relevant when group_by is used"
         ),

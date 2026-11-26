@@ -176,6 +176,12 @@ QDRANT_CONTENT_FILE_INDEXES = {
     "url": models.PayloadSchemaType.KEYWORD,
 }
 
+# Qdrant groups only by an indexed field, and the grouped search reads the
+# group id from the top level of each payload, so dotted paths are left out.
+QDRANT_CONTENT_FILE_GROUP_BY_FIELDS = [
+    field for field in QDRANT_CONTENT_FILE_INDEXES if "." not in field
+]
+
 
 QDRANT_CONTENT_FILES_SORTBY_FIELDS = [
     param
