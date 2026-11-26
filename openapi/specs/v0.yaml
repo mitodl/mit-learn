@@ -869,9 +869,26 @@ paths:
       - in: query
         name: group_by
         schema:
+          enum:
+          - key
+          - title
+          - file_extension
+          - run_readable_id
+          - resource_readable_id
+          - edx_module_id
+          - url
           type: string
           minLength: 1
-        description: The attribute to group results by
+        description: |-
+          The attribute to group results by
+
+          * `key` - key
+          * `title` - title
+          * `file_extension` - file_extension
+          * `run_readable_id` - run_readable_id
+          * `resource_readable_id` - resource_readable_id
+          * `edx_module_id` - edx_module_id
+          * `url` - url
       - in: query
         name: group_size
         schema:

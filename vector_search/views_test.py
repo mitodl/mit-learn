@@ -2,12 +2,12 @@ import asyncio
 from datetime import timedelta
 from types import SimpleNamespace
 
+import grpc
 import pytest
 from django.contrib.auth.models import Group
 from django.urls import reverse
 from django.utils import timezone
 from qdrant_client import models
-from qdrant_client.http.exceptions import UnexpectedResponse
 from qdrant_client.http.models.models import CountResult
 from rest_framework.exceptions import (
     NotAuthenticated,
@@ -357,19 +357,111 @@ def test_vector_search_drf_exceptions_get_their_status(
         assert response["Retry-After"] == "30"
 
 
-def _qdrant_error(status_code):
-    return UnexpectedResponse(
-        status_code=status_code,
-        reason_phrase="",
-        content=b"{}",
-        headers={},
+def _qdrant_error(code):
+    """Build the gRPC error the async Qdrant client raises."""
+    return grpc.aio.AioRpcError(
+        code=code,
+        initial_metadata=grpc.aio.Metadata(),
+        trailing_metadata=grpc.aio.Metadata(),
+        details="test error",
     )
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.usefixtures("content_file_viewer")
+def test_content_file_vector_search_missing_collection_override_returns_400(
+    client, mock_qdrant
+):
+    """A collection_name the caller named that doesn't exist gets a 400."""
+    mock_qdrant.query_points.side_effect = _qdrant_error(grpc.StatusCode.NOT_FOUND)
+
+    response = client.get(
+        reverse("vector_search:v0:vector_content_files_search"),
+        data={"q": "test", "collection_name": "does_not_exist"},
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {"collection_name": ["Collection does not exist."]}
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.usefixtures("content_file_viewer")
+@pytest.mark.parametrize(
+    ("params", "field"),
+    [
+        ({"group_by": "does_not_exist"}, "group_by"),
+        ({"group_by": "platform.code"}, "group_by"),
+    ],
+)
+def test_content_file_vector_search_rejects_bad_group_params(
+    client, mock_qdrant, params, field
+):
+    """A group_by Qdrant can't group on gets a 400."""
+    response = client.get(
+        reverse("vector_search:v0:vector_content_files_search"),
+        data={"q": "test", **params},
+    )
+
+    assert response.status_code == 400
+    assert list(response.json()) == [field]
+    mock_qdrant.query_points_groups.assert_not_called()
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.usefixtures("content_file_viewer")
+@pytest.mark.parametrize(
+    ("params", "code"),
+    [
+        ({}, grpc.StatusCode.NOT_FOUND),
+        ({"collection_name": "does_not_exist"}, grpc.StatusCode.UNAVAILABLE),
+    ],
+)
+def test_content_file_vector_search_other_qdrant_errors_propagate(
+    client, mock_qdrant, params, code
+):
+    """A missing default collection or a server error is not the caller's fault."""
+    exc = _qdrant_error(code)
+    mock_qdrant.query_points.side_effect = exc
+
+    with pytest.raises(type(exc)):
+        client.get(
+            reverse("vector_search:v0:vector_content_files_search"),
+            data={"q": "test", **params},
+        )
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.usefixtures("content_file_viewer")
+def test_content_file_vector_search_missing_named_default_collection_propagates(
+    client, mock_qdrant, mocker, settings
+):
+    """OCW names the default collection. If it's missing, that's ours, not a 400."""
+    # The constant is built at import, before conftest sets the test base name.
+    mocker.patch(
+        "vector_search.views.CONTENT_FILES_COLLECTION_NAME",
+        f"{settings.QDRANT_BASE_COLLECTION_NAME}.content_files",
+    )
+    exc = _qdrant_error(grpc.StatusCode.NOT_FOUND)
+    mock_qdrant.query_points.side_effect = exc
+
+    with pytest.raises(type(exc)):
+        client.get(
+            reverse("vector_search:v0:vector_content_files_search"),
+            data={"q": "test", "collection_name": "content_files"},
+        )
 
 
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize(
     "exc",
-    [RuntimeError("boom"), _qdrant_error(404), _qdrant_error(500), _qdrant_error(503)],
+    [
+        RuntimeError("boom"),
+        _qdrant_error(grpc.StatusCode.NOT_FOUND),
+        _qdrant_error(grpc.StatusCode.INVALID_ARGUMENT),
+        _qdrant_error(grpc.StatusCode.UNAVAILABLE),
+        _qdrant_error(grpc.StatusCode.INTERNAL),
+        _qdrant_error(grpc.StatusCode.DEADLINE_EXCEEDED),
+    ],
 )
 def test_vector_search_unexpected_errors_propagate(client, mock_qdrant, exc):
     """Errors DRF doesn't know how to answer still reach Django's error handling."""

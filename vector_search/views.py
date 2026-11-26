@@ -3,6 +3,7 @@ import logging
 from collections import Counter
 from itertools import chain
 
+import grpc
 from django.conf import settings
 from django.utils.decorators import method_decorator
 from drf_spectacular.utils import extend_schema, extend_schema_view
@@ -863,14 +864,28 @@ class ContentFilesVectorSearchView(QdrantView):
                     del params["resource_readable_id"]
                     params["run_readable_id"] = best_run_ids + list(resource_ids)
 
-                response = await self.async_vector_search(
-                    query_text,
-                    limit=limit,
-                    offset=offset,
-                    params=params,
-                    search_collection=collection_name,
-                    hybrid_search=hybrid_search,
-                )
+                try:
+                    response = await self.async_vector_search(
+                        query_text,
+                        limit=limit,
+                        offset=offset,
+                        params=params,
+                        search_collection=collection_name,
+                        hybrid_search=hybrid_search,
+                    )
+                except grpc.aio.AioRpcError as exc:
+                    # Only a collection the caller named is their mistake. A
+                    # missing default collection is ours and stays a 500, even
+                    # when named (OCW sends collection_name=content_files).
+                    if (
+                        collection_name != CONTENT_FILES_COLLECTION_NAME
+                        and exc.code() == grpc.StatusCode.NOT_FOUND
+                    ):
+                        return Response(
+                            {"collection_name": ["Collection does not exist."]},
+                            status=400,
+                        )
+                    raise
 
             if params.get("edx_module_id") and not response.get("hits"):
                 try:
