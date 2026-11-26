@@ -11,23 +11,12 @@ import {
 import { Section, SectionInner, SectionTitle } from "./SectionLayout"
 import { ONE_PAGER_URLS, OPEN_LEARNING_GIVE_URL } from "./links"
 
-/**
- * Continues the impact reports' gray band, after a divider spaced like the
- * band's own padding. On phones the sections are separate, with no divider.
- */
 const Inner = styled(SectionInner)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: "64px",
-  paddingTop: "64px",
-  borderTop: `1px solid ${theme.custom.colors.silverGray}`,
-  [theme.breakpoints.down("md")]: {
-    paddingTop: "40px",
-  },
   [theme.breakpoints.down("sm")]: {
     gap: "24px",
-    paddingTop: 0,
-    borderTop: "none",
   },
 }))
 
