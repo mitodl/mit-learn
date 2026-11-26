@@ -23,8 +23,10 @@ test("opens external links in a new tab", () => {
 })
 
 test("leaves anchors without an href alone", () => {
-  render(<UnstyledRawHTML html='<a href="/relative">Rel</a>' />)
-  expect(screen.getByText("Rel")).not.toHaveAttribute("target")
+  render(<UnstyledRawHTML html='<a name="faq-top">Top</a>' />)
+  const anchor = screen.getByText("Top")
+  expect(anchor).toHaveAttribute("name", "faq-top")
+  expect(anchor).not.toHaveAttribute("target")
 })
 
 test("keeps markup in attribute values inert when adding link targets", () => {
