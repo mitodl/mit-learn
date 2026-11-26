@@ -368,58 +368,43 @@ def _qdrant_error(code):
 
 
 @pytest.mark.django_db(transaction=True)
-@pytest.mark.parametrize(
-    ("code", "status_code"),
-    [
-        (grpc.StatusCode.INVALID_ARGUMENT, 400),
-        (grpc.StatusCode.NOT_FOUND, 404),
-    ],
-)
-def test_vector_search_qdrant_client_errors_return_4xx(
-    client, mock_qdrant, code, status_code
+@pytest.mark.usefixtures("content_file_viewer")
+def test_content_file_vector_search_missing_collection_override_returns_400(
+    client, mock_qdrant
 ):
-    """A Qdrant error caused by the request gets the matching 4xx."""
-    mock_qdrant.query_points.side_effect = _qdrant_error(code)
+    """A collection_name the caller named that doesn't exist gets a 400."""
+    mock_qdrant.query_points.side_effect = _qdrant_error(grpc.StatusCode.NOT_FOUND)
 
     response = client.get(
-        reverse("vector_search:v0:vector_learning_resources_search"),
-        data={"q": "test"},
+        reverse("vector_search:v0:vector_content_files_search"),
+        data={"q": "test", "collection_name": "does_not_exist"},
     )
 
-    assert response.status_code == status_code
+    assert response.status_code == 400
+    assert response.json() == {"collection_name": ["Collection does not exist."]}
 
 
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.usefixtures("content_file_viewer")
 @pytest.mark.parametrize(
-    ("method", "params", "code", "status_code"),
+    ("params", "code"),
     [
-        (
-            "query_points",
-            {"collection_name": "does_not_exist"},
-            grpc.StatusCode.NOT_FOUND,
-            404,
-        ),
-        (
-            "query_points_groups",
-            {"group_by": "does_not_exist"},
-            grpc.StatusCode.INVALID_ARGUMENT,
-            400,
-        ),
+        ({}, grpc.StatusCode.NOT_FOUND),
+        ({"collection_name": "does_not_exist"}, grpc.StatusCode.UNAVAILABLE),
     ],
 )
-def test_content_file_vector_search_qdrant_client_errors_return_4xx(  # noqa: PLR0913
-    client, mock_qdrant, method, params, code, status_code
+def test_content_file_vector_search_other_qdrant_errors_propagate(
+    client, mock_qdrant, params, code
 ):
-    """A bad collection_name or group_by on content-file search gets a 4xx."""
-    getattr(mock_qdrant, method).side_effect = _qdrant_error(code)
+    """A missing default collection or a server error is not the caller's fault."""
+    exc = _qdrant_error(code)
+    mock_qdrant.query_points.side_effect = exc
 
-    response = client.get(
-        reverse("vector_search:v0:vector_content_files_search"),
-        data={"q": "test", **params},
-    )
-
-    assert response.status_code == status_code
+    with pytest.raises(type(exc)):
+        client.get(
+            reverse("vector_search:v0:vector_content_files_search"),
+            data={"q": "test", **params},
+        )
 
 
 @pytest.mark.django_db(transaction=True)
@@ -427,10 +412,11 @@ def test_content_file_vector_search_qdrant_client_errors_return_4xx(  # noqa: PL
     "exc",
     [
         RuntimeError("boom"),
+        _qdrant_error(grpc.StatusCode.NOT_FOUND),
+        _qdrant_error(grpc.StatusCode.INVALID_ARGUMENT),
         _qdrant_error(grpc.StatusCode.UNAVAILABLE),
         _qdrant_error(grpc.StatusCode.INTERNAL),
         _qdrant_error(grpc.StatusCode.DEADLINE_EXCEEDED),
-        _qdrant_error(grpc.StatusCode.PERMISSION_DENIED),
     ],
 )
 def test_vector_search_unexpected_errors_propagate(client, mock_qdrant, exc):

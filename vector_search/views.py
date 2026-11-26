@@ -8,7 +8,6 @@ from django.conf import settings
 from django.utils.decorators import method_decorator
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from qdrant_client import models
-from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
@@ -53,14 +52,6 @@ from vector_search.utils import (
 )
 
 log = logging.getLogger(__name__)
-
-# The Qdrant client talks gRPC (prefer_grpc=True). These codes mean the
-# request was bad (unknown collection, invalid filter), so the caller gets a
-# 4xx. Every other code is a server problem and still raises.
-QDRANT_GRPC_CLIENT_ERRORS = {
-    grpc.StatusCode.INVALID_ARGUMENT: status.HTTP_400_BAD_REQUEST,
-    grpc.StatusCode.NOT_FOUND: status.HTTP_404_NOT_FOUND,
-}
 
 
 def _normalize_score_cutoff(value, hybrid_search_enabled):
@@ -730,17 +721,6 @@ class QdrantView(AsyncAPIView):
             **counts,
         }
 
-    def handle_exception(self, exc):
-        if (
-            isinstance(exc, grpc.aio.AioRpcError)
-            and exc.code() in QDRANT_GRPC_CLIENT_ERRORS
-        ):
-            log.exception("Received a 4xx error from Qdrant")
-            return Response(status=QDRANT_GRPC_CLIENT_ERRORS[exc.code()])
-        # DRF maps its own exceptions (NotAuthenticated, ValidationError,
-        # Throttled, ...) to responses and re-raises anything else.
-        return super().handle_exception(exc)
-
 
 @method_decorator(blocked_ip_exempt, name="dispatch")
 @extend_schema_view(
@@ -884,14 +864,27 @@ class ContentFilesVectorSearchView(QdrantView):
                     del params["resource_readable_id"]
                     params["run_readable_id"] = best_run_ids + list(resource_ids)
 
-                response = await self.async_vector_search(
-                    query_text,
-                    limit=limit,
-                    offset=offset,
-                    params=params,
-                    search_collection=collection_name,
-                    hybrid_search=hybrid_search,
-                )
+                try:
+                    response = await self.async_vector_search(
+                        query_text,
+                        limit=limit,
+                        offset=offset,
+                        params=params,
+                        search_collection=collection_name,
+                        hybrid_search=hybrid_search,
+                    )
+                except grpc.aio.AioRpcError as exc:
+                    # Only a collection the caller named is their mistake. A
+                    # missing default collection is ours and stays a 500.
+                    if (
+                        collection_name_override
+                        and exc.code() == grpc.StatusCode.NOT_FOUND
+                    ):
+                        return Response(
+                            {"collection_name": ["Collection does not exist."]},
+                            status=400,
+                        )
+                    raise
 
             if params.get("edx_module_id") and not response.get("hits"):
                 try:
