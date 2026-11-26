@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker/locale/en"
 import type { PartialFactory } from "ol-test-utilities"
-import type { CurrentUser, Profile } from "../../generated/v0"
+import type { CurrentUser, Profile } from "@mitodl/mit-learn-api-axios/v0"
 import { UniqueEnforcer } from "enforce-unique"
 
 const profile: PartialFactory<Profile> = (overrides = {}): Profile => ({

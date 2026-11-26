@@ -91,19 +91,13 @@ export const DurationText = styled.span(({ theme }) => ({
 
 export const StyledVideoResourcePlayer = styled(VideoResourcePlayer)(
   ({ theme }) => ({
+    marginBottom: "40px",
     [theme.breakpoints.down("sm")]: {
       marginTop: "0",
+      marginBottom: "24px",
     },
   }),
 )
-
-export const BorderLine = styled.div(({ theme }) => ({
-  borderBottom: `4px solid ${theme.custom.colors.darkGray2}`,
-  marginBottom: "40px",
-  [theme.breakpoints.down("sm")]: {
-    marginBottom: "24px",
-  },
-}))
 
 export const DescriptionText = styled(Typography)<
   Pick<TypographyProps, "component">

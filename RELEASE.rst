@@ -1,6 +1,44 @@
 Release Notes
 =============
 
+Version 0.88.8
+--------------
+
+- Bump smoot-design to 6.43.0 for the Contact Us review and new-thread changes (#4392)
+- Show practice problems in the learning resource drawer and cards (#4381)
+
+Version 0.88.7
+--------------
+
+- Show vertical videos at their own aspect ratio (#4351)
+- Update educator page links and copy, hide Stay connected (#4363)
+- Ability to promote practice problems to searchable learning materials (#4329)
+- Don't offer Start on an archived run on dashboard cards (#4344)
+- Use the published API client instead of a checked-in copy (#4366)
+- Assert uv.lock stays on revision 5 (#4328)
+- Drop the columns left by the is_b2b and SEO override expand migrations (#4341)
+
+Version 0.88.5
+--------------
+
+- Update Support page copy and move initiatives to the end (#4364)
+- fix: leave prek out of the production image (#4360)
+- Show MITx Online enrollment and checkout messages on the dashboard (#4347)
+- update qdrant version (#4361)
+- Test more kinds of bad cta_link in the OVS webhook (#4224)
+- chore: add a 7-day npm release-age gate to Yarn (#4348)
+- Refuse to merge unreleased API clients, and add a branch-client script (#4359)
+- Clarify the B2B dashboard's Learner progress section and completion labels (#4349)
+- Bump smoot-design to 6.42.0 for Send request and Cancel on the ticket review (#4352)
+- Add the Support page at /support (#4338)
+- Sweep OVS playlists left published with no published video (#4239)
+- Add the extracted_content_files webhook (#4223)
+- Install local-dev's dev deps before the source copy (#4345)
+- Unpublish OVS playlists the webhook empties (#4225)
+- fix(users): set username to the lowercased email where it is something else (#4197)
+- Load a run's units from the warehouse with its content files (#4290)
+- units admin and api (#4339)
+
 Version 0.88.3
 --------------
 

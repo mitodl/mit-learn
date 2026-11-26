@@ -933,6 +933,28 @@ class VideoFactory(DjangoModelFactory):
         is_unpublished = factory.Trait(learning_resource__published=False)
 
 
+class PracticeProblemFactory(DjangoModelFactory):
+    """Factory for PracticeProblems"""
+
+    learning_resource = factory.SubFactory(
+        LearningResourceFactory,
+        resource_type=constants.LearningResourceType.document.name,
+        resource_category=constants.OCW_CONTENT_CATEGORY_PRACTICE_AND_ASSIGNMENT,
+    )
+    content_file = factory.SubFactory(ContentFileFactory, file_extension=".pdf")
+    node_id = factory.Sequence(lambda n: f"n{n}")
+    number = factory.Sequence(lambda n: str(n + 1))
+    document_title = "Problem Set 1"
+    statement = factory.Faker("paragraph")
+    parts = factory.LazyFunction(lambda: [{"label": "a", "body": "Find $v(t)$."}])
+    solution = factory.Faker("sentence")
+    pages = factory.LazyFunction(lambda: [1])
+
+    class Meta:
+        model = models.PracticeProblem
+        skip_postgeneration_save = True
+
+
 class VideoChannelFactory(DjangoModelFactory):
     """Factory for VideoChannels"""
 

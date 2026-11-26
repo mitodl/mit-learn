@@ -729,7 +729,8 @@ def get_published_items(zipfile_path, url_config):
 # course_settings/* change bytes AND size — verified across 13 prod course
 # pairs). They are excluded from the byte digest; their semantic content
 # (publish state, titles) is covered by the publish-set component below.
-# Nothing under these paths is ever ingested as a content file (IGNORE_FILES).
+# The one member under them that is ingested, a syllabus published at
+# course_settings/syllabus.html, is digested like any other content member.
 CHECKSUM_EXCLUDED = ("imsmanifest.xml", "course_settings/")
 
 
@@ -744,18 +745,24 @@ def canvas_course_checksum(course_archive_path, url_config: dict) -> str:
     content can change. Stable across Canvas's no-op scheduled exports.
     """
     hasher = md5()  # noqa: S324 - non-cryptographic change detection
-    with zipfile.ZipFile(course_archive_path, "r") as course_archive:
-        for info in sorted(course_archive.infolist(), key=lambda i: i.filename):
-            if info.filename.startswith(CHECKSUM_EXCLUDED):
-                continue
-            hasher.update(f"{info.filename}\0{info.file_size}\0{info.CRC}\0".encode())
     published = get_published_items(course_archive_path, url_config)
     # relpath: get_published_items keys are resolve()'d against the process
     # cwd, which must not leak into the digest
-    for path, title in sorted(
-        (os.path.relpath(path), item.get("title") or "")
+    published_titles = {
+        os.path.relpath(path): item.get("title") or ""
         for path, item in published.items()
-    ):
+    }
+    with zipfile.ZipFile(course_archive_path, "r") as course_archive:
+        for info in sorted(course_archive.infolist(), key=lambda i: i.filename):
+            # A published member under an excluded path is ingested, e.g. the
+            # syllabus at course_settings/syllabus.html, so its bytes count.
+            if (
+                info.filename.startswith(CHECKSUM_EXCLUDED)
+                and info.filename not in published_titles
+            ):
+                continue
+            hasher.update(f"{info.filename}\0{info.file_size}\0{info.CRC}\0".encode())
+    for path, title in sorted(published_titles.items()):
         hasher.update(f"{path}\0{title}\0".encode())
     hasher.update(json.dumps(url_config, sort_keys=True, default=str).encode())
     return hasher.hexdigest()

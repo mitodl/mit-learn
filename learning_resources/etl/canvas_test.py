@@ -2396,6 +2396,51 @@ def test_canvas_course_checksum_ignores_export_noise(tmp_path):
     assert canvas_course_checksum(a, {}) == canvas_course_checksum(b, {})
 
 
+@pytest.mark.parametrize("public_syllabus", [True, False])
+def test_canvas_course_checksum_detects_syllabus_edit(tmp_path, public_syllabus):
+    """
+    Canvas exports the syllabus as course_settings/syllabus.html. When it is
+    ingested, an edit to it alone has to change the digest; when it isn't, it
+    stays export noise like the rest of course_settings/.
+    """
+    manifest_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <manifest xmlns="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1">
+      <resources>
+        <resource identifier="syllabus" type="webcontent" intendeduse="syllabus" href="course_settings/syllabus.html">
+          <file href="course_settings/syllabus.html"/>
+        </resource>
+      </resources>
+    </manifest>
+    """
+    settings_xml = DEFAULT_SETTINGS_XML
+    if not public_syllabus:
+        settings_xml = settings_xml.replace(
+            b"</course>",
+            b"<public_syllabus>false</public_syllabus>"
+            b"<public_syllabus_to_auth>false</public_syllabus_to_auth></course>",
+        )
+    digests = []
+    for body in ("Week 1: intro", "Week 1: review"):
+        course_dir = tmp_path / body.replace(" ", "_").replace(":", "")
+        course_dir.mkdir()
+        zip_path = make_canvas_zip(
+            course_dir,
+            manifest_xml=manifest_xml,
+            settings_xml=settings_xml,
+            files=[
+                (
+                    "course_settings/syllabus.html",
+                    (
+                        '<html><head><meta name="workflow_state" content="active"/>'
+                        f"</head><body>{body}</body></html>"
+                    ),
+                )
+            ],
+        )
+        digests.append(canvas_course_checksum(zip_path, {}))
+    assert (digests[0] != digests[1]) is public_syllabus
+
+
 def test_canvas_course_checksum_detects_same_size_content_edit(tmp_path):
     """
     A content member with identical name and size but different bytes must

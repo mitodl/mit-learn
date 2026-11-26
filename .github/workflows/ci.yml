@@ -260,88 +260,6 @@ jobs:
       - name: Every API client is a released npm version
         run: bash scripts/check-api-client-versions.sh
 
-  openapi-generated-client-check-v0:
-    # This job checks that the output of openapi-generator-typescript-axios that
-    # is checked into version control is up-to-date.
-    env:
-      OPENAPI_SCHEMA: ./openapi/specs/v0.yaml
-      GENERATOR_IGNORE_FILE: ./frontends/api/.openapi-generator-ignore
-      GENERATOR_OUTPUT_DIR_CI: ./frontends/api/tmp/generated/v0
-      GENERATOR_OUTPUT_DIR_VC: ./frontends/api/src/generated/v0
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: "^24.0.0"
-          cache: yarn
-          cache-dependency-path: yarn.lock
-
-      - name: Install dependencies
-        run: yarn install --immutable
-
-      - name: Generate Fresh API Client
-        uses: openapi-generators/openapitools-generator-action@515e8d70646f72de54d61c7f54b9447b7a1176f0 # v1
-        with:
-          generator: typescript-axios
-          openapi-file: $OPENAPI_SCHEMA
-          generator-tag: v7.25.0
-          command-args: |
-            --output $GENERATOR_OUTPUT_DIR_CI \
-            --ignore-file-override $GENERATOR_IGNORE_FILE \
-            -c scripts/openapi-configs/typescript-axios-v0.yaml
-
-      - name: Format freshly generated client
-        run: npx prettier $GENERATOR_OUTPUT_DIR_CI/**/*.ts --no-semi --write
-
-      - name: Check VC client is up-to-date
-        run: |
-          diff $GENERATOR_OUTPUT_DIR_CI $GENERATOR_OUTPUT_DIR_VC \
-          || { echo "OpenAPI spec is out of date. Please regenerate via ./scripts/generate_openapi.sh"; exit 1; }
-
-  openapi-generated-client-check-v1:
-    # This job checks that the output of openapi-generator-typescript-axios that
-    # is checked into version control is up-to-date.
-    env:
-      OPENAPI_SCHEMA: ./openapi/specs/v1.yaml
-      GENERATOR_IGNORE_FILE: ./frontends/api/.openapi-generator-ignore
-      GENERATOR_OUTPUT_DIR_CI: ./frontends/api/tmp/generated/v1
-      GENERATOR_OUTPUT_DIR_VC: ./frontends/api/src/generated/v1
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: "^24.0.0"
-          cache: yarn
-          cache-dependency-path: yarn.lock
-
-      - name: Install dependencies
-        run: yarn install --immutable
-
-      - name: Generate Fresh API Client
-        uses: openapi-generators/openapitools-generator-action@515e8d70646f72de54d61c7f54b9447b7a1176f0 # v1
-        with:
-          generator: typescript-axios
-          openapi-file: $OPENAPI_SCHEMA
-          generator-tag: v7.25.0
-          command-args: |
-            --output $GENERATOR_OUTPUT_DIR_CI \
-            --ignore-file-override $GENERATOR_IGNORE_FILE \
-            -c scripts/openapi-configs/typescript-axios-v1.yaml
-
-      - name: Format freshly generated client
-        run: npx prettier $GENERATOR_OUTPUT_DIR_CI/**/*.ts --no-semi --write
-
-      - name: Check VC client is up-to-date
-        run: |
-          diff $GENERATOR_OUTPUT_DIR_CI $GENERATOR_OUTPUT_DIR_VC \
-          || { echo "OpenAPI spec is out of date. Please regenerate via ./scripts/generate_openapi.sh"; exit 1; }
-
   # ONE required status check standing for this whole workflow.
   #
   # GitHub's required status checks take an exact list of context names -- no
@@ -375,8 +293,6 @@ jobs:
       - build-nextjs-container
       - build-storybook
       - api-clients-released
-      - openapi-generated-client-check-v0
-      - openapi-generated-client-check-v1
     # Without this the gate is skipped when a dependency fails, and a skipped required
     # check leaves the PR pending rather than failing it.
     if: always()

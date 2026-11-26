@@ -7,6 +7,7 @@ import {
   getBestResourceStartDate,
   getLearningResourcePrices,
   getResourceLanguage,
+  isPracticeProblem,
   resourceContentFilesImageSrc,
   showStartAnytime,
 } from "ol-utilities"
@@ -19,6 +20,11 @@ import type {
 
 const getMetadata = (resource: LearningResource): MetadataItem[] => {
   const items: MetadataItem[] = []
+  // a problem has no start or format; its size is its parts
+  if (isPracticeProblem(resource)) {
+    const parts = resource.practice_problem.parts.length
+    return parts ? [{ label: "Parts", value: parts }] : []
+  }
   if (resource.resource_type === ResourceTypeEnum.LearningPath) {
     items.push({ label: "Items", value: resource.learning_path.item_count })
   }
@@ -47,6 +53,9 @@ const certificateType = (resource: LearningResource) =>
     : resource.certification_type.name || "Certificate"
 
 const getPrice = (resource: LearningResource): PricePanel => {
+  // a problem is something to practice, not something to buy or enroll in:
+  // its card has no price panel
+  if (isPracticeProblem(resource)) return { tone: "neutral" }
   const prices = getLearningResourcePrices(resource)
   if (!resource.free) {
     return {
@@ -69,6 +78,21 @@ const getPrice = (resource: LearningResource): PricePanel => {
   return freePanel({ license })
 }
 
+/**
+ * What a practice problem without a figure shows in its image's place: the
+ * problem set it is from over its topic (or its number).
+ */
+const getPlaceholderDetails = (
+  resource: LearningResource,
+): ResourceCardContent["placeholderDetails"] => {
+  if (!isPracticeProblem(resource)) return undefined
+  const problem = resource.practice_problem
+  const value =
+    problem.topics[0] || (problem.number ? `Problem ${problem.number}` : "")
+  if (!value) return undefined
+  return { label: problem.document_title || undefined, value }
+}
+
 const learningResourceCardContent = (
   resource: LearningResource,
 ): ResourceCardContent => ({
@@ -76,6 +100,7 @@ const learningResourceCardContent = (
   typeLabel: resource.resource_category,
   parentCourseName: formattedParentCourseName(resource) ?? undefined,
   imageSrc: resource.image?.url ?? resourceContentFilesImageSrc(resource),
+  placeholderDetails: getPlaceholderDetails(resource),
   placeholderIcon:
     resource.resource_type === ResourceTypeEnum.Document ? (
       <RiFileCopy2Line />
