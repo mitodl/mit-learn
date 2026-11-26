@@ -123,7 +123,10 @@ const MoreFromPlaylist: React.FC<MoreFromPlaylistProps> = ({
 
   return (
     <>
-      <Styled.MoreFromTitle>More from {playlistLabel}</Styled.MoreFromTitle>
+      {/* A heading, so the cards aren't listed under "About this video". */}
+      <Styled.MoreFromTitle component="h2">
+        More from {playlistLabel}
+      </Styled.MoreFromTitle>
       {shorts ? (
         <ShortCards
           videos={videos}

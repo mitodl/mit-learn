@@ -111,6 +111,31 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
   // See: https://developers.google.com/search/docs/appearance/structured-data/video
   const structuredData = !isLoading ? buildVideoStructuredData(video) : null
 
+  // A short's player sits beside its description; other videos' sit above it.
+  const Player = isShort ? Styled.ShortPlayer : Styled.StyledVideoResourcePlayer
+  const player = (
+    <Player
+      ref={playerRef}
+      video={video}
+      videoId={videoId}
+      isLoading={isLoading}
+      videoTitleLabel={videoTitleLabel}
+      videoThumbnailAlt={videoThumbnailAlt}
+      startTime={startTime}
+    />
+  )
+  const description =
+    !isLoading && video?.description ? (
+      <Styled.DescriptionText
+        component="div"
+        id="video-description"
+        $short={isShort}
+        dangerouslySetInnerHTML={{
+          __html: addExternalLinkTargets(video.description),
+        }}
+      />
+    ) : null
+
   return (
     <Styled.PageWrapper>
       {structuredData && (
@@ -226,50 +251,18 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
           </Styled.VideoShareSection>
           {isShort ? (
             <Styled.ShortBody>
-              <Styled.ShortPlayer
-                ref={playerRef}
-                video={video}
-                videoId={videoId}
-                isLoading={isLoading}
-                videoTitleLabel={videoTitleLabel}
-                videoThumbnailAlt={videoThumbnailAlt}
-                startTime={startTime}
-              />
-              {video?.description && (
+              {player}
+              {description && (
                 <Styled.ShortAbout>
                   <Styled.AboutHeading>About this video</Styled.AboutHeading>
-                  <Styled.DescriptionText
-                    component="div"
-                    id="video-description"
-                    $short
-                    dangerouslySetInnerHTML={{
-                      __html: addExternalLinkTargets(video.description),
-                    }}
-                  />
+                  {description}
                 </Styled.ShortAbout>
               )}
             </Styled.ShortBody>
           ) : (
             <>
-              <Styled.StyledVideoResourcePlayer
-                ref={playerRef}
-                video={video}
-                videoId={videoId}
-                isLoading={isLoading}
-                videoTitleLabel={videoTitleLabel}
-                videoThumbnailAlt={videoThumbnailAlt}
-                startTime={startTime}
-              />
-
-              {!isLoading && video?.description && (
-                <Styled.DescriptionText
-                  component="div"
-                  id="video-description"
-                  dangerouslySetInnerHTML={{
-                    __html: addExternalLinkTargets(video.description),
-                  }}
-                />
-              )}
+              {player}
+              {description}
             </>
           )}
 

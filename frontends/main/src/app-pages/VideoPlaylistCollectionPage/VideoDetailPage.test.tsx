@@ -153,6 +153,10 @@ describe("VideoDetailPage", () => {
         videoDetailPath(siblings[i].id, 99, siblings[i].url_slug),
       )
     })
+    // A heading of its own, so the cards aren't under "About this video".
+    expect(
+      screen.getByRole("heading", { level: 2, name: /^More from / }),
+    ).toBeInTheDocument()
     // The rows used for regular videos aren't shown.
     expect(
       within(section).queryByRole("link", { name: /^Open video / }),

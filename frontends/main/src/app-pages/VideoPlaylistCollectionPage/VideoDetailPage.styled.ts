@@ -192,7 +192,9 @@ export const AboutHeading = styled.h2(({ theme }) => ({
 
 // ── "More from playlist" list ──
 
-export const MoreFromTitle = styled(Typography)(({ theme }) => ({
+export const MoreFromTitle = styled(Typography)<
+  Pick<TypographyProps, "component">
+>(({ theme }) => ({
   ...theme.typography.body3,
   fontWeight: theme.typography.fontWeightBold,
   textTransform: "uppercase",
