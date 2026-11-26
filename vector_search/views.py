@@ -875,9 +875,10 @@ class ContentFilesVectorSearchView(QdrantView):
                     )
                 except grpc.aio.AioRpcError as exc:
                     # Only a collection the caller named is their mistake. A
-                    # missing default collection is ours and stays a 500.
+                    # missing default collection is ours and stays a 500, even
+                    # when named (OCW sends collection_name=content_files).
                     if (
-                        collection_name_override
+                        collection_name != CONTENT_FILES_COLLECTION_NAME
                         and exc.code() == grpc.StatusCode.NOT_FOUND
                     ):
                         return Response(

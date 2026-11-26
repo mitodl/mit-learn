@@ -432,6 +432,27 @@ def test_content_file_vector_search_other_qdrant_errors_propagate(
 
 
 @pytest.mark.django_db(transaction=True)
+@pytest.mark.usefixtures("content_file_viewer")
+def test_content_file_vector_search_missing_named_default_collection_propagates(
+    client, mock_qdrant, mocker, settings
+):
+    """OCW names the default collection. If it's missing, that's ours, not a 400."""
+    # The constant is built at import, before conftest sets the test base name.
+    mocker.patch(
+        "vector_search.views.CONTENT_FILES_COLLECTION_NAME",
+        f"{settings.QDRANT_BASE_COLLECTION_NAME}.content_files",
+    )
+    exc = _qdrant_error(grpc.StatusCode.NOT_FOUND)
+    mock_qdrant.query_points.side_effect = exc
+
+    with pytest.raises(type(exc)):
+        client.get(
+            reverse("vector_search:v0:vector_content_files_search"),
+            data={"q": "test", "collection_name": "content_files"},
+        )
+
+
+@pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize(
     "exc",
     [
