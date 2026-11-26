@@ -71,3 +71,10 @@
 2026-11-10 PUT /api/v0/widget_lists/{id}/ removed the enum value `People` of the request property `widgets/items/widget_type` (media type: application/json)
 2026-11-10 PUT /api/v0/widget_lists/{id}/ removed the enum value `People` of the request property `widgets/items/widget_type` (media type: application/x-www-form-urlencoded)
 2026-11-10 PUT /api/v0/widget_lists/{id}/ removed the enum value `People` of the request property `widgets/items/widget_type` (media type: multipart/form-data)
+
+# Content file search passed any group_by and group_size straight to Qdrant.
+# A field Qdrant can't group on or a group_size below 1 returned a 500, and
+# now returns a 400 from validation.
+# https://github.com/mitodl/mit-learn/pull/4390
+2026-11-27 GET /api/v0/vector_content_files_search/ the `query` request parameter `group_by` was restricted to a list of enum values
+2026-11-27 GET /api/v0/vector_content_files_search/ for the `query` request parameter `group_size`, the min was set to `1.00`
