@@ -2,12 +2,16 @@ import React from "react"
 import user from "@testing-library/user-event"
 import { setMockResponse, urls, factories } from "api/test-utils"
 import { absoluteUrl, videoDetailPath } from "@/common/urls"
-import { renderWithProviders, screen } from "@/test-utils"
+import { renderWithProviders, screen, within } from "@/test-utils"
 import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import VideoDetailPage from "./VideoDetailPage"
 import { ResourceTypeEnum } from "api/v1"
 import type { VideoResource, VideoPlaylistResource } from "api/v1"
+import {
+  VIDEO_PLAYLIST_PAGE_SIZE,
+  VIDEO_SHORT_CATEGORY,
+} from "@/common/constants"
 
 jest.mock("@/common/useFeatureFlag")
 const mockedUseFeatureFlag = jest.mocked(useFeatureFlag)
@@ -48,18 +52,21 @@ const setupVideoApi = (video: VideoResource) => {
 }
 
 const setupItemsApi = (playlistId: number, items: VideoResource[]) => {
-  setMockResponse.get(urls.learningResources.items({ id: playlistId }), {
-    count: items.length,
-    next: null,
-    previous: null,
-    results: items.map((item, i) => ({
-      id: i + 1,
-      child: item.id,
-      parent: playlistId,
-      position: i + 1,
-      resource: item,
-    })),
-  })
+  setMockResponse.get(
+    `${urls.learningResources.items({ id: playlistId })}?limit=${VIDEO_PLAYLIST_PAGE_SIZE}`,
+    {
+      count: items.length,
+      next: null,
+      previous: null,
+      results: items.map((item, i) => ({
+        id: i + 1,
+        child: item.id,
+        parent: playlistId,
+        position: i + 1,
+        resource: item,
+      })),
+    },
+  )
 }
 
 // ── Default render helper ────────────────────────────────────────────────────
@@ -120,6 +127,91 @@ describe("VideoDetailPage", () => {
       "href",
       videoDetailPath(sibling.id, 99, sibling.url_slug),
     )
+  })
+
+  test("'more from this playlist' shows shorts as a grid of four cards", async () => {
+    const makeShort = () =>
+      makeVideo({ resource_category: VIDEO_SHORT_CATEGORY })
+    const [current, ...siblings] = Array.from({ length: 7 }, makeShort)
+    renderPage({
+      video: current,
+      playlistId: 99,
+      playlistItems: [current, ...siblings],
+    })
+
+    await screen.findByText(siblings[0].title)
+    const section = document.getElementById("more-from-playlist")!
+    const cards = within(section).getAllByRole("listitem")
+    expect(cards).toHaveLength(4)
+    cards.forEach((card, i) => {
+      expect(
+        within(card).getByRole("link", {
+          name: new RegExp(`^${siblings[i].title}`),
+        }),
+      ).toHaveAttribute(
+        "href",
+        videoDetailPath(siblings[i].id, 99, siblings[i].url_slug),
+      )
+    })
+    // A heading of its own, so the cards aren't under "About this video".
+    expect(
+      screen.getByRole("heading", { level: 2, name: /^More from / }),
+    ).toBeInTheDocument()
+    // The rows used for regular videos aren't shown.
+    expect(
+      within(section).queryByRole("link", { name: /^Open video / }),
+    ).not.toBeInTheDocument()
+    // 7 videos: the current one and four cards leave two unseen.
+    within(section).getByRole("link", { name: /^View all videos in / })
+  })
+
+  test("'more from this playlist' keeps rows when the current video is the playlist's only regular one", async () => {
+    const current = makeVideo()
+    const shorts = Array.from({ length: 3 }, () =>
+      makeVideo({ resource_category: VIDEO_SHORT_CATEGORY }),
+    )
+    renderPage({
+      video: current,
+      playlistId: 99,
+      playlistItems: [current, ...shorts],
+    })
+
+    const section = document.getElementById("more-from-playlist")!
+    for (const short of shorts) {
+      await within(section).findByRole("link", {
+        name: `Open video ${short.title}`,
+      })
+    }
+    expect(within(section).queryAllByRole("listitem")).toHaveLength(0)
+  })
+
+  test("a video short shows its description under 'About this video'", async () => {
+    const video = makeVideo({
+      resource_category: VIDEO_SHORT_CATEGORY,
+      description: "<p>How rubber acts like a neuron.</p>",
+    })
+    renderPage({ video })
+
+    const heading = await screen.findByRole("heading", {
+      name: "About this video",
+    })
+    expect(heading.parentElement).toHaveTextContent(
+      "How rubber acts like a neuron.",
+    )
+    // The description still describes the player.
+    expect(
+      screen.getByRole("region", { name: /Video player/ }),
+    ).toHaveAccessibleDescription("How rubber acts like a neuron.")
+  })
+
+  test("a regular video has no 'About this video' heading", async () => {
+    const video = makeVideo({ description: "<p>A lecture.</p>" })
+    renderPage({ video })
+
+    await screen.findByText("A lecture.")
+    expect(
+      screen.queryByRole("heading", { name: "About this video" }),
+    ).not.toBeInTheDocument()
   })
 
   test("renders the video title once data is loaded", async () => {

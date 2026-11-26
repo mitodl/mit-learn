@@ -1,9 +1,15 @@
 import React from "react"
-import { setMockResponse, urls, factories } from "api/test-utils"
+import { makeRequest, setMockResponse, urls, factories } from "api/test-utils"
 import { videoDetailPath } from "@/common/urls"
-import { renderWithProviders, screen } from "@/test-utils"
+import { renderWithProviders, screen, user, within } from "@/test-utils"
 import VideoPage from "./VideoPlaylistCollectionPage"
 import { ResourceTypeEnum } from "api/v1"
+import type { VideoResource } from "api/v1"
+import {
+  VIDEO_PLAYLIST_PAGE_SIZE as VIDEOS_PAGE_SIZE,
+  VIDEO_SHORT_CATEGORY,
+} from "@/common/constants"
+import { formatDurationClockTime } from "ol-utilities"
 
 jest.mock("next-nprogress-bar", () => ({
   useRouter: () => ({}),
@@ -22,13 +28,13 @@ const makeSeriesPlaylist = () =>
     offered_by: { code: "ocw", name: "OCW", channel_url: null },
   })
 
-const makeVideo = (overrides: { title?: string } = {}) =>
+const makeVideo = (
+  overrides: { title?: string; resource_category?: string } = {},
+) =>
   factories.learningResources.resource({
     resource_type: ResourceTypeEnum.Video,
     ...overrides,
   })
-
-const VIDEOS_PAGE_SIZE = 10
 
 const setupApis = ({
   playlistId,
@@ -253,6 +259,151 @@ describe("VideoPage", () => {
       expect(titleEls[0].closest("a")).toHaveAttribute(
         "href",
         videoDetailPath(featured.id, playlist.id, featured.url_slug),
+      )
+    })
+  })
+
+  describe("shorts playlist", () => {
+    const makeShort = (title: string) =>
+      makeVideo({ title, resource_category: VIDEO_SHORT_CATEGORY })
+
+    test("shows every short as a card in a grid, without a featured video", async () => {
+      const playlist = makePlaylist()
+      const shorts = [makeShort("Short One"), makeShort("Short Two")]
+      setupApis({ playlistId: playlist.id, videos: shorts, playlist })
+
+      renderWithProviders(<VideoPage playlistId={playlist.id} />)
+
+      const grid = await screen.findByRole("region", { name: "Videos" })
+      const cards = within(grid).getAllByRole("listitem")
+      expect(cards).toHaveLength(2)
+      shorts.forEach((short, i) => {
+        // Each short appears once: in its card, not also as a featured video.
+        expect(screen.getAllByText(short.title)).toHaveLength(1)
+        // Named by its title, then its duration.
+        expect(
+          within(cards[i]).getByRole("link", {
+            name: `${short.title} (${formatDurationClockTime((short as VideoResource).video!.duration!)})`,
+          }),
+        ).toHaveAttribute(
+          "href",
+          videoDetailPath(short.id, playlist.id, short.url_slug),
+        )
+      })
+    })
+
+    test("ends with the grid, without other collections", async () => {
+      const playlist = makePlaylist()
+      setupApis({
+        playlistId: playlist.id,
+        videos: [makeShort("Short One")],
+        playlist,
+        similarCollections: [
+          factories.learningResources.videoPlaylist({
+            title: "MIT Research Highlights",
+          }),
+        ],
+      })
+
+      renderWithProviders(<VideoPage playlistId={playlist.id} />)
+
+      await screen.findByRole("region", { name: "Videos" })
+      expect(screen.queryByText("Other Collections")).not.toBeInTheDocument()
+      // Nor are they fetched.
+      expect(
+        makeRequest.mock.calls.some(([args]) =>
+          args.url.startsWith(
+            urls.learningResources.vectorSimilar({ id: playlist.id }),
+          ),
+        ),
+      ).toBe(false)
+    })
+
+    test("loads the first row of thumbnails eagerly, the first one first", async () => {
+      const playlist = makePlaylist()
+      setupApis({
+        playlistId: playlist.id,
+        videos: Array.from({ length: 6 }, (_, i) =>
+          makeShort(`Short ${i + 1}`),
+        ),
+        playlist,
+      })
+
+      renderWithProviders(<VideoPage playlistId={playlist.id} />)
+
+      const grid = await screen.findByRole("region", { name: "Videos" })
+      const images = grid.querySelectorAll("img")
+      expect(Array.from(images, (img) => img.getAttribute("loading"))).toEqual([
+        "eager",
+        "eager",
+        "eager",
+        "eager",
+        "lazy",
+        "lazy",
+      ])
+      expect(
+        Array.from(images, (img) => img.getAttribute("fetchpriority")),
+      ).toEqual(["high", null, null, null, null, null])
+    })
+
+    test("a playlist mixing shorts and regular videos keeps the regular layout", async () => {
+      const playlist = makePlaylist()
+      const featured = makeVideo({ title: "Featured Video" })
+      setupApis({
+        playlistId: playlist.id,
+        videos: [featured, makeShort("A Short")],
+        playlist,
+      })
+
+      renderWithProviders(<VideoPage playlistId={playlist.id} />)
+
+      await screen.findByText("A Short")
+      // desktop-title + mobile-title spans of the featured video
+      expect(screen.getAllByText(featured.title)).toHaveLength(2)
+      expect(
+        screen.queryByRole("region", { name: "Videos" }),
+      ).not.toBeInTheDocument()
+    })
+
+    test("keeps the grid when 'Load more' brings in a regular video", async () => {
+      const playlist = makePlaylist()
+      const firstPage = Array.from({ length: VIDEOS_PAGE_SIZE }, (_, i) =>
+        makeShort(`Short ${i + 1}`),
+      )
+      const regular = makeVideo({ title: "Regular Video" })
+      const itemsUrl = urls.learningResources.items({ id: playlist.id })
+      const nextUrl = `${itemsUrl}?limit=${VIDEOS_PAGE_SIZE}&offset=${VIDEOS_PAGE_SIZE}`
+      const relationship = (
+        resource: ReturnType<typeof makeVideo>,
+        position: number,
+      ) => ({
+        id: position,
+        child: resource.id,
+        parent: playlist.id,
+        position,
+        resource,
+      })
+      setupApis({ playlistId: playlist.id, videos: [], playlist })
+      setMockResponse.get(`${itemsUrl}?limit=${VIDEOS_PAGE_SIZE}`, {
+        count: VIDEOS_PAGE_SIZE + 1,
+        next: nextUrl,
+        previous: null,
+        results: firstPage.map((short, i) => relationship(short, i + 1)),
+      })
+      setMockResponse.get(nextUrl, {
+        count: VIDEOS_PAGE_SIZE + 1,
+        next: null,
+        previous: null,
+        results: [relationship(regular, VIDEOS_PAGE_SIZE + 1)],
+      })
+
+      renderWithProviders(<VideoPage playlistId={playlist.id} />)
+
+      const grid = await screen.findByRole("region", { name: "Videos" })
+      await user.click(screen.getByRole("button", { name: /Load more videos/ }))
+      await within(grid).findByText(regular.title)
+      expect(within(grid).getAllByRole("listitem")).toHaveLength(
+        VIDEOS_PAGE_SIZE + 1,
       )
     })
   })

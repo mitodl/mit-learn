@@ -11,6 +11,7 @@ import VideoPlaylistCollectionPage from "@/app-pages/VideoPlaylistCollectionPage
 import { notFound, redirect } from "next/navigation"
 import { parseResourceId } from "@/common/slugs"
 import { carrySearchParams, videoPlaylistPath } from "@/common/urls"
+import { VIDEO_PLAYLIST_PAGE_SIZE } from "@/common/constants"
 
 type Props = AppPageProps<"/video-playlist/[id]/[slug]">
 
@@ -68,9 +69,12 @@ const Page: React.FC<Props> = async ({ params, searchParams }) => {
     redirect(carrySearchParams(canonical, await searchParams))
   }
 
-  await queryClient.prefetchQuery(
-    learningResourceQueries.items(playlistId, {
+  // The page's first page of videos, which decides a shorts playlist, so the
+  // server renders the right layout rather than switching once it loads.
+  await queryClient.prefetchInfiniteQuery(
+    learningResourceQueries.infiniteItems(playlistId, {
       learning_resource_id: playlistId,
+      limit: VIDEO_PLAYLIST_PAGE_SIZE,
     }),
   )
 

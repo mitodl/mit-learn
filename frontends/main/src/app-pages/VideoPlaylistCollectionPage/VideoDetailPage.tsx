@@ -16,11 +16,18 @@ import { formatDurationClockTime } from "ol-utilities"
 import { absoluteUrl, videoDetailPath, videoPlaylistPath } from "@/common/urls"
 import { buildVideoStructuredData } from "./videoStructuredData"
 import type { VideoPlayerHandle } from "@/page-components/VideoPlayer/VideoResourcePlayer"
-import { addExternalLinkTargets } from "@/common/utils"
+import { addExternalLinkTargets, isOcwPlaylist } from "@/common/utils"
 import * as Styled from "./VideoDetailPage.styled"
+import { isShortsList } from "./ShortsGrid"
+import {
+  VIDEO_PLAYLIST_PAGE_SIZE,
+  VIDEO_SHORT_CATEGORY,
+} from "@/common/constants"
 
 /** How many sibling videos the "More from" list shows at most. */
 const MORE_FROM_LIMIT = 5
+/** Shorts show as cards: one row of 4 on desktop, two rows of 2 on phones. */
+const MORE_FROM_SHORTS_LIMIT = 4
 
 type VideoDetailPageProps = {
   videoId: number
@@ -46,6 +53,8 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
   const { data: playlistItems, isLoading: itemsLoading } = useQuery({
     ...learningResourceQueries.items(playlistId ?? 0, {
       learning_resource_id: playlistId ?? 0,
+      // The playlist page's first page, which decides a shorts playlist.
+      limit: VIDEO_PLAYLIST_PAGE_SIZE,
     }),
     enabled: !!playlistId,
   })
@@ -61,17 +70,18 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
 
   const playlistLabel = playlist?.title || "Video Collection"
 
-  const otherVideos = (playlistItems ?? [])
-    .filter(
-      (item): item is VideoResource =>
-        item.resource_type === VideoResourceResourceTypeEnum.Video &&
-        item.id !== videoId,
-    )
-    .slice(0, MORE_FROM_LIMIT)
-
-  const totalPlaylistVideos = (playlistItems ?? []).filter(
-    (item) => item.resource_type === VideoResourceResourceTypeEnum.Video,
-  ).length
+  const playlistVideos = (playlistItems ?? []).filter(
+    (item): item is VideoResource =>
+      item.resource_type === VideoResourceResourceTypeEnum.Video,
+  )
+  const totalPlaylistVideos = playlistVideos.length
+  // Same rule as the playlist page, applied to the same first page of the
+  // playlist (the current video included), so both pages agree on the layout.
+  const isShortsPlaylist =
+    !isOcwPlaylist(playlist) && isShortsList(playlistVideos)
+  const otherVideos = playlistVideos
+    .filter((item) => item.id !== videoId)
+    .slice(0, isShortsPlaylist ? MORE_FROM_SHORTS_LIMIT : MORE_FROM_LIMIT)
 
   const isLoading = videoLoading || (!!playlistId && playlistLoading)
 
@@ -79,6 +89,9 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
     .map((t) => t.name)
     .filter(Boolean)
     .join(" · ")
+
+  // A vertical short gets its player beside the description, not above it.
+  const isShort = video?.resource_category === VIDEO_SHORT_CATEGORY
 
   const videoTitleLabel = video?.title?.trim() || "Untitled video"
   const durationLabel = duration || "Unknown duration"
@@ -97,6 +110,31 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
   // VideoObject JSON-LD for Google search indexing.
   // See: https://developers.google.com/search/docs/appearance/structured-data/video
   const structuredData = !isLoading ? buildVideoStructuredData(video) : null
+
+  // A short's player sits beside its description; other videos' sit above it.
+  const Player = isShort ? Styled.ShortPlayer : Styled.StyledVideoResourcePlayer
+  const player = (
+    <Player
+      ref={playerRef}
+      video={video}
+      videoId={videoId}
+      isLoading={isLoading}
+      videoTitleLabel={videoTitleLabel}
+      videoThumbnailAlt={videoThumbnailAlt}
+      startTime={startTime}
+    />
+  )
+  const description =
+    !isLoading && video?.description ? (
+      <Styled.DescriptionText
+        component="div"
+        id="video-description"
+        $short={isShort}
+        dangerouslySetInnerHTML={{
+          __html: addExternalLinkTargets(video.description),
+        }}
+      />
+    ) : null
 
   return (
     <Styled.PageWrapper>
@@ -158,7 +196,7 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
           {isLoading ? (
             <Skeleton width={120} height={18} style={{ marginBottom: 8 }} />
           ) : playlist ? (
-            <Styled.CategoryLabel href={playlist.learn_url}>
+            <Styled.CategoryLabel href={playlist.learn_url} $short={isShort}>
               {playlistLabel}
             </Styled.CategoryLabel>
           ) : null}
@@ -182,7 +220,14 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
                 <Styled.DurationText>
                   {duration && <span>{duration}</span>}
                 </Styled.DurationText>
-                <Styled.TopicText>{topicNames}</Styled.TopicText>
+                <Styled.TopicText $short={isShort}>
+                  {isShort
+                    ? topics
+                        .map((t) => t.name)
+                        .filter(Boolean)
+                        .join(" - ")
+                    : topicNames}
+                </Styled.TopicText>
               </Styled.MetaRow>
             )}
 
@@ -204,24 +249,21 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
               />
             )}
           </Styled.VideoShareSection>
-          <Styled.StyledVideoResourcePlayer
-            ref={playerRef}
-            video={video}
-            videoId={videoId}
-            isLoading={isLoading}
-            videoTitleLabel={videoTitleLabel}
-            videoThumbnailAlt={videoThumbnailAlt}
-            startTime={startTime}
-          />
-
-          {!isLoading && video?.description && (
-            <Styled.DescriptionText
-              component="div"
-              id="video-description"
-              dangerouslySetInnerHTML={{
-                __html: addExternalLinkTargets(video.description),
-              }}
-            />
+          {isShort ? (
+            <Styled.ShortBody>
+              {player}
+              {description && (
+                <Styled.ShortAbout>
+                  <Styled.AboutHeading>About this video</Styled.AboutHeading>
+                  {description}
+                </Styled.ShortAbout>
+              )}
+            </Styled.ShortBody>
+          ) : (
+            <>
+              {player}
+              {description}
+            </>
           )}
 
           {!isLoading && !video?.description && (
@@ -242,6 +284,7 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
                     : videoPlaylistPath(playlistId, undefined)
                 }
                 videos={otherVideos}
+                shorts={isShortsPlaylist}
                 totalVideos={totalPlaylistVideos}
                 isLoading={itemsLoading}
               />

@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation"
 import { factories, setMockResponse, urls } from "api/test-utils"
+import { VIDEO_PLAYLIST_PAGE_SIZE } from "@/common/constants"
 import Page, { generateMetadata } from "./page"
 
 jest.mock("@/app/getQueryClient", () => {
@@ -39,8 +40,9 @@ const mockPlaylist = (slug = "great-talks") => {
     urls.videoPlaylists.details({ id: playlist.id }),
     playlist,
   )
+  // The page's first page of videos, prefetched for the layout.
   setMockResponse.get(
-    urls.learningResources.items({ id: playlist.id }),
+    `${urls.learningResources.items({ id: playlist.id })}?limit=${VIDEO_PLAYLIST_PAGE_SIZE}`,
     factories.learningResources.resources({ count: 0 }),
   )
   return playlist

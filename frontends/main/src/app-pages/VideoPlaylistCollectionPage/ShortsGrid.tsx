@@ -1,0 +1,188 @@
+import React from "react"
+import Image from "next/image"
+import Link from "next/link"
+import { styled } from "ol-components"
+import { VisuallyHidden } from "@mitodl/smoot-design"
+import { formatDurationClockTime, useImageWithFallback } from "ol-utilities"
+import type { VideoResource } from "api/v1"
+import { VIDEO_SHORT_CATEGORY } from "@/common/constants"
+import VideoContainer from "./VideoContainer"
+import { DurationBadge, PlayIcon, PlayOverlay } from "./shared.styled"
+
+const PLACEHOLDER_IMG = "/images/mit-open-learning-logo.svg"
+
+/**
+ * Four vertical cards per row on desktop (234px wide in the 1080px column),
+ * three on tablets, two on phones.
+ */
+const Grid = styled.ul(({ theme }) => ({
+  listStyle: "none",
+  margin: 0,
+  padding: 0,
+  display: "grid",
+  gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+  gap: "56px 48px",
+  [theme.breakpoints.down("lg")]: {
+    gap: "40px 24px",
+  },
+  [theme.breakpoints.down("md")]: {
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+  },
+  [theme.breakpoints.down("sm")]: {
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: "24px 16px",
+  },
+}))
+
+const CardLink = styled(Link)(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: "8px",
+  textDecoration: "none",
+  "&:hover .short-title, &:focus-visible .short-title": {
+    color: theme.custom.colors.red,
+  },
+  "&:hover .play-overlay, &:focus-visible .play-overlay": {
+    opacity: 1,
+  },
+}))
+
+const Thumbnail = styled.div(({ theme }) => ({
+  position: "relative",
+  width: "100%",
+  aspectRatio: "9/16",
+  overflow: "hidden",
+  borderRadius: "8px",
+  backgroundColor: theme.custom.colors.black,
+}))
+
+const Title = styled.p(({ theme }) => ({
+  ...theme.typography.subtitle2,
+  color: theme.custom.colors.darkGray2,
+  margin: 0,
+  overflow: "hidden",
+  display: "-webkit-box",
+  WebkitLineClamp: 2,
+  WebkitBoxOrient: "vertical",
+  transition: "color 0.2s",
+}))
+
+/** Flush with the card's bottom-right corner, which it rounds to match. */
+const ShortDurationBadge = styled(DurationBadge)({
+  lineHeight: "16px",
+  borderBottomRightRadius: "8px",
+})
+
+const ShortCard: React.FC<{
+  video: VideoResource
+  href: string
+  /** Load the thumbnail right away, for cards that start in view. */
+  eager?: boolean
+  /** Ask for this thumbnail first: the page's largest image. */
+  highPriority?: boolean
+}> = ({ video, href, eager, highPriority }) => {
+  const {
+    src: imageUrl,
+    unoptimized,
+    onError,
+  } = useImageWithFallback(video.image?.url, PLACEHOLDER_IMG)
+  // The fallback is a wide logo: shown whole, small and white on the black
+  // card, rather than cropped to fill it.
+  const isPlaceholder = imageUrl === PLACEHOLDER_IMG
+  const duration = video.video?.duration
+    ? formatDurationClockTime(video.video.duration)
+    : null
+  return (
+    <li>
+      <CardLink href={href}>
+        {/* Hidden from assistive tech: the title names the link, and the
+            duration is read after it rather than before. */}
+        <Thumbnail aria-hidden>
+          <Image
+            src={imageUrl}
+            alt=""
+            fill
+            sizes="(max-width: 600px) 50vw, (max-width: 900px) 33vw, 240px"
+            style={
+              isPlaceholder
+                ? {
+                    objectFit: "contain",
+                    padding: "0 20%",
+                    boxSizing: "border-box",
+                    filter: "brightness(0) invert(1)",
+                  }
+                : { objectFit: "cover" }
+            }
+            unoptimized={unoptimized}
+            onError={onError}
+            loading={eager ? "eager" : "lazy"}
+            fetchPriority={highPriority ? "high" : undefined}
+          />
+          {duration && <ShortDurationBadge>{duration}</ShortDurationBadge>}
+          <PlayOverlay className="play-overlay">
+            <PlayIcon />
+          </PlayOverlay>
+        </Thumbnail>
+        <Title className="short-title">
+          {video.title}
+          {duration && <VisuallyHidden> ({duration})</VisuallyHidden>}
+        </Title>
+      </CardLink>
+    </li>
+  )
+}
+
+type ShortCardsProps = {
+  videos: VideoResource[]
+  getHref: (video: VideoResource) => string
+  /**
+   * Whether the first row starts in view, so its thumbnails load right away
+   * and the first, the page's largest image, is fetched first.
+   */
+  aboveFold?: boolean
+}
+
+/** The desktop row: four cards. */
+const FIRST_ROW = 4
+
+/**
+ * Whether these are all vertical shorts (e.g. MIT Pulse), which show as 9:16
+ * cards. 16:9 frames would crop their thumbnails to a thin strip.
+ */
+const isShortsList = (videos: VideoResource[]) =>
+  videos.length > 0 &&
+  videos.every((video) => video.resource_category === VIDEO_SHORT_CATEGORY)
+
+/** A grid of 9:16 cards, sized to its container. */
+const ShortCards: React.FC<ShortCardsProps> = ({
+  videos,
+  getHref,
+  aboveFold = false,
+}) => (
+  <Grid>
+    {videos.map((video, i) => (
+      <ShortCard
+        key={video.id}
+        video={video}
+        href={getHref(video)}
+        eager={aboveFold && i < FIRST_ROW}
+        highPriority={aboveFold && i === 0}
+      />
+    ))}
+  </Grid>
+)
+
+/**
+ * A playlist page's videos when they are all shorts. Regular playlists use
+ * `FeaturedVideo` and `VideoCollection` instead.
+ */
+const ShortsGrid: React.FC<ShortCardsProps> = (props) => (
+  <section aria-label="Videos">
+    <VideoContainer>
+      <ShortCards aboveFold {...props} />
+    </VideoContainer>
+  </section>
+)
+
+export { ShortCards, isShortsList }
+export default ShortsGrid

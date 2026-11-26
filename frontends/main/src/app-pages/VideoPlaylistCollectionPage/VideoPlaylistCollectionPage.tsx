@@ -21,10 +21,15 @@ import FeaturedVideo from "./FeaturedVideo"
 import VideoCollection from "./VideoCollection"
 import RelatedPlaylist from "./RelatedPlaylist"
 import VideoContainer from "./VideoContainer"
+import ShortsGrid, { isShortsList } from "./ShortsGrid"
+import { VIDEO_PLAYLIST_PAGE_SIZE } from "@/common/constants"
 
-const Page = styled.div(({ theme }) => ({
+const Page = styled.div<{ $shorts?: boolean }>(({ theme, $shorts }) => ({
   backgroundColor: theme.custom.colors.lightGray1,
   minHeight: "100vh",
+  // A shorts playlist ends with its grid (and "Load more"), not related
+  // playlists, so it needs its own space above the footer.
+  ...($shorts && { paddingBottom: "80px" }),
 }))
 
 const EpisodeListSection = styled.section(({ theme }) => ({
@@ -48,15 +53,26 @@ const ShowMoreContainer = styled("div")({
   justifyContent: "center",
 })
 
-const ShowMoreButton = styled(Button)(({ theme }) => ({
+const ShowMoreButton = styled(Button, {
+  shouldForwardProp: (prop) => prop !== "$shorts",
+})<{ $shorts?: boolean }>(({ theme, $shorts }) => ({
   minWidth: "140px",
   margin: "40px 0 0px 0",
+  // Shorts playlists: the "bordered" button, 48px tall with dark red text.
+  ...($shorts && {
+    height: "48px",
+    padding: "0 32px",
+    borderWidth: "1px",
+    color: theme.custom.colors.darkRed,
+    "&:hover:not(:disabled)": {
+      color: theme.custom.colors.darkRed,
+    },
+  }),
   [theme.breakpoints.down("sm")]: {
     width: "100%",
   },
 }))
 
-const VIDEOS_PAGE_SIZE = 10
 type VideoPlaylistCollectionPageProps = {
   playlistId: number
 }
@@ -81,20 +97,9 @@ const VideoPlaylistCollectionPage: React.FC<
     fetchNextPage,
   } = useInfiniteLearningResourceItems(playlistId, {
     learning_resource_id: playlistId,
-    limit: VIDEOS_PAGE_SIZE,
+    limit: VIDEO_PLAYLIST_PAGE_SIZE,
   })
 
-  const { data: similarData, isLoading: similarLoading } = useQuery({
-    ...learningResourceQueries.vectorSimilar({
-      id: playlistId,
-      limit: 6,
-      resource_type: [ResourceTypeEnum.VideoPlaylist],
-    }),
-  })
-
-  if (isError) {
-    return notFound()
-  }
   const isLoading = playlistLoading || itemsLoading
   const totalCount = itemsData?.pages[0]?.count ?? 0
   const videos = (
@@ -106,6 +111,29 @@ const VideoPlaylistCollectionPage: React.FC<
       item.resource_type === VideoResourceResourceTypeEnum.Video,
   )
   const playlistType = isOcwPlaylist(playlist)
+  // Decided from the first page only, so the layout doesn't switch when "Load
+  // more" brings in later videos. The video detail page uses the same page.
+  const firstPageIds = new Set(
+    itemsData?.pages[0]?.results.map((rel) => rel.resource.id),
+  )
+  const firstPageVideos = videos.filter((video) => firstPageIds.has(video.id))
+  const isShortsPlaylist = !playlistType && isShortsList(firstPageVideos)
+
+  // A shorts playlist doesn't show related playlists, so they're only fetched
+  // once the playlist and its first page show it isn't one.
+  // Pending, not loading: a query waiting to be enabled still shows skeletons.
+  const { data: similarData, isPending: similarLoading } = useQuery({
+    ...learningResourceQueries.vectorSimilar({
+      id: playlistId,
+      limit: 6,
+      resource_type: [ResourceTypeEnum.VideoPlaylist],
+    }),
+    enabled: !isLoading && !isShortsPlaylist,
+  })
+
+  if (isError) {
+    return notFound()
+  }
 
   const totalVideoSeconds = videos.reduce((acc, video) => {
     const duration = video.video?.duration ?? ""
@@ -126,15 +154,18 @@ const VideoPlaylistCollectionPage: React.FC<
     .filter((resource) => resource.id !== playlistId)
     .slice(0, 6)
   return (
-    <Page>
+    <Page $shorts={isShortsPlaylist}>
       <VideoPageHeader
         playlist={playlist}
         isSeries={playlistType}
+        isShorts={isShortsPlaylist}
         totalVideos={totalCount}
       />
 
       {isLoading ? (
         <Skeleton variant="rectangular" width="100%" height={460} />
+      ) : isShortsPlaylist ? (
+        <ShortsGrid videos={videos} getHref={getVideoHref} />
       ) : videos.length > 0 ? (
         <FeaturedVideo
           video={videos[0]}
@@ -144,7 +175,7 @@ const VideoPlaylistCollectionPage: React.FC<
           totalTime={totalTime}
         />
       ) : null}
-      {!playlistType && (
+      {!playlistType && !isShortsPlaylist && (
         <VideoCollection
           videos={videos.slice(1)} // 0th video is featured prominently
           isLoading={isLoading}
@@ -170,7 +201,9 @@ const VideoPlaylistCollectionPage: React.FC<
       {hasNextPage && (
         <ShowMoreContainer>
           <ShowMoreButton
-            variant="secondary"
+            variant={isShortsPlaylist ? "bordered" : "secondary"}
+            size={isShortsPlaylist ? "large" : "medium"}
+            $shorts={isShortsPlaylist}
             onClick={() => fetchNextPage()}
             disabled={isFetchingNextPage}
           >
@@ -183,10 +216,12 @@ const VideoPlaylistCollectionPage: React.FC<
           No videos found.
         </Typography>
       )}
-      <RelatedPlaylist
-        collections={otherCollections}
-        isLoading={similarLoading}
-      />
+      {!isShortsPlaylist && (
+        <RelatedPlaylist
+          collections={otherCollections}
+          isLoading={similarLoading}
+        />
+      )}
     </Page>
   )
 }

@@ -47,3 +47,9 @@ export const DigitalCredentialsFAQLink =
  * The resource_category of vertical (9:16) video shorts, such as MIT Pulse.
  */
 export const VIDEO_SHORT_CATEGORY = "Video Short"
+
+/**
+ * How many videos a playlist page loads at a time. The video page fetches the
+ * same first page, so both decide a shorts playlist from the same videos.
+ */
+export const VIDEO_PLAYLIST_PAGE_SIZE = 10

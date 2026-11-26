@@ -6,6 +6,7 @@ import type { VideoResource } from "api/v1"
 import { videoDetailPath } from "@/common/urls"
 import { stripAnchorTags } from "@/common/utils"
 import * as Styled from "./VideoDetailPage.styled"
+import { ShortCards } from "./ShortsGrid"
 
 type MoreFromPlaylistProps = {
   playlistId: number
@@ -15,6 +16,11 @@ type MoreFromPlaylistProps = {
   playlistHref: string
   /** Sibling videos to list, already filtered and capped by the caller. */
   videos: VideoResource[]
+  /**
+   * Whether the playlist is a shorts playlist, decided by the caller from the
+   * whole playlist rather than these few siblings.
+   */
+  shorts?: boolean
   /** Total videos in the playlist, used to decide whether to link to the rest. */
   totalVideos: number
   isLoading: boolean
@@ -83,6 +89,7 @@ const MoreFromPlaylist: React.FC<MoreFromPlaylistProps> = ({
   playlistLabel,
   playlistHref,
   videos,
+  shorts = false,
   totalVideos,
   isLoading,
 }) => {
@@ -116,15 +123,27 @@ const MoreFromPlaylist: React.FC<MoreFromPlaylistProps> = ({
 
   return (
     <>
-      <Styled.MoreFromTitle>More from {playlistLabel}</Styled.MoreFromTitle>
-      <Styled.MoreFromList>
-        {videos.map((video) => (
-          <React.Fragment key={video.id}>
-            <MoreFromPlaylistItem video={video} playlistId={playlistId} />
-            <Styled.SpacerBlock className="spacer-block" />
-          </React.Fragment>
-        ))}
-      </Styled.MoreFromList>
+      {/* A heading, so the cards aren't listed under "About this video". */}
+      <Styled.MoreFromTitle component="h2">
+        More from {playlistLabel}
+      </Styled.MoreFromTitle>
+      {shorts ? (
+        <ShortCards
+          videos={videos}
+          getHref={(video) =>
+            videoDetailPath(video.id, playlistId, video.url_slug)
+          }
+        />
+      ) : (
+        <Styled.MoreFromList>
+          {videos.map((video) => (
+            <React.Fragment key={video.id}>
+              <MoreFromPlaylistItem video={video} playlistId={playlistId} />
+              <Styled.SpacerBlock className="spacer-block" />
+            </React.Fragment>
+          ))}
+        </Styled.MoreFromList>
+      )}
       {hasMore && (
         <Styled.SeeAllLink
           href={playlistHref}
