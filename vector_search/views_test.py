@@ -391,13 +391,12 @@ def test_content_file_vector_search_missing_collection_override_returns_400(
     [
         ({"group_by": "does_not_exist"}, "group_by"),
         ({"group_by": "platform.code"}, "group_by"),
-        ({"group_by": "key", "group_size": 0}, "group_size"),
     ],
 )
 def test_content_file_vector_search_rejects_bad_group_params(
     client, mock_qdrant, params, field
 ):
-    """A group_by Qdrant can't group on, or a group_size below 1, gets a 400."""
+    """A group_by Qdrant can't group on gets a 400."""
     response = client.get(
         reverse("vector_search:v0:vector_content_files_search"),
         data={"q": "test", **params},

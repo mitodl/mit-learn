@@ -893,7 +893,6 @@ paths:
         name: group_size
         schema:
           type: integer
-          minimum: 1
         description: The number of chunks in each group. Only relevant when group_by
           is used
       - in: query

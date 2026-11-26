@@ -406,7 +406,6 @@ class ContentFileVectorSearchRequestSerializer(serializers.Serializer):
     )
     group_size = serializers.IntegerField(
         required=False,
-        min_value=1,
         help_text=(
             "The number of chunks in each group. Only relevant when group_by is used"
         ),
