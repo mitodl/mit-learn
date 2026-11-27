@@ -1145,6 +1145,56 @@ def test_generation_stops_without_a_marketing_page(
 
 
 @pytest.mark.django_db(transaction=True)
+def test_test_mode_resource_uses_full_description_without_a_marketing_page(
+    configurations, mock_llm, mock_retrieval
+):
+    """A test-mode course has no scraped page, so its full_description stands in"""
+    resource = LearningResourceFactory.create(
+        is_course=True,
+        published=False,
+        test_mode=True,
+        full_description="## About\n\nA course about fluid dynamics.",
+    )
+
+    generated = asyncio.run(generate_credential_metadata(resource))
+
+    assert generated.errors == {}
+    assert set(generated.fields) == {field.name for field in CredentialMetadataField}
+    assert "A course about fluid dynamics." in mock_llm.prompts[BadgeCriteria]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_full_description_is_not_a_marketing_page_outside_test_mode(
+    configurations, mock_llm, mock_retrieval
+):
+    """A live course without a scraped page is still not generated for"""
+    resource = LearningResourceFactory.create(
+        is_course=True,
+        test_mode=False,
+        full_description="## About\n\nA course about fluid dynamics.",
+    )
+
+    generated = asyncio.run(generate_credential_metadata(resource))
+
+    assert generated.fields == {}
+    assert "missing its marketing page" in generated.errors["description"]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_scraped_marketing_page_wins_over_full_description(
+    resource, configurations, mock_llm, mock_retrieval
+):
+    """The scraped page is used when a test-mode course has both"""
+    resource.test_mode = True
+    resource.full_description = "## About\n\nSomething else entirely."
+    resource.save()
+
+    asyncio.run(generate_credential_metadata(resource))
+
+    assert "Something else entirely." not in mock_llm.prompts[BadgeCriteria]
+
+
+@pytest.mark.django_db(transaction=True)
 def test_generation_stops_without_course_content(
     resource, configurations, mock_llm, mocker, caplog
 ):
