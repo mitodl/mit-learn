@@ -148,6 +148,39 @@ def test_dry_run_saves_nothing(mocked_responses, cache_clears):
     cache_clears.pages.assert_not_called()
 
 
+def test_dry_run_counts_a_repeated_row_as_unchanged(mocked_responses):
+    """A topic listed twice counts once, as in a real run"""
+    channel = _topic_channel("Music", "old")
+
+    output = _run(mocked_responses, ("Music", "New."), ("Music", "New."), dry_run=True)
+
+    channel.refresh_from_db()
+    assert channel.public_description == "old"
+    assert output.count("Would update 'Music'") == 1
+    assert "[dry run] 1 updated, 1 already up to date, 0 skipped" in output
+
+
+def test_updates_every_channel_of_a_topic(mocked_responses, cache_clears):
+    """A topic with more than one channel has the description set on each"""
+    topic = LearningResourceTopicFactory.create(name="Music")
+    stale, current = (
+        ChannelTopicDetailFactory.create(
+            topic=topic, channel__public_description=description
+        ).channel
+        for description in ("old", "New.")
+    )
+
+    output = _run(mocked_responses, ("Music", "New."))
+
+    stale.refresh_from_db()
+    assert stale.public_description == "New."
+    assert "1 updated, 0 already up to date, 0 skipped" in output
+    # Only the channel that changed is purged.
+    cache_clears.pages.assert_called_once_with([stale.channel_url])
+    current.refresh_from_db()
+    assert current.public_description == "New."
+
+
 def test_no_changes_clears_nothing(mocked_responses, cache_clears):
     """A run that changes nothing leaves the caches alone"""
     _topic_channel("Music", "Same.")

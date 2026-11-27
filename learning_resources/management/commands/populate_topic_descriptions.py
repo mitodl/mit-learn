@@ -146,8 +146,8 @@ class Command(BaseCommand):
         self, row, description_index, topics_by_name, updated_channels, *, dry_run
     ):
         """
-        Set one row's description on its topic's channel, adding the channel to
-        `updated_channels` if it changed, and return the outcome.
+        Set one row's description on its topic's channels, adding each one that
+        changed to `updated_channels`, and return the outcome.
         """
         sheet_name = row[0].strip()
         name = sheet_name.removeprefix(PARENT_TOPIC_PREFIX)
@@ -162,18 +162,25 @@ class Command(BaseCommand):
         if not description:
             self.stdout.write(f"No description in the sheet for '{topic.name}'")
             return SKIPPED
-        topic_detail = next(iter(topic.channel_topic_details.all()), None)
-        if topic_detail is None:
+        # A topic can have more than one channel (renaming a topic and upserting
+        # it with overwrite creates another), so all of them are updated.
+        channels = [detail.channel for detail in topic.channel_topic_details.all()]
+        if not channels:
             self.stdout.write(f"Topic '{topic.name}' has no channel")
             return SKIPPED
 
-        channel = topic_detail.channel
-        if channel.public_description == description:
+        changed = [
+            channel for channel in channels if channel.public_description != description
+        ]
+        if not changed:
             return UNCHANGED
-        if not dry_run:
+        for channel in changed:
+            # Set in memory on a dry run too, so a later row for the same topic
+            # counts as unchanged, as it would in a real run.
             channel.public_description = description
-            channel.save(update_fields=["public_description", "updated_on"])
-        updated_channels.append(channel)
+            if not dry_run:
+                channel.save(update_fields=["public_description", "updated_on"])
+        updated_channels.extend(changed)
         verb = "Would update" if dry_run else "Updated"
         self.stdout.write(f"{verb} '{topic.name}'")
         return UPDATED
