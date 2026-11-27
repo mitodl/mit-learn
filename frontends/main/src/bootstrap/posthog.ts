@@ -4,21 +4,24 @@ import { initPostHog } from "@/common/analytics/posthog"
 
 /**
  * Requests flags now, and resolves once PostHog has answered or the request
- * has failed.
+ * has failed: `true` when PostHog evaluated every flag for this visitor
+ * (posthog-js's `loaded` status). `false` when the request failed, timed out,
+ * was quota-limited, hit errors computing flags, or was skipped (posthog-js
+ * stops sending requests after several in a row get no HTTP response).
  *
  * `cancelled` means posthog-js reset its flags for an identity change (a
  * `reset()`, another tab logging in or out, a back/forward-cache restore) and
  * is reloading for the new identity, so wait for that reload instead.
  */
-const loadFlags = (): Promise<void> => {
+const loadFlags = (): Promise<boolean> => {
   const reload = posthog.featureFlags?.reloadFeatureFlagsAsync()
-  if (!reload) return Promise.resolve()
+  if (!reload) return Promise.resolve(false)
   return reload.then((result) =>
-    result.status === "cancelled" ? loadFlags() : undefined,
+    result.status === "cancelled" ? loadFlags() : result.status === "loaded",
   )
 }
 
-let firstFlagLoad: Promise<void> | undefined
+let firstFlagLoad: Promise<boolean> | undefined
 
 /**
  * Initializes posthog and starts the page's first flag request.
@@ -62,7 +65,7 @@ const bootstrapPostHog = () => {
      * login (an anonymous request, then an identified one) keeps gated pages
      * on their loading state until ConfiguredPostHogProvider's 10s cap.
      * Waiting that long on a skeleton is worse than an occasional blip falling
-     * back to env defaults.
+     * back to the server's values and env defaults.
      */
     feature_flag_request_max_retries: 0,
     // Scope the posthog cookie to this site's exact domain. Posthog defaults

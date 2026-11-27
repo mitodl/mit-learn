@@ -16,7 +16,7 @@ import type { Channel } from "api/v0"
 import { ChannelTypeEnum } from "api/v0"
 import ChannelPage from "./ChannelPage"
 import { useFeatureFlag } from "@/common/useFeatureFlag"
-import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
+import { useFeatureFlagsSettled } from "@/common/useFeatureFlagsSettled"
 import { FeatureFlags } from "@/common/feature_flags"
 import { PostHogEvents } from "@/common/constants"
 import { capturePostHog } from "@/common/analytics/posthog"
@@ -34,7 +34,7 @@ jest.mock("@/common/analytics/posthog", () => ({
   capturePostHog: jest.fn(),
   initPostHog: jest.fn(),
 }))
-jest.mock("@/common/useFeatureFlagsLoaded")
+jest.mock("@/common/useFeatureFlagsSettled")
 
 const mockedUseFeatureFlag = jest.mocked(useFeatureFlag)
 
@@ -52,9 +52,9 @@ const mockFeatureFlags = (flags: Partial<Record<FeatureFlags, boolean>>) => {
 // one; the cases that need a flag set it for themselves.
 beforeEach(() => {
   mockFeatureFlags({})
-  /* The page holds a spinner until the flags are in rather than render on an
-     env default, so without this every case here waits on one. */
-  jest.mocked(useFeatureFlagsLoaded).mockReturnValue(true)
+  /* The page holds a spinner until the flags are in rather than render on a
+     fallback value, so without this every case here waits on one. */
+  jest.mocked(useFeatureFlagsSettled).mockReturnValue(true)
 })
 
 const setMockApiResponses = ({

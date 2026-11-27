@@ -1,6 +1,7 @@
 import React from "react"
 import Providers from "./providers"
 import { env, publicEnvObject } from "@/env"
+import { getServerFlags } from "@/common/serverFeatureFlags"
 
 import "./GlobalStyles"
 import { Metadata } from "next"
@@ -32,11 +33,12 @@ export const metadata: Metadata = {
  */
 export const dynamic = "force-dynamic"
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const serverFlags = await getServerFlags()
   return (
     <html lang="en">
       <head>
@@ -98,7 +100,13 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <Providers>{children}</Providers>
+        {/*
+          The flag values are passed as a prop so they are serialized into
+          the same HTML document that was rendered with them. The CDN caches
+          that document, so a cached page is consistent with itself: the
+          client hydrates with exactly the values the server rendered with.
+        */}
+        <Providers serverFlags={serverFlags}>{children}</Providers>
       </body>
     </html>
   )

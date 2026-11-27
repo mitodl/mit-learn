@@ -5,12 +5,12 @@ import { testimonials as factories } from "api/test-utils/factories"
 import { testimonialsQueries } from "api/hooks/testimonials"
 import type { Attestation } from "api/v0"
 import { useFeatureFlag } from "@/common/useFeatureFlag"
-import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
+import { useFeatureFlagsSettled } from "@/common/useFeatureFlagsSettled"
 import { FEATURED_TESTIMONIAL_PARAMS } from "@/app-pages/SupportPage/queryParams"
 import Page, { metadata } from "./page"
 
-jest.mock("@/common/useFeatureFlagsLoaded", () => ({
-  useFeatureFlagsLoaded: jest.fn(),
+jest.mock("@/common/useFeatureFlagsSettled", () => ({
+  useFeatureFlagsSettled: jest.fn(),
 }))
 jest.mock("@/common/useFeatureFlag")
 // The route's server-side client, swapped for a browser one without retries.
@@ -31,8 +31,8 @@ const mockTestimonials = (results: Attestation[]) =>
     results,
   })
 
-const enableFlag = (enabled: boolean, loaded = true) => {
-  jest.mocked(useFeatureFlagsLoaded).mockReturnValue(loaded)
+const enableFlag = (enabled: boolean, settled = true) => {
+  jest.mocked(useFeatureFlagsSettled).mockReturnValue(settled)
   jest.mocked(useFeatureFlag).mockReturnValue(enabled)
 }
 
@@ -47,7 +47,7 @@ describe("support page.tsx", () => {
     screen.getByRole("heading", { level: 1, name: "Support open education." })
   })
 
-  test("renders nothing until the flags have loaded", async () => {
+  test("renders nothing until the flags have settled", async () => {
     enableFlag(false, false)
     renderWithProviders(await Page())
     expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument()

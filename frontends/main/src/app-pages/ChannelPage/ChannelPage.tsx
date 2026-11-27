@@ -18,7 +18,7 @@ import useChannelPageRedesign, {
   channelTypeUsesRedesignFlag,
 } from "./useChannelPageRedesign"
 import dynamic from "next/dynamic"
-import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
+import { useFeatureFlagsSettled } from "@/common/useFeatureFlagsSettled"
 
 const LearningResourceDrawer = dynamic(
   () =>
@@ -63,12 +63,13 @@ const ChannelPage: React.FC = () => {
 
   const searchParams = getConstantSearchParams(channelSearchFilter)
   const channelRedesign = useChannelPageRedesign(String(channelType))
-  const flagsLoaded = useFeatureFlagsLoaded()
+  const flagsSettled = useFeatureFlagsSettled()
 
   /**
    * The whole page is behind the flag, so wait until flags are final rather
    * than deciding on what the flag reads before then: a value PostHog stored on
-   * an earlier visit, or the env default (see useFeatureFlagsLoaded's USE CASE).
+   * an earlier visit, or the server's value and then the env default (see
+   * useFeatureFlagsSettled's USE CASE).
    *
    * Only where there is something to wait for: only the department page is
    * still behind a flag. Every other one draws the page it has always drawn
@@ -76,7 +77,7 @@ const ChannelPage: React.FC = () => {
    * or pathway page nothing but the spinner.
    */
   const awaitingFlags =
-    channelTypeUsesRedesignFlag(String(channelType)) && !flagsLoaded
+    channelTypeUsesRedesignFlag(String(channelType)) && !flagsSettled
   if (awaitingFlags) {
     return <PageLoadingSpinner loading />
   }

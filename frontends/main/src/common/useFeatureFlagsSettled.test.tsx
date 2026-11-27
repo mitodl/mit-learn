@@ -2,7 +2,7 @@ import { renderHook } from "@testing-library/react"
 import ConfiguredPostHogProvider from "@/page-components/ConfiguredPostHogProvider/ConfiguredPostHogProvider"
 import { FeatureFlags } from "./feature_flags"
 import { useFeatureFlag } from "./useFeatureFlag"
-import { useFeatureFlagsLoaded } from "./useFeatureFlagsLoaded"
+import { useFeatureFlagsSettled } from "./useFeatureFlagsSettled"
 
 /**
  * Renders under the real provider with no api key, so useFeatureFlag reads the
@@ -12,14 +12,14 @@ const readFlagState = (env: Record<string, string>) => {
   window.__ENV = env
   return renderHook(
     () => ({
-      loaded: useFeatureFlagsLoaded(),
+      settled: useFeatureFlagsSettled(),
       enabled: useFeatureFlag(FeatureFlags.UniversalAI),
     }),
     { wrapper: ConfiguredPostHogProvider },
   ).result
 }
 
-describe("useFeatureFlagsLoaded without a PostHog api key", () => {
+describe("useFeatureFlagsSettled without a PostHog api key", () => {
   afterEach(() => {
     delete window.__ENV
   })
@@ -28,17 +28,17 @@ describe("useFeatureFlagsLoaded without a PostHog api key", () => {
     { value: "True", enabled: true },
     { value: "false", enabled: false },
   ])(
-    "treats NEXT_PUBLIC_FEATURE_*=$value as a loaded, final $enabled",
+    "treats NEXT_PUBLIC_FEATURE_*=$value as a settled, final $enabled",
     ({ value, enabled }) => {
       const flagState = readFlagState({
         NEXT_PUBLIC_FEATURE_universal_ai: value,
       })
-      expect(flagState.current).toEqual({ loaded: true, enabled })
+      expect(flagState.current).toEqual({ settled: true, enabled })
     },
   )
 
-  test("reports a flag with no env var as loaded and off", () => {
+  test("reports a flag with no env var as settled and off", () => {
     const flagState = readFlagState({})
-    expect(flagState.current).toEqual({ loaded: true, enabled: false })
+    expect(flagState.current).toEqual({ settled: true, enabled: false })
   })
 })

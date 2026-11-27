@@ -3,23 +3,23 @@ import { renderWithProviders, screen } from "@/test-utils"
 import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { notFound } from "next/navigation"
 import { allowConsoleErrors } from "ol-test-utilities"
-import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
+import { useFeatureFlagsSettled } from "@/common/useFeatureFlagsSettled"
 import { FeatureFlags } from "@/common/feature_flags"
 import EducatorFlagGate from "./EducatorFlagGate"
 
-jest.mock("@/common/useFeatureFlagsLoaded", () => ({
-  useFeatureFlagsLoaded: jest.fn(),
+jest.mock("@/common/useFeatureFlagsSettled", () => ({
+  useFeatureFlagsSettled: jest.fn(),
 }))
 
 jest.mock("@/common/useFeatureFlag")
 
 const mockUseFeatureFlag = jest.mocked(useFeatureFlag)
-const mockUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
+const mockUseFeatureFlagsSettled = jest.mocked(useFeatureFlagsSettled)
 const mockNotFound = jest.mocked(notFound)
 
 describe("EducatorFlagGate", () => {
   test("renders children when the feature flag is enabled", () => {
-    mockUseFeatureFlagsLoaded.mockReturnValue(true)
+    mockUseFeatureFlagsSettled.mockReturnValue(true)
     mockUseFeatureFlag.mockReturnValue(true)
     renderWithProviders(
       <EducatorFlagGate>
@@ -31,8 +31,8 @@ describe("EducatorFlagGate", () => {
     expect(mockNotFound).not.toHaveBeenCalled()
   })
 
-  test("renders nothing while the feature flags have not loaded", () => {
-    mockUseFeatureFlagsLoaded.mockReturnValue(false)
+  test("renders nothing while the feature flags have not settled", () => {
+    mockUseFeatureFlagsSettled.mockReturnValue(false)
     mockUseFeatureFlag.mockReturnValue(false)
     renderWithProviders(
       <EducatorFlagGate>
@@ -43,12 +43,12 @@ describe("EducatorFlagGate", () => {
     expect(mockNotFound).not.toHaveBeenCalled()
   })
 
-  test("calls notFound when the flag is disabled and flags have loaded", () => {
+  test("calls notFound when the flag is disabled and flags have settled", () => {
     allowConsoleErrors()
     mockNotFound.mockImplementation(() => {
       throw new Error("NEXT_NOT_FOUND")
     })
-    mockUseFeatureFlagsLoaded.mockReturnValue(true)
+    mockUseFeatureFlagsSettled.mockReturnValue(true)
     mockUseFeatureFlag.mockReturnValue(false)
     expect(() =>
       renderWithProviders(

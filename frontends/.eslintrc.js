@@ -15,11 +15,11 @@ const COMPONENT_HIERARCHY_ZONES = [
 ]
 
 /**
- * Flag reads go through useFeatureFlag, so every flag read falls back to its
- * env default the same way and hydrates with the server's value (see its
- * docstring for why posthog's own hooks don't). A `patterns` entry rather than
- * a `paths` one: a second `paths` entry for posthog-js/react (the usePostHog
- * ban below) would replace it.
+ * Flag reads go through useFeatureFlag, so every flag read falls back the same
+ * way (the server's value, then its env default) and hydrates without a
+ * mismatch (see its docstring for why posthog's own hooks don't). A `patterns`
+ * entry rather than a `paths` one: a second `paths` entry for posthog-js/react
+ * (the usePostHog ban below) would replace it.
  */
 const POSTHOG_FLAG_HOOKS_PATTERN = {
   group: ["posthog-js/react"],
@@ -32,7 +32,7 @@ const POSTHOG_FLAG_HOOKS_PATTERN = {
     "PostHogFeature",
   ],
   message:
-    "Read feature flags with useFeatureFlag from '@/common/useFeatureFlag', which falls back to the flag's env default.",
+    "Read feature flags with useFeatureFlag from '@/common/useFeatureFlag', which falls back to the server's value, then the flag's env default.",
   allowTypeImports: true,
 }
 

@@ -2,12 +2,12 @@ import React from "react"
 import { factories } from "api/test-utils"
 import { renderWithProviders, screen } from "@/test-utils"
 import { useFeatureFlag } from "@/common/useFeatureFlag"
-import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
+import { useFeatureFlagsSettled } from "@/common/useFeatureFlagsSettled"
 import { ContactUsLauncher } from "@mitodl/smoot-design/contact-us"
 import ContactUsLauncherGate from "./ContactUsLauncherGate"
 
-jest.mock("@/common/useFeatureFlagsLoaded", () => ({
-  useFeatureFlagsLoaded: jest.fn(),
+jest.mock("@/common/useFeatureFlagsSettled", () => ({
+  useFeatureFlagsSettled: jest.fn(),
 }))
 jest.mock("@/common/useFeatureFlag")
 jest.mock("@mitodl/smoot-design/contact-us", () => ({
@@ -15,7 +15,7 @@ jest.mock("@mitodl/smoot-design/contact-us", () => ({
 }))
 
 const mockEnabled = jest.mocked(useFeatureFlag)
-const mockLoaded = jest.mocked(useFeatureFlagsLoaded)
+const mockSettled = jest.mocked(useFeatureFlagsSettled)
 const mockLauncher = jest.mocked(ContactUsLauncher)
 
 const ENDPOINT = "https://learn-ai.test/http/support_agent/"
@@ -36,7 +36,7 @@ describe("ContactUsLauncherGate", () => {
   })
 
   test("renders the launcher and forwards the signed-in email, name and username", () => {
-    mockLoaded.mockReturnValue(true)
+    mockSettled.mockReturnValue(true)
     mockEnabled.mockReturnValue(true)
     renderWithProviders(<ContactUsLauncherGate />, {
       user: factories.user.user({
@@ -55,7 +55,7 @@ describe("ContactUsLauncherGate", () => {
   })
 
   test("omits the name and username when the learner has neither", () => {
-    mockLoaded.mockReturnValue(true)
+    mockSettled.mockReturnValue(true)
     mockEnabled.mockReturnValue(true)
     renderWithProviders(<ContactUsLauncherGate />, {
       user: factories.user.user({
@@ -71,7 +71,7 @@ describe("ContactUsLauncherGate", () => {
   })
 
   test("renders the launcher with no user_email for an anonymous learner", () => {
-    mockLoaded.mockReturnValue(true)
+    mockSettled.mockReturnValue(true)
     mockEnabled.mockReturnValue(true)
     renderWithProviders(<ContactUsLauncherGate />, {
       user: { is_authenticated: false },
@@ -82,8 +82,8 @@ describe("ContactUsLauncherGate", () => {
     ).toBeUndefined()
   })
 
-  test("renders nothing while flags have not loaded", () => {
-    mockLoaded.mockReturnValue(false)
+  test("renders nothing while flags have not settled", () => {
+    mockSettled.mockReturnValue(false)
     mockEnabled.mockReturnValue(false)
     renderWithProviders(<ContactUsLauncherGate />, {
       user: { is_authenticated: false },
@@ -92,7 +92,7 @@ describe("ContactUsLauncherGate", () => {
   })
 
   test("renders nothing when the flag is disabled", () => {
-    mockLoaded.mockReturnValue(true)
+    mockSettled.mockReturnValue(true)
     mockEnabled.mockReturnValue(false)
     renderWithProviders(<ContactUsLauncherGate />, {
       user: { is_authenticated: false },
@@ -102,7 +102,7 @@ describe("ContactUsLauncherGate", () => {
 
   test("renders nothing when the endpoint is unset", () => {
     delete process.env.NEXT_PUBLIC_LEARN_AI_SUPPORT_ENDPOINT
-    mockLoaded.mockReturnValue(true)
+    mockSettled.mockReturnValue(true)
     mockEnabled.mockReturnValue(true)
     renderWithProviders(<ContactUsLauncherGate />, {
       user: { is_authenticated: false },
@@ -111,7 +111,7 @@ describe("ContactUsLauncherGate", () => {
   })
 
   test("keeps the same settings object across re-renders", () => {
-    mockLoaded.mockReturnValue(true)
+    mockSettled.mockReturnValue(true)
     mockEnabled.mockReturnValue(true)
     const { view } = renderWithProviders(<ContactUsLauncherGate />, {
       user: { is_authenticated: true, email: "learner@example.com" },

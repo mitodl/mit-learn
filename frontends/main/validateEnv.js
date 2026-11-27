@@ -16,6 +16,14 @@ const yup = require("yup")
 const schema = yup.object().shape({
   // Server-only env vars
   MITOL_NOINDEX: yup.string().oneOf(["true", "false"]),
+  POSTHOG_SECRET_KEY: yup.string(),
+  // Tuning for the server's flag evaluation; see src/common/serverFeatureFlags.ts
+  POSTHOG_SERVER_FLAGS_WAIT_MS: yup
+    .string()
+    .matches(/^\d+$/, { excludeEmptyString: true }),
+  POSTHOG_SERVER_FLAGS_POLLING_INTERVAL_MS: yup
+    .string()
+    .matches(/^\d+$/, { excludeEmptyString: true }),
   // Required client/server vars — must be present in local dev and at runtime.
   NEXT_PUBLIC_ORIGIN: yup
     .string()

@@ -5,7 +5,12 @@ import { hydrateRoot } from "react-dom/client"
 import { renderToString } from "react-dom/server.node"
 import posthog from "posthog-js"
 import { FeatureFlags } from "./feature_flags"
-import { useFeatureFlag } from "./useFeatureFlag"
+import type { ServerFlags } from "./feature_flags"
+import {
+  FlagsSuccessContext,
+  ServerFlagsContext,
+  useFeatureFlag,
+} from "./useFeatureFlag"
 
 jest.mock("posthog-js", () => ({
   __esModule: true,
@@ -16,6 +21,17 @@ jest.mock("posthog-js", () => ({
 }))
 const mockIsFeatureEnabled = jest.mocked(posthog.isFeatureEnabled)
 const mockOnFeatureFlags = jest.mocked(posthog.onFeatureFlags)
+
+const wrapper = (serverFlags: ServerFlags, flagsSuccess = false) => {
+  const Wrapper = ({ children }: { children: React.ReactNode }) => (
+    <ServerFlagsContext.Provider value={serverFlags}>
+      <FlagsSuccessContext.Provider value={flagsSuccess}>
+        {children}
+      </FlagsSuccessContext.Provider>
+    </ServerFlagsContext.Provider>
+  )
+  return Wrapper
+}
 
 describe("useFeatureFlag", () => {
   beforeEach(() => {
@@ -66,21 +82,78 @@ describe("useFeatureFlag", () => {
     expect(result.current).toBe(true)
   })
 
-  test("Hydrates with the env default when PostHog already has a value, then switches to it", async () => {
+  test("A flag PostHog has no value for reads the server's value over its env default", () => {
+    window.__ENV = { NEXT_PUBLIC_FEATURE_universal_ai: "true" }
+    mockIsFeatureEnabled.mockReturnValue(undefined)
+    const { result } = renderHook(
+      () => useFeatureFlag(FeatureFlags.UniversalAI),
+      { wrapper: wrapper({ [FeatureFlags.UniversalAI]: false }) },
+    )
+    expect(result.current).toBe(false)
+  })
+
+  test("PostHog's value wins over the server's value", () => {
+    mockIsFeatureEnabled.mockReturnValue(false)
+    const { result } = renderHook(
+      () => useFeatureFlag(FeatureFlags.UniversalAI),
+      { wrapper: wrapper({ [FeatureFlags.UniversalAI]: true }) },
+    )
+    expect(result.current).toBe(false)
+  })
+
+  test("Once PostHog has answered in full, its value still wins over the env default", () => {
+    mockIsFeatureEnabled.mockReturnValue(true)
+    const { result } = renderHook(
+      () => useFeatureFlag(FeatureFlags.UniversalAI),
+      { wrapper: wrapper({}, true) },
+    )
+    expect(result.current).toBe(true)
+  })
+
+  test("Once PostHog has answered in full, a flag it left out hydrates with the server's value, then reads its env default", async () => {
     const Flag = () => (
       <span>{String(useFeatureFlag(FeatureFlags.UniversalAI))}</span>
     )
+    const Wrapper = wrapper({ [FeatureFlags.UniversalAI]: true }, true)
+    const tree = (
+      <Wrapper>
+        <Flag />
+      </Wrapper>
+    )
     mockIsFeatureEnabled.mockReturnValue(undefined)
     const container = document.createElement("div")
-    container.innerHTML = renderToString(<Flag />)
-    expect(container.textContent).toBe("false")
+    container.innerHTML = renderToString(tree)
+    expect(container.textContent).toBe("true")
 
-    mockIsFeatureEnabled.mockReturnValue(true)
     const onRecoverableError = jest.fn()
     await act(async () => {
-      hydrateRoot(container, <Flag />, { onRecoverableError })
+      hydrateRoot(container, tree, { onRecoverableError })
     })
     expect(onRecoverableError).not.toHaveBeenCalled()
+    expect(container.textContent).toBe("false")
+  })
+
+  test("Hydrates with the server's value when PostHog already has a different one, then switches to it", async () => {
+    const Flag = () => (
+      <span>{String(useFeatureFlag(FeatureFlags.UniversalAI))}</span>
+    )
+    const Wrapper = wrapper({ [FeatureFlags.UniversalAI]: true })
+    const tree = (
+      <Wrapper>
+        <Flag />
+      </Wrapper>
+    )
+    mockIsFeatureEnabled.mockReturnValue(undefined)
+    const container = document.createElement("div")
+    container.innerHTML = renderToString(tree)
     expect(container.textContent).toBe("true")
+
+    mockIsFeatureEnabled.mockReturnValue(false)
+    const onRecoverableError = jest.fn()
+    await act(async () => {
+      hydrateRoot(container, tree, { onRecoverableError })
+    })
+    expect(onRecoverableError).not.toHaveBeenCalled()
+    expect(container.textContent).toBe("false")
   })
 })

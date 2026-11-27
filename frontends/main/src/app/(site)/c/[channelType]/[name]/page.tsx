@@ -37,6 +37,7 @@ import { isInEnum } from "@/common/utils"
 import { notFound } from "next/navigation"
 import { getQueryClient } from "@/app/getQueryClient"
 import { isHybridSearchEnabled } from "@/common/hybridSearch"
+import { getServerFlags } from "@/common/serverFeatureFlags"
 import {
   getVectorScoreTuning,
   toUnfacetedVectorSearchParams,
@@ -154,11 +155,13 @@ const Page: React.FC<AppPageProps<"/c/[channelType]/[name]">> = async ({
     page: Number(search.page ?? 1),
   })
 
-  // Server components cannot read PostHog flags, so this resolves the URL
-  // override and the env kill switch only. Setting
-  // NEXT_PUBLIC_DISABLE_HYBRID_SEARCH alongside the PostHog flag is what keeps
-  // this prefetch on the same endpoint the client will query.
-  const isHybridSearch = isHybridSearchEnabled(urlParams)
+  // The server's flag values feed the client hook during the server render, so
+  // this prefetch resolves `disable-hybrid-search` from the same values to
+  // match the endpoint the server render and hydration query.
+  const isHybridSearch = isHybridSearchEnabled(
+    urlParams,
+    await getServerFlags(),
+  )
   // The admin score tuning params are part of the request, so the prefetch
   // must include them or the client would refetch on hydration.
   const scoreTuning = getVectorScoreTuning(urlParams)

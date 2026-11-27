@@ -68,6 +68,7 @@
     "ol-utilities": "0.0.0",
     "papaparse": "^5.5.3",
     "posthog-js": "1.442.0",
+    "posthog-node": "5.68.2",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
     "react-hotkeys-hook": "^5.2.1",
