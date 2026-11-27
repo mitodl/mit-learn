@@ -793,10 +793,7 @@ def sweep_empty_ovs_playlists(*, allow_mass_unpublish=False):
         list[int]: the ids of the playlists it unpublished
     """
     with writing_as(Pipeline.WEBHOOK):
-        if not may_write(
-            ETLSource.ovs.name,
-            [LearningResourceType.video_playlist.name, LearningResourceType.video.name],
-        ):
+        if not may_write(ETLSource.ovs.name, ovs.OVS_TYPES):
             return []
         return loaders.unpublish_empty_ovs_playlists(
             allow_mass_unpublish=allow_mass_unpublish
