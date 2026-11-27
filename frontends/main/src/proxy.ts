@@ -28,8 +28,10 @@ export function isPageRoute(pathname: string): boolean {
   if (pathname.startsWith("/_next/")) return false
   // JSON healthcheck — exclude from page cache headers
   if (pathname === "/healthcheck") return false
-  // Sitemaps are dynamically generated; treat them as page content
+  // Sitemaps are dynamically generated; treat them as page content. The OCW
+  // course sitemap index sits at the root so it can list /courses/o/ sitemaps.
   if (pathname.startsWith("/sitemaps/")) return true
+  if (pathname === "/sitemap-index-courses-o.xml") return true
   // Known static-asset extensions are served as immutable files
   if (STATIC_FILE_EXT.test(pathname)) return false
   return true
