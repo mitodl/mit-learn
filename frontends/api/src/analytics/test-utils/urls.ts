@@ -70,16 +70,11 @@ const contracts = {
     contractId: number,
     params?: LearnersParams,
   ) => contractResource(organizationId, contractId, "learners", params),
-  courseRuns: (
+  courses: (
     organizationId: string,
     contractId: number,
     params?: AnalyticsPageParams,
-  ) => contractResource(organizationId, contractId, "course-runs", params),
-  needsAttention: (
-    organizationId: string,
-    contractId: number,
-    params?: AnalyticsPageParams,
-  ) => contractResource(organizationId, contractId, "needs-attention", params),
+  ) => contractResource(organizationId, contractId, "courses", params),
 }
 
 export { contracts }

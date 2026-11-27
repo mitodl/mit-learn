@@ -10,7 +10,6 @@ import {
   factories as analyticsFactories,
   urls as analyticsUrls,
 } from "api/analytics-test-utils"
-import type { CompletionStatusFilter } from "api/analytics-hooks/organizations"
 import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { allowConsoleErrors } from "ol-test-utilities"
 import { ForbiddenError } from "@/common/errors"
@@ -32,16 +31,9 @@ const mockedUseFeatureFlag = jest.mocked(useFeatureFlag)
 const ORG_UUID = "11111111-2222-3333-4444-555555555555"
 const GRID_PAGE_SIZE = 25
 const EXPORT_PAGE_SIZE = 100
-const M5 = "course-v1:MITx+M5+2026"
-const M6 = "course-v1:MITx+M6+2026"
+const M5 = "course-v1:MITx+M5"
+const M6 = "course-v1:MITx+M6"
 const NEEDS_ATTENTION = "Not started or inactive 30+ days"
-/** Every learners request asks for these, which leaves out learners who haven't consented. */
-const SHARED_STATUSES: CompletionStatusFilter[] = [
-  "not_started",
-  "in_progress",
-  "passed",
-  "certified",
-]
 
 /** managerOrganizationsList reads `res.data.results`, so a bare array is not enough. */
 const paginate = (orgs: unknown[]) => ({
@@ -85,21 +77,21 @@ const setupUnqueryable = () => {
  * The grid's columns and the Modules filter's options. Every queryable render
  * fires this; an unmocked request throws rather than resolving empty.
  */
-const mockCourseRuns = (
+const mockCourses = (
   contractId: number,
   runs = [
-    analyticsFactories.courseRun({
-      courserun_id: M5,
-      courserun_title: "Module 5",
+    analyticsFactories.course({
+      course_readable_id: M5,
+      course_title: "Module 5",
     }),
-    analyticsFactories.courseRun({
-      courserun_id: M6,
-      courserun_title: "Module 6",
+    analyticsFactories.course({
+      course_readable_id: M6,
+      course_title: "Module 6",
     }),
   ],
 ) => {
   setMockResponse.get(
-    analyticsUrls.contracts.courseRuns(ORG_UUID, contractId, { limit: 1000 }),
+    analyticsUrls.contracts.courses(ORG_UUID, contractId, { limit: 1000 }),
     analyticsFactories.envelope(runs),
   )
 }
@@ -107,23 +99,31 @@ const mockCourseRuns = (
 const mockGridPage = (
   contractId: number,
   offset: number,
-  rows: ReturnType<typeof analyticsFactories.learnerProgress>[],
+  rows: ReturnType<typeof analyticsFactories.learnerRow>[],
   envelopeOverrides: Record<string, unknown> = {},
   extraParams: Record<string, unknown> = {},
+  members: ReturnType<typeof analyticsFactories.learnersFromRows> = [],
 ) => {
   setMockResponse.get(
     analyticsUrls.contracts.learners(ORG_UUID, contractId, {
       limit: GRID_PAGE_SIZE,
       offset,
-      completion_status: SHARED_STATUSES,
       ...extraParams,
     }),
     analyticsFactories.learnersEnvelope(
-      analyticsFactories.learnersFromRows(rows),
+      [...analyticsFactories.learnersFromRows(rows), ...members],
       envelopeOverrides,
     ),
   )
 }
+
+/** A contract member with no enrollments, as `/learners` lists them. */
+const memberNamed = (name: string) => ({
+  learner_id: name,
+  email: null,
+  full_name: name,
+  enrollments: [],
+})
 
 /**
  * Mocks everything but the grid's own pages, which each test adds after this
@@ -133,17 +133,16 @@ const learnerTotalUrl = (contractId: number) =>
   analyticsUrls.contracts.learners(ORG_UUID, contractId, {
     limit: 1,
     offset: 0,
-    completion_status: SHARED_STATUSES,
   })
 
-const renderGrid = (url = "/", runs?: Parameters<typeof mockCourseRuns>[1]) => {
+const renderGrid = (url = "/", runs?: Parameters<typeof mockCourses>[1]) => {
   const { org, contract, orgSlug } = setup()
   const contractId = contract.id
   setMockResponse.get(
     mitxUrls.organization.managerOrganizationsList(),
     paginate([org]),
   )
-  mockCourseRuns(contractId, runs)
+  mockCourses(contractId, runs)
   setMockResponse.get(
     learnerTotalUrl(contractId),
     analyticsFactories.learnersEnvelope([], { total_count: 28 }),
@@ -156,9 +155,9 @@ const renderGrid = (url = "/", runs?: Parameters<typeof mockCourseRuns>[1]) => {
 }
 
 const learnerNamed = (name: string) =>
-  analyticsFactories.learnerProgress({
+  analyticsFactories.learnerRow({
     full_name: name,
-    courserun_readable_id: M5,
+    course_readable_id: M5,
   })
 
 const gridTable = () =>
@@ -181,9 +180,9 @@ const toggleModule = async (name: string) => {
 
 /** A contract with one module has no Modules filter, so Status applies to that module. */
 const oneModule = () => [
-  analyticsFactories.courseRun({
-    courserun_id: M5,
-    courserun_title: "Module 5",
+  analyticsFactories.course({
+    course_readable_id: M5,
+    course_title: "Module 5",
   }),
 ]
 
@@ -302,7 +301,7 @@ describe("ContractLearnersPage", () => {
       expect(screen.queryByText("No learners found.")).not.toBeInTheDocument()
     })
 
-    test("says no one is enrolled yet in place of the grid when the contract has no learners to show", async () => {
+    test("says there are no learners to show in place of the grid when none are listed", async () => {
       const { contractId, contract } = renderGrid()
       setMockResponse.get(
         learnerTotalUrl(contractId),
@@ -311,7 +310,7 @@ describe("ContractLearnersPage", () => {
       mockGridPage(contractId, 0, [])
 
       const message = await screen.findByText(
-        `No learners are enrolled in ${contract.name} yet. They'll appear here once they enroll.`,
+        `No learners to show for ${contract.name} yet.`,
       )
       expect(
         screen.queryByRole("table", { name: "Learner progress by module" }),
@@ -319,7 +318,27 @@ describe("ContractLearnersPage", () => {
       expect(
         screen.queryByRole("combobox", { name: /status/i }),
       ).not.toBeInTheDocument()
-      expect(screen.queryByText(/enrolled learners/)).not.toBeInTheDocument()
+      expect(screen.queryByText(/\d+ of \d+ learners/)).not.toBeInTheDocument()
+      const exportButton = screen.getByRole("button", {
+        name: "Export learners",
+      })
+      expect(exportButton).toHaveAttribute("aria-disabled", "true")
+      expect(exportButton).toHaveAttribute("aria-describedby", message.id)
+    })
+
+    test("says there are no courses in place of the grid when none of the contract's courses is in a program", async () => {
+      const { contractId, contract } = renderGrid("/", [])
+      mockGridPage(contractId, 0, [learnerNamed("Ada Lovelace")])
+
+      const message = await screen.findByText(
+        `No courses to show for ${contract.name}. Progress appears here for the courses in its programs.`,
+      )
+      expect(
+        screen.queryByRole("table", { name: "Learner progress by module" }),
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole("combobox", { name: /status/i }),
+      ).not.toBeInTheDocument()
       const exportButton = screen.getByRole("button", {
         name: "Export learners",
       })
@@ -342,10 +361,9 @@ describe("ContractLearnersPage", () => {
         analyticsUrls.contracts.learners(ORG_UUID, contractId, {
           limit: GRID_PAGE_SIZE,
           offset: 0,
-          completion_status: SHARED_STATUSES,
         }),
         learnerTotalUrl(contractId),
-        analyticsUrls.contracts.courseRuns(ORG_UUID, contractId, {
+        analyticsUrls.contracts.courses(ORG_UUID, contractId, {
           limit: 1000,
         }),
       ]) {
@@ -370,25 +388,25 @@ describe("ContractLearnersPage", () => {
     test("shows one row per learner with a column per module", async () => {
       const { contractId } = renderGrid()
       mockGridPage(contractId, 0, [
-        analyticsFactories.learnerProgress({
+        analyticsFactories.learnerRow({
           learner_id: "a",
           email: "ada@example.com",
           full_name: "Ada Lovelace",
-          courserun_readable_id: M5,
+          course_readable_id: M5,
           completion_status: "passed",
         }),
-        analyticsFactories.learnerProgress({
+        analyticsFactories.learnerRow({
           learner_id: "a",
           email: "ada@example.com",
           full_name: "Ada Lovelace",
-          courserun_readable_id: M6,
+          course_readable_id: M6,
           completion_status: "in_progress",
         }),
-        analyticsFactories.learnerProgress({
+        analyticsFactories.learnerRow({
           learner_id: "b",
           email: "bob@example.com",
           full_name: "Bob Barker",
-          courserun_readable_id: M5,
+          course_readable_id: M5,
           completion_status: "not_started",
         }),
       ])
@@ -428,7 +446,7 @@ describe("ContractLearnersPage", () => {
       try {
         const { contractId } = renderGrid()
         mockGridPage(contractId, 0, [
-          analyticsFactories.learnerProgress({ courserun_readable_id: M5 }),
+          analyticsFactories.learnerRow({ course_readable_id: M5 }),
         ])
         const header = await screen.findByRole("columnheader", {
           name: "Module 5",
@@ -448,20 +466,20 @@ describe("ContractLearnersPage", () => {
     test("marks inactive modules and shows the learner's latest activity", async () => {
       const { contractId } = renderGrid()
       mockGridPage(contractId, 0, [
-        analyticsFactories.learnerProgress({
+        analyticsFactories.learnerRow({
           learner_id: "a",
           email: "ada@example.com",
           full_name: "Ada Lovelace",
-          courserun_readable_id: M5,
+          course_readable_id: M5,
           completion_status: "in_progress",
           last_active_on: "2026-09-30",
           needs_attention: true,
         }),
-        analyticsFactories.learnerProgress({
+        analyticsFactories.learnerRow({
           learner_id: "a",
           email: "ada@example.com",
           full_name: "Ada Lovelace",
-          courserun_readable_id: M6,
+          course_readable_id: M6,
           completion_status: "not_started",
           last_active_on: "2026-08-01",
           needs_attention: true,
@@ -484,15 +502,15 @@ describe("ContractLearnersPage", () => {
         full_name: "Ada Lovelace",
       }
       mockGridPage(contractId, 0, [
-        analyticsFactories.learnerProgress({
+        analyticsFactories.learnerRow({
           ...ada,
-          courserun_readable_id: M5,
+          course_readable_id: M5,
           completion_status: "in_progress",
           content_progress: 0.45,
         }),
-        analyticsFactories.learnerProgress({
+        analyticsFactories.learnerRow({
           ...ada,
-          courserun_readable_id: M6,
+          course_readable_id: M6,
           completion_status: "not_started",
           content_progress: 0.1,
         }),
@@ -527,22 +545,20 @@ describe("ContractLearnersPage", () => {
       expect(learnerCell).toHaveStyle({ boxShadow: "none" })
     })
 
-    test("says how many of the contract's enrolled learners match", async () => {
+    test("says how many of the contract's learners match", async () => {
       const { contractId } = renderGrid()
       mockGridPage(contractId, 0, [
-        analyticsFactories.learnerProgress({
+        analyticsFactories.learnerRow({
           learner_id: "a",
           full_name: "Ada",
         }),
-        analyticsFactories.learnerProgress({
+        analyticsFactories.learnerRow({
           learner_id: "b",
           full_name: "Bob",
         }),
       ])
 
-      expect(
-        await screen.findByText("2 of 28 enrolled learners"),
-      ).toBeInTheDocument()
+      expect(await screen.findByText("2 of 28 learners")).toBeInTheDocument()
     })
 
     test("drops the learner count, rather than loading forever, when the grid fails", async () => {
@@ -551,7 +567,6 @@ describe("ContractLearnersPage", () => {
         analyticsUrls.contracts.learners(ORG_UUID, contractId, {
           limit: GRID_PAGE_SIZE,
           offset: 0,
-          completion_status: SHARED_STATUSES,
         }),
         "Internal Server Error",
         { code: 500 },
@@ -561,43 +576,69 @@ describe("ContractLearnersPage", () => {
         "Something went wrong loading learner data.",
       )
       expect(screen.queryByText("Loading…")).not.toBeInTheDocument()
-      expect(screen.queryByText(/enrolled learners/)).not.toBeInTheDocument()
+      expect(screen.queryByText(/\d+ of \d+ learners/)).not.toBeInTheDocument()
     })
 
-    /** Asking for every shared status is what leaves out learners who haven't consented. */
-    test("asks for only learners who consented, in the grid and in the learner total", async () => {
+    /** `/learners` lists every member when no status is asked for; it already leaves out learners it can't share. */
+    test("lists members with no enrollments, Not enrolled in every module, without asking for a status", async () => {
       const { contractId } = renderGrid()
-      mockGridPage(contractId, 0, [learnerNamed("Ada Lovelace")])
+      mockGridPage(contractId, 0, [learnerNamed("Ada Lovelace")], {}, {}, [
+        memberNamed("Bob Barker"),
+      ])
 
-      await screen.findByText("1 of 28 enrolled learners")
+      const bob = rowOf(await screen.findByText("Bob Barker"))
+      expect(within(bob).getAllByText("N/A")).toHaveLength(2)
+      expect(within(bob).getAllByText(", not enrolled")).toHaveLength(2)
+      await screen.findByText("2 of 28 learners")
 
       const learnerRequests = makeRequest.mock.calls
         .map(([{ url }]) => new URL(url, "http://localhost"))
         .filter(({ pathname }) => pathname.split("/").includes("learners"))
+      expect(learnerRequests.length).toBeGreaterThan(0)
       expect(
-        learnerRequests.map(({ searchParams }) => ({
-          limit: searchParams.get("limit"),
-          statuses: searchParams.getAll("completion_status").sort(),
-        })),
-      ).toEqual(
-        expect.arrayContaining([
-          { limit: "1", statuses: [...SHARED_STATUSES].sort() },
-          {
-            limit: String(GRID_PAGE_SIZE),
-            statuses: [...SHARED_STATUSES].sort(),
-          },
-        ]),
-      )
-      expect(
-        learnerRequests.every(
-          ({ searchParams }) => searchParams.getAll("completion_status").length,
+        learnerRequests.some(({ searchParams }) =>
+          searchParams.has("completion_status"),
         ),
-      ).toBe(true)
+      ).toBe(false)
       expect(
         makeRequest.mock.calls.some(([{ url }]) =>
           url.includes("learner-progress"),
         ),
       ).toBe(false)
+    })
+
+    test("puts each learner's entry under its course, whichever run it shows", async () => {
+      const { contractId } = renderGrid()
+      mockGridPage(contractId, 0, [
+        analyticsFactories.learnerRow({
+          learner_id: "a",
+          full_name: "Ada Lovelace",
+          course_readable_id: M5,
+          courserun_readable_id: "course-v1:MITx+M5+2025_C695",
+          completion_status: "certified",
+        }),
+        analyticsFactories.learnerRow({
+          learner_id: "b",
+          full_name: "Bob Barker",
+          course_readable_id: M5,
+          courserun_readable_id: "course-v1:MITx+M5+2026",
+          completion_status: "in_progress",
+        }),
+      ])
+
+      const ada = rowOf(await screen.findByText("Ada Lovelace"))
+      const bob = rowOf(screen.getByText("Bob Barker"))
+      expect(
+        within(gridTable())
+          .getAllByRole("columnheader")
+          .map((header) => header.textContent),
+      ).toEqual(["Learner", "Module 5", "Module 6"])
+      expect(within(ada).getAllByRole("cell")[0]).toHaveTextContent(
+        "Certificate",
+      )
+      expect(within(bob).getAllByRole("cell")[0]).toHaveTextContent(
+        "In progress",
+      )
     })
 
     test("requests the next page of learners by offset", async () => {
@@ -623,9 +664,9 @@ describe("ContractLearnersPage", () => {
 
   describe("the learner summary panel", () => {
     const ada = (
-      overrides: Parameters<typeof analyticsFactories.learnerProgress>[0],
+      overrides: Parameters<typeof analyticsFactories.learnerRow>[0],
     ) =>
-      analyticsFactories.learnerProgress({
+      analyticsFactories.learnerRow({
         learner_id: "a",
         email: "ada@example.com",
         full_name: "Ada Lovelace",
@@ -648,7 +689,7 @@ describe("ContractLearnersPage", () => {
       const { contractId } = renderGrid()
       mockGridPage(contractId, 0, [
         ada({
-          courserun_readable_id: M5,
+          course_readable_id: M5,
           completion_status: "passed",
           content_progress: 1,
           last_active_on: "2026-09-12",
@@ -658,7 +699,7 @@ describe("ContractLearnersPage", () => {
           chatbot_interactions: 2,
         }),
         ada({
-          courserun_readable_id: M6,
+          course_readable_id: M6,
           completion_status: "in_progress",
           content_progress: 0.4,
           last_active_on: "2026-09-30",
@@ -700,10 +741,28 @@ describe("ContractLearnersPage", () => {
       ).toBeInTheDocument()
     })
 
+    test("counts Completed over the selected modules only", async () => {
+      const { contractId } = renderGrid(`/?modules=${encodeURIComponent(M6)}`)
+      mockGridPage(contractId, 0, [
+        ada({ course_readable_id: M5, completion_status: "passed" }),
+        ada({ course_readable_id: M6, completion_status: "in_progress" }),
+      ])
+
+      const dialog = await openSummary()
+
+      const progress = within(dialog).getByRole("region", { name: "Progress" })
+      expect(statValue(progress, "Completed")).toHaveTextContent("0 of 1")
+      expect(
+        within(
+          within(dialog).getByRole("region", { name: "Modules" }),
+        ).getAllByRole("listitem"),
+      ).toHaveLength(1)
+    })
+
     test("shows refetched counts while the panel stays open", async () => {
       const { contractId, queryClient } = renderGrid()
       mockGridPage(contractId, 0, [
-        ada({ courserun_readable_id: M5, videos_watched: 4 }),
+        ada({ course_readable_id: M5, videos_watched: 4 }),
       ])
 
       const dialog = await openSummary()
@@ -713,7 +772,7 @@ describe("ContractLearnersPage", () => {
       expect(statValue(activity, "Videos watched")).toHaveTextContent("4")
 
       mockGridPage(contractId, 0, [
-        ada({ courserun_readable_id: M5, videos_watched: 9 }),
+        ada({ course_readable_id: M5, videos_watched: 9 }),
       ])
       await act(async () => {
         await queryClient.refetchQueries()
@@ -727,7 +786,7 @@ describe("ContractLearnersPage", () => {
 
     test("closes on Escape and returns focus to the learner", async () => {
       const { contractId } = renderGrid()
-      mockGridPage(contractId, 0, [ada({ courserun_readable_id: M5 })])
+      mockGridPage(contractId, 0, [ada({ course_readable_id: M5 })])
 
       await openSummary()
       await user.keyboard("{Escape}")
@@ -740,28 +799,38 @@ describe("ContractLearnersPage", () => {
   })
 
   describe("the Modules filter", () => {
-    test("narrows learners and columns to the selected modules", async () => {
-      const { contractId, location } = renderGrid()
-      mockGridPage(contractId, 0, [
-        analyticsFactories.learnerProgress({
-          learner_id: "a",
-          full_name: "Ada Lovelace",
-          courserun_readable_id: M5,
+    test("lists courses in the order the API sends them, not alphabetically", async () => {
+      const { contractId } = renderGrid("/", [
+        analyticsFactories.course({
+          course_readable_id: M6,
+          course_title: "Introduction",
+        }),
+        analyticsFactories.course({
+          course_readable_id: M5,
+          course_title: "Applications",
         }),
       ])
-      mockGridPage(
-        contractId,
-        0,
-        [
-          analyticsFactories.learnerProgress({
-            learner_id: "b",
-            full_name: "Bob Barker",
-            courserun_readable_id: M6,
-          }),
-        ],
-        {},
-        { courserun_readable_id: [M6] },
-      )
+      mockGridPage(contractId, 0, [learnerNamed("Ada Lovelace")])
+
+      await screen.findByText("Ada Lovelace")
+      await user.click(screen.getByRole("combobox", { name: /modules/i }))
+      expect(
+        within(await screen.findByRole("listbox"))
+          .getAllByRole("option")
+          .map((option) => option.textContent),
+      ).toEqual(["Introduction", "Applications"])
+    })
+
+    /** With no status, every learner has a status in every module, so a module selection can't leave anyone out. */
+    test("narrows the columns, and keeps every learner, when no status is selected", async () => {
+      const { contractId, location } = renderGrid()
+      mockGridPage(contractId, 0, [
+        analyticsFactories.learnerRow({
+          learner_id: "a",
+          full_name: "Ada Lovelace",
+          course_readable_id: M5,
+        }),
+      ])
 
       await screen.findByText("Ada Lovelace")
 
@@ -774,8 +843,9 @@ describe("ContractLearnersPage", () => {
       expect(option).toHaveAttribute("aria-selected", "true")
       await user.keyboard("{Escape}")
 
-      expect(await screen.findByText("Bob Barker")).toBeInTheDocument()
       expect(location.current.searchParams.getAll("modules")).toEqual([M6])
+      const ada = rowOf(screen.getByText("Ada Lovelace"))
+      expect(within(ada).getByText("N/A")).toBeInTheDocument()
       const table = gridTable()
       expect(
         within(table).getByRole("columnheader", { name: "Module 6" }),
@@ -803,44 +873,42 @@ describe("ContractLearnersPage", () => {
       expect(combobox).toHaveTextContent("Selected2")
     })
 
-    test("drops module ids in the URL that aren't on the contract", async () => {
+    /** Links saved while the columns were runs carry run ids, which match no course. */
+    test("drops module ids in the URL that aren't courses on the contract, such as run ids", async () => {
       const { contractId } = renderGrid(
-        `/?modules=${encodeURIComponent(M5)}&modules=gone`,
+        `/?modules=${encodeURIComponent(M5)}&modules=${encodeURIComponent(`${M6}+2026`)}&status=in_progress`,
       )
       mockGridPage(
         contractId,
         0,
         [learnerNamed("Ada Lovelace")],
         {},
-        { courserun_readable_id: [M5] },
+        { completion_status: ["in_progress"], course_readable_id: [M5] },
       )
 
       expect(await screen.findByText("Ada Lovelace")).toBeInTheDocument()
+      expect(
+        within(gridTable()).queryByRole("columnheader", { name: "Module 6" }),
+      ).not.toBeInTheDocument()
     })
 
     test("dates the learner's last activity from the selected modules only", async () => {
       const { contractId } = renderGrid(`/?modules=${encodeURIComponent(M6)}`)
       const ada = { learner_id: "a", full_name: "Ada Lovelace" }
-      mockGridPage(
-        contractId,
-        0,
-        [
-          analyticsFactories.learnerProgress({
-            ...ada,
-            courserun_readable_id: M5,
-            completion_status: "in_progress",
-            last_active_on: "2026-09-30",
-          }),
-          analyticsFactories.learnerProgress({
-            ...ada,
-            courserun_readable_id: M6,
-            completion_status: "in_progress",
-            last_active_on: "2026-08-01",
-          }),
-        ],
-        {},
-        { courserun_readable_id: [M6] },
-      )
+      mockGridPage(contractId, 0, [
+        analyticsFactories.learnerRow({
+          ...ada,
+          course_readable_id: M5,
+          completion_status: "in_progress",
+          last_active_on: "2026-09-30",
+        }),
+        analyticsFactories.learnerRow({
+          ...ada,
+          course_readable_id: M6,
+          completion_status: "in_progress",
+          last_active_on: "2026-08-01",
+        }),
+      ])
 
       const row = rowOf(await screen.findByText("Ada Lovelace"))
       expect(
@@ -850,9 +918,9 @@ describe("ContractLearnersPage", () => {
 
     test("is hidden, and ignores modules in the URL, when the contract has one module", async () => {
       const { contractId } = renderGrid(`/?modules=${encodeURIComponent(M5)}`, [
-        analyticsFactories.courseRun({
-          courserun_id: M5,
-          courserun_title: "Module 5",
+        analyticsFactories.course({
+          course_readable_id: M5,
+          course_title: "Module 5",
         }),
       ])
       mockGridPage(contractId, 0, [learnerNamed("Ada Lovelace")])
@@ -870,7 +938,7 @@ describe("ContractLearnersPage", () => {
     test("marks the field when its options fail to load", async () => {
       const { contractId } = renderGrid()
       setMockResponse.get(
-        analyticsUrls.contracts.courseRuns(ORG_UUID, contractId, {
+        analyticsUrls.contracts.courses(ORG_UUID, contractId, {
           limit: 1000,
         }),
         "Internal Server Error",
@@ -906,18 +974,11 @@ describe("ContractLearnersPage", () => {
       mockGridPage(
         contractId,
         0,
-        [learnerNamed("In Module 6")],
-        {},
-        { courserun_readable_id: [M6] },
-      )
-      mockGridPage(
-        contractId,
-        0,
         [learnerNamed("Completed In Module 6")],
         {},
         {
           completion_status: ["passed", "certified"],
-          courserun_readable_id: [M6],
+          course_readable_id: [M6],
         },
       )
 
@@ -943,8 +1004,9 @@ describe("ContractLearnersPage", () => {
       }
 
       await toggleModule("Module 6")
-      await screen.findByText("In Module 6")
-      expect(statusField()).not.toHaveAttribute("aria-disabled")
+      await waitFor(() =>
+        expect(statusField()).not.toHaveAttribute("aria-disabled"),
+      )
       expect(statusField()).toHaveTextContent("All learners")
       expect(statusField()).not.toHaveAccessibleDescription()
 
@@ -960,7 +1022,7 @@ describe("ContractLearnersPage", () => {
         Promise.withResolvers<ReturnType<typeof analyticsFactories.envelope>>()
       const { contractId } = renderGrid()
       setMockResponse.get(
-        analyticsUrls.contracts.courseRuns(ORG_UUID, contractId, {
+        analyticsUrls.contracts.courses(ORG_UUID, contractId, {
           limit: 1000,
         }),
         runs.promise,
@@ -987,7 +1049,7 @@ describe("ContractLearnersPage", () => {
     test("says why it's unavailable when the modules fail to load", async () => {
       const { contractId } = renderGrid()
       setMockResponse.get(
-        analyticsUrls.contracts.courseRuns(ORG_UUID, contractId, {
+        analyticsUrls.contracts.courses(ORG_UUID, contractId, {
           limit: 1000,
         }),
         "Internal Server Error",
@@ -1014,7 +1076,7 @@ describe("ContractLearnersPage", () => {
         {},
         {
           completion_status: ["passed", "certified"],
-          courserun_readable_id: [M6],
+          course_readable_id: [M6],
         },
       )
       mockGridPage(contractId, 0, [learnerNamed("Everyone")])
@@ -1026,23 +1088,58 @@ describe("ContractLearnersPage", () => {
       await screen.findByText("Everyone")
       expect(location.current.search).toBe("")
       expect(statusField()).toHaveAttribute("aria-disabled", "true")
-      expect(screen.getByText("Status filter cleared.")).toHaveAttribute(
-        "role",
-        "status",
-      )
+      expect(
+        screen.getByText("Status filter cleared. Showing 2 of 2 modules."),
+      ).toHaveAttribute("role", "status")
 
+      await toggleModule("Module 6")
+      expect(
+        await screen.findByText("Showing 1 of 2 modules."),
+      ).toHaveAttribute("role", "status")
+    })
+
+    /** With no status, the rows don't change, so the grid has nothing new to announce. */
+    test("announces a module change and keeps the page when it only picks columns", async () => {
+      const { contractId, location } = renderGrid("/?page=2")
+      mockGridPage(contractId, GRID_PAGE_SIZE, [learnerNamed("Second Page")], {
+        total_count: 30,
+      })
+
+      await screen.findByText("Second Page")
+      await toggleModule("Module 6")
+
+      expect(
+        await screen.findByText("Showing 1 of 2 modules."),
+      ).toHaveAttribute("role", "status")
+      expect(location.current.searchParams.get("page")).toBe("2")
+      expect(location.current.searchParams.getAll("modules")).toEqual([M6])
+      expect(screen.getByText("Second Page")).toBeInTheDocument()
+    })
+
+    test("sends the page back to 1 when a module change narrows the learners", async () => {
+      const { contractId, location } = renderGrid(
+        "/?page=2&needs_attention=true",
+      )
+      mockGridPage(
+        contractId,
+        GRID_PAGE_SIZE,
+        [learnerNamed("Second Page")],
+        { total_count: 30 },
+        { needs_attention: true },
+      )
       mockGridPage(
         contractId,
         0,
-        [learnerNamed("In Module 6")],
+        [learnerNamed("Stale In Module 6")],
         {},
-        { courserun_readable_id: [M6] },
+        { needs_attention: true, course_readable_id: [M6] },
       )
+
+      await screen.findByText("Second Page")
       await toggleModule("Module 6")
-      await screen.findByText("In Module 6")
-      expect(
-        screen.queryByText("Status filter cleared."),
-      ).not.toBeInTheDocument()
+
+      await screen.findByText("Stale In Module 6")
+      expect(location.current.searchParams.get("page")).toBeNull()
     })
 
     /** An old link or bookmark, from before Status needed a module. */
@@ -1091,12 +1188,12 @@ describe("ContractLearnersPage", () => {
         contractId,
         0,
         [
-          analyticsFactories.learnerProgress({
+          analyticsFactories.learnerRow({
             learner_id: "p",
             full_name: "Passed",
             completion_status: "passed",
           }),
-          analyticsFactories.learnerProgress({
+          analyticsFactories.learnerRow({
             learner_id: "c",
             full_name: "Certified",
             completion_status: "certified",
@@ -1114,11 +1211,39 @@ describe("ContractLearnersPage", () => {
         within(listbox)
           .getAllByRole("option")
           .map((option) => option.textContent),
-      ).toEqual(["All learners", "Not started", "In progress", "Completed"])
+      ).toEqual([
+        "All learners",
+        "Not enrolled",
+        "Not started",
+        "In progress",
+        "Completed",
+      ])
       await user.click(within(listbox).getByText("Completed"))
 
       await screen.findByText("Passed")
       await screen.findByText("Certified")
+    })
+
+    test("Not enrolled asks for members missing an enrollment in a selected module", async () => {
+      const { contractId, location } = renderGrid(
+        `/?modules=${encodeURIComponent(M6)}`,
+      )
+      mockGridPage(contractId, 0, [learnerNamed("Everyone")])
+      mockGridPage(
+        contractId,
+        0,
+        [],
+        {},
+        { completion_status: ["not_enrolled"], course_readable_id: [M6] },
+        [memberNamed("Bob Barker")],
+      )
+
+      await screen.findByText("Everyone")
+      await pickStatus("Not enrolled")
+
+      const bob = rowOf(await screen.findByText("Bob Barker"))
+      expect(within(bob).getByText("N/A")).toBeInTheDocument()
+      expect(location.current.searchParams.get("status")).toBe("not_enrolled")
     })
 
     /**
@@ -1205,6 +1330,55 @@ describe("ContractLearnersPage", () => {
       await user.click(await checkbox())
       await screen.findByText("Stale And In Progress")
     })
+
+    /** The API never matches the two together, so the pair would always list nobody. */
+    test("is cleared, and unavailable but still reachable, while Status is Not enrolled", async () => {
+      const { contractId, location } = renderGrid("/", oneModule())
+      mockGridPage(contractId, 0, [learnerNamed("Everyone")])
+      mockGridPage(
+        contractId,
+        0,
+        [learnerNamed("Stale")],
+        {},
+        { needs_attention: true },
+      )
+      mockGridPage(
+        contractId,
+        0,
+        [],
+        {},
+        { completion_status: ["not_enrolled"] },
+        [memberNamed("Bob Barker")],
+      )
+
+      await screen.findByText("Everyone")
+      await user.click(await checkbox())
+      await screen.findByText("Stale")
+      await pickStatus("Not enrolled")
+
+      await screen.findByText("Bob Barker")
+      const box = await checkbox()
+      expect(box).not.toBeChecked()
+      expect(box).toHaveAttribute("aria-disabled", "true")
+      expect(box).not.toBeDisabled()
+      expect(box).toHaveAccessibleDescription(
+        "Learners who haven't enrolled have no activity to flag.",
+      )
+      expect(location.current.search).toBe("?status=not_enrolled")
+      expect(
+        screen.getByText(`${NEEDS_ATTENTION} filter cleared.`),
+      ).toHaveAttribute("role", "status")
+
+      await user.click(box)
+      expect(box).not.toBeChecked()
+      expect(location.current.search).toBe("?status=not_enrolled")
+
+      await user.hover(box)
+      expect(await screen.findByRole("tooltip")).toHaveTextContent(
+        "Learners who haven't enrolled have no activity to flag.",
+      )
+      expect(box).toHaveAccessibleName(NEEDS_ATTENTION)
+    })
   })
 
   describe("URL state", () => {
@@ -1232,9 +1406,9 @@ describe("ContractLearnersPage", () => {
     /** The API accepts at most 50 modules; every module is sent as no module filter instead. */
     test("selects every module for a dashboard link, past the API's 50-module cap", async () => {
       const runs = Array.from({ length: 51 }, (_, index) =>
-        analyticsFactories.courseRun({
-          courserun_id: `course-v1:MITx+M${index}+2026`,
-          courserun_title: `Module ${index}`,
+        analyticsFactories.course({
+          course_readable_id: `course-v1:MITx+M${index}`,
+          course_title: `Module ${index}`,
         }),
       )
       const { contractId } = renderGrid(
@@ -1258,23 +1432,32 @@ describe("ContractLearnersPage", () => {
 
     test("returns to every module when the last one is selected again, past the API's 50-module cap", async () => {
       const runs = Array.from({ length: 51 }, (_, index) =>
-        analyticsFactories.courseRun({
-          courserun_id: `course-v1:MITx+M${index}+2026`,
-          courserun_title: `Module ${String(index).padStart(2, "0")}`,
+        analyticsFactories.course({
+          course_readable_id: `course-v1:MITx+M${index}`,
+          course_title: `Module ${String(index).padStart(2, "0")}`,
         }),
       )
-      const ids = runs.map(({ courserun_id: id }) => id)
+      const ids = runs.map(({ course_readable_id: id }) => id)
       const { contractId, location } = renderGrid(
-        `/?modules=${ALL_MODULES}`,
+        `/?modules=${ALL_MODULES}&status=in_progress`,
         runs,
       )
-      mockGridPage(contractId, 0, [learnerNamed("Every Module Learner")])
+      mockGridPage(
+        contractId,
+        0,
+        [learnerNamed("Every Module Learner")],
+        {},
+        { completion_status: ["in_progress"] },
+      )
       mockGridPage(
         contractId,
         0,
         [learnerNamed("Fifty Module Learner")],
         {},
-        { courserun_readable_id: ids.slice(1) },
+        {
+          completion_status: ["in_progress"],
+          course_readable_id: ids.slice(1),
+        },
       )
       /**
        * By text rather than `toggleModule`, whose `getByRole("option", { name })`
@@ -1308,23 +1491,26 @@ describe("ContractLearnersPage", () => {
 
     test("shows and requests the same 50 modules when a link selects more than 50 but not all", async () => {
       const runs = Array.from({ length: 52 }, (_, index) =>
-        analyticsFactories.courseRun({
-          courserun_id: `course-v1:MITx+M${index}+2026`,
-          courserun_title: `Module ${String(index).padStart(2, "0")}`,
+        analyticsFactories.course({
+          course_readable_id: `course-v1:MITx+M${index}`,
+          course_title: `Module ${String(index).padStart(2, "0")}`,
         }),
       )
-      const ids = runs.map(({ courserun_id: id }) => id)
+      const ids = runs.map(({ course_readable_id: id }) => id)
       const modules = ids
         .slice(0, 51)
         .map((id) => `modules=${encodeURIComponent(id)}`)
         .join("&")
-      const { contractId } = renderGrid(`/?${modules}`, runs)
+      const { contractId } = renderGrid(`/?${modules}&status=in_progress`, runs)
       mockGridPage(
         contractId,
         0,
         [learnerNamed("Capped Learner")],
         {},
-        { courserun_readable_id: ids.slice(0, 50) },
+        {
+          completion_status: ["in_progress"],
+          course_readable_id: ids.slice(0, 50),
+        },
       )
 
       await screen.findByText("Capped Learner")
@@ -1449,7 +1635,7 @@ describe("ContractLearnersPage", () => {
         {
           completion_status: ["not_started"],
           needs_attention: true,
-          courserun_readable_id: [M6],
+          course_readable_id: [M6],
         },
       )
       await screen.findByText("Filtered")
@@ -1521,27 +1707,27 @@ describe("ContractLearnersPage", () => {
         full_name: "Ada Lovelace",
       }
       const rows = [
-        analyticsFactories.learnerProgress({
+        analyticsFactories.learnerRow({
           ...ada,
-          courserun_readable_id: M5,
+          course_readable_id: M5,
           completion_status: "passed",
           content_progress: 0.9,
           last_active_on: "2026-09-30",
           needs_attention: true,
         }),
-        analyticsFactories.learnerProgress({
+        analyticsFactories.learnerRow({
           ...ada,
-          courserun_readable_id: M6,
+          course_readable_id: M6,
           completion_status: "not_started",
           content_progress: 0.1,
           last_active_on: null,
           needs_attention: true,
         }),
-        analyticsFactories.learnerProgress({
+        analyticsFactories.learnerRow({
           learner_id: "b",
           email: "bob@example.com",
           full_name: "Bob Barker",
-          courserun_readable_id: M5,
+          course_readable_id: M5,
           completion_status: "in_progress",
           content_progress: 0.35,
           last_active_on: null,
@@ -1556,7 +1742,7 @@ describe("ContractLearnersPage", () => {
       expect(csv.split("\n")).toEqual([
         "Name,Email,Last activity,Module 5 status,Module 5 progress,Module 6 status,Module 6 progress",
         "Ada Lovelace,ada@example.com,2026-09-30,Completed (inactive 30+ days),90%,Not started,",
-        "Bob Barker,bob@example.com,,In progress,35%,N/A,",
+        "Bob Barker,bob@example.com,,In progress,35%,Not enrolled,",
       ])
       expect(await screen.findByText("CSV download started.")).toBeVisible()
     })
@@ -1570,16 +1756,16 @@ describe("ContractLearnersPage", () => {
         `/?status=not_started&modules=${encodeURIComponent(M6)}`,
       )
       const rows = [
-        analyticsFactories.learnerProgress({
+        analyticsFactories.learnerRow({
           email: "ada@example.com",
           full_name: "Ada Lovelace",
-          courserun_readable_id: M6,
+          course_readable_id: M6,
           completion_status: "not_started",
         }),
       ]
       const filters = {
         completion_status: ["not_started"],
-        courserun_readable_id: [M6],
+        course_readable_id: [M6],
       }
       mockGridPage(contractId, 0, rows, {}, filters)
       mockExportPage(contractId, 0, rows, {}, filters)
@@ -1624,7 +1810,7 @@ describe("ContractLearnersPage", () => {
         Promise.withResolvers<ReturnType<typeof analyticsFactories.envelope>>()
       const { contractId } = renderGrid()
       setMockResponse.get(
-        analyticsUrls.contracts.courseRuns(ORG_UUID, contractId, {
+        analyticsUrls.contracts.courses(ORG_UUID, contractId, {
           limit: 1000,
         }),
         runs.promise,
@@ -1642,9 +1828,9 @@ describe("ContractLearnersPage", () => {
       await act(async () => {
         runs.resolve(
           analyticsFactories.envelope([
-            analyticsFactories.courseRun({
-              courserun_id: M5,
-              courserun_title: "Module 5",
+            analyticsFactories.course({
+              course_readable_id: M5,
+              course_title: "Module 5",
             }),
           ]),
         )
@@ -1656,7 +1842,7 @@ describe("ContractLearnersPage", () => {
     test("says why Export is disabled when the modules fail to load", async () => {
       const { contractId } = renderGrid()
       setMockResponse.get(
-        analyticsUrls.contracts.courseRuns(ORG_UUID, contractId, {
+        analyticsUrls.contracts.courses(ORG_UUID, contractId, {
           limit: 1000,
         }),
         "Internal Server Error",
@@ -1688,7 +1874,6 @@ describe("ContractLearnersPage", () => {
         analyticsUrls.contracts.learners(ORG_UUID, contractId, {
           limit: EXPORT_PAGE_SIZE,
           offset: EXPORT_PAGE_SIZE,
-          completion_status: SHARED_STATUSES,
         }),
         "Internal Server Error",
         { code: 500 },

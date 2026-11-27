@@ -62,18 +62,11 @@ describe("analyticsContractQueries", () => {
       ]),
     },
     {
-      name: "courseRuns",
+      name: "courses",
       query: () =>
-        erase(analyticsContractQueries.courseRuns(ORG_UUID, CONTRACT_ID)),
-      url: urls.contracts.courseRuns(ORG_UUID, CONTRACT_ID),
-      response: factories.envelope([factories.courseRun()]),
-    },
-    {
-      name: "needsAttention",
-      query: () =>
-        erase(analyticsContractQueries.needsAttention(ORG_UUID, CONTRACT_ID)),
-      url: urls.contracts.needsAttention(ORG_UUID, CONTRACT_ID),
-      response: factories.envelope([factories.contractNeedsAttention()]),
+        erase(analyticsContractQueries.courses(ORG_UUID, CONTRACT_ID)),
+      url: urls.contracts.courses(ORG_UUID, CONTRACT_ID),
+      response: factories.envelope([factories.course()]),
     },
   ])(
     "$name requests the contract-nested path",

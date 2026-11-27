@@ -5,7 +5,7 @@ import type {
   OrganizationsApiOrganizationsContractUtilizationRetrieveRequest,
   OrgAnalyticsResponseContractUtilization,
 } from "@mitodl/ol-analytics-dashboard-api-axios"
-import { contractsApi, learnersApi, needsAttentionApi } from "../../clients"
+import { contractsApi, learnersApi } from "../../clients"
 
 /**
  * LIMIT/OFFSET paging, shared by every multi-row endpoint. The API caps `limit`
@@ -238,7 +238,7 @@ const analyticsContractQueries = {
     }),
 
   /**
-   * One page of learners, each with all of their enrollments. `params.limit`
+   * One page of learners, each with one enrollment per course. `params.limit`
    * and `params.offset` count learners.
    */
   learners: (orgId: string, contractId: number, params?: LearnersParams) =>
@@ -259,47 +259,26 @@ const analyticsContractQueries = {
     }),
 
   /**
-   * The module filter's options. Kept on the shared five-minute
-   * `ANALYTICS_STALE_TIME` rather than `learnerProgress`'s shorter one: a
-   * contract's set of course runs changes when the contract does, not as
-   * learners move through it. Five minutes is still short enough that a
-   * consumer has to expect a mid-session refetch.
+   * The Learners page's columns and module filter options, in the learner
+   * dashboard's order. Kept on the shared five-minute `ANALYTICS_STALE_TIME`
+   * rather than `learnerProgress`'s shorter one: a contract's set of courses
+   * changes when the contract does, not as learners move through it. Five
+   * minutes is still short enough that a consumer has to expect a mid-session
+   * refetch.
    */
-  courseRuns: (orgId: string, contractId: number, page?: AnalyticsPageParams) =>
+  courses: (orgId: string, contractId: number, page?: AnalyticsPageParams) =>
     queryOptions({
       queryKey: analyticsContractKeys.resource(
         orgId,
         contractId,
-        "course-runs",
+        "courses",
         page,
       ),
       staleTime: ANALYTICS_STALE_TIME,
       queryFn: async ({ signal }) =>
         learnersApi
-          .learnersCourseRunsRetrieve(
+          .learnersCoursesRetrieve(
             { organization_id: orgId, contract_id: contractId, ...page },
-            { signal },
-          )
-          .then((res) => res.data),
-    }),
-
-  /**
-   * On `learnerProgress`'s stale time, not the rollups': it is computed from
-   * the same rows at query time, and the count should not lag the directory a
-   * manager clicks through to.
-   */
-  needsAttention: (orgId: string, contractId: number) =>
-    queryOptions({
-      queryKey: analyticsContractKeys.resource(
-        orgId,
-        contractId,
-        "needs-attention",
-      ),
-      staleTime: LEARNER_PROGRESS_STALE_TIME,
-      queryFn: async ({ signal }) =>
-        needsAttentionApi
-          .contractsNeedsAttentionRetrieve(
-            { organization_id: orgId, contract_id: contractId },
             { signal },
           )
           .then((res) => res.data),

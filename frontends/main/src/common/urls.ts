@@ -2,7 +2,10 @@ import { env, requiredEnv } from "@/env"
 import type { V2ProgramDisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { slugify } from "@/common/slugs"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
-import type { CompletionStatusFilter } from "api/analytics-hooks/organizations"
+import type {
+  CompletionStatusFilter,
+  LearnerStatusFilter,
+} from "api/analytics-hooks/organizations"
 
 // matches ! $ & ' ( ) * + , ; = : @ ~
 const SAFE_IN_PATH_SEGMENT =
@@ -129,6 +132,12 @@ export const CONTRACT_LEARNERS_STATUSES = [
   "passed",
 ] as const
 export type ContractLearnersStatus = (typeof CONTRACT_LEARNERS_STATUSES)[number]
+/** The Learners page's own Status values: the dashboard's, plus Not enrolled, which has no tile. */
+export const LEARNERS_PAGE_STATUSES = [
+  "not_enrolled",
+  ...CONTRACT_LEARNERS_STATUSES,
+] as const
+export type LearnersPageStatus = (typeof LEARNERS_PAGE_STATUSES)[number]
 
 /**
  * "Completed" queries both `passed` and `certified`, matching the count
@@ -139,9 +148,10 @@ export type ContractLearnersStatus = (typeof CONTRACT_LEARNERS_STATUSES)[number]
  * two outcomes; only the filter groups them.
  */
 export const STATUS_FILTER_COMPLETION_STATUS: Record<
-  ContractLearnersStatus,
-  CompletionStatusFilter[]
+  LearnersPageStatus,
+  LearnerStatusFilter[]
 > = {
+  not_enrolled: ["not_enrolled"],
   not_started: ["not_started"],
   in_progress: ["in_progress"],
   passed: ["passed", "certified"],

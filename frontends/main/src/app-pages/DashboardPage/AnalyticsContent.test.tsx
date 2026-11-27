@@ -10,7 +10,6 @@ import { waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type { AxiosError } from "axios"
 import type { UserOrganizationPage } from "@mitodl/mitxonline-api-axios/v0"
-import type { ContractNeedsAttention } from "api/analytics-hooks/organizations"
 import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { allowConsoleErrors } from "ol-test-utilities"
 import {
@@ -111,23 +110,29 @@ const setAnalyticsResponses = ({
   )
 }
 
+/** The Needs attention card's count: the same `/learners` request its link makes. */
+const needsAttentionUrl = (contractId: number) =>
+  analyticsUrls.contracts.learners(ORG_UUID, contractId, {
+    limit: 1,
+    offset: 0,
+    needs_attention: true,
+  })
+
 /**
- * Mocks the four section endpoints and the learner count and needs-attention
- * endpoints, for tests that render with the learner analytics flag on.
+ * Mocks the four section endpoints and the learner counts, Needs attention's
+ * included, for tests that render with the learner analytics flag on.
  */
 const setContractAnalyticsResponses = (
   contractId: number,
   page = { limit: 200 },
-  needsAttention: ContractNeedsAttention[] = [
-    analyticsFactories.contractNeedsAttention({
-      contract_id: contractId,
-      learners_needing_attention: 20,
-    }),
-  ],
+  needsAttentionCount = 20,
 ) => {
   setMockResponse.get(
-    analyticsUrls.contracts.needsAttention(ORG_UUID, contractId),
-    analyticsFactories.envelope(needsAttention, { as_of: AS_OF }),
+    needsAttentionUrl(contractId),
+    analyticsFactories.learnersEnvelope([], {
+      as_of: AS_OF,
+      total_count: needsAttentionCount,
+    }),
   )
   setMockResponse.get(
     analyticsUrls.contracts.contractUtilization(ORG_UUID, contractId, page),
@@ -1249,10 +1254,15 @@ describe("AnalyticsContent, contract-scoped", () => {
     )
     await screen.findByRole("group", { name: "Completed" })
 
+    /** Needs attention sends no status, as its Learners page link does. */
     const statusesSent = (resource: string) =>
       makeRequest.mock.calls
         .map(([{ url }]) => new URL(url, "http://localhost"))
-        .filter(({ pathname }) => pathname.split("/").includes(resource))
+        .filter(
+          ({ pathname, searchParams }) =>
+            pathname.split("/").includes(resource) &&
+            !searchParams.has("needs_attention"),
+        )
         .map(({ searchParams }) =>
           searchParams.getAll("completion_status").sort(),
         )
@@ -1266,11 +1276,11 @@ describe("AnalyticsContent, contract-scoped", () => {
   })
 
   describe("Needs attention card", () => {
-    const renderCard = async (needsAttention: ContractNeedsAttention[]) => {
+    const renderCard = async (count: number) => {
       const contract = factories.contracts.contract()
       const org = orgWithUuid({ contracts: [contract] })
       setManagerOrgs([org])
-      setContractAnalyticsResponses(contract.id, undefined, needsAttention)
+      setContractAnalyticsResponses(contract.id, undefined, count)
       const orgSlug = org.slug.replace(/^org-/, "")
       renderWithProviders(
         <AnalyticsContent orgSlug={orgSlug} contractSlug={contract.slug} />,
@@ -1283,17 +1293,8 @@ describe("AnalyticsContent, contract-scoped", () => {
       return { card, orgSlug, contract }
     }
 
-    const row = (overrides: Partial<ContractNeedsAttention> = {}) =>
-      analyticsFactories.contractNeedsAttention({
-        learners_considered: 120,
-        learners_outcomes_withheld: 0,
-        ...overrides,
-      })
-
     test("counts learners and links to the directory filtered to them", async () => {
-      const { card, orgSlug, contract } = await renderCard([
-        row({ learners_needing_attention: 20 }),
-      ])
+      const { card, orgSlug, contract } = await renderCard(20)
 
       expect(card).toHaveTextContent("20 learners")
       expect(
@@ -1311,18 +1312,14 @@ describe("AnalyticsContent, contract-scoped", () => {
     })
 
     test("uses singular wording for one learner", async () => {
-      const { card } = await renderCard([
-        row({ learners_needing_attention: 1 }),
-      ])
+      const { card } = await renderCard(1)
 
       expect(card).toHaveTextContent("1 learner")
       expect(card).not.toHaveTextContent("1 learners")
     })
 
     test("says no one needs attention instead of offering a follow-up with zero", async () => {
-      const { card } = await renderCard([
-        row({ learners_needing_attention: 0 }),
-      ])
+      const { card } = await renderCard(0)
 
       expect(
         within(card).getByText("No learners need attention right now."),
@@ -1366,33 +1363,9 @@ describe("AnalyticsContent, contract-scoped", () => {
           screen.queryByRole("group", { name: "Needs attention" }),
         ).not.toBeInTheDocument()
         expect(makeRequest).not.toHaveBeenCalledWith(
-          expect.objectContaining({
-            url: analyticsUrls.contracts.needsAttention(ORG_UUID, contractId),
-          }),
+          expect.objectContaining({ url: needsAttentionUrl(contractId) }),
         )
       },
     )
-
-    test.each([
-      {
-        name: "a suppressed count",
-        rows: [row({ learners_needing_attention: null })],
-      },
-      { name: "a contract under the floor", rows: [] },
-    ])("withholds the number for $name", async ({ rows }) => {
-      const { card } = await renderCard(rows)
-
-      expect(within(card).getByText("—")).toBeInTheDocument()
-      expect(
-        within(card).getByText(
-          "Too few learners to report how many need attention.",
-        ),
-      ).toBeInTheDocument()
-      expect(
-        within(card).getByRole("link", {
-          name: "Review learners who need attention",
-        }),
-      ).toBeInTheDocument()
-    })
   })
 })

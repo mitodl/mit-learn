@@ -9,14 +9,16 @@ import {
 import Image from "next/image"
 import {
   Container,
+  MuiCheckbox,
   SearchInput,
   SimpleSelectField,
   Skeleton,
   Stack,
   styled,
+  Tooltip,
   Typography,
 } from "ol-components"
-import { Alert, Button, Checkbox, VisuallyHidden } from "@mitodl/smoot-design"
+import { Alert, Button, VisuallyHidden } from "@mitodl/smoot-design"
 import {
   analyticsContractQueries,
   type LearnerWithEnrollments,
@@ -51,7 +53,7 @@ import {
   gridLearnersQuery,
   ProgressGrid,
 } from "./ProgressGrid"
-import { ALL_MODULES, completionStatusFilter } from "@/common/urls"
+import { ALL_MODULES, STATUS_FILTER_COMPLETION_STATUS } from "@/common/urls"
 import {
   ALL,
   MAX_GRID_MODULES,
@@ -60,8 +62,8 @@ import {
 } from "./useLearnerFilters"
 
 /**
- * The B2B learner directory: one row per learner, one column per course run
- * under a contract.
+ * The B2B learner directory: one row per contract member, one column per
+ * course the learner dashboard shows for the contract.
  *
  * Routed outside `/dashboard` (see `CONTRACT_LEARNERS_VIEW`) so it gets no
  * sidebar and can use the full width this table needs.
@@ -192,6 +194,7 @@ const SelectedValue = styled.span({
 
 const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: ALL, label: "All learners" },
+  { value: "not_enrolled", label: "Not enrolled" },
   { value: "not_started", label: "Not started" },
   { value: "in_progress", label: "In progress" },
   { value: "passed", label: "Completed" },
@@ -341,6 +344,74 @@ const CheckboxField = styled.div(({ theme }) => ({
   },
 }))
 
+const CheckboxLabel = styled("label", {
+  shouldForwardProp: (prop) => prop !== "$unavailable",
+})<{ $unavailable: boolean }>(({ $unavailable, theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  cursor: $unavailable ? "default" : "pointer",
+  ...theme.typography.body2,
+  color: $unavailable
+    ? theme.custom.colors.silverGrayLight
+    : theme.custom.colors.silverGrayDark,
+  ".MuiCheckbox-root": {
+    padding: "0 4px 0 0",
+    color: "inherit",
+  },
+  /** MUI hides the focused input and its root isn't focusable, so the outline goes on the box drawn in its place. */
+  ".MuiCheckbox-root:has(input:focus-visible) svg": {
+    outline: `2px solid ${theme.custom.colors.darkGray2}`,
+    borderRadius: "2px",
+  },
+}))
+
+const NEEDS_ATTENTION_LABEL = "Not started or inactive 30+ days"
+const NEEDS_ATTENTION_HINT_ID = "learner-needs-attention-hint"
+const NEEDS_ATTENTION_REASON =
+  "Learners who haven't enrolled have no activity to flag."
+
+/**
+ * Unavailable is `aria-disabled` rather than `disabled`, as in `StatusSelect`,
+ * so a keyboard or screen reader user can still reach the reason, which the
+ * tooltip shows on hover and focus. MUI's checkbox stands in for
+ * smoot-design's, which can't carry `aria-disabled`. `describeChild` keeps
+ * the tooltip from renaming the checkbox.
+ */
+const NeedsAttentionCheckbox: React.FC<{
+  checked: boolean
+  onChange: (checked: boolean) => void
+  unavailable: boolean
+}> = ({ checked, onChange, unavailable }) => (
+  <CheckboxField>
+    <Tooltip describeChild title={unavailable ? NEEDS_ATTENTION_REASON : ""}>
+      <CheckboxLabel $unavailable={unavailable}>
+        <MuiCheckbox
+          size="small"
+          disableRipple
+          checked={checked}
+          onChange={(event) => {
+            if (!unavailable) onChange(event.target.checked)
+          }}
+          inputProps={
+            unavailable
+              ? {
+                  "aria-disabled": "true",
+                  "aria-describedby": NEEDS_ATTENTION_HINT_ID,
+                }
+              : undefined
+          }
+        />
+        {NEEDS_ATTENTION_LABEL}
+      </CheckboxLabel>
+    </Tooltip>
+    {unavailable ? (
+      <VisuallyHidden id={NEEDS_ATTENTION_HINT_ID}>
+        {NEEDS_ATTENTION_REASON}
+      </VisuallyHidden>
+    ) : null}
+  </CheckboxField>
+)
+
 const ErrorRow = styled.div({
   display: "flex",
   alignItems: "center",
@@ -356,6 +427,7 @@ const CSV_EXPORT_CONCURRENCY = 2
 const UNAVAILABLE_MESSAGE_ID = "learner-analytics-unavailable-message"
 const NOT_LOADED_MESSAGE_ID = "learner-analytics-not-loaded-message"
 const NO_LEARNERS_MESSAGE_ID = "learner-analytics-no-learners-message"
+const NO_COURSES_MESSAGE_ID = "learner-analytics-no-courses-message"
 const MODULES_FAILED_MESSAGE_ID = "learner-export-modules-failed-message"
 
 type ContractLearnersPageProps = {
@@ -412,22 +484,23 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   const contractId = contract?.id ?? null
   const canQuery = isAnalyticsConfigured() && !!orgUuid && !!contractId
 
-  const courseRunsQuery = useQuery({
-    ...analyticsContractQueries.courseRuns(orgUuid ?? "", contractId ?? 0, {
+  const coursesQuery = useQuery({
+    ...analyticsContractQueries.courses(orgUuid ?? "", contractId ?? 0, {
       limit: 1000,
     }),
     enabled: canQuery,
   })
 
-  const courseRunOptions = useMemo(
+  const courseOptions = useMemo(
     () =>
-      (courseRunsQuery.data?.data ?? [])
-        .map((run) => ({ value: run.courserun_id, label: run.courserun_title }))
-        .sort((a, b) => a.label.localeCompare(b.label)),
-    [courseRunsQuery.data],
+      (coursesQuery.data?.data ?? []).map((course) => ({
+        value: course.course_readable_id,
+        label: course.course_title,
+      })),
+    [coursesQuery.data],
   )
   /** Kept while loading or on error, so its error text can show. */
-  const showModuleFilter = !courseRunsQuery.data || courseRunOptions.length > 1
+  const showModuleFilter = !coursesQuery.data || courseOptions.length > 1
   /**
    * Every module asks for the same learners as no module filter, so only a
    * partial selection is held to the API's cap; that keeps a dashboard link on
@@ -436,72 +509,95 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   const activeGridModules = useMemo(() => {
     if (!showModuleFilter) return []
     const everyModule = gridModules.includes(ALL_MODULES)
-    const selected = courseRunOptions
+    const selected = courseOptions
       .filter((option) => everyModule || gridModules.includes(option.value))
       .map((option) => option.value)
-    return selected.length < courseRunOptions.length
+    return selected.length < courseOptions.length
       ? selected.slice(0, MAX_GRID_MODULES)
       : selected
-  }, [showModuleFilter, gridModules, courseRunOptions])
+  }, [showModuleFilter, gridModules, courseOptions])
 
   /** Status is per module, so it needs one selected, unless the contract has only one. */
   const statusAvailable = !showModuleFilter || activeGridModules.length > 0
   const activeStatus = statusAvailable ? statusFilter : ALL
-  const completionStatus = completionStatusFilter(
-    activeStatus === ALL ? undefined : activeStatus,
-  )
+  const completionStatus =
+    activeStatus === ALL
+      ? undefined
+      : STATUS_FILTER_COMPLETION_STATUS[activeStatus]
 
   useEffect(() => {
-    if (courseRunsQuery.isSuccess && !statusAvailable && statusFilter !== ALL) {
+    if (coursesQuery.isSuccess && !statusAvailable && statusFilter !== ALL) {
       setStatusFilter(ALL)
     }
-  }, [
-    courseRunsQuery.isSuccess,
-    statusAvailable,
-    statusFilter,
-    setStatusFilter,
-  ])
+  }, [coursesQuery.isSuccess, statusAvailable, statusFilter, setStatusFilter])
+
+  /** The API never matches Not enrolled with needs attention: there's no enrollment to judge. */
+  const needsAttentionAvailable = activeStatus !== "not_enrolled"
+  const activeNeedsAttention = needsAttentionAvailable && needsAttentionOnly
+
+  useEffect(() => {
+    if (!needsAttentionAvailable && needsAttentionOnly) {
+      setNeedsAttentionOnly(false)
+    }
+  }, [needsAttentionAvailable, needsAttentionOnly, setNeedsAttentionOnly])
+
+  const handleStatusChange = (value: string) => {
+    setStatusAnnouncement(
+      value === "not_enrolled" && needsAttentionOnly
+        ? `${NEEDS_ATTENTION_LABEL} filter cleared.`
+        : "",
+    )
+    setStatusFilter(value)
+  }
 
   /**
    * Every module is stored as `ALL_MODULES`, so the URL's 50-module cap can't
    * drop one. The announcement is emptied on every other change, so a later
-   * reset is announced again.
+   * reset is announced again. With no status or needs attention, the change
+   * only picks columns, so the grid has no new results to announce and the
+   * page stays.
    */
   const handleModulesChange = (values: string[]) => {
+    const statusCleared = !values.length && activeStatus !== ALL
     setStatusAnnouncement(
-      !values.length && activeStatus !== ALL ? "Status filter cleared." : "",
+      `${statusCleared ? "Status filter cleared. " : ""}Showing ${values.length || courseOptions.length} of ${courseOptions.length} modules.`,
     )
     setGridModules(
-      values.length > 0 && values.length === courseRunOptions.length
+      values.length > 0 && values.length === courseOptions.length
         ? [ALL_MODULES]
         : values,
+      { keepPage: !completionStatus && !activeNeedsAttention },
     )
   }
 
-  const courseRunsSettled = courseRunsQuery.isSuccess || courseRunsQuery.isError
+  const coursesSettled = coursesQuery.isSuccess || coursesQuery.isError
   /** Whether modules and status in the URL apply depends on the contract's modules. */
   const filtersResolved =
-    (gridModules.length === 0 && statusFilter === ALL) || courseRunsSettled
+    (gridModules.length === 0 && statusFilter === ALL) || coursesSettled
 
+  /**
+   * Modules narrow learners only through a status or needs attention: with
+   * neither, every learner has a status in every module, Not enrolled
+   * included, so the selection only picks the columns.
+   */
   const requestModules = useMemo(
     () =>
-      activeGridModules.length < courseRunOptions.length
+      (completionStatus || activeNeedsAttention) &&
+      activeGridModules.length < courseOptions.length
         ? activeGridModules
         : [],
-    [activeGridModules, courseRunOptions],
+    [completionStatus, activeNeedsAttention, activeGridModules, courseOptions],
   )
 
   const gridFilters = useMemo(
     () => ({
       ...(debouncedSearch ? { search: debouncedSearch } : {}),
-      completion_status: completionStatus,
+      ...(completionStatus ? { completion_status: completionStatus } : {}),
       /** Only ever sent as `true`: no control here asks for the learners who are fine. */
-      ...(needsAttentionOnly ? { needs_attention: true } : {}),
-      ...(requestModules.length
-        ? { courserun_readable_id: requestModules }
-        : {}),
+      ...(activeNeedsAttention ? { needs_attention: true } : {}),
+      ...(requestModules.length ? { course_readable_id: requestModules } : {}),
     }),
-    [debouncedSearch, completionStatus, needsAttentionOnly, requestModules],
+    [debouncedSearch, completionStatus, activeNeedsAttention, requestModules],
   )
   const gridQuery = useQuery({
     ...gridLearnersQuery(orgUuid ?? "", contractId ?? 0, gridFilters, page),
@@ -514,7 +610,6 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     ...analyticsContractQueries.learners(orgUuid ?? "", contractId ?? 0, {
       limit: 1,
       offset: 0,
-      completion_status: completionStatusFilter(),
     }),
     enabled: canQuery,
   })
@@ -532,14 +627,25 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
    * The contract exists in MITx Online but the warehouse has not loaded it
    * yet. Not an error a retry can fix, so it gets its own message.
    */
-  const notLoaded = [gridQuery, learnerTotalQuery, courseRunsQuery].some(
-    (query) => isAnalyticsNotLoaded(query.error),
+  const notLoaded = [gridQuery, learnerTotalQuery, coursesQuery].some((query) =>
+    isAnalyticsNotLoaded(query.error),
   )
 
-  const courseRuns = courseRunsQuery.data?.data
-  const courseRunsFailed = courseRunsQuery.isError && !courseRuns
+  const courses = coursesQuery.data?.data
+  const columns = useMemo(
+    () => courses && gridColumns(courses, activeGridModules),
+    [courses, activeGridModules],
+  )
+  const coursesFailed = coursesQuery.isError && !courses
+  /** `/courses` lists only courses in the contract's programs, as the learner Overview does. */
+  const noCourses = courses?.length === 0
   const exportUnavailable =
-    !canQuery || notLoaded || noLearners || !filtersResolved || !courseRuns
+    !canQuery ||
+    notLoaded ||
+    noLearners ||
+    noCourses ||
+    !filtersResolved ||
+    !columns
 
   const handleExport = useCallback(async () => {
     if (isExporting || exportUnavailable || !orgUuid || !contractId) return
@@ -567,10 +673,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
         )
         learners.push(...batch.flatMap((response) => response.data))
       }
-      const csv = buildGridCsv(
-        learners,
-        gridColumns(courseRuns, activeGridModules),
-      )
+      const csv = buildGridCsv(learners, columns)
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
       const url = URL.createObjectURL(blob)
       const anchor = document.createElement("a")
@@ -600,8 +703,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     contractSlug,
     queryClient,
     gridFilters,
-    courseRuns,
-    activeGridModules,
+    columns,
   ])
 
   if (isLoadingOrgs) {
@@ -653,11 +755,11 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     !!searchQuery ||
     activeStatus !== ALL ||
     hasModuleFilter ||
-    needsAttentionOnly
+    activeNeedsAttention
 
   const emptyMessage = debouncedSearch
     ? "No learners match your search."
-    : activeStatus !== ALL || hasModuleFilter || needsAttentionOnly
+    : activeStatus !== ALL || hasModuleFilter || activeNeedsAttention
       ? "No learners match this filter."
       : "No learners found."
 
@@ -692,21 +794,23 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                     ? NOT_LOADED_MESSAGE_ID
                     : noLearners
                       ? NO_LEARNERS_MESSAGE_ID
-                      : courseRunsFailed
-                        ? MODULES_FAILED_MESSAGE_ID
-                        : undefined
+                      : noCourses
+                        ? NO_COURSES_MESSAGE_ID
+                        : coursesFailed
+                          ? MODULES_FAILED_MESSAGE_ID
+                          : undefined
               }
               aria-busy={
                 isExporting ||
                 (canQuery &&
                   !notLoaded &&
-                  (!filtersResolved || courseRunsQuery.isPending))
+                  (!filtersResolved || coursesQuery.isPending))
               }
               onClick={handleExport}
             >
               {isExporting ? "Exporting…" : "Export learners"}
             </Button>
-            {courseRunsFailed ? (
+            {coursesFailed ? (
               <VisuallyHidden id={MODULES_FAILED_MESSAGE_ID}>
                 Export needs this contract&apos;s modules, which couldn&apos;t
                 load.
@@ -745,8 +849,12 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
           </Alert>
         ) : noLearners ? (
           <Typography id={NO_LEARNERS_MESSAGE_ID} variant="body1">
-            No learners are enrolled in {contract.name} yet. They&apos;ll appear
-            here once they enroll.
+            No learners to show for {contract.name} yet.
+          </Typography>
+        ) : noCourses ? (
+          <Typography id={NO_COURSES_MESSAGE_ID} variant="body1">
+            No courses to show for {contract.name}. Progress appears here for
+            the courses in its programs.
           </Typography>
         ) : (
           <ResultsSection>
@@ -765,7 +873,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                   gridQuery.isError || learnerTotalQuery.isError
                     ? undefined
                     : gridQuery.data && totalLearners !== null
-                      ? `${gridQuery.data.total_count} of ${totalLearners} enrolled learners`
+                      ? `${gridQuery.data.total_count} of ${totalLearners} learners`
                       : "Loading…"
                 }
                 asOfPlacement="external"
@@ -785,21 +893,21 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                 />
                 {showModuleFilter ? (
                   <ModulesSelect
-                    options={courseRunOptions}
+                    options={courseOptions}
                     value={activeGridModules}
                     onChange={handleModulesChange}
-                    error={courseRunsFailed}
+                    error={coursesFailed}
                   />
                 ) : null}
                 <StatusSelect
                   value={activeStatus}
-                  onChange={setStatusFilter}
+                  onChange={handleStatusChange}
                   unavailable={
                     statusAvailable
                       ? undefined
-                      : courseRunsQuery.isPending
+                      : coursesQuery.isPending
                         ? "loading"
-                        : courseRunsFailed
+                        : coursesFailed
                           ? "modulesFailed"
                           : "noModule"
                   }
@@ -807,15 +915,14 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                 <VisuallyHidden role="status" aria-atomic="true">
                   {statusAnnouncement}
                 </VisuallyHidden>
-                <CheckboxField>
-                  <Checkbox
-                    label="Not started or inactive 30+ days"
-                    checked={needsAttentionOnly}
-                    onChange={(event) =>
-                      setNeedsAttentionOnly(event.target.checked)
-                    }
-                  />
-                </CheckboxField>
+                <NeedsAttentionCheckbox
+                  checked={activeNeedsAttention}
+                  onChange={(checked) => {
+                    setStatusAnnouncement("")
+                    setNeedsAttentionOnly(checked)
+                  }}
+                  unavailable={!needsAttentionAvailable}
+                />
                 <Button
                   variant="tertiary"
                   size="medium"
@@ -842,10 +949,10 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
             <ProgressGrid
               filters={gridFilters}
               query={gridQuery}
-              courseRuns={courseRuns}
-              courseRunsFailed={courseRunsFailed}
-              courseRunsFetching={courseRunsQuery.isFetching}
-              onRetryCourseRuns={() => courseRunsQuery.refetch()}
+              columns={columns}
+              coursesFailed={coursesFailed}
+              coursesFetching={coursesQuery.isFetching}
+              onRetryCourses={() => coursesQuery.refetch()}
               page={page}
               onPageChange={setPage}
               emptyMessage={emptyMessage}
