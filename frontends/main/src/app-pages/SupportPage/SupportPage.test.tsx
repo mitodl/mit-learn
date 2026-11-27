@@ -49,11 +49,11 @@ const sectionOf = (name: string) =>
 /** In page order. */
 const SECTION_TITLES = {
   letter: "A little support can open a world of possibility.",
-  testimonial: "The impact of open education",
-  metrics: "Opening education to the world.",
-  reports: "Explore Open Learning's impact reports",
   initiatives:
     "Learn more about how you can support MIT Open Learning’s transformative initiatives",
+  metrics: "Opening education to the world.",
+  testimonial: "The impact of open education",
+  reports: "Explore Open Learning's impact reports",
 }
 
 const INITIATIVES = [

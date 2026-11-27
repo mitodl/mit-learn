@@ -8,16 +8,6 @@ import { IMPACT_REPORT_URLS } from "./links"
 const REPORT_COVER_MOBILE_RATIO = "368 / 210"
 const COMPACT_TEXT_MIN_WIDTH = "200px"
 
-/**
- * The initiatives section below continues this gray band after a divider, so
- * there's no bottom padding here. On phones the sections are separate.
- */
-const Band = styled(Section)(({ theme }) => ({
-  [theme.breakpoints.up("sm")]: {
-    paddingBottom: 0,
-  },
-}))
-
 const Inner = styled(SectionInner)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
@@ -212,7 +202,7 @@ const newTab = { target: "_blank", rel: "noopener noreferrer" }
 const ImpactReportsSection: React.FC = () => {
   const [featured, ...others] = REPORTS
   return (
-    <Band shade="gray">
+    <Section shade="gray">
       <Inner>
         <Header>
           <SectionTitle>Explore Open Learning's impact reports</SectionTitle>
@@ -257,7 +247,7 @@ const ImpactReportsSection: React.FC = () => {
           </Others>
         </Cards>
       </Inner>
-    </Band>
+    </Section>
   )
 }
 
