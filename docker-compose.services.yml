@@ -117,7 +117,7 @@ services:
   apigateway:
     profiles:
       - apisix
-    image: apache/apisix:3.17.0-debian@sha256:0e5377839f4ff5e322a5686ab6ce6797ba768008aca1bfc9b71149c3b326c4df # versions above this drop the local port on redirects
+    image: apache/apisix:3.21.0-debian@sha256:1741a8e1186e5c39ea10e6b4fb3e682534d1705efb8328195de5b41ad0657380 # versions above this drop the local port on redirects
     <<: *default-extra-hosts
     environment:
       - CSRF_COOKIE_DOMAIN=${CSRF_COOKIE_DOMAIN:-.odl.local}
