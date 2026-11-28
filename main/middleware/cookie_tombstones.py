@@ -10,6 +10,26 @@ from django.core.exceptions import ImproperlyConfigured
 VALID_COOKIE_DOMAIN_RE = re.compile(r"^\.?[A-Za-z0-9.-]+$")
 ALLOWED_TOMBSTONE_FIELDS = {"name", "domain", "path"}
 
+TOMBSTONE_MIDDLEWARE = "main.middleware.cookie_tombstones.CookieTombstoneMiddleware"
+CACHE_POLICY_MIDDLEWARE = "main.middleware.cache_policy.CachePolicyMiddleware"
+
+
+def insert_tombstone_middleware(middleware: tuple[str, ...]) -> tuple[str, ...]:
+    """
+    Place this middleware directly after CachePolicyMiddleware in MIDDLEWARE.
+
+    Response phases run bottom-up, so an entry listed later runs earlier on the
+    way out, and the deletion cookies added here have to already be on the
+    response when the cache policy is decided. Prepending instead — the obvious
+    placement for something that should see every request — would run this last
+    and attach a `Set-Cookie` to a response already classified as cacheable.
+
+    Raises ValueError if CachePolicyMiddleware is not registered, rather than
+    guessing at a position: a silently wrong one produces no failure anywhere.
+    """
+    position = middleware.index(CACHE_POLICY_MIDDLEWARE) + 1
+    return (*middleware[:position], TOMBSTONE_MIDDLEWARE, *middleware[position:])
+
 
 @dataclass(frozen=True)
 class CookieTombstone:
